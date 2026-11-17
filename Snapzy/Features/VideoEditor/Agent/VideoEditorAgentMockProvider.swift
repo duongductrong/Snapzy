@@ -108,6 +108,12 @@ final class VideoEditorAgentMockProvider: AgentProvider {
         calls.append(Call(name: "speed_up_idle", arguments: rate.map { json(["rate": $0]) } ?? "{}"))
       } else if has("zoom", "phong"), has("activity", "hoat dong", "auto", "tu dong"), times.isEmpty {
         calls.append(Call(name: "auto_zoom_activity", arguments: rate.map { json(["level": $0]) } ?? "{}"))
+      } else if has("zoom", "phong"), let words = quoted(in: text) {
+        // "zoom on "Deploy"": the toolbox finds the words on screen.
+        var args: [String: Any] = ["text": words]
+        if let start = times.first { args["start"] = start }
+        if let rate { args["level"] = rate }
+        calls.append(Call(name: "add_zoom", arguments: json(args)))
       } else if has("cut", "cat", "remove", "xoa", "bo "), times.count >= 2 {
         // Latest cut first, so earlier times stay valid.
         cuts.append(Call(name: "cut_range", arguments: json(["start": times[0], "end": times[1]]), time: times[0]))
@@ -137,6 +143,15 @@ final class VideoEditorAgentMockProvider: AgentProvider {
     }
     let orderedCuts = cuts.sorted { ($0.time ?? 0) > ($1.time ?? 0) }
     return orderedCuts + calls
+  }
+
+  /// Text inside quotes ("…", “…”, '…'), so times written inside it aren't read as times.
+  static func quoted(in text: String) -> String? {
+    guard let regex = try? NSRegularExpression(pattern: #"["“'‘]([^"”'’]+)["”'’]"#),
+          let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+          let range = Range(match.range(at: 1), in: text) else { return nil }
+    let words = text[range].trimmingCharacters(in: .whitespaces)
+    return words.isEmpty ? nil : words
   }
 
   /// Times in a clause: "1:05.5", "0:10", "12s", "12". Rates and paddings are taken out first.

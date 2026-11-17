@@ -24,6 +24,9 @@ extension AgentSurface {
     Zoom centers are [x, y] from 0 to 1 with the origin at the top left. Speed blocks cannot overlap.
     For pauses, waiting or "zoom where I work", use remove_silences, speed_up_idle and auto_zoom_activity: \
     they find the parts themselves. get_activity tells when the user talks, waits or moves the cursor.
+    To act on something on screen ("zoom on the Deploy button when it appears"), give add_zoom its text; \
+    find_on_screen tells when and where words show, get_frame shows a moment. \
+    get_transcript tells what is said, for requests about speech ("cut where I say 'um'", "zoom when I mention the settings").
     Keep Snapzy's defaults unless the user asks for something else. "It"/"that" usually means what you changed last.
     You cannot export, save, share or open files; say so if asked.
     """,
@@ -50,6 +53,6 @@ extension VideoEditorAgentToolbox: AgentToolbox {
 }
 
 extension VideoEditorAgentScene: AgentScene {
-  /// The video scene is text only; frames come later (phase 6).
+  /// The scene is text only; frames come through `get_frame`, which sizes its own image.
   var imageUnitSize: CGSize? { nil }
 }

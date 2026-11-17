@@ -79,16 +79,8 @@ struct VideoEditorMainView: View {
       .frame(width: 0, height: 0)
       .disabled(isAuthoringLocked)
 
+      // The AI prompt shortcut (configurable, default ⌘K) is matched by VideoEditorWindow.
       if !state.isGIF {
-        // AI prompt (⌘K): open, refocus, or close when the field has the caret.
-        Button("") {
-          agent.handleShortcut(isFieldEditing: PromptTextField.isEditing(in: NSApp.keyWindow))
-        }
-        .keyboardShortcut("k", modifiers: [.command])
-        .opacity(0)
-        .frame(width: 0, height: 0)
-        .disabled(!agent.isAvailable)
-
         editingShortcuts
           .disabled(isAuthoringLocked)
           .disabled(!agent.allowsPlainKeyShortcuts)

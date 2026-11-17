@@ -20,12 +20,14 @@ final class AgentBridge {
   /// MCP-only tool: the surface's picture as an image, for agents that look at pixels.
   static let snapshotToolName = "get_snapshot"
   /// Socket frames are capped at 1 MiB; leave room for the JSON around the image.
-  static let maximumSnapshotBase64Bytes = 900_000
+  nonisolated static let maximumSnapshotBase64Bytes = 900_000
 
   private struct Entry {
     weak var session: AgentSession?
     let image: CGImage?
     let sceneSize: CGSize?
+    /// Pictures tools return (a video frame) are passed on only when the user lets images go.
+    let allowsToolImages: Bool
     var snapshot: AgentImage?
   }
 
@@ -36,9 +38,10 @@ final class AgentBridge {
   nonisolated deinit {}
 
   /// Opens a bridge for one run. Close it with `close(_:)` when the run ends.
-  func open(session: AgentSession, image: CGImage?, sceneSize: CGSize?) -> String {
+  /// - Parameter allowsToolImages: pass on images tools return (Settings › AI › send image).
+  func open(session: AgentSession, image: CGImage?, sceneSize: CGSize?, allowsToolImages: Bool = false) -> String {
     let token = Self.makeToken()
-    entries[token] = Entry(session: session, image: image, sceneSize: sceneSize)
+    entries[token] = Entry(session: session, image: image, sceneSize: sceneSize, allowsToolImages: allowsToolImages)
     return token
   }
 
@@ -83,7 +86,8 @@ final class AgentBridge {
 
     do {
       let result = try await session.callTool(name, arguments: arguments)
-      return AgentCallResult(text: result.text, isError: result.isError)
+      let image = entry.allowsToolImages ? result.image.map { AgentImage(mimeType: $0.mimeType, base64: $0.base64) } : nil
+      return AgentCallResult(text: result.text, isError: result.isError, image: image)
     } catch is CancellationError {
       throw Self.expired
     }

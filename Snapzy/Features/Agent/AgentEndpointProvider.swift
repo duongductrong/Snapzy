@@ -63,7 +63,7 @@ final class AgentEndpointProvider: AgentProvider {
   /// Earlier turns resent as chat history.
   static let historyLimit = 6
   /// Longest edge of the screenshot sent to vision models.
-  static let maximumImageEdge: CGFloat = 1568
+  nonisolated static let maximumImageEdge: CGFloat = 1568
 
   let model: CustomOCRModel
   var displayName: String { model.name }
@@ -117,6 +117,8 @@ final class AgentEndpointProvider: AgentProvider {
     }
 
     var conversation = Conversation(request: request, image: image)
+    // Tools may hand back pictures too (a video frame); same rules as the opening image.
+    conversation.sendsToolImages = sendsImage && capabilities.supportsVision != false
     let counter = ChangeCounter()
     do {
       if capabilities.supportsTools != false {
@@ -167,6 +169,7 @@ final class AgentEndpointProvider: AgentProvider {
       }
 
       messages.append(message.assistantMessage)
+      var pictures: [(tool: String, image: AgentToolImage)] = []
       for call in message.toolCalls {
         let result = try await session.callTool(call.name, arguments: call.arguments)
         if !result.isError, !session.isReadOnly(call.name) {
@@ -178,6 +181,14 @@ final class AgentEndpointProvider: AgentProvider {
           "name": call.name,
           "content": result.text,
         ])
+        if conversation.sendsToolImages, let image = result.image {
+          pictures.append((call.name, image))
+        }
+      }
+      // Tool messages are text only in the chat-completions API: pictures follow as a user turn.
+      if let message = Conversation.toolImagesMessage(pictures) {
+        messages = Conversation.keepingRecentToolImages(messages, limit: Conversation.toolImageHistory - pictures.count)
+        messages.append(message)
       }
     }
     return Self.cleanReply(lastText)
@@ -274,7 +285,7 @@ final class AgentEndpointProvider: AgentProvider {
       do {
         let response = try await client.send(jsonBody: data)
         try Task.checkCancellation()
-        if conversation.image != nil { remember { $0.supportsVision = true } }
+        if conversation.hasImages(in: messages) { remember { $0.supportsVision = true } }
         guard let message = AgentEndpointMessage.parse(response) else {
           throw AgentProviderError.failed(L10n.AnnotateAI.invalidReply)
         }
@@ -285,9 +296,10 @@ final class AgentEndpointProvider: AgentProvider {
         switch Self.rejection(status: status, body: snippet) {
         case .tools? where extra["tools"] != nil && mayRejectTools:
           throw EndpointFallback.toolsUnsupported
-        case .images? where conversation.image != nil:
+        case .images? where conversation.hasImages(in: messages):
           remember { $0.supportsVision = false }
           conversation.image = nil
+          conversation.sendsToolImages = false
           messages = Conversation.removingImages(from: messages)
           DiagnosticLogger.shared.log(.info, logCategory, "AI endpoint rejected the image; retrying with text only")
           continue
@@ -353,6 +365,54 @@ final class AgentEndpointProvider: AgentProvider {
     var image: AgentEndpointImage?
     /// Some models (OpenAI reasoning models) accept only the default temperature.
     var sendsTemperature = true
+    /// Pass on pictures tools return. Off when the user keeps images on the Mac or the model can't see.
+    var sendsToolImages = false
+
+    func hasImages(in messages: [[String: Any]]) -> Bool {
+      image != nil || messages.contains { message in
+        (message["content"] as? [[String: Any]])?.contains { $0["type"] as? String == "image_url" } ?? false
+      }
+    }
+
+    /// Earlier tool pictures resent each round add up (each up to ~900 KB): keep the newest ones.
+    static let toolImageHistory = 2
+    static let toolImagesMarker = "Image returned by "
+
+    /// Older tool-image messages lose their pictures (text kept), so at most `limit` remain.
+    static func keepingRecentToolImages(_ messages: [[String: Any]], limit: Int) -> [[String: Any]] {
+      var remaining = max(0, limit)
+      var result = messages
+      for index in result.indices.reversed() {
+        guard let parts = result[index]["content"] as? [[String: Any]],
+              (parts.first?["text"] as? String)?.hasPrefix(toolImagesMarker) == true else { continue }
+        var kept: [[String: Any]] = []
+        for part in parts {
+          if part["type"] as? String == "image_url" {
+            if remaining > 0 { remaining -= 1; kept.append(part) }
+          } else {
+            kept.append(part)
+          }
+        }
+        if kept.contains(where: { $0["type"] as? String == "image_url" }) {
+          result[index]["content"] = kept
+        } else {
+          result[index]["content"] = kept.compactMap { $0["text"] as? String }.joined(separator: " ") + " (no longer attached)"
+        }
+      }
+      return result
+    }
+
+    /// One user message carrying the pictures the last tool calls returned, or nil when there are none.
+    static func toolImagesMessage(_ pictures: [(tool: String, image: AgentToolImage)]) -> [String: Any]? {
+      guard !pictures.isEmpty else { return nil }
+      var parts: [[String: Any]] = []
+      for picture in pictures {
+        let size = "\(Int(picture.image.pixelSize.width))×\(Int(picture.image.pixelSize.height))"
+        parts.append(["type": "text", "text": "\(toolImagesMarker)\(picture.tool) (\(size) pixels):"])
+        parts.append(["type": "image_url", "image_url": ["url": picture.image.dataURL]])
+      }
+      return ["role": "user", "content": parts]
+    }
 
     func openingMessages(system: String) -> [[String: Any]] {
       var messages: [[String: Any]] = [["role": "system", "content": system]]

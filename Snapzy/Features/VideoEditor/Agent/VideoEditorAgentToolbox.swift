@@ -12,6 +12,8 @@
 //  - Export, save, share and file access are deliberately not tools.
 //
 
+import AVFoundation
+import CoreGraphics
 import CoreMedia
 import Foundation
 
@@ -212,7 +214,18 @@ final class VideoEditorAgentToolbox {
         ).message)
       }
     }
-    return execute(name: name, arguments: Data(argumentsJSON.utf8))
+    let arguments = argumentsJSON.isEmpty ? Data("{}".utf8) : Data(argumentsJSON.utf8)
+    if let tool = VideoEditorAgentToolName(rawValue: name), tool.readsMedia || tool == .addZoom {
+      do {
+        if let result = try await performMedia(tool, arguments: arguments) {
+          if !tool.isReadOnly { changeCount += 1 }
+          return result
+        }
+      } catch {
+        return Self.failure(for: error)
+      }
+    }
+    return execute(name: name, arguments: arguments)
   }
 
   /// Runs one tool call. Never throws: failures come back as error results the model can read.
@@ -226,11 +239,26 @@ final class VideoEditorAgentToolbox {
       // One-step tools count each edit they make themselves.
       if !tool.isReadOnly, !tool.isOneStep { changeCount += 1 }
       return result
-    } catch let error as VideoEditorAgentToolError {
-      return .failure(message: error.message)
-    } catch let error as DecodingError {
-      return .failure(message: VideoEditorAgentToolError.invalidArguments(Self.describe(error)).message)
     } catch {
+      return Self.failure(for: error)
+    }
+  }
+
+  private static func failure(for error: Error) -> AgentToolResult {
+    switch error {
+    case let error as VideoEditorAgentToolError:
+      return .failure(message: error.message)
+    case let error as DecodingError:
+      return .failure(message: VideoEditorAgentToolError.invalidArguments(describe(error)).message)
+    case let error as VideoEditorTranscriptError:
+      return .failure(message: error.message)
+    case VideoEditorVisionError.noFootage(let time):
+      return .failure(message: "Nothing plays at \(clock(time)) (trimmed out or past the end). Pick a time inside a clip's playing part.")
+    case is CancellationError:
+      return .failure(message: "Stopped.")
+    case is VideoEditorVisionError, is AVError:
+      return .failure(message: "The video frames could not be read (\(error.localizedDescription)). Work from the timeline instead.")
+    default:
       return .failure(message: VideoEditorAgentToolError.invalidArguments(error.localizedDescription).message)
     }
   }
@@ -281,6 +309,9 @@ final class VideoEditorAgentToolbox {
       return try speedUpIdle(decode(IdleArguments.self, arguments), state: state)
     case .autoZoomActivity:
       return try autoZoomActivity(decode(AutoZoomArguments.self, arguments), state: state)
+    case .getFrame, .findOnScreen, .getTranscript:
+      // Only through `execute(name:argumentsJSON:)`, which can wait for frames and speech.
+      throw VideoEditorAgentToolError.unavailable("This tool is still working; call it again.")
     }
   }
 
@@ -497,7 +528,13 @@ final class VideoEditorAgentToolbox {
   }
 
   private func addZoom(_ args: AddZoomArguments, state: VideoEditorState) throws -> AgentToolResult {
-    let start = try time(args.start, state, name: "start")
+    guard args.text == nil else {
+      throw VideoEditorAgentToolError.unavailable("Finding the text is still working; call add_zoom again.")
+    }
+    guard let startArgument = args.start else {
+      throw VideoEditorAgentToolError.invalidArguments("missing 'start' (or give text to zoom on).")
+    }
+    let start = try time(startArgument, state, name: "start")
     let length = try clampedZoomDuration(args.duration) ?? ZoomSegment.defaultDuration
     guard start <= duration(state) - ZoomSegment.minDuration else {
       throw VideoEditorAgentToolError.invalidArguments(
@@ -542,14 +579,22 @@ final class VideoEditorAgentToolbox {
   }
 
   private func zoomResult(_ id: UUID, _ state: VideoEditorState) -> AgentToolResult {
-    guard let segment = state.zoomSegments.first(where: { $0.id == id }) else { return .success([:]) }
-    return .success([
+    .success(zoomPayload(id, state))
+  }
+
+  private func zoomPayload(_ id: UUID, _ state: VideoEditorState) -> [String: Any] {
+    guard let segment = state.zoomSegments.first(where: { $0.id == id }) else { return [:] }
+    var payload: [String: Any] = [
       "id": reference(.zoom, for: id),
       "start": Self.round(segment.startTime),
       "end": Self.round(segment.endTime),
       "level": Self.round(Double(segment.zoomLevel)),
       "follow_mouse": segment.zoomType == .auto,
-    ])
+    ]
+    if segment.zoomType != .auto {
+      payload["center"] = [Self.round(segment.zoomCenter.x), Self.round(segment.zoomCenter.y)]
+    }
+    return payload
   }
 
   private func removeZooms(_ args: IDsArguments, state: VideoEditorState) throws -> AgentToolResult {
@@ -1016,6 +1061,178 @@ final class VideoEditorAgentToolbox {
     return .success(payload)
   }
 
+  // MARK: - Frames, on-screen text & speech
+
+  static let maximumFrameLines = 40
+  static let maximumAppearances = 10
+  /// Characters of transcript one call returns; the rest is offered through `next_start`.
+  static let maximumTranscriptCharacters = 6_000
+
+  /// Tools that wait on frames or speech. nil = run the synchronous path (add_zoom without text).
+  private func performMedia(_ tool: VideoEditorAgentToolName, arguments: Data) async throws -> AgentToolResult? {
+    switch tool {
+    case .getFrame:
+      let state = try readyState()
+      return try await getFrame(decode(TimeArguments.self, arguments), state: state)
+    case .findOnScreen:
+      let state = try readyState()
+      return try await findOnScreen(decode(FindArguments.self, arguments), state: state)
+    case .getTranscript:
+      let state = try readyState()
+      return try await getTranscript(decode(TranscriptArguments.self, arguments), state: state)
+    case .addZoom:
+      let args = try decode(AddZoomArguments.self, arguments)
+      guard let raw = args.text else { return nil }
+      let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !text.isEmpty else { throw VideoEditorAgentToolError.invalidArguments("text is empty.") }
+      let state = try readyState()
+      guard changeCount < Self.maximumChangesPerRun else {
+        throw VideoEditorAgentToolError.limitReached(Self.maximumChangesPerRun)
+      }
+      return try await addZoom(onText: text, args, state: state)
+    default:
+      return nil
+    }
+  }
+
+  private func getFrame(_ args: TimeArguments, state: VideoEditorState) async throws -> AgentToolResult {
+    let t = try time(args.time, state, name: "time")
+    let frame = try await analyzer.vision.frame(at: t, in: state)
+    try Task.checkCancellation()
+    // Same OCR size and cache as find_on_screen, so the two agree.
+    let lines = (try? await analyzer.vision.text(at: t, in: state)) ?? []
+    let image = await AgentToolImage.jpeg(from: frame)
+    try Task.checkCancellation()
+
+    // Top to bottom, left to right: the order people read a screen in.
+    let sorted = lines.sorted { abs($0.box.minY - $1.box.minY) > 0.01 ? $0.box.minY < $1.box.minY : $0.box.minX < $1.box.minX }
+    var payload: [String: Any] = [
+      "time": Self.round(t),
+      "size": [Int(state.naturalSize.width.rounded()), Int(state.naturalSize.height.rounded())],
+      "text": sorted.prefix(Self.maximumFrameLines).map { ["text": $0.text, "box": Self.box($0.box)] as [String: Any] },
+    ]
+    if let clip = state.sourceContext(atSequence: t)?.clip { payload["clip"] = reference(.clip, for: clip.id) }
+    if sorted.count > Self.maximumFrameLines { payload["more_text_lines"] = sorted.count - Self.maximumFrameLines }
+    if lines.isEmpty { payload["note"] = "No text found on this frame." }
+    if image == nil { payload["image"] = "omitted (too large to send); use the text." }
+    return AgentToolResult.success(payload).with(image: image)
+  }
+
+  private func findOnScreen(_ args: FindArguments, state: VideoEditorState) async throws -> AgentToolResult {
+    let text = args.text.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !text.isEmpty else { throw VideoEditorAgentToolError.invalidArguments("text is empty.") }
+    let window = try window(args.start, args.end, state)
+    let search = try await analyzer.vision.find(text, in: window, state: state)
+    try Task.checkCancellation()
+
+    var payload: [String: Any] = [
+      "text": text,
+      "matches": search.appearances.prefix(Self.maximumAppearances).map(Self.appearancePayload),
+      "frames_read": search.samples,
+      "seconds_between_frames": Self.round(search.step),
+    ]
+    if search.appearances.count > Self.maximumAppearances {
+      payload["more_matches"] = search.appearances.count - Self.maximumAppearances
+    }
+    if search.appearances.isEmpty {
+      payload["note"] = "Not found on screen. Text that is on screen often: "
+        + search.commonLines.prefix(12).map { "\"\($0)\"" }.joined(separator: ", ")
+    }
+    return .success(payload)
+  }
+
+  private static func appearancePayload(_ appearance: VideoEditorTextAppearance) -> [String: Any] {
+    [
+      "start": round(appearance.start),
+      "end": round(appearance.end),
+      "line": appearance.line,
+      "box": box(appearance.box),
+      "center": [round(appearance.box.midX), round(appearance.box.midY)],
+    ]
+  }
+
+  private func addZoom(onText text: String, _ args: AddZoomArguments, state: VideoEditorState) async throws -> AgentToolResult {
+    let from = try args.start.map { try time($0, state, name: "start") } ?? 0
+    guard from < duration(state) - ZoomSegment.minDuration else {
+      throw VideoEditorAgentToolError.invalidArguments(
+        "start must leave \(ZoomSegment.minDuration)s before the end (\(Self.clock(duration(state))))."
+      )
+    }
+    let search = try await analyzer.vision.find(text, in: from ... duration(state), state: state)
+    try Task.checkCancellation()
+    guard let appearance = search.appearances.first else {
+      let seen = search.commonLines.prefix(12).map { "\"\($0)\"" }.joined(separator: ", ")
+      throw VideoEditorAgentToolError.notFound(
+        "'\(text)' on screen after \(Self.clock(from)). Text that is on screen often: \(seen.isEmpty ? "none" : seen). "
+          + "Try other words, or give start and center"
+      )
+    }
+    var resolved = args
+    resolved.text = nil
+    resolved.start = VideoEditorAgentTime(seconds: max(from, appearance.start))
+    resolved.center = [Double(appearance.box.midX), Double(appearance.box.midY)]
+    resolved.followMouse = false
+    let added = try addZoom(resolved, state: state)
+    guard !added.isError, let data = added.text.data(using: .utf8),
+          var payload = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return added }
+    payload.removeValue(forKey: "ok")
+    payload["found"] = Self.appearancePayload(appearance)
+    if search.appearances.count > 1 { payload["other_matches"] = search.appearances.count - 1 }
+    return .success(payload)
+  }
+
+  private func getTranscript(_ args: TranscriptArguments, state: VideoEditorState) async throws -> AgentToolResult {
+    let window = try window(args.start, args.end, state)
+    let locale = Self.speechLocale(args.language)
+    let phrases = try await analyzer.transcriber.phrases(for: state, locale: locale)
+    try Task.checkCancellation()
+
+    // Through the clips: cut speech is gone, reordered speech moves with its clip.
+    var mapped: [(range: ClosedRange<TimeInterval>, text: String)] = []
+    for phrase in phrases {
+      let pieces = VideoEditorAgentAnalyzer.timelineSpans([phrase.range], placements: state.placements)
+      guard let first = pieces.first, let last = pieces.last,
+            first.lowerBound < window.upperBound, last.upperBound > window.lowerBound else { continue }
+      mapped.append((first.lowerBound ... last.upperBound, phrase.text))
+    }
+    // Timeline order before truncating, so next_start never skips a phrase.
+    mapped.sort { $0.range.lowerBound < $1.range.lowerBound }
+    var items: [[String: Any]] = []
+    var characters = 0
+    var nextStart: TimeInterval?
+    for phrase in mapped {
+      if characters + phrase.text.count > Self.maximumTranscriptCharacters, !items.isEmpty {
+        nextStart = phrase.range.lowerBound
+        break
+      }
+      characters += phrase.text.count
+      items.append(["start": Self.round(phrase.range.lowerBound), "end": Self.round(phrase.range.upperBound), "text": phrase.text])
+    }
+
+    var payload: [String: Any] = ["language": locale.identifier, "phrases": items]
+    if let nextStart {
+      payload["truncated"] = true
+      payload["next_start"] = Self.round(nextStart)
+    }
+    if items.isEmpty { payload["note"] = "No speech recognized here." }
+    if state.hasInsertedClips { payload["inserted_videos"] = "Inserted videos are not transcribed." }
+    return .success(payload)
+  }
+
+  /// "vi_VN", "vi-VN" or nothing (the Mac's language, without extensions like @rg=…).
+  nonisolated static func speechLocale(_ raw: String?) -> Locale {
+    if let raw = raw?.trimmingCharacters(in: .whitespaces), !raw.isEmpty {
+      return Locale(identifier: raw.replacingOccurrences(of: "_", with: "-"))
+    }
+    let current = Locale.current
+    guard let language = current.language.languageCode?.identifier else { return current }
+    return Locale(identifier: current.region.map { "\(language)-\($0.identifier)" } ?? language)
+  }
+
+  private static func box(_ rect: CGRect) -> [Double] {
+    [rect.minX, rect.minY, rect.width, rect.height].map { round($0) }
+  }
+
   // MARK: - Parsing & description
 
   nonisolated static func parseBackground(_ raw: String) throws -> BackgroundStyle {
@@ -1172,11 +1389,25 @@ private struct MoveArguments: Decodable {
 }
 
 private struct AddZoomArguments: Decodable {
-  let start: VideoEditorAgentTime
-  let duration: Double?
-  let level: Double?
-  let center: [Double]?
-  let followMouse: Bool?
+  var start: VideoEditorAgentTime?
+  var duration: Double?
+  var level: Double?
+  var center: [Double]?
+  var followMouse: Bool?
+  /// Words on screen to zoom on; resolved to start + center before the zoom is added.
+  var text: String?
+}
+
+private struct FindArguments: Decodable {
+  let text: String
+  let start: VideoEditorAgentTime?
+  let end: VideoEditorAgentTime?
+}
+
+private struct TranscriptArguments: Decodable {
+  let start: VideoEditorAgentTime?
+  let end: VideoEditorAgentTime?
+  let language: String?
 }
 
 private struct UpdateZoomArguments: Decodable {

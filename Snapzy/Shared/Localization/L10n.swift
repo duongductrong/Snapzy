@@ -2495,6 +2495,18 @@ nonisolated enum L10n {
       defaultValue: "Inside annotate editor",
       comment: "Subtitle for annotate action shortcuts in overlay"
     )
+
+    static let videoEditorActions = string(
+      "shortcut-overlay.video-editor-actions",
+      defaultValue: "Video Editor Actions",
+      comment: "Shortcut overlay section title and Settings → Shortcuts card title for Video Editor action shortcuts"
+    )
+
+    static let insideVideoEditor = string(
+      "shortcut-overlay.inside-video-editor",
+      defaultValue: "Inside video editor",
+      comment: "Subtitle for Video Editor action shortcuts in overlay"
+    )
     static func applicationCapture(_ shortcut: String) -> String {
       format(
         "shortcut-overlay.application-capture",
@@ -2649,6 +2661,21 @@ nonisolated enum L10n {
         displayName
       )
     }
+
+    static func alreadyUsedByInVideoEditor(_ displayName: String) -> String {
+      format(
+        "shortcut-validation.already-used-by-video-editor",
+        defaultValue: "Already used by %@ in Video Editor.",
+        comment: "Validation error for duplicate shortcut in the video editor. %@ is the conflicting action name.",
+        displayName
+      )
+    }
+
+    static let reservedByVideoEditor = string(
+      "shortcut-validation.reserved-by-video-editor",
+      defaultValue: "The Video Editor already uses this shortcut.",
+      comment: "Validation error when a Video Editor action shortcut matches a built-in editor shortcut such as ⌘Z or ⌘S"
+    )
 
     static func matchesSystemConflict(_ displayName: String) -> String {
       format(
@@ -4591,6 +4618,18 @@ nonisolated enum L10n {
       "preferences-shortcuts.annotate-actions-page-description",
       defaultValue: "Copy, pin, upload, and redact from the editor.",
       comment: "Shortcuts overview card subtitle"
+    )
+
+    static let videoEditorActionsPageDescription = string(
+      "preferences-shortcuts.video-editor-actions-page-description",
+      defaultValue: "Open the AI prompt from the video editor.",
+      comment: "Shortcuts overview card subtitle for Video Editor actions"
+    )
+
+    static let videoEditorActionsDescription = string(
+      "preferences-shortcuts.video-editor-actions-description",
+      defaultValue: "Shortcuts that work only while a Video Editor window is focused. Built-in editor keys such as ⌘Z, ⌘S, ⌘U, and ⌘B can't be reassigned.",
+      comment: "Help text for the Video Editor action shortcuts card"
     )
     static let annotateToolsPageDescription = string(
       "preferences-shortcuts.annotate-tools-page-description",
@@ -10308,6 +10347,9 @@ extension L10n {
     static var askHelp: String {
       string("video-editor.ai.ask-help", defaultValue: "Ask AI", comment: "Tooltip and shortcut name for the Video Editor AI prompt")
     }
+    static var shortcutDescription: String {
+      string("video-editor.ai.shortcut-description", defaultValue: "Open the AI prompt to edit the timeline by describing the change.", comment: "Settings → Shortcuts description for the Video Editor AI prompt shortcut")
+    }
     static var placeholder: String {
       string("video-editor.ai.placeholder", defaultValue: "Describe how to edit the video…", comment: "Placeholder of the Video Editor AI prompt field")
     }
@@ -10362,6 +10404,15 @@ extension L10n {
     static var statusAutoZoom: String {
       string("video-editor.ai.status-auto-zoom", defaultValue: "Zooming on activity…", comment: "AI working status")
     }
+    static var statusLooking: String {
+      string("video-editor.ai.status-looking", defaultValue: "Looking at the video…", comment: "AI working status while it reads a video frame")
+    }
+    static var statusFinding: String {
+      string("video-editor.ai.status-finding", defaultValue: "Reading the screen…", comment: "AI working status while it searches the video for text on screen")
+    }
+    static var statusTranscribing: String {
+      string("video-editor.ai.status-transcribing", defaultValue: "Transcribing…", comment: "AI working status while speech is transcribed on this Mac")
+    }
     static var suggestionSilences: String {
       string("video-editor.ai.suggestion-silences", defaultValue: "Remove silences", comment: "Quick action chip above the Video Editor AI prompt")
     }
@@ -10393,10 +10444,10 @@ extension L10n {
       format("video-editor.ai.consent-title", defaultValue: "Send this video’s timeline to %@?", comment: "Alert title before the first Video Editor AI prompt goes to an off-device provider. %@ is the provider name", name)
     }
     static func consentMessage(_ host: String) -> String {
-      format("video-editor.ai.consent-message", defaultValue: "To answer, the video’s timeline (clips, zooms, speeds, frame and audio settings) is sent to %@. Snapzy asks once for each provider.", comment: "Alert message before the first Video Editor AI prompt goes to an off-device provider. %@ is the server host", host)
+      format("video-editor.ai.consent-message", defaultValue: "To answer, the video’s timeline (clips, zooms, speeds, frame and audio settings), text read off the screen, what is said (transcribed on this Mac) and, when sending images is on, video frames are sent to %@. Snapzy asks once for each provider.", comment: "Alert message before the first Video Editor AI prompt goes to an off-device provider. %@ is the server host", host)
     }
     static func consentMessageCLI(_ name: String) -> String {
-      format("video-editor.ai.consent-message-cli", defaultValue: "%@ gets the video’s timeline (clips, zooms, speeds, frame and audio settings) and sends it to its model provider. It may also load your own MCP servers, hooks and instructions. Snapzy asks once for each provider.", comment: "Alert message before the first Video Editor AI prompt goes to an agent CLI. %@ is the CLI name", name)
+      format("video-editor.ai.consent-message-cli", defaultValue: "%@ gets the video’s timeline (clips, zooms, speeds, frame and audio settings), text read off the screen, what is said (transcribed on this Mac) and, when sending images is on, video frames, and sends them to its model provider. It may also load your own MCP servers, hooks and instructions. Snapzy asks once for each provider.", comment: "Alert message before the first Video Editor AI prompt goes to an agent CLI. %@ is the CLI name", name)
     }
   }
 

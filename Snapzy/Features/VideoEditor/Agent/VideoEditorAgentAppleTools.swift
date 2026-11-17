@@ -335,7 +335,8 @@ nonisolated struct VideoAppleZoomTool: Tool {
   let bridge: VideoAppleToolBridge
 
   let name = "zoom"
-  let description = "Add, change or remove zoom blocks (z#). Remove every zoom: action remove, ids [all]."
+  let description = "Add, change or remove zoom blocks (z#). Remove every zoom: action remove, ids [all]. "
+    + "Zoom on a button or words on screen: action add, text."
 
   @Generable
   struct Arguments {
@@ -351,6 +352,8 @@ nonisolated struct VideoAppleZoomTool: Tool {
     var place: String?
     @Guide(description: "change or remove: zoom ids like z1, or all")
     var ids: [String]?
+    @Guide(description: "add: words shown on screen to zoom on, like a button label; found in the video")
+    var text: String?
   }
 
   func call(arguments: Arguments) async throws -> String {
@@ -369,6 +372,20 @@ nonisolated struct VideoAppleZoomTool: Tool {
 
     switch arguments.action.lowercased() {
     case "add":
+      if let text = VideoEditorAgentAppleArguments.value(arguments.text) {
+        // The toolbox finds the words and zooms on them; place and mouse don't apply.
+        var payload: [String: Any] = ["text": text]
+        if let level = arguments.level { payload["level"] = level }
+        if let start = VideoEditorAgentAppleArguments.time(arguments.start) { payload["start"] = start }
+        if let seconds = arguments.seconds { payload["duration"] = seconds }
+        let result = try await bridge.call(.addZoom, payload)
+        if !result.isError,
+           let object = try? JSONSerialization.jsonObject(with: Data(result.text.utf8)) as? [String: Any],
+           let start = object["start"] as? Double {
+          try await bridge.show(start)
+        }
+        return result.text
+      }
       guard let start = VideoEditorAgentAppleArguments.time(arguments.start) else {
         return VideoAppleToolBridge.error("add needs start.")
       }

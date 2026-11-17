@@ -64,6 +64,17 @@ final class VideoEditorAgentAnalyzer {
   private var cached: (key: Key, activity: VideoEditorActivity)?
   private var inFlight: (key: Key, task: Task<VideoEditorActivity, Error>)?
 
+  /// On-screen text and frames (`get_frame`, `find_on_screen`). Lives with the analysis so
+  /// its OCR cache outlasts one conversation.
+  let vision: VideoEditorAgentVision
+  /// Speech (`get_transcript`), on-device.
+  let transcriber: VideoEditorAgentTranscriber
+
+  init(vision: VideoEditorAgentVision? = nil, transcriber: VideoEditorAgentTranscriber? = nil) {
+    self.vision = vision ?? VideoEditorAgentVision()
+    self.transcriber = transcriber ?? VideoEditorAgentTranscriber()
+  }
+
   /// The analysis for the open video, from cache when the source hasn't changed.
   func activity(for state: VideoEditorState) async throws -> VideoEditorActivity {
     let key = Self.key(for: state)

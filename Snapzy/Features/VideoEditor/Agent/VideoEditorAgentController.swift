@@ -71,7 +71,9 @@ final class VideoEditorAgentController: ObservableObject {
 
   static let noticeLifetime: TimeInterval = 6
   /// Consent asked for Annotate does not cover video: it sends different data.
-  static let consentScope = "video"
+  /// "media": screen text, speech and frames joined the timeline in phase 6, so an earlier
+  /// yes for the timeline alone is asked again.
+  static let consentScope = "video-media"
 
   @Published var isPromptPresented = false
   @Published var draft = ""
@@ -581,6 +583,9 @@ final class VideoEditorAgentController: ObservableObject {
     case .removeSilences: L10n.VideoEditorAI.statusSilences
     case .speedUpIdle: L10n.VideoEditorAI.statusIdle
     case .autoZoomActivity: L10n.VideoEditorAI.statusAutoZoom
+    case .getFrame: L10n.VideoEditorAI.statusLooking
+    case .findOnScreen: L10n.VideoEditorAI.statusFinding
+    case .getTranscript: L10n.VideoEditorAI.statusTranscribing
     }
   }
 }

@@ -87,7 +87,7 @@ final class AgentCLIProvider: AgentProvider {
     let sceneSize = request.scene?.imageUnitSize
     let image = sendsImage ? request.image : nil
     let bridge = AgentBridge.shared
-    let token = bridge.open(session: session, image: image, sceneSize: sceneSize)
+    let token = bridge.open(session: session, image: image, sceneSize: sceneSize, allowsToolImages: sendsImage)
     defer { bridge.close(token) }
 
     let directory = try Self.workingDirectory(for: kind)

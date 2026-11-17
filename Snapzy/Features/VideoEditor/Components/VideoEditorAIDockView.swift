@@ -19,6 +19,7 @@ import SwiftUI
 struct VideoEditorAIDockView: View {
   @ObservedObject var state: VideoEditorState
   @ObservedObject private var agent: VideoEditorAgentController
+  @ObservedObject private var shortcuts = VideoEditorShortcutManager.shared
   /// Widest the dock may grow (the player width minus margins).
   let maxWidth: CGFloat
 
@@ -62,7 +63,8 @@ struct VideoEditorAIDockView: View {
       AnnotateAIDockOrb(
         isExpanded: isPrompt,
         isWorking: agent.isRunning,
-        label: L10n.VideoEditorAI.askHelp
+        label: L10n.VideoEditorAI.askHelp,
+        help: shortcuts.helpText(L10n.VideoEditorAI.askHelp, for: .aiPrompt)
       ) {
         withAnimation(expandAnimation) { agent.togglePrompt() }
       }

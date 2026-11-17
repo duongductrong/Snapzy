@@ -17,6 +17,15 @@ import Foundation
 nonisolated struct AgentToolResult: Equatable {
   let isError: Bool
   let text: String
+  /// A picture for providers that can look (a video frame). Providers that can't, or may not
+  /// send images, use `text` alone, so it must stand on its own.
+  var image: AgentToolImage? = nil
+
+  func with(image: AgentToolImage?) -> AgentToolResult {
+    var copy = self
+    copy.image = image
+    return copy
+  }
 
   static func success(_ payload: [String: Any]) -> AgentToolResult {
     var body = payload
@@ -42,6 +51,24 @@ nonisolated struct AgentToolResult: Equatable {
       return "{}"
     }
     return String(decoding: data, as: UTF8.self)
+  }
+}
+
+/// A JPEG a tool hands back, already sized for a model (long edge ≤ `AgentEndpointProvider.maximumImageEdge`).
+nonisolated struct AgentToolImage: Equatable {
+  let mimeType: String
+  let base64: String
+  let pixelSize: CGSize
+
+  var dataURL: String { "data:\(mimeType);base64,\(base64)" }
+
+  /// Encodes off the main actor; nil when the image can't be encoded or is too large for the socket.
+  static func jpeg(from image: CGImage) async -> AgentToolImage? {
+    guard let encoded = await AgentEndpointImage.make(from: image, sceneSize: nil),
+          let comma = encoded.dataURL.firstIndex(of: ",") else { return nil }
+    let base64 = String(encoded.dataURL[encoded.dataURL.index(after: comma)...])
+    guard base64.utf8.count <= AgentBridge.maximumSnapshotBase64Bytes else { return nil }
+    return AgentToolImage(mimeType: "image/jpeg", base64: base64, pixelSize: CGSize(width: encoded.pixelSize.width, height: encoded.pixelSize.height))
   }
 }
 

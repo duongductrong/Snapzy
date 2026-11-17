@@ -234,6 +234,7 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 
 - In-memory `undoStack`/`redoStack` of `EditorAction` (max 50) inside `VideoEditorState`; covers zoom add/remove/update, speed add/remove/update/toggle, mute, background changes, and the clip sequence (add/remove/update/move/split — which subsumes trim). Shortcuts: ⌘Z / ⇧⌘Z (toolbar buttons in `VideoEditorToolbarView`).
 - Any recorded action sets `hasUnsavedChanges` → `isDocumentEdited` + close alert.
+- Undo groups: `beginUndoGroup()` / `endUndoGroup()` (nestable) collect actions into one `EditorAction.group`; an empty group pushes nothing, a single action is pushed as is. ⌘Z/redo are ignored while a group is open, and the preview composition rebuilds once when it closes. The AI prompt and its quick actions use one group per run.
 - Continuous zoom/speed drags and settings gestures record one update when the interaction ends. A clamped/no-op update does not publish or add history; undo/redo finalizes any active transaction first.
 
 ## Timeline interaction performance
@@ -247,6 +248,10 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 - Debug builds expose `VideoEditor` signposts when the `perf.signposts` user-default is enabled before launch. Use Instruments to measure pointer handling, model updates, path work and release settling. Close cancels pending performance work.
 - Run `scripts/run-video-editor-performance-probe.sh` for the reproducible CPU matrix, or `--quick` for a shorter equality check. The runner can attach Instruments to a running process with `--attach PID --duration 30 --template 'Time Profiler'`. CPU results isolate camera algorithms; they do not measure native pointer-to-frame latency.
 
+## AI Prompt
+
+Dock over the bottom of the player (orb → prompt, provider chip, quick-action chips, result pill with Undo). The agent edits clips, zooms, speeds, frame and audio through the state's mutators, one undo step per prompt, and can read activity (silence/idle/motion), frames, on-screen text and an on-device transcript. Authoring is locked while it runs; playback stays live. Not for GIFs. Full reference: [AI.md](AI.md#video-editor).
+
 ## Editor Shortcuts (video only)
 
 | Action | Key |
@@ -258,6 +263,10 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 | Set trim end at playhead | `O` |
 | Timeline zoom in/out/fit | `⌘=` / `⌘-` / `⌘0` |
 | Cloud upload | `⌘U` |
+| AI prompt (open / refocus / close) | `⌘K` — configurable (Settings → Shortcuts → Video Editor Actions, `shortcuts.video_editor.ai_prompt`) |
+
+- The single-key shortcuts (Z, S, ⌫, I, O) are off while the AI prompt is open, so typing never edits the timeline. Close the prompt (Esc / ⌘K) to use them again.
+- The AI prompt shortcut cannot take a built-in editor combo (⌘Z, ⇧⌘Z, ⌘S, ⌘U, ⌘B, ⌘=, ⌘-, ⌘0, ⌘C/V/X/A, ⌘W/Q/M/H, ⌘,) or an enabled global hotkey; see [SHORTCUTS.md](SHORTCUTS.md#video-editor-shortcuts).
 
 ## Bottom Bar (HEAD)
 
@@ -289,6 +298,9 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 | `Snapzy/Features/VideoEditor/Components/VideoEditorLeftSidebar.swift` | Left sidebar panels (background canvas settings, zoom item configuration) |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorClipThumbnailCache.swift` | Frame strips for inserted clips, cached per URL |
 | `Snapzy/Features/VideoEditor/Components/VideoEditorBottomBar.swift` | Cancel / cloud-upload / Convert-Save bar |
+| `Snapzy/Features/VideoEditor/Agent/` | AI prompt: toolbox, tool catalog, controller, analyzer, vision/OCR, transcriber, Apple Intelligence tools (see [AI.md](AI.md#source-map)) |
+| `Snapzy/Features/VideoEditor/Components/VideoEditorAIDockView.swift` | AI dock, quick-action chips, result pill |
+| `Snapzy/Features/VideoEditor/Services/VideoEditorShortcutManager.swift` | Configurable editor action shortcuts (AI prompt) and reserved editor combos |
 | `Snapzy/Services/Capture/RecordingMetadata.swift` | Metadata consumed by Follow Mouse and multitrack audio |
 
 ## Related docs
@@ -296,3 +308,4 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 - [`RECORDING.md`](RECORDING.md) — recording pipeline, GIF conversion, Smart Camera metadata format and store
 - [`CAPTURE.md`](CAPTURE.md) — post-capture routing, Quick Access actions, history restore
 - [`STRUCTURE.md`](STRUCTURE.md) — runtime map and persistence layout
+- [`AI.md`](AI.md) — AI prompt providers, tools, privacy

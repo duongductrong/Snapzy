@@ -157,12 +157,20 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       guard state?.isExporting != true else { return }
       state?.togglePlayback()
     }
+    (window as? VideoEditorWindow)?.onAIPromptShortcut = { [weak state, weak window] in
+      guard let state, !state.isExporting else { return false }
+      let agent = state.agent
+      guard agent.isAvailable else { return false }
+      agent.handleShortcut(isFieldEditing: PromptTextField.isEditing(in: window))
+      return true
+    }
     window?.contentView = NSHostingView(rootView: mainView)
   }
 
   private func setupEmptyContent() {
     bindDocumentEditedState(to: nil)
     (window as? VideoEditorWindow)?.onTogglePlayback = nil
+    (window as? VideoEditorWindow)?.onAIPromptShortcut = nil
     let emptyView = VideoEditorEmptyStateView { [weak self] url, originalURL in
       self?.onVideoLoaded?(url, originalURL)
     }

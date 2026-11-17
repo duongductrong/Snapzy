@@ -29,10 +29,22 @@ nonisolated enum VideoEditorAgentToolName: String, CaseIterable {
   case removeSilences = "remove_silences"
   case speedUpIdle = "speed_up_idle"
   case autoZoomActivity = "auto_zoom_activity"
+  case getFrame = "get_frame"
+  case findOnScreen = "find_on_screen"
+  case getTranscript = "get_transcript"
 
   /// Read-only tools are not paced and don't count as changes. `seek` only moves the playhead.
   var isReadOnly: Bool {
-    self == .getTimeline || self == .seek || self == .getActivity
+    switch self {
+    case .getTimeline, .seek, .getActivity, .getFrame, .findOnScreen, .getTranscript: true
+    default: false
+    }
+  }
+
+  /// Looks at frames or listens to speech, which takes a while (`VideoEditorAgentVision`,
+  /// `VideoEditorAgentTranscriber`). `add_zoom` does too when it is given `text`.
+  var readsMedia: Bool {
+    self == .getFrame || self == .findOnScreen || self == .getTranscript
   }
 
   /// Reads the recording's audio and cursor first (`VideoEditorAgentAnalyzer`).
@@ -166,14 +178,17 @@ nonisolated enum VideoEditorAgentToolCatalog {
     ),
     spec(
       .addZoom,
-      "Zoom in for a while. Without center it follows the mouse when the recording has mouse data, else zooms on the middle.",
+      "Zoom in for a while. Give text to zoom on words or a button on screen: it is found in the video and the zoom "
+        + "starts when it appears (after start, when given). Without center or text it follows the mouse when the "
+        + "recording has mouse data, else zooms on the middle.",
       object([
-        ("start", time("When the zoom starts.")),
+        ("start", time("When the zoom starts. Required unless text is given.")),
         ("duration", number("Seconds, \(fmt(ZoomSegment.minDuration))–\(fmt(ZoomSegment.maxDuration)) (default \(fmt(ZoomSegment.defaultDuration))).")),
         ("level", number("Zoom factor \(fmt(ZoomSegment.minZoomLevel))–\(fmt(ZoomSegment.maxZoomLevel)) (default \(fmt(ZoomSegment.defaultZoomLevel))).")),
         ("center", point("Point to zoom on, [x, y] from 0 to 1, origin at the top left.")),
         ("follow_mouse", bool("Follow the recorded mouse instead of a fixed center.")),
-      ], required: ["start"])
+        ("text", string("Words shown on screen to zoom on, like a button label (\"Deploy\").")),
+      ])
     ),
     spec(
       .updateZoom,
@@ -276,6 +291,31 @@ nonisolated enum VideoEditorAgentToolCatalog {
         ("max_zooms", integer("At most this many zooms (default \(VideoEditorAgentToolbox.autoZoomDefaults.maxZooms)).")),
         ("start", time("Only from here.")),
         ("end", time("Only up to here.")),
+      ])
+    ),
+    spec(
+      .getFrame,
+      "Look at the recording at a time: the frame as an image when you can see images, and the text on it "
+        + "with boxes [x, y, w, h] from 0 to 1 (top left), the same space as zoom centers. Raw footage, without zoom or background.",
+      object([("time", time("Which moment."))], required: ["time"])
+    ),
+    spec(
+      .findOnScreen,
+      "Find when and where words appear on screen (a button, a title, an error). Reads frames across the video, "
+        + "so it takes a few seconds; narrow it with start and end when you can.",
+      object([
+        ("text", string("The words to find; case and accents don't matter.")),
+        ("start", time("Only from here.")),
+        ("end", time("Only up to here.")),
+      ], required: ["text"])
+    ),
+    spec(
+      .getTranscript,
+      "What is said in the recording, as timed phrases (transcribed on this Mac; the first call takes a while).",
+      object([
+        ("start", time("Only from here.")),
+        ("end", time("Only up to here.")),
+        ("language", string("Spoken language, BCP-47 like en-US or vi-VN (default: the Mac's language).")),
       ])
     ),
   ]

@@ -55,7 +55,7 @@ The TOML file covers portable app preferences:
 - History: retention, maximum count, floating panel layout and filter.
 - Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, share link style (`[cloud] share_link_style`: `"descriptive"` or `"short"`, default `"descriptive"`, S3 and R2 only), and upload window position.
 - Annotate preferences.
-- Global, overlay, Annotate tool, and Annotate action shortcuts.
+- Global, overlay, Annotate tool, Annotate action, and Video Editor action shortcuts.
 
 The export intentionally excludes secrets and machine-private state:
 
@@ -268,6 +268,11 @@ enabled = true
 key = "k"
 modifiers = ["command"]
 
+[shortcuts.video_editor.ai_prompt]
+enabled = true
+key = "k"
+modifiers = ["command"]
+
 [shortcuts.quick_access.edit_latest_capture]
 enabled = false
 key = "return"
@@ -292,6 +297,13 @@ modifiers = ["command"]
 `⌘`, `⌥`, or `⌃` in `modifiers` — bare and shift-only combos are rejected on import,
 as is `fn`. `key = ""` clears a binding. Named keys accept either the exported symbol
 or a readable word (`"delete"`/`"⌫"`, `"return"`/`"↩"`, `"esc"`/`"⎋"`, `"tab"`, arrows).
+
+`shortcuts.video_editor.ai_prompt` is the Video Editor's Ask AI shortcut. It needs a
+modifier, and the editor's built-in combos (`⌘Z`, `⇧⌘Z`, `⌘S`, `⌘U`, `⌘B`, `⌘=`, `⌘-`,
+`⌘0`, `⌘C`/`⌘V`/`⌘X`/`⌘A`, `⌘W`/`⌘Q`/`⌘M`/`⌘H`/`⌘,`) are rejected on import. `key = ""`
+clears it; `enabled = false` turns it off without losing the binding. Import does not
+check global hotkeys (same as Annotate actions): an enabled global shortcut with the same
+combo wins, and Settings → Shortcuts flags the clash the next time the row is edited.
 
 ## Manual Testing
 

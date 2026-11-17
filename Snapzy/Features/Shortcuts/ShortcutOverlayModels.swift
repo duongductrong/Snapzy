@@ -31,6 +31,7 @@ enum ShortcutOverlayContentBuilder {
   static func buildSections() -> [ShortcutOverlaySection] {
     let keyboard = KeyboardShortcutManager.shared
     let annotate = AnnotateShortcutManager.shared
+    let videoEditor = VideoEditorShortcutManager.shared
 
     return [
       ShortcutOverlaySection(
@@ -97,6 +98,21 @@ enum ShortcutOverlayContentBuilder {
             subtitle: toolContextSubtitle(for: tool),
             isEnabled: annotate.isShortcutEnabled(for: tool),
             display: display
+          )
+        }
+      ),
+      ShortcutOverlaySection(
+        id: "video-editor-actions",
+        title: L10n.ShortcutOverlay.videoEditorActions,
+        items: VideoEditorActionShortcutKind.allCases.map { kind in
+          let shortcut = videoEditor.shortcut(for: kind)
+          return ShortcutOverlayItem(
+            id: "video-editor-action-\(kind.rawValue)",
+            icon: "sparkles",
+            title: kind.displayName,
+            subtitle: L10n.ShortcutOverlay.insideVideoEditor,
+            isEnabled: videoEditor.isActionShortcutEnabled(for: kind),
+            display: shortcut.map { .keycaps($0.displayParts) } ?? .text(L10n.Common.none)
           )
         }
       ),

@@ -240,6 +240,8 @@ struct AnnotateAIDockOrb: View {
   let isWorking: Bool
   /// Tooltip and VoiceOver name at rest.
   var label: String = L10n.AnnotateTranslate.aiTools
+  /// Tooltip while collapsed; falls back to `label` (e.g. to append the shortcut).
+  var help: String? = nil
   let action: () -> Void
 
   @State private var isHovered = false
@@ -279,7 +281,7 @@ struct AnnotateAIDockOrb: View {
     .onHover { hovering in
       withAnimation(LiquidGlassTokens.hoverSpring) { isHovered = hovering }
     }
-    .help(isExpanded ? L10n.Common.close : label)
+    .help(isExpanded ? L10n.Common.close : (help ?? label))
     .accessibilityLabel(label)
     .accessibilityAddTraits(isExpanded ? .isSelected : [])
   }

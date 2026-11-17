@@ -1,3 +1,4 @@
 "NSMicrophoneUsageDescription" = "Snapzy זקוקה לגישה למיקרופון כדי להקליט שמע יחד עם הקלטות המסך שלך.";
 "NSCameraUsageDescription" = "Snapzy זקוקה לגישה למצלמה כדי להוסיף שכבת מצלמה להקלטות המסך שלך.";
 "NSScreenCaptureUsageDescription" = "Snapzy זקוקה להרשאת הקלטת מסך כדי לצלם מסך ולהקליט את המסך שלך.";
+"NSSpeechRecognitionUsageDescription" = "‏Snapzy מתמללת את ההקלטות שלכם במק הזה כשאתם שואלים את ה-AI של עורך הווידאו על מה שנאמר.";

@@ -42,6 +42,49 @@ extension SnapzyConfigurationImporter {
     collectQuickAccessCardActionShortcuts(&reader, mutations: &mutations)
     collectAnnotateTools(&reader, mutations: &mutations)
     collectAnnotateActions(&reader, mutations: &mutations)
+    for kind in VideoEditorActionShortcutKind.allCases {
+      collectVideoEditorAction(&reader, kind: kind, mutations: &mutations)
+    }
+  }
+
+  private static func collectVideoEditorAction(
+    _ reader: inout SnapzyConfigurationReader,
+    kind: VideoEditorActionShortcutKind,
+    mutations: inout [() -> Void]
+  ) {
+    let section = "shortcuts.video_editor.\(kind.configKey)"
+    let path = ["shortcuts", "video_editor", kind.configKey]
+    let key = reader.string(path + ["key"])
+    let modifiers = reader.stringArray(path + ["modifiers"])
+    let enabled = reader.bool(path + ["enabled"])
+
+    guard key != nil || modifiers != nil || enabled != nil else { return }
+    guard key != nil || modifiers == nil else {
+      reader.error("\(section).modifiers requires key")
+      return
+    }
+
+    if let key, key.isEmpty {
+      mutations.append { VideoEditorShortcutManager.shared.setShortcut(nil, for: kind) }
+    } else if let key {
+      guard let shortcut = SnapzyConfigurationShortcutCodec.shortcut(
+        key: key,
+        modifiers: modifiers ?? [],
+        requireModifier: true
+      ) else {
+        reader.error("\(section) has an invalid shortcut")
+        return
+      }
+      guard !VideoEditorShortcutManager.reservedShortcuts.contains(shortcut) else {
+        reader.error("\(section) uses a shortcut the Video Editor reserves")
+        return
+      }
+      mutations.append { VideoEditorShortcutManager.shared.setShortcut(shortcut, for: kind) }
+    }
+
+    if let enabled {
+      mutations.append { VideoEditorShortcutManager.shared.setActionShortcutEnabled(enabled, for: kind) }
+    }
   }
 
   private static func collectQuickAccessShortcut(

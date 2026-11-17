@@ -257,6 +257,12 @@ enum SnapzyConfigurationDefaultDocument {
       writer.value("enabled", true)
       writeShortcutValues(&writer, shortcut: annotateActionShortcut(for: kind))
     }
+
+    for kind in VideoEditorActionShortcutKind.allCases {
+      writer.section("shortcuts.video_editor.\(kind.configKey)")
+      writer.value("enabled", true)
+      writeShortcutValues(&writer, shortcut: VideoEditorShortcutManager.defaultShortcut(for: kind))
+    }
   }
 
   private static func writeAfterCapture(_ writer: inout SimpleTOMLWriter, type: CaptureType) {

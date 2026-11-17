@@ -287,7 +287,7 @@ final class VideoEditorAgentControllerTests: XCTestCase {
     controller.submit()
     await waitUntil { !provider.requests.isEmpty && !controller.isRunning }
     XCTAssertEqual(asked, 1)
-    XCTAssertTrue(AgentRemoteConsent(defaults: defaults, scope: "video").has(destination))
+    XCTAssertTrue(AgentRemoteConsent(defaults: defaults, scope: VideoEditorAgentController.consentScope).has(destination))
 
     controller.draft = "again"
     controller.submit()
