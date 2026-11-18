@@ -430,6 +430,21 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testCaptureDuringOpeningPreservesShelfForRestoration() async throws {
+    try await withCaptureWindows { shelf, overlay, _, screen in
+      shelf.show(on: screen)
+      let panel = try XCTUnwrap(self.hangingWindow)
+      overlay.orderFrontRegardless()
+      try await Task.sleep(nanoseconds: 250_000_000)
+      XCTAssertFalse(shelf.isVisible)
+      overlay.orderOut(nil)
+      try await Task.sleep(nanoseconds: 250_000_000)
+      XCTAssertTrue(shelf.isVisible)
+      XCTAssertTrue(shelf.isRevealed)
+      XCTAssertTrue(self.hangingWindow === panel)
+    }
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
