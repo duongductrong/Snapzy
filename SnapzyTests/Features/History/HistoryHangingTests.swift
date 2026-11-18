@@ -369,6 +369,17 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertFalse(shelf.isMonitoring)
   }
 
+  func testCaptureSuspensionPreservesExplicitEdgeDismissal() {
+    var state = HistoryEdgeHoverState()
+    state.dismiss()
+    state.suspend(atEdge: true)
+    XCTAssertEqual(update(&state, edge: true, time: 1), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 2), .none)
+    state.suspend(atEdge: false)
+    XCTAssertEqual(update(&state, edge: true, time: 3), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 3.2), .reveal)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
