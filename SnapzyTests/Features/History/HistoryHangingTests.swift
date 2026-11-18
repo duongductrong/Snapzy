@@ -301,6 +301,16 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertEqual(update(&state, edge: true, time: 4.2), .reveal)
   }
 
+  func testEscapeDoesNotImmediatelyReopenAtEdge() {
+    var state = HistoryEdgeHoverState()
+    state.dismiss()
+    XCTAssertEqual(update(&state, edge: true, time: 0), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 10), .none)
+    XCTAssertEqual(update(&state, edge: false, time: 11), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 12), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 12.2), .reveal)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
