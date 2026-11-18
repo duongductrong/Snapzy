@@ -380,6 +380,14 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertEqual(update(&state, edge: true, time: 3.2), .reveal)
   }
 
+  func testCaptureSuspensionRestartsDwellWithoutRequiringEdgeExit() {
+    var state = HistoryEdgeHoverState()
+    XCTAssertEqual(update(&state, edge: true, time: 0), .none)
+    state.suspend(atEdge: true)
+    XCTAssertEqual(update(&state, edge: true, time: 1), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 1.2), .reveal)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
