@@ -710,6 +710,108 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testNativeHangingHistoryInteraction() throws {
+    guard ProcessInfo.processInfo.environment["SNAPZY_HANGING_INTERACTIVE"] == "1" else {
+      throw XCTSkip("Opt-in native History interaction")
+    }
+    guard !NSScreen.screens.isEmpty else { throw XCTSkip("Requires WindowServer") }
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("HangingHistory-\(UUID())")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let history = HistoryFloatingManager.shared
+    let shelf = HistoryHangingManager.shared
+    let store = CaptureHistoryStore.shared
+    let style = history.displayStyle
+    let enabled = history.isEnabled
+    let oldDefaults = store.userDefaults
+    let oldFilter = history.defaultFilter
+    let oldMaximum = history.maxDisplayedItems
+    history.defaultFilter = nil
+    history.maxDisplayedItems = 20
+    let defaultsName = "HangingHistory-\(UUID())"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: defaultsName))
+    defaults.set(true, forKey: PreferencesKeys.historyEnabled)
+    store.userDefaults = defaults
+    var ids: [UUID] = []
+    let window = NSWindow(contentRect: CGRect(x: 400, y: 120, width: 720, height: 620),
+                          styleMask: [.titled, .closable], backing: .buffered, defer: false)
+    window.isReleasedWhenClosed = false
+    window.title = "History Settings Test"
+    let originalAppearance = NSApp.appearance
+    NSApp.appearance = NSAppearance(named: .darkAqua)
+    defer {
+      window.close()
+      shelf.stop()
+      history.hide()
+      history.displayStyle = style
+      history.isEnabled = enabled
+      store.remove(ids: ids)
+      store.userDefaults = oldDefaults
+      history.defaultFilter = oldFilter
+      history.maxDisplayedItems = oldMaximum
+      defaults.removePersistentDomain(forName: defaultsName)
+      NSApp.appearance = originalAppearance
+      try? FileManager.default.removeItem(at: directory)
+    }
+    for index in 0 ..< 6 {
+      let url = try makeImage(index: index, directory: directory)
+      let record = CaptureHistoryRecord(id: UUID(), filePath: url.path, fileName: url.lastPathComponent,
+                                        captureType: .screenshot, fileSize: 1000,
+                                        capturedAt: Date().addingTimeInterval(-Double(index) * 60),
+                                        width: 640, height: 400, thumbnailPath: nil, isDeleted: false)
+      ids.append(record.id)
+      store.add(record)
+    }
+    store.refreshRecords()
+    history.displayStyle = .traditional
+    shelf.start()
+    window.contentView = NSHostingView(rootView: HistorySettingsView())
+    window.makeKeyAndOrderFront(nil)
+    NSApp.activate(ignoringOtherApps: true)
+    print("HANGING_UI_READY pid=\(ProcessInfo.processInfo.processIdentifier)")
+    try waitForInteraction { history.displayStyle == .hanging }
+    print("HANGING_STYLE_SELECTED monitoring=\(shelf.isMonitoring)")
+    try waitForInteraction { shelf.isVisible && shelf.isRevealed }
+    print("HANGING_REVEALED")
+    try waitForInteraction { !shelf.isVisible }
+    print("HANGING_AUTOHIDDEN")
+    try waitForInteraction { shelf.isVisible && shelf.isRevealed }
+    print("HANGING_REVEALED_AGAIN")
+    try waitForInteraction { shelf.keepOpen }
+    print("HANGING_KEEP_OPEN")
+    try waitForInteraction { !shelf.pinnedIDs.isEmpty }
+    print("HANGING_PINNED")
+    try waitForInteraction { self.previewWindow != nil }
+    let preview = try XCTUnwrap(previewWindow)
+    XCTAssertTrue(preview.ignoresMouseEvents)
+    XCTAssertFalse(preview.canBecomeKey)
+    XCTAssertTrue(NSScreen.screens.contains { $0.visibleFrame.contains(preview.frame) })
+    print("HANGING_PREVIEW")
+    try waitForInteraction { self.previewWindow == nil }
+    let url = try makeImage(index: 6, directory: directory)
+    let newest = CaptureHistoryRecord(id: UUID(), filePath: url.path, fileName: url.lastPathComponent,
+                                      captureType: .screenshot, fileSize: 1000, capturedAt: Date(),
+                                      width: 640, height: 400, thumbnailPath: nil, isDeleted: false)
+    ids.append(newest.id)
+    store.add(newest)
+    store.refreshRecords()
+    print("HANGING_INSERTED id=\(newest.id)")
+    try waitForInteraction { !shelf.keepOpen }
+    shelf.toggleKeepOpen()
+    for type: CaptureHistoryType in [.video, .gif] {
+      history.defaultFilter = type
+      let settledAt = Date().addingTimeInterval(0.8)
+      try waitForInteraction { Date() >= settledAt }
+      print("HANGING_EMPTY_\(type.rawValue.uppercased())")
+      try waitForInteraction { !shelf.keepOpen }
+      shelf.toggleKeepOpen()
+      XCTAssertNil(previewWindow)
+    }
+    history.defaultFilter = nil
+    print("HANGING_FINISHED")
+    try waitForInteraction { history.isTraditionalPanelVisible }
+    XCTAssertEqual(store.records.filter { ids.contains($0.id) }.count, 7)
+  }
+
   private var previewWindow: NSWindow? {
     NSApp.windows.first { $0.isVisible && $0.identifier?.rawValue == "SnapzyHistoryPreview" }
   }
