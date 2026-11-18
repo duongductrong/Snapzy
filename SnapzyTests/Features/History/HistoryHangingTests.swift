@@ -115,6 +115,14 @@ final class HistoryHangingTests: XCTestCase {
     )
   }
 
+  func testBurstAndDeletedRecordsDoNotOverflowTheRow() {
+    var records = (0 ..< 40).map { selectionRecord(index: $0) }
+    records[0].isDeleted = true
+    let visible = HistoryHangingLayout.visibleRecords(records, filter: nil, maximum: 20, width: 608)
+    XCTAssertEqual(visible.map(\.id), Array(records.dropFirst().prefix(2)).map(\.id))
+    XCTAssertFalse(visible.contains { $0.isDeleted })
+  }
+
   private func selectionRecord(index: Int, type: CaptureHistoryType = .screenshot) -> CaptureHistoryRecord {
     CaptureHistoryRecord(id: UUID(), filePath: "/tmp/history-selection-\(index).png", fileName: "Capture \(index)",
                          captureType: type, fileSize: 1000, capturedAt: Date().addingTimeInterval(-Double(index)),
