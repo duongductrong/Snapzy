@@ -31,6 +31,10 @@ struct VideoEditorLeftSidebar: View {
       VideoEditorCameraSettingsPanel(state: state)
         .frame(width: 240)
         .frame(maxHeight: .infinity)
+    case .captions:
+      VideoEditorCaptionsPanel(state: state)
+        .frame(width: 240)
+        .frame(maxHeight: .infinity)
     }
   }
 }

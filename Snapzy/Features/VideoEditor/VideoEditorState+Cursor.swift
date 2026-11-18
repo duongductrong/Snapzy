@@ -25,22 +25,27 @@ extension VideoEditorState {
   }
 
   /// Studio layers for an export with the given output → sequence mapping. GIF output
-  /// and recordings without editable cursor data get an empty recipe.
+  /// gets an empty recipe; cursor/camera need a Studio recording, captions do not.
   func makeStudioRecipe(
     sequenceMap: TimelineSequenceMap,
     playbackPlacements: [TimelineSequence.Placement]
   ) -> VideoEditorStudioRecipe {
-    guard !isGIF, let metadata = recordingMetadata else { return .empty }
+    guard !isGIF else { return .empty }
     let mapping = VideoEditorSourceTimeMapping(sequenceMap: sequenceMap, playbackPlacements: playbackPlacements)
     var layers: [any VideoEditorStudioLayer] = []
-    if hasEditableCursor,
-       let cursor = cursorSprites.makeLayer(metadata: metadata, settings: cursorSettings, mapping: mapping),
-       cursor.isActive {
-      layers.append(cursor)
+    if let metadata = recordingMetadata {
+      if hasEditableCursor,
+         let cursor = cursorSprites.makeLayer(metadata: metadata, settings: cursorSettings, mapping: mapping),
+         cursor.isActive {
+        layers.append(cursor)
+      }
+      if hasEditableCamera, let source = metadata.cameraSource, cameraSettings.isVisible {
+        layers.append(VideoEditorCameraLayer(settings: cameraSettings, source: source, mapping: mapping))
+      }
     }
-    if hasEditableCamera, let source = metadata.cameraSource, cameraSettings.isVisible {
-      layers.append(VideoEditorCameraLayer(settings: cameraSettings, source: source, mapping: mapping))
-    }
+    // Captions work for any video with speech, Studio recording or not; drawn last (on top).
+    let captionLayer = VideoEditorCaptionLayer(captions: captions, mapping: mapping, sequenceMap: sequenceMap)
+    if captionLayer.isActive { layers.append(captionLayer) }
     return VideoEditorStudioRecipe(layers: layers)
   }
 

@@ -7145,6 +7145,170 @@ nonisolated enum L10n {
       defaultValue: "Reset to Recording Layout",
       comment: "Video editor camera panel reset button"
     )
+    static let captionsSection = string(
+      "video-editor.captions-section",
+      defaultValue: "Captions",
+      comment: "Video editor captions panel and timeline track title"
+    )
+    static let captionsHint = string(
+      "video-editor.captions-hint",
+      defaultValue: "Create captions from the speech in this video. Speech is recognized on this Mac.",
+      comment: "Video editor captions panel explanation before captions exist"
+    )
+    static let captionsUnavailableNotice = string(
+      "video-editor.captions-unavailable-notice",
+      defaultValue: "Captions need a video with sound.",
+      comment: "Video editor captions panel notice when the video has no audio or is a GIF"
+    )
+    static let captionsGenerate = string(
+      "video-editor.captions-generate",
+      defaultValue: "Generate Captions",
+      comment: "Video editor button that creates captions from speech"
+    )
+    static let captionsRegenerate = string(
+      "video-editor.captions-regenerate",
+      defaultValue: "Regenerate",
+      comment: "Video editor button that replaces captions with newly generated ones"
+    )
+    static let captionsLanguage = string(
+      "video-editor.captions-language",
+      defaultValue: "Language",
+      comment: "Video editor captions speech language picker label"
+    )
+    static func captionsLanguageAutomatic(_ name: String) -> String {
+      format(
+        "video-editor.captions-language-automatic",
+        defaultValue: "Automatic (%@)",
+        comment: "Video editor captions language option that follows the app language. %@ is the resolved language name.",
+        name
+      )
+    }
+    static let captionsShow = string(
+      "video-editor.captions-show",
+      defaultValue: "Show on Video",
+      comment: "Video editor toggle that shows captions on the video and burns them into the export"
+    )
+    static let captionsPosition = string(
+      "video-editor.captions-position",
+      defaultValue: "Position",
+      comment: "Video editor captions position picker label"
+    )
+    static let captionsPositionBottom = string(
+      "video-editor.captions-position-bottom",
+      defaultValue: "Bottom",
+      comment: "Video editor captions position option"
+    )
+    static let captionsPositionTop = string(
+      "video-editor.captions-position-top",
+      defaultValue: "Top",
+      comment: "Video editor captions position option"
+    )
+    static let captionsTextSize = string(
+      "video-editor.captions-text-size",
+      defaultValue: "Text Size",
+      comment: "Video editor captions text size slider"
+    )
+    static let captionsBackground = string(
+      "video-editor.captions-background",
+      defaultValue: "Background",
+      comment: "Video editor captions background opacity slider"
+    )
+    static let captionsBold = string(
+      "video-editor.captions-bold",
+      defaultValue: "Bold Text",
+      comment: "Video editor captions bold text toggle"
+    )
+    static let captionsTextColor = string(
+      "video-editor.captions-text-color",
+      defaultValue: "Text Color",
+      comment: "Video editor captions text color picker"
+    )
+    static let captionsHideFastSpeed = string(
+      "video-editor.captions-hide-fast-speed",
+      defaultValue: "Hide When Faster Than 2×",
+      comment: "Video editor toggle hiding captions where the video plays faster than 2x"
+    )
+    static let captionsExportSRT = string(
+      "video-editor.captions-export-srt",
+      defaultValue: "Export SRT…",
+      comment: "Video editor button that saves captions as an SRT file"
+    )
+    static let captionsExportVTT = string(
+      "video-editor.captions-export-vtt",
+      defaultValue: "Export WebVTT…",
+      comment: "Video editor button that saves captions as a WebVTT file"
+    )
+    static let captionsExportFailed = string(
+      "video-editor.captions-export-failed",
+      defaultValue: "The caption file could not be saved.",
+      comment: "Video editor captions panel message when a subtitle file cannot be written"
+    )
+    static let captionsClear = string(
+      "video-editor.captions-clear",
+      defaultValue: "Remove All Captions",
+      comment: "Video editor button removing all captions"
+    )
+    static let captionsDelete = string(
+      "video-editor.captions-delete",
+      defaultValue: "Delete Caption",
+      comment: "Video editor help text for the button deleting one caption"
+    )
+    static let captionsNoSpeech = string(
+      "video-editor.captions-no-speech",
+      defaultValue: "No speech was found in this video.",
+      comment: "Video editor captions message when transcription found no words"
+    )
+    static func captionsPartial(_ count: Int) -> String {
+      format(
+        "video-editor.captions-partial",
+        defaultValue: "%d part(s) of the audio could not be recognized and have no captions.",
+        comment: "Video editor captions message when some audio chunks failed. %d is the number of failed parts.",
+        count
+      )
+    }
+    static let captionsErrorNoAudio = string(
+      "video-editor.captions-error-no-audio",
+      defaultValue: "This video has no audio to transcribe.",
+      comment: "Video editor captions error when the video has no audio track"
+    )
+    static let captionsErrorDenied = string(
+      "video-editor.captions-error-denied",
+      defaultValue: "Speech Recognition is off for Snapzy. Allow it in System Settings › Privacy & Security › Speech Recognition, then try again.",
+      comment: "Video editor captions error when Speech Recognition permission is off"
+    )
+    static func captionsErrorUnsupported(_ name: String) -> String {
+      format(
+        "video-editor.captions-error-unsupported",
+        defaultValue: "On-device speech recognition isn’t available for %@ on this Mac. Choose another language.",
+        comment: "Video editor captions error when the language has no on-device recognizer. %@ is the language name.",
+        name
+      )
+    }
+    static let captionsErrorFailed = string(
+      "video-editor.captions-error-failed",
+      defaultValue: "Captions could not be generated. Try again.",
+      comment: "Video editor captions error for an unexpected transcription failure"
+    )
+    static let generatingCaptions = string(
+      "video-editor.generating-captions",
+      defaultValue: "Generating Captions",
+      comment: "Video editor progress overlay title while captions are generated"
+    )
+    static let transcribingSpeech = string(
+      "video-editor.transcribing-speech",
+      defaultValue: "Recognizing speech…",
+      comment: "Video editor progress overlay status while speech is transcribed"
+    )
+    static let downloadingSpeechModel = string(
+      "video-editor.downloading-speech-model",
+      defaultValue: "Downloading Speech Model",
+      comment: "Video editor progress overlay title while the speech model downloads"
+    )
+    static let downloadingSpeechModelDetail = string(
+      "video-editor.downloading-speech-model-detail",
+      defaultValue: "Needed once per language.",
+      comment: "Video editor progress overlay status while the on-device speech model downloads"
+    )
     static let zoomSettings = string(
       "video-editor.zoom-settings",
       defaultValue: "Zoom Settings",

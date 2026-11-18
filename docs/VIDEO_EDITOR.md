@@ -207,6 +207,17 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 - Preview (D2, simplified): `VideoEditorCameraPreviewController` owns a second, muted `AVPlayer` on the sidecar, whose time axis is recording source time. On each playback tick the playhead is mapped to source time (same mapping as the cursor): while playing it runs at the current speed segment's rate and re-seeks when drift exceeds 120 ms; while paused/scrubbing it seeks exactly, coalescing seeks. Rendered by an `AVPlayerLayer` (corner mask and mirroring in Core Animation) in the canvas-space overlay host; hidden over inserted clips, trimmed footage and gaps.
 - Not yet: dragging the camera directly on the preview, hide-camera time segments on the timeline, session persistence (phase 6).
 
+## Captions
+
+- Work for any video with audio (not only Studio recordings); not for GIF. Left rail panel `captions.bubble` (`VideoEditorCaptionsPanel` + `VideoEditorCaptionSegmentList`) and a Captions timeline track (`VideoEditorCaptionTimelineTrack`) that appears once captions exist.
+- Model: `VideoEditorCaptions` = `[CaptionSegment]` in SOURCE time of the primary recording + `VideoEditorCaptionSettings` (show on video, language, text size as a fraction of the video height, bold, text color, background pill opacity — below 20 % the text gets an outline instead —, top/bottom + margin, 42 chars × 2 lines, hide faster than 2×). Cuts, reorder and speed never need a regenerate. Every edit is one undo step (`EditorAction.updateCaptions`; slider drags and timeline drags commit once; Generate/Regenerate is one checkpoint).
+- Generate: `VideoEditorState.generateCaptions()` → `VideoEditorTranscriptService` (SpeechAnalyzer on macOS 26 → chunked SFSpeech on-device; microphone track preferred) → `VideoEditorCaptionSegmenter`. Runs in the progress overlay as `.generateCaptions` / `.downloadSpeechModel` with a Cancel button. Language: panel choice → app language (with the Mac's region when they match) → Mac locale. Errors and "x parts could not be recognized" show in the panel (`captionNotice`). Remote (opt-in) transcription is not offered in the UI yet.
+- Layout: `VideoEditorCaptionLayout` (CoreText, sizes relative to the video rect) + `VideoEditorCaptionRenderer` (bitmap) are shared by preview and export, so line breaks and the box match. `VideoEditorCaptionImageCache` renders each caption once.
+- Preview: `VideoEditorCaptionOverlayView` in the canvas-space host above the camera, playhead → source time via `cursorSourceTime(atSequence:)`, rate via `previewSourceRate`.
+- Export: `VideoEditorCaptionLayer` (canvas space, last in the recipe) is added by `makeStudioRecipe` whenever captions are shown; output → source through `VideoEditorSourceTimeMapping`.
+- SRT / WebVTT: panel buttons; `VideoEditorCaptionResolver.outputCues` maps source → output time over the playable placements and `TimelineSequenceMap` (cut footage dropped, a caption split by a cut becomes two cues, back-to-back pieces merge, speed shrinks cues), written by `VideoEditorSubtitleWriter`. Independent of "Show on Video".
+- Not yet: session persistence, agent tools, caption language preference (phase 6).
+
 ## Background and Padding
 
 - `BackgroundStyle` (shared `Snapzy/Features/Annotate/Models/AnnotateBackgroundStyle.swift`): `none`, `gradient`, `wallpaper(URL)`, `blurred(URL)`, `solidColor`. Combined with padding, shadow, corner radius, alignment, and aspect controls in the left sidebar's Background panel (`VideoEditorVideoBackgroundSidebarView`); background changes are undoable.

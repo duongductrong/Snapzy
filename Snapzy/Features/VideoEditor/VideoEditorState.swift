@@ -19,6 +19,7 @@ enum VideoEditorLeftSidebarPanel: Hashable, CaseIterable {
   case zoom
   case cursor
   case camera
+  case captions
 }
 
 /// AVPlayer callbacks and schedule access are serialized on `queue`. Observer
@@ -273,6 +274,7 @@ enum EditorAction: Equatable {
   case updateExportSettings(old: ExportSettings, new: ExportSettings)
   case updateCursor(old: VideoEditorCursorSettings, new: VideoEditorCursorSettings)
   case updateCamera(old: VideoEditorCameraSettings, new: VideoEditorCameraSettings)
+  case updateCaptions(old: VideoEditorCaptions, new: VideoEditorCaptions)
   /// Several actions that undo and redo as one step (one AI prompt).
   case group([EditorAction])
 }
@@ -722,6 +724,13 @@ final class VideoEditorState: ObservableObject {
   private(set) var cameraSourceURL: URL?
   /// Second, muted player on the camera sidecar for the preview.
   private(set) var cameraPreview: VideoEditorCameraPreviewController?
+  /// Captions (segments in source time + style); see `VideoEditorState+Captions`.
+  @Published internal(set) var captions = VideoEditorCaptions.empty
+  internal(set) var initialCaptions = VideoEditorCaptions.empty
+  /// Caption generation in flight (transcription), cancellable from the progress overlay.
+  internal(set) var captionTask: Task<Void, Never>?
+  /// Last caption generation problem or partial result, shown in the captions panel.
+  @Published internal(set) var captionNotice: String?
   /// Live Studio click sound for the preview (engine starts only when used).
   let clickSoundPlayer = VideoEditorClickSoundPlayer()
   @Published private(set) var autoFocusPaths: [UUID: [AutoFocusCameraSample]] = [:]
@@ -1980,13 +1989,14 @@ final class VideoEditorState: ObservableObject {
     initialBackgroundAlignment = backgroundAlignment
     initialBackgroundAspectRatio = backgroundAspectRatio
     initialExportSettings = exportSettings
+    initialCaptions = captions
     clearUndoHistory()
   }
 
   // MARK: - Undo/Redo Actions
 
   /// Record an action for undo support
-  private func recordAction(_ action: EditorAction) {
+  func recordAction(_ action: EditorAction) {
     guard !isUndoingOrRedoing else { return }
     if undoGroupDepth > 0 {
       undoGroupBuffer.append(action)
@@ -2169,6 +2179,10 @@ final class VideoEditorState: ObservableObject {
     case .updateCamera(let old, let new):
       applyCameraSettings(old)
       return .updateCamera(old: new, new: old)
+
+    case .updateCaptions(let old, let new):
+      applyCaptions(old)
+      return .updateCaptions(old: new, new: old)
 
     case .group(let actions):
       // Undo the members newest first; the returned group replays them oldest first.
@@ -3485,7 +3499,7 @@ final class VideoEditorState: ObservableObject {
       .store(in: &cancellables)
   }
 
-  private func updateHasUnsavedChanges(currentZoomSegments: [ZoomSegment]? = nil) {
+  func updateHasUnsavedChanges(currentZoomSegments: [ZoomSegment]? = nil) {
     // GIF mode: only track dimension changes
     if isGIF {
       let dimensionChanged = exportSettings.dimensionPreset != initialExportSettings.dimensionPreset
@@ -3514,8 +3528,9 @@ final class VideoEditorState: ObservableObject {
     let exportSettingsChanged = exportSettings != initialExportSettings
     let cursorChanged = cursorSettings != initialCursorSettings
     let cameraChanged = cameraSettings != initialCameraSettings
+    let captionsChanged = captions != initialCaptions
     let changed = clipsChanged || muteChanged || zoomsChanged || speedsChanged
-      || backgroundChanged || exportSettingsChanged || cursorChanged || cameraChanged
+      || backgroundChanged || exportSettingsChanged || cursorChanged || cameraChanged || captionsChanged
     if hasUnsavedChanges != changed { hasUnsavedChanges = changed }
   }
 
@@ -3667,6 +3682,7 @@ final class VideoEditorState: ObservableObject {
     isPerformanceWorkClosed = true
     clickSoundPlayer.shutdown()
     cameraPreview?.stop()
+    cancelCaptionGeneration()
     speedPreviewRevision &+= 1
     estimateRevision &+= 1
     speedTrackDragInProgress = false

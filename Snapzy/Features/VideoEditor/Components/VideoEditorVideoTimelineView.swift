@@ -33,6 +33,7 @@ struct VideoTimelineView: View {
     var height = TimelineRulerView.height + spacing + frameStripHeight
     if state.isZoomTrackVisible { height += spacing + segmentTrackHeight }
     if state.isSpeedTrackVisible, !state.isGIF { height += spacing + segmentTrackHeight }
+    if showsCaptionTrack { height += spacing + segmentTrackHeight }
     return height
   }
 
@@ -121,7 +122,16 @@ struct VideoTimelineView: View {
       if state.isSpeedTrackVisible, !state.isGIF {
         SpeedTimelineTrack(state: state, timelineWidth: contentWidth, visibleRange: renderRange).equatable()
       }
+
+      // Captions track — shown once the video has captions.
+      if showsCaptionTrack {
+        VideoEditorCaptionTimelineTrack(state: state, timelineWidth: contentWidth).equatable()
+      }
     }
+  }
+
+  private var showsCaptionTrack: Bool {
+    !state.isGIF && !state.captions.isEmpty
   }
 
   /// One viewport of overscan on either side preserves smooth panning.

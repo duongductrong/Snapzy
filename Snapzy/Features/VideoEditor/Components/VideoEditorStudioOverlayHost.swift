@@ -44,11 +44,13 @@ struct VideoEditorStudioOverlayHost: View {
     }
   }
 
-  /// Camera (phase 4); phase 5 adds captions on top.
+  /// Camera, then captions on top (same order as the export recipe).
   @ViewBuilder
   private var canvasSpaceLayers: some View {
     if let state {
-      VideoEditorCameraOverlayView(state: state, videoRect: videoRect ?? CGRect(origin: .zero, size: size))
+      let rect = videoRect ?? CGRect(origin: .zero, size: size)
+      VideoEditorCameraOverlayView(state: state, videoRect: rect)
+      VideoEditorCaptionOverlayView(state: state, videoRect: rect)
     }
   }
 }

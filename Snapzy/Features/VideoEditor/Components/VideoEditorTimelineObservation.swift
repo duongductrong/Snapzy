@@ -4,7 +4,7 @@ import Foundation
 
 @MainActor
 final class VideoEditorTimelineObservation: ObservableObject {
-  enum Surface { case container, zoom, speed, clips }
+  enum Surface { case container, zoom, speed, clips, captions }
   @Published private(set) var revision: UInt64 = 0
   private var subscriptions = Set<AnyCancellable>()
 
@@ -19,7 +19,8 @@ final class VideoEditorTimelineObservation: ObservableObject {
         state.$frameThumbnails.map { _ in () }.eraseToAnyPublisher(),
         state.$isExtractingFrames.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
         state.$isZoomTrackVisible.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
-        state.$isSpeedTrackVisible.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
+        state.$isSpeedTrackVisible.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
+        state.$captions.map(\.isEmpty).removeDuplicates().map { _ in () }.eraseToAnyPublisher()
       ]
     case .zoom:
       changes += [
@@ -32,6 +33,8 @@ final class VideoEditorTimelineObservation: ObservableObject {
         state.$selectedSpeedId.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
         state.$zoomSegments.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
       ]
+    case .captions:
+      changes += [state.$captions.removeDuplicates().map { _ in () }.eraseToAnyPublisher()]
     case .clips:
       changes += [
         state.$selectedClipId.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
