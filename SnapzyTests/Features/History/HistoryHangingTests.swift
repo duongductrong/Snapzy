@@ -129,6 +129,12 @@ final class HistoryHangingTests: XCTestCase {
                          width: 640, height: 400, thumbnailPath: nil, isDeleted: false)
   }
 
+  func testShortGalleryKeepsRoomForClipsAndActions() {
+    XCTAssertEqual(HistoryHangingLayout.thumbnailHeight(galleryHeight: 251), 126)
+    XCTAssertEqual(HistoryHangingLayout.thumbnailHeight(galleryHeight: 171), 63)
+    XCTAssertLessThanOrEqual(HistoryHangingLayout.thumbnailHeight(galleryHeight: 171) + 108, 171)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
