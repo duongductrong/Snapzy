@@ -135,6 +135,20 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertLessThanOrEqual(HistoryHangingLayout.thumbnailHeight(galleryHeight: 171) + 108, 171)
   }
 
+  func testCompactCardsStayAboveToolbarWithMenuBarAndDock() {
+    for width: CGFloat in [640, 1152, 3440] {
+      let screen = CGRect(x: 0, y: 0, width: width, height: 280)
+      let visible = CGRect(x: 0, y: 64, width: width, height: 192)
+      let panel = HistoryHangingLayout.frame(screenFrame: screen, visibleFrame: visible, safeAreaTop: 24)
+      let cable = HistoryHangingCableLayout(panelFrame: panel, screenFrame: screen)
+      let galleryHeight = panel.height - HistoryHangingLayout.toolbarHeight - Spacing.md - Spacing.sm
+      let imageHeight = HistoryHangingLayout.thumbnailHeight(galleryHeight: galleryHeight,
+                                                             anchorDepth: cable.maximumAttachmentHeight, compact: true)
+      XCTAssertLessThanOrEqual(panel.width, 680)
+      XCTAssertLessThanOrEqual(cable.maximumAttachmentHeight + imageHeight + 54, galleryHeight)
+    }
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
