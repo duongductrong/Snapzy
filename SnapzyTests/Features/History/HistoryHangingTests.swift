@@ -265,6 +265,15 @@ final class HistoryHangingTests: XCTestCase {
     ))
   }
 
+  func testEdgeRequiresDwellAndResetsOnLeaving() {
+    var state = HistoryEdgeHoverState()
+    XCTAssertEqual(update(&state, edge: true, time: 0), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 0.1), .none)
+    XCTAssertEqual(update(&state, edge: false, time: 0.15), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 0.2), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 0.4), .reveal)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
