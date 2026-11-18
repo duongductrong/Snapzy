@@ -59,7 +59,9 @@ nonisolated enum VideoEditorTranscriptError: Error, Equatable {
 
 @MainActor
 final class VideoEditorAgentTranscriber {
-  typealias Engine = @Sendable (_ asset: AVAsset, _ roles: [VideoEditorAudioTrackRole], _ locale: Locale) async throws -> [VideoEditorTranscriptWord]
+  /// `@concurrent`: a nonsending async closure type stored as a value pulls in
+  /// swift_getExtendedFunctionTypeMetadata (macOS 15+ only), which crashes Release builds on 13/14 (#725).
+  typealias Engine = @concurrent @Sendable (_ asset: AVAsset, _ roles: [VideoEditorAudioTrackRole], _ locale: Locale) async throws -> [VideoEditorTranscriptWord]
 
   private struct Key: Equatable {
     let url: URL

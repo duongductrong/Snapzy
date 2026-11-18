@@ -56,7 +56,9 @@ nonisolated enum VideoEditorVisionError: Error, Equatable {
 
 @MainActor
 final class VideoEditorAgentVision {
-  typealias Recognizer = @Sendable (CGImage) async throws -> [VideoEditorScreenText]
+  /// `@concurrent`: a nonsending async closure type stored as a value pulls in
+  /// swift_getExtendedFunctionTypeMetadata (macOS 15+ only), which crashes Release builds on 13/14 (#725).
+  typealias Recognizer = @concurrent @Sendable (CGImage) async throws -> [VideoEditorScreenText]
 
   /// `get_frame` image size, same as the endpoint screenshot.
   nonisolated static let frameEdge: CGFloat = AgentEndpointProvider.maximumImageEdge
