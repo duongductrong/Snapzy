@@ -283,6 +283,14 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertEqual(update(&state, visible: true, time: 1.3), .dismiss)
   }
 
+  func testPinnedShelfAndActiveDragStayOpen() {
+    var state = HistoryEdgeHoverState()
+    XCTAssertEqual(update(&state, visible: true, keepOpen: true, time: 0), .none)
+    XCTAssertEqual(update(&state, visible: true, keepOpen: true, time: 10), .none)
+    XCTAssertEqual(update(&state, visible: true, time: 11), .none)
+    XCTAssertEqual(update(&state, visible: true, time: 12), .dismiss)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
