@@ -99,6 +99,22 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertTrue(HistoryHangingLayout.visibleRecords(records, filter: .gif, maximum: 20, width: 1120).isEmpty)
   }
 
+  func testNewCaptureDisplacesOnlyLastVisibleRecordWithoutDeletingHistory() {
+    var records = (0 ..< 10).map { selectionRecord(index: $0) }
+    let before = HistoryHangingLayout.visibleRecords(records, filter: nil, maximum: 20, width: 1120)
+    let newRecord = selectionRecord(index: 100)
+    records.insert(newRecord, at: 0)
+    let after = HistoryHangingLayout.visibleRecords(records, filter: nil, maximum: 20, width: 1120)
+    XCTAssertEqual(after.map(\.id), [newRecord.id] + before.dropLast().map(\.id))
+    XCTAssertTrue(records.contains { $0.id == before.last?.id })
+    XCTAssertEqual(records.count, 11)
+    records[0].thumbnailPath = "/tmp/updated-thumbnail.jpg"
+    XCTAssertEqual(
+      HistoryHangingLayout.visibleRecords(records, filter: nil, maximum: 20, width: 1120).map(\.id),
+      after.map(\.id)
+    )
+  }
+
   private func selectionRecord(index: Int, type: CaptureHistoryType = .screenshot) -> CaptureHistoryRecord {
     CaptureHistoryRecord(id: UUID(), filePath: "/tmp/history-selection-\(index).png", fileName: "Capture \(index)",
                          captureType: type, fileSize: 1000, capturedAt: Date().addingTimeInterval(-Double(index)),
