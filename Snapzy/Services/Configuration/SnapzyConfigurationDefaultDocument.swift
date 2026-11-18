@@ -103,6 +103,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("remember_last_area", true)
     writer.value("include_snapzy", false)
     writer.value("show_cursor", true)
+    writer.value("studio_mode", false)
     writer.value("highlight_clicks", false)
     writer.value("show_keystrokes", false)
     writer.value("video_editor_zoom_transition_duration", 0.4)

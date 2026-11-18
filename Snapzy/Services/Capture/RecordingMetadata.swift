@@ -67,6 +67,9 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
   var isCursorBaked: Bool
   /// Camera recorded as a sidecar movie; `nil` when the camera is baked or absent.
   var cameraSource: RecordingCameraSource?
+  /// Studio recordings whose shared file was flattened (cursor burned in) keep the
+  /// cursor-less original here (`StudioSources` sidecar). The editor opens this one.
+  var studioSourceFileName: String?
 
   init(
     version: Int = RecordingMetadata.currentVersion,
@@ -79,7 +82,8 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
     audioSourceTracks: [RecordingAudioSourceTrack] = [],
     cursorCapture: RecordingCursorCapture? = nil,
     isCursorBaked: Bool = true,
-    cameraSource: RecordingCameraSource? = nil
+    cameraSource: RecordingCameraSource? = nil,
+    studioSourceFileName: String? = nil
   ) {
     self.version = version
     self.coordinateSpace = coordinateSpace
@@ -92,6 +96,7 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
     self.cursorCapture = cursorCapture
     self.isCursorBaked = isCursorBaked
     self.cameraSource = cameraSource
+    self.studioSourceFileName = studioSourceFileName
   }
 
   private enum CodingKeys: String, CodingKey {
@@ -106,6 +111,7 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
     case cursorCapture
     case isCursorBaked
     case cameraSource
+    case studioSourceFileName
   }
 
   init(from decoder: Decoder) throws {
@@ -138,6 +144,7 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
     // Absent for every ≤v5 file and for non-Studio v6 recordings: the cursor is baked.
     isCursorBaked = try container.decodeIfPresent(Bool.self, forKey: .isCursorBaked) ?? true
     cameraSource = try container.decodeIfPresent(RecordingCameraSource.self, forKey: .cameraSource)
+    studioSourceFileName = try container.decodeIfPresent(String.self, forKey: .studioSourceFileName)
   }
 
   func encode(to encoder: Encoder) throws {
@@ -159,6 +166,7 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
       try container.encode(isCursorBaked, forKey: .isCursorBaked)
     }
     try container.encodeIfPresent(cameraSource, forKey: .cameraSource)
+    try container.encodeIfPresent(studioSourceFileName, forKey: .studioSourceFileName)
   }
 }
 
@@ -757,7 +765,8 @@ private extension RecordingMetadata {
       audioSourceTracks: audioSourceTracks,
       cursorCapture: cursorCapture,
       isCursorBaked: isCursorBaked,
-      cameraSource: cameraSource
+      cameraSource: cameraSource,
+      studioSourceFileName: studioSourceFileName
     )
   }
 }

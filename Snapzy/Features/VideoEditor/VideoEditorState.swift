@@ -968,15 +968,19 @@ final class VideoEditorState: ObservableObject {
     return candidateURLs.lazy.compactMap { RecordingMetadataStore.load(for: $0) }.first
   }
 
+  /// The file the editor actually edits: the multi-track audio source when present,
+  /// else a flattened Studio recording's cursor-less original, else `url` itself.
   static func editorAssetURL(for url: URL, metadata: RecordingMetadata?) -> URL {
-    guard
-      let audioSourceURL = metadata?.audioSourceURL,
-      FileManager.default.fileExists(atPath: audioSourceURL.path)
-    else {
-      return url
+    if let audioSourceURL = metadata?.audioSourceURL,
+       FileManager.default.fileExists(atPath: audioSourceURL.path) {
+      return audioSourceURL
     }
-
-    return audioSourceURL
+    if let name = metadata?.studioSourceFileName,
+       let studioSourceURL = try? RecordingMetadataStore.sidecarURL(named: name, kind: .studioSource),
+       FileManager.default.fileExists(atPath: studioSourceURL.path) {
+      return studioSourceURL
+    }
+    return url
   }
 
   static func audioTrackRoles(for audioTracks: [AVAssetTrack],

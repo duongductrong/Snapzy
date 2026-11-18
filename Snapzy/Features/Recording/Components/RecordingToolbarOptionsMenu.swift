@@ -122,6 +122,20 @@ private struct ToolbarOptionsPopoverContent: View {
           )
         )
 
+        if state.outputMode != .gif {
+          RightAlignedToggleRow(
+            title: L10n.RecordingToolbar.studioRecording,
+            isOn: Binding(
+              get: { state.studioRecording },
+              set: { newValue in
+                state.studioRecording = newValue
+                UserDefaults.standard.set(newValue, forKey: PreferencesKeys.recordingStudioMode)
+              }
+            )
+          )
+          .help(L10n.RecordingToolbar.studioRecordingHelp)
+        }
+
         RightAlignedToggleRow(
           title: L10n.RecordingToolbar.highlightClicks,
           isOn: Binding(

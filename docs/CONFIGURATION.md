@@ -187,6 +187,7 @@ fps = 30
 capture_system_audio = false
 capture_microphone = false
 show_cursor = true
+studio_mode = false
 dim_non_selected_area = true
 highlight_clicks = false
 show_keystrokes = false

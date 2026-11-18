@@ -3,23 +3,12 @@
 //  Snapzy
 //
 //  Metadata v6 pieces for Studio recordings and the sidecar kinds the metadata store
-//  keeps next to recordings. Cursor/camera payloads are placeholders: phase 1 (cursor)
-//  and phase 3 (camera) extend them with `decodeIfPresent` fields.
+//  keeps next to recordings. Cursor data lives in `RecordingCursorCapture.swift`; the
+//  camera payload is a placeholder phase 3 extends with `decodeIfPresent` fields.
 //
 
 import CoreGraphics
 import Foundation
-
-/// Cursor appearance/click data captured by a Studio recording (filled in by phase 1).
-nonisolated struct RecordingCursorCapture: Codable, Equatable {
-  /// Folder inside the `CursorImages` sidecar directory holding this recording's
-  /// cursor PNGs. `nil` while no image was captured.
-  var imagesFolderName: String?
-
-  init(imagesFolderName: String? = nil) {
-    self.imagesFolderName = imagesFolderName
-  }
-}
 
 /// Camera recorded as a separate sidecar movie (filled in by phase 3).
 nonisolated struct RecordingCameraSource: Codable, Equatable {
@@ -39,12 +28,15 @@ nonisolated enum RecordingSidecarKind: String, CaseIterable, Sendable {
   case camera
   /// Per-recording folder of cursor images (`RecordingMetadata.cursorCapture`).
   case cursorImages
+  /// Cursor-less original of a flattened Studio recording (`RecordingMetadata.studioSourceFileName`).
+  case studioSource
 
   var folderName: String {
     switch self {
     case .audio: "AudioSources"
     case .camera: "CameraSources"
     case .cursorImages: "CursorImages"
+    case .studioSource: "StudioSources"
     }
   }
 
@@ -52,7 +44,7 @@ nonisolated enum RecordingSidecarKind: String, CaseIterable, Sendable {
   /// (directories).
   var defaultPathExtension: String? {
     switch self {
-    case .audio, .camera: "mov"
+    case .audio, .camera, .studioSource: "mov"
     case .cursorImages: nil
     }
   }
@@ -71,6 +63,9 @@ nonisolated extension RecordingMetadata {
     }
     if let folder = cursorCapture?.imagesFolderName, !folder.isEmpty {
       references.append(.named(.cursorImages, folder))
+    }
+    if let fileName = studioSourceFileName, !fileName.isEmpty {
+      references.append(.named(.studioSource, fileName))
     }
     return references
   }

@@ -742,6 +742,8 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   private var captureMicrophone: Bool = false
   private var microphoneDeviceID: String?
   private var showCursorInRecording: Bool = true
+  /// Studio recording: the cursor is left out of the pixels and captured as data.
+  private var isStudioRecording: Bool = false
   private var excludeOwnApplicationFromCapture: Bool = true
   private var excludeDesktopIconsFromCapture: Bool = false
   private var excludeDesktopWidgetsFromCapture: Bool = false
@@ -753,6 +755,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   private var recordingProcessingDirectory: URL?
   private var shouldPreserveProcessingOutputOnCleanup = false
   private var mouseTracker: RecordingMouseTracker?
+  private var cursorTracker: RecordingCursorAppearanceTracker?
   private var exportDirectoryAccess: SandboxFileAccessManager.ScopedAccess?
   private var registeredOutputTypes: Set<SCStreamOutputType> = []
 
@@ -805,6 +808,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     captureMicrophone: Bool = false,
     microphoneDeviceID: String? = nil,
     showCursor: Bool = true,
+    studioRecording: Bool = false,
     saveDirectory: URL,
     processingDirectory: URL? = nil,
     fileName: String? = nil,
@@ -835,6 +839,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       "microphone": "\(captureMicrophone)",
       "microphoneDevice": microphoneDeviceID ?? RecordingMicrophoneDevice.systemDefaultID,
       "showCursor": "\(showCursor)",
+      "studioRecording": "\(studioRecording && showCursor)",
       "excludeOwnApp": "\(excludeOwnApplication)",
       "excludeDesktopIcons": "\(excludeDesktopIcons)",
       "excludeDesktopWidgets": "\(excludeDesktopWidgets)",
@@ -851,6 +856,8 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     self.captureMicrophone = captureMicrophone
     self.microphoneDeviceID = microphoneDeviceID
     self.showCursorInRecording = showCursor
+    // Studio only makes sense when the cursor should appear in the result.
+    self.isStudioRecording = studioRecording && showCursor
     self.excludeOwnApplicationFromCapture = excludeOwnApplication
     self.excludeDesktopIconsFromCapture = excludeDesktopIcons
     self.excludeDesktopWidgetsFromCapture = excludeDesktopWidgets
@@ -1075,7 +1082,9 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
         microphoneCapturer = capturer
       }
 
-      mouseTracker = RecordingMouseTracker(recordingRect: captureGeometry.globalCaptureRect, fps: fps)
+      let tracker = RecordingMouseTracker(recordingRect: captureGeometry.globalCaptureRect, fps: fps)
+      mouseTracker = tracker
+      cursorTracker = isStudioRecording ? RecordingCursorAppearanceTracker(mouseTracker: tracker) : nil
       DiagnosticLogger.shared.log(.info, .recording, "Recording prepare completed", context: [
         "file": outputURL?.lastPathComponent ?? "nil",
         "outputSize": "\(captureGeometry.outputWidth)x\(captureGeometry.outputHeight)",
@@ -1123,6 +1132,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     session.setOnFirstVideoFrame { [weak self] in
       Task { @MainActor [weak self] in
         self?.mouseTracker?.start()
+        self?.cursorTracker?.start()
       }
     }
 
@@ -1290,6 +1300,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     let videoWriteStats = session.videoWriteStats()
 
     let mouseSamples = mouseTracker?.stop() ?? []
+    let cursorCapture = stopCursorCapture()
     let writerURL = outputURL
     await logRecordingFrameDiagnostics(outputURL: writerURL, stats: videoWriteStats)
     let audioNormalization = await normalizeRecordingAudioForCompatibilityIfNeeded(writerURL: writerURL)
@@ -1305,7 +1316,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
         for: editorAudioSourceURL,
         roles: audioSourceTrackRoles
       )
-      if mouseSamples.count >= 2 || editorAudioSourceURL != nil {
+      if mouseSamples.count >= 2 || editorAudioSourceURL != nil || cursorCapture != nil {
         do {
           let metadata = RecordingMetadata(
             coordinateSpace: .topLeftNormalized,
@@ -1314,7 +1325,9 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
             mouseSamples: mouseSamples,
             audioSourceURL: editorAudioSourceURL,
             audioSourceTrackRoles: audioSourceTrackRoles,
-            audioSourceTracks: audioSourceTracks
+            audioSourceTracks: audioSourceTracks,
+            cursorCapture: cursorCapture,
+            isCursorBaked: cursorCapture == nil
           )
           try RecordingMetadataStore.save(metadata, for: url)
           DiagnosticLogger.shared.log(.info, .recording, "Recording metadata saved", context: [
@@ -1354,6 +1367,30 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     return url
   }
 
+  /// Studio recording: stops cursor capture and stores its images as a sidecar.
+  /// `nil` for non-Studio recordings; never fails the recording itself.
+  private func stopCursorCapture() -> RecordingCursorCapture? {
+    guard isStudioRecording, let cursorTracker else { return nil }
+    var capture = cursorTracker.stop()
+    guard cursorTracker.hasImages else { return capture }
+    let stagingURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("snapzy-cursor-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: stagingURL) }
+    do {
+      try cursorTracker.writeImages(to: stagingURL)
+      let stored = try RecordingMetadataStore.storeSidecar(from: stagingURL, kind: .cursorImages)
+      capture.imagesFolderName = stored.lastPathComponent
+    } catch {
+      DiagnosticLogger.shared.logError(.recording, error, "Failed to store Studio cursor images")
+    }
+    DiagnosticLogger.shared.log(.info, .recording, "Studio cursor captured", context: [
+      "images": "\(capture.images.count)",
+      "appearanceChanges": "\(capture.appearance.count)",
+      "clicks": "\(capture.clicks.count)",
+    ])
+    return capture
+  }
+
   /// Cancel the recording without saving
   func cancelRecording() async {
     guard state != .idle else {
@@ -1376,6 +1413,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     session.setOnFirstVideoFrame(nil)
     session.cancelWriting()
     mouseTracker?.reset()
+    cursorTracker?.reset()
     DiagnosticLogger.shared.log(.info, .recording, "Recording cancelled")
     if let url = outputURL {
       guard FileManager.default.fileExists(atPath: url.path) else {
@@ -1889,7 +1927,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     config.scalesToFit = false
     config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(fps))
     config.pixelFormat = kCVPixelFormatType_32BGRA
-    config.showsCursor = showCursorInRecording
+    config.showsCursor = showCursorInRecording && !isStudioRecording
     config.sourceRect = captureGeometry.sourceRect
     let captureResolutionMode: String
     if #available(macOS 14.2, *) {
@@ -2193,6 +2231,9 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     excludeDesktopIconsFromCapture = false
     excludeDesktopWidgetsFromCapture = false
     mouseTracker = nil
+    cursorTracker?.reset()
+    cursorTracker = nil
+    isStudioRecording = false
     microphoneCapturer = nil
     audioLevelMeter.reset()
     session.reset()

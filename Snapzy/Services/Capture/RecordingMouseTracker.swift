@@ -67,6 +67,25 @@ final class RecordingMouseTracker {
     samplesPerSecondValue
   }
 
+  /// Recording time on this tracker's clock (pauses excluded); `nil` before `start()`.
+  /// Studio cursor/click capture stamps events with it so they line up with samples.
+  var elapsedTime: TimeInterval? {
+    currentElapsedTime()
+  }
+
+  var isPaused: Bool {
+    pausedAtUptime != nil
+  }
+
+  var isRunning: Bool {
+    startUptime != nil
+  }
+
+  /// Global capture rect in AppKit coordinates (bottom-left origin).
+  var captureRect: CGRect {
+    recordingRect
+  }
+
   func start() {
     reset()
 

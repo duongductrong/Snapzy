@@ -716,6 +716,7 @@ final class RecordingCoordinator: ObservableObject {
           captureMicrophone: savedCaptureMicrophone,
           microphoneDeviceID: savedMicrophoneDeviceID,
           showCursor: savedShowCursor,
+          studioRecording: self.isStudioRecordingActive(for: window),
           saveDirectory: savePlan.finalDirectory,
           processingDirectory: savePlan.processingDirectory,
           excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
@@ -857,6 +858,7 @@ final class RecordingCoordinator: ObservableObject {
           captureMicrophone: captureMicrophone,
           microphoneDeviceID: microphoneDeviceID,
           showCursor: showCursor,
+          studioRecording: self.isStudioRecordingActive(for: window),
           saveDirectory: savePlan.finalDirectory,
           processingDirectory: savePlan.processingDirectory,
           excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
@@ -1005,6 +1007,7 @@ final class RecordingCoordinator: ObservableObject {
           captureSystemAudio: captureSystemAudio,
           captureMicrophone: false,
           showCursor: showCursor,
+          studioRecording: self.isStudioRecordingActive(for: window),
           saveDirectory: savePlan.finalDirectory,
           processingDirectory: savePlan.processingDirectory,
           excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
@@ -1076,12 +1079,53 @@ final class RecordingCoordinator: ObservableObject {
         if outputMode == .gif {
           // GIF mode: add to QuickAccess immediately with processing state
           await handleGIFConversion(videoURL: url)
+        } else if RecordingStudioFlattenJob.needsFlatten(RecordingMetadataStore.load(for: url)) {
+          await handleStudioFlatten(videoURL: url)
         } else {
           // Video mode: normal post-capture flow
           await PostCaptureActionHandler.shared.handleVideoCapture(url: url)
         }
       }
     }
+  }
+
+  /// Studio recording: show the card as processing while the cursor is burned back
+  /// into the shared file, then run the usual post-capture actions on it.
+  private func handleStudioFlatten(videoURL: URL) async {
+    let quickAccess = QuickAccessManager.shared
+    let itemId = await quickAccess.addVideo(url: videoURL)?.id
+    if let itemId {
+      quickAccess.updateProcessingState(id: itemId, state: .processing(progress: 0))
+    }
+    var fps = UserDefaults.standard.integer(forKey: PreferencesKeys.recordingFPS)
+    if fps == 0 { fps = 30 }
+
+    let outcome = await RecordingStudioFlattenJob.run(url: videoURL, frameRate: fps) { progress in
+      guard let itemId else { return }
+      quickAccess.updateProcessingState(id: itemId, state: .processing(progress: progress))
+    }
+
+    if let itemId {
+      switch outcome {
+      case .flattened:
+        let thumbnail = await ThumbnailGenerator.generate(from: videoURL).thumbnail
+        quickAccess.updateItemURL(id: itemId, newURL: videoURL, newThumbnail: thumbnail)
+        quickAccess.updateProcessingState(id: itemId, state: .idle)
+      case .keptOriginal:
+        quickAccess.updateProcessingState(id: itemId, state: .failed)
+        Task {
+          try? await Task.sleep(nanoseconds: 2_000_000_000)
+          quickAccess.updateProcessingState(id: itemId, state: .idle)
+        }
+      }
+    }
+    // Deliver the file either way; a failed flatten keeps the cursor-less recording.
+    await PostCaptureActionHandler.shared.handleVideoCapture(url: videoURL, skipQuickAccess: true)
+  }
+
+  /// Studio recording applies to video output with a visible cursor only.
+  private func isStudioRecordingActive(for window: RecordingToolbarWindow) -> Bool {
+    window.state.studioRecording && window.state.outputMode != .gif && window.state.showCursor
   }
 
   /// Handle GIF conversion: add to QuickAccess with progress, convert, and update
@@ -1480,6 +1524,11 @@ final class RecordingCoordinator: ObservableObject {
 
   private func setupClickHighlightOverlay(for rect: CGRect) {
     let isEnabled = UserDefaults.standard.object(forKey: PreferencesKeys.recordingHighlightClicks) as? Bool ?? false
+    // Studio recordings draw click effects from captured clicks instead (flatten/editor).
+    if isEnabled, let window = toolbarWindow, isStudioRecordingActive(for: window) {
+      DiagnosticLogger.shared.log(.debug, .recording, "Click highlight overlay skipped for Studio recording")
+      return
+    }
     guard isEnabled else {
       DiagnosticLogger.shared.log(.debug, .recording, "Click highlight overlay disabled")
       return

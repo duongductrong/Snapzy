@@ -3598,6 +3598,16 @@ nonisolated enum L10n {
       defaultValue: "Hover passthrough needs Accessibility permission to observe global mouse and keyboard events.",
       comment: "Capture preferences permission hint"
     )
+    static let recordingStudioModeTitle = string(
+      "preferences-capture.recording-studio-mode-title",
+      defaultValue: "Studio Recording",
+      comment: "Recording preferences setting title"
+    )
+    static let recordingStudioModeDescription = string(
+      "preferences-capture.recording-studio-mode-description",
+      defaultValue: "Edit the cursor after recording in the Video Editor. Saved videos take a few extra seconds to process after you stop.",
+      comment: "Recording preferences setting description"
+    )
     static let recordingShowCursorDescription = string(
       "preferences-capture.recording-show-cursor-description",
       defaultValue: "Include mouse pointer in recorded videos and GIFs",
@@ -8126,6 +8136,16 @@ nonisolated enum L10n {
       "recording-toolbar.show-keystrokes",
       defaultValue: "Show Keystrokes",
       comment: "Recording toolbar setting label"
+    )
+    static let studioRecording = string(
+      "recording-toolbar.studio-recording",
+      defaultValue: "Studio Recording",
+      comment: "Recording toolbar setting label"
+    )
+    static let studioRecordingHelp = string(
+      "recording-toolbar.studio-recording-help",
+      defaultValue: "Edit the cursor after recording. Takes a few extra seconds to process after you stop.",
+      comment: "Recording toolbar Studio recording toggle tooltip"
     )
     static let showCursor = string(
       "recording-toolbar.show-cursor",
