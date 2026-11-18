@@ -211,6 +211,33 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertNil(HistoryHangingLayout.edgeScreenIndex(at: CGPoint(x: 1500, y: 900), frames: frames))
   }
 
+  func testCableWindowTracksEachConnectedDisplayWithoutInterceptingClicks() throws {
+    guard !NSScreen.screens.isEmpty else { throw XCTSkip("Requires WindowServer") }
+    let history = HistoryFloatingManager.shared
+    let shelf = HistoryHangingManager.shared
+    let style = history.displayStyle
+    defer {
+      shelf.stop()
+      history.displayStyle = style
+    }
+    history.displayStyle = .hanging
+    for screen in NSScreen.screens {
+      shelf.show(on: screen)
+      let cable = try XCTUnwrap(NSApp.windows.first { $0.isVisible && $0.identifier?.rawValue == "SnapzyHistoryCable" })
+      let panel = try XCTUnwrap(NSApp.windows
+        .first { $0.isVisible && $0.identifier?.rawValue == "SnapzyHistoryHanging" })
+      XCTAssertEqual(cable.frame.minX, screen.frame.minX)
+      XCTAssertEqual(cable.frame.maxX, screen.frame.maxX)
+      XCTAssertEqual(cable.frame.maxY, screen.frame.maxY)
+      XCTAssertLessThanOrEqual(panel.frame.maxY, screen.frame.maxY - screen.safeAreaInsets.top - 8)
+      XCTAssertTrue(cable.ignoresMouseEvents)
+      XCTAssertFalse(cable.canBecomeKey)
+      shelf.hide(animated: false)
+      XCTAssertFalse(cable.isVisible)
+      XCTAssertFalse(panel.isVisible)
+    }
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
