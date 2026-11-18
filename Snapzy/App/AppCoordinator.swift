@@ -88,6 +88,7 @@ final class AppCoordinator {
       context: ["crashPrompt": (didCrash && DiagnosticLogger.shared.isEnabled) ? "true" : "false"]
     )
 
+    HistoryHangingManager.shared.start()
     CLIServer.shared.startIfEnabled()
 
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -99,6 +100,7 @@ final class AppCoordinator {
   }
 
   func applicationWillTerminate() {
+    HistoryHangingManager.shared.stop()
     flushConfigurationSyncBeforeTermination()
     CLIServer.shared.shutdown()
     DiagnosticLogger.shared.log(.info, .lifecycle, "App terminated normally")
