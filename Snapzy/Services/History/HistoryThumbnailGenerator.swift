@@ -30,6 +30,9 @@ final class HistoryThumbnailGenerator {
   private let thumbnailsDirectoryURL: URL
   private let stateQueue = DispatchQueue(label: "snapzy.history-thumbnail-generator.state")
   private let memoryCache = NSCache<NSString, NSImage>()
+  // Serialize enlarged decodes; cancelled hover requests skip queued work.
+  private let previewQueue = DispatchQueue(label: "snapzy.history-preview.worker", qos: .utility)
+  private let previewMemoryCache = HistoryPreviewMemoryCache()
   private var inFlightRequests: [String: [(NSImage?) -> Void]] = [:]
   private var memoryCacheKeysByRecordId: [UUID: Set<String>] = [:]
 
@@ -61,6 +64,56 @@ final class HistoryThumbnailGenerator {
   }
 
   // MARK: - Public API
+
+  // The security scope must outlive decoding even after cancellation.
+  @MainActor
+  func loadPreviewImage(for record: CaptureHistoryRecord) async -> NSImage? {
+    guard !Task.isCancelled else { return nil }
+    let url = record.fileURL
+    let access = SandboxFileAccessManager.shared.beginAccessingURL(url)
+    defer { access.stop() }
+
+    let request = HistoryPreviewDecodeRequest()
+    let cache = previewMemoryCache
+    let isVideo = record.captureType == .video
+    let duration = record.duration ?? 0
+    let posterTime = duration.isFinite && duration > 0 ? min(duration / 2, 1) : 0
+    let image: NSImage? = await withTaskCancellationHandler {
+      await withCheckedContinuation { continuation in
+        previewQueue.async {
+          let image: NSImage? = autoreleasepool {
+            guard !request.isCancelled,
+              let sourceKey = Self.previewSourceKey(at: url)
+            else { return nil }
+            let key = NSString(string: "\(sourceKey)|\(isVideo)|\(posterTime)")
+            if let cached = cache.images.object(forKey: key) { return cached }
+
+            let cgImage: CGImage?
+            if isVideo {
+              cgImage = Self.previewVideoImage(at: url, seconds: posterTime)
+            } else {
+              cgImage = self.downsampledImage(at: url, maxPixelSize: 1200)
+            }
+            // An edit or deletion during decoding must not populate the cache or UI.
+            guard let cgImage, !request.isCancelled,
+              Self.previewSourceKey(at: url) == sourceKey
+            else { return nil }
+
+            let image = NSImage(
+              cgImage: cgImage,
+              size: NSSize(width: cgImage.width, height: cgImage.height)
+            )
+            cache.images.setObject(image, forKey: key, cost: cgImage.bytesPerRow * cgImage.height)
+            return image
+          }
+          continuation.resume(returning: image)
+        }
+      }
+    } onCancel: {
+      request.cancel()
+    }
+    return Task.isCancelled ? nil : image
+  }
 
   func loadThumbnailImage(for record: CaptureHistoryRecord) async -> NSImage? {
     await withCheckedContinuation { continuation in
@@ -217,6 +270,25 @@ final class HistoryThumbnailGenerator {
 
   // MARK: - Private
 
+  private nonisolated static func previewSourceKey(at url: URL) -> String? {
+    // Read live filesystem metadata, not the (potentially older) history record.
+    guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+      let modified = attributes[.modificationDate] as? Date,
+      let size = attributes[.size] as? NSNumber
+    else { return nil }
+    let fileNumber = attributes[.systemFileNumber] as? NSNumber
+    return "\(url.standardizedFileURL.path)|\(modified.timeIntervalSince1970)|\(size)|\(fileNumber?.stringValue ?? "")"
+  }
+
+  private nonisolated static func previewVideoImage(at url: URL, seconds: TimeInterval) -> CGImage? {
+    let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+    generator.appliesPreferredTrackTransform = true
+    generator.maximumSize = CGSize(width: 1200, height: 1200)
+    return try? generator.copyCGImage(
+      at: CMTimeMakeWithSeconds(seconds, preferredTimescale: 600), actualTime: nil
+    )
+  }
+
   private func resolveThumbnailImage(for record: CaptureHistoryRecord, identity: ThumbnailCacheIdentity) -> NSImage? {
     if let cachedURL = existingThumbnailURL(for: record, identity: identity),
       let cachedImage = decodeThumbnail(at: cachedURL)
@@ -257,7 +329,7 @@ final class HistoryThumbnailGenerator {
     let scopedAccess = SandboxFileAccessManager.shared.beginAccessingURL(url)
     defer { scopedAccess.stop() }
 
-    guard let cgImage = downsampledImage(at: url) else {
+    guard let cgImage = downsampledImage(at: url, maxPixelSize: Int(maxDimension * 2)) else {
       logger.warning("Failed to load image for thumbnail: \(record.fileName)")
       DiagnosticLogger.shared.log(
         .warning,
@@ -387,7 +459,7 @@ final class HistoryThumbnailGenerator {
     }
   }
 
-  private func downsampledImage(at url: URL) -> CGImage? {
+  private nonisolated func downsampledImage(at url: URL, maxPixelSize: Int) -> CGImage? {
     let sourceOptions: [CFString: Any] = [
       kCGImageSourceShouldCache: false
     ]
@@ -396,7 +468,6 @@ final class HistoryThumbnailGenerator {
       return nil
     }
 
-    let maxPixelSize = Int(maxDimension * 2)
     let downsampleOptions: [CFString: Any] = [
       kCGImageSourceCreateThumbnailFromImageAlways: true,
       kCGImageSourceShouldCacheImmediately: true,
@@ -480,6 +551,28 @@ final class HistoryThumbnailGenerator {
       )
       return nil
     }
+  }
+}
+
+// NSCache synchronizes access internally; stored preview images are immutable.
+private nonisolated final class HistoryPreviewMemoryCache: @unchecked Sendable {
+  let images = NSCache<NSString, NSImage>()
+
+  init() {
+    images.countLimit = 6
+    images.totalCostLimit = 24 * 1024 * 1024
+  }
+}
+
+/// Shared only between the cancellation handler and the serial preview worker.
+private nonisolated final class HistoryPreviewDecodeRequest: @unchecked Sendable {
+  private let lock = NSLock()
+  private var cancelled = false
+
+  var isCancelled: Bool { lock.withLock { cancelled } }
+
+  func cancel() {
+    lock.withLock { cancelled = true }
   }
 }
 
