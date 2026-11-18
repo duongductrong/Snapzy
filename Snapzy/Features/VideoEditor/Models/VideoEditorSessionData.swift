@@ -29,6 +29,10 @@ nonisolated struct VideoEditorSessionData: Equatable {
   var backgroundAspectRatio: AspectRatioOption
   var exportSettings: ExportSettings
   var isMuted: Bool
+  /// Studio layers; `nil` = not saved (older sessions), keep the editor defaults.
+  var cursorSettings: VideoEditorCursorSettings?
+  var cameraSettings: VideoEditorCameraSettings?
+  var captions: VideoEditorCaptions?
 
   init(
     sourceSnapshotURL: URL,
@@ -43,7 +47,10 @@ nonisolated struct VideoEditorSessionData: Equatable {
     backgroundAlignment: ImageAlignment = .center,
     backgroundAspectRatio: AspectRatioOption = .auto,
     exportSettings: ExportSettings = .init(),
-    isMuted: Bool = false
+    isMuted: Bool = false,
+    cursorSettings: VideoEditorCursorSettings? = nil,
+    cameraSettings: VideoEditorCameraSettings? = nil,
+    captions: VideoEditorCaptions? = nil
   ) {
     self.sourceSnapshotURL = sourceSnapshotURL
     self.recordingMetadata = recordingMetadata
@@ -58,6 +65,9 @@ nonisolated struct VideoEditorSessionData: Equatable {
     self.backgroundAspectRatio = backgroundAspectRatio
     self.exportSettings = exportSettings
     self.isMuted = isMuted
+    self.cursorSettings = cursorSettings
+    self.cameraSettings = cameraSettings
+    self.captions = captions
   }
 }
 
@@ -75,6 +85,11 @@ nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
   var backgroundAspectRatio: String
   var exportSettings: ExportSettings
   var isMuted: Bool
+  // Added after schema 1 shipped: optional, so older manifests still decode
+  // (synthesized Codable uses decodeIfPresent) and the schema is not bumped.
+  var cursorSettings: VideoEditorCursorSettings?
+  var cameraSettings: VideoEditorCameraSettings?
+  var captions: VideoEditorCaptions?
 
   init(sessionData: VideoEditorSessionData) {
     clips = sessionData.clips
@@ -89,6 +104,9 @@ nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
     backgroundAspectRatio = sessionData.backgroundAspectRatio.rawValue
     exportSettings = sessionData.exportSettings
     isMuted = sessionData.isMuted
+    cursorSettings = sessionData.cursorSettings
+    cameraSettings = sessionData.cameraSettings
+    captions = sessionData.captions
   }
 
   func sessionData(
@@ -108,7 +126,10 @@ nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
       backgroundAlignment: ImageAlignment(rawValue: backgroundAlignment) ?? .center,
       backgroundAspectRatio: AspectRatioOption(rawValue: backgroundAspectRatio) ?? .auto,
       exportSettings: exportSettings,
-      isMuted: isMuted
+      isMuted: isMuted,
+      cursorSettings: cursorSettings,
+      cameraSettings: cameraSettings,
+      captions: captions
     )
   }
 }
@@ -181,7 +202,10 @@ extension VideoEditorSessionData {
       backgroundAlignment: state.backgroundAlignment,
       backgroundAspectRatio: state.backgroundAspectRatio,
       exportSettings: state.exportSettings,
-      isMuted: state.isMuted
+      isMuted: state.isMuted,
+      cursorSettings: state.hasEditableCursor ? state.cursorSettings : nil,
+      cameraSettings: state.hasEditableCamera ? state.cameraSettings : nil,
+      captions: state.captions.isEmpty ? nil : state.captions
     )
   }
 }

@@ -62,7 +62,7 @@ final class VideoEditorAgentToolbox {
   let analyzer: VideoEditorAgentAnalyzer
 
   private var references: [Kind: (byID: [UUID: String], byRef: [String: UUID], next: Int)] = [
-    .clip: ([:], [:], 1), .zoom: ([:], [:], 1), .speed: ([:], [:], 1),
+    .clip: ([:], [:], 1), .zoom: ([:], [:], 1), .speed: ([:], [:], 1), .caption: ([:], [:], 1),
   ]
 
   private var isRunOpen = false
@@ -96,13 +96,14 @@ final class VideoEditorAgentToolbox {
 
   // MARK: - References
 
-  private enum Kind: String {
+  enum Kind: String {
     case clip = "c"
     case zoom = "z"
     case speed = "s"
+    case caption = "t"
   }
 
-  private func reference(_ kind: Kind, for id: UUID) -> String {
+  func reference(_ kind: Kind, for id: UUID) -> String {
     if let existing = references[kind]?.byID[id] { return existing }
     var table = references[kind]!
     let reference = "\(kind.rawValue)\(table.next)"
@@ -121,7 +122,7 @@ final class VideoEditorAgentToolbox {
     references[kind] = table
   }
 
-  private func lookup(_ kind: Kind, _ reference: String) -> UUID? {
+  func lookup(_ kind: Kind, _ reference: String) -> UUID? {
     references[kind]?.byRef[reference.trimmingCharacters(in: .whitespaces).lowercased()]
   }
 
@@ -197,7 +198,10 @@ final class VideoEditorAgentToolbox {
       ),
       audio: .init(muted: settings.audioMode == .mute, tracks: tracks),
       selection: selection,
-      hasMouseData: state.hasMouseTrackingData
+      hasMouseData: state.hasMouseTrackingData,
+      cursor: studioCursorScene(state),
+      camera: studioCameraScene(state),
+      captions: captionsScene(state)
     )
   }
 
@@ -320,13 +324,19 @@ final class VideoEditorAgentToolbox {
       return try speedUpIdle(decode(IdleArguments.self, arguments), state: state)
     case .autoZoomActivity:
       return try autoZoomActivity(decode(AutoZoomArguments.self, arguments), state: state)
-    case .getFrame, .findOnScreen, .getTranscript:
+    case .setCursor:
+      return try setCursor(decode(VideoEditorAgentCursorArguments.self, arguments), state: state)
+    case .setCamera:
+      return try setCamera(decode(VideoEditorAgentCameraArguments.self, arguments), state: state)
+    case .editCaption:
+      return try editCaption(decode(VideoEditorAgentCaptionEditArguments.self, arguments), state: state)
+    case .getFrame, .findOnScreen, .getTranscript, .generateCaptions:
       // Only through `execute(name:argumentsJSON:)`, which can wait for frames and speech.
       throw VideoEditorAgentToolError.unavailable("This tool is still working; call it again.")
     }
   }
 
-  private func readyState() throws -> VideoEditorState {
+  func readyState() throws -> VideoEditorState {
     guard let state else { throw VideoEditorAgentToolError.unavailable("No video is open.") }
     guard !state.isGIF else {
       throw VideoEditorAgentToolError.unavailable("This is a GIF; it can only be resized, not edited. Stop and tell the user.")
@@ -338,7 +348,7 @@ final class VideoEditorAgentToolbox {
     return state
   }
 
-  private func decode<T: Decodable>(_ type: T.Type, _ data: Data) throws -> T {
+  func decode<T: Decodable>(_ type: T.Type, _ data: Data) throws -> T {
     let decoder = JSONDecoder()
     decoder.keyDecodingStrategy = .convertFromSnakeCase
     return try decoder.decode(type, from: data)
@@ -351,7 +361,7 @@ final class VideoEditorAgentToolbox {
   }
 
   /// A time inside the timeline, or an error that says what the timeline spans.
-  private func time(_ value: VideoEditorAgentTime, _ state: VideoEditorState, name: String) throws -> TimeInterval {
+  func time(_ value: VideoEditorAgentTime, _ state: VideoEditorState, name: String) throws -> TimeInterval {
     let total = duration(state)
     guard value.seconds <= total + 0.05 else {
       throw VideoEditorAgentToolError.invalidArguments(
@@ -1091,6 +1101,12 @@ final class VideoEditorAgentToolbox {
     case .getTranscript:
       let state = try readyState()
       return try await getTranscript(decode(TranscriptArguments.self, arguments), state: state)
+    case .generateCaptions:
+      let state = try readyState()
+      guard changeCount < Self.maximumChangesPerRun else {
+        throw VideoEditorAgentToolError.limitReached(Self.maximumChangesPerRun)
+      }
+      return try await generateCaptions(decode(VideoEditorAgentCaptionArguments.self, arguments), state: state)
     case .addZoom:
       let args = try decode(AddZoomArguments.self, arguments)
       guard let raw = args.text else { return nil }

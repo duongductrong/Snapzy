@@ -43,7 +43,7 @@ Release builds show the toolbar AI button when Apple Intelligence is ready, an e
 - Short ids `c1…` (clips), `z1…` (zooms), `s1…` (speeds) map to UUIDs per run. Zoom centers are normalized top-left 0…1 (percent accepted).
 - Clamps: clip 0.1 s, zoom/speed 0.5 s, rate 0.25–8, zoom level 1–4. ≤ 80 changes per turn (`VideoEditorAgentToolbox.maximumChangesPerRun`). Refused while exporting or for GIFs.
 
-### Tools (`VideoEditorAgentToolCatalog`, 22)
+### Tools (`VideoEditorAgentToolCatalog`, 26)
 
 | Group | Tools |
 | --- | --- |
@@ -52,11 +52,13 @@ Release builds show the toolbar AI button when Apple Intelligence is ready, an e
 | Zoom | `add_zoom(start?, duration, level, center? \| follow_mouse? \| text?)`, `update_zoom`, `remove_zoom(ids)` |
 | Speed | `add_speed(start, end, rate)`, `update_speed`, `remove_speed(ids)` |
 | Frame / audio | `set_background(style, padding, shadow, corner_radius, alignment, aspect_ratio)`, `set_audio(muted?, volume 0–200, track all\|system\|microphone)` |
+| Studio layers / captions (`VideoEditorAgentToolbox+Studio.swift`) | `set_cursor(visible?, scale?, smoothing?, hide_when_idle?, click_effect?, click_sound?)`, `set_camera(visible?, shape?, size?, position? \| center?, mirrored?)` (Studio recordings only; otherwise an error the model relays), `generate_captions(language?, show_on_video=true)` (on device, replaces existing captions), `edit_caption(id?, text?, start?, end?, show_on_video?, position?, text_size?)` (empty text deletes; no id = style only) |
 | High level (computed in app) | `remove_silences(min_duration=1, padding=0.25)`, `speed_up_idle(rate=4, min_duration=3)`, `auto_zoom_activity(level=2, max_zooms=8)` |
 
 - `cut_range` shifts zooms/speeds after the cut back by its length, drops effects inside it and shortens ones across its edges (manual cuts leave effects in place). High-level tools cut from the end so earlier timestamps stay valid.
 - `add_zoom(text:)` finds the words on screen from `start` on; the zoom begins when they appear and centers on their box. Not found → error listing frequent on-screen lines.
-- Apple Intelligence (macOS 26) gets 5 coarse tools instead: `cut`, `zoom`, `speed`, `style`, `auto` (`VideoEditorAgentAppleTools.swift`), with a compact text scene.
+- `get_timeline` reports `cursor` / `camera` only when they can be edited and `captions` (style, count, first 40 with ids `t1…` and timeline times) once they exist.
+- Apple Intelligence (macOS 26) gets 6 coarse tools instead: `cut`, `zoom`, `speed`, `style` (also cursor and camera), `auto`, `captions` (add / show / hide) (`VideoEditorAgentAppleTools.swift`, `VideoEditorAgentAppleCaptionsTool.swift`), with a compact text scene.
 
 ### Perception (`VideoEditorAgentAnalyzer`, `…Vision`, `…Transcriber`)
 
@@ -130,6 +132,7 @@ flowchart LR
 - Automatic never chooses an endpoint or CLI. The first prompt to each off-device provider asks once ("Send this screenshot to …?"); the consent id is `endpoint:<uuid>@<scheme:host:port>` (pointing the endpoint at another server asks again) or `cli:<kind>`. Stored in `annotateAgent.consentedProviders`; Settings → AI → Sending permissions → **Reset**.
 - Video Editor asks separately ("Send this video’s timeline to …?"): same id with `#video-media` (`AgentRemoteConsent.scope`), because it sends a timeline, on-screen text, transcript text and frames rather than one screenshot. Agreeing for Annotate does not cover video. Apple Intelligence and quick actions never ask (on device).
 - **Send screenshot image** (`annotateAgent.sendImage`, default on): off sends only the scene text (recognized text blocks, detected elements, annotations, canvas). For video, off keeps `get_frame` images on the Mac (the tool still returns the text read off the frame).
+- Captions (panel or `generate_captions`) are transcribed on this Mac (SpeechAnalyzer on macOS 26, otherwise on-device SFSpeech); no audio leaves the Mac. The remote transcription engine exists but is not offered in the UI yet; it will only run after an explicit opt-in.
 - The tools only touch the canvas; there is no export/upload/send tool. Text in a screenshot can still try to steer the model (prompt injection), which is why every run is one undo step.
 - Known limit: Codex and OpenCode still merge the user's global config, so **their other MCP servers stay available** to the model; Claude Code still loads the user's hooks, `CLAUDE.md` and skills. The CLI consent message and Settings → AI say so.
 

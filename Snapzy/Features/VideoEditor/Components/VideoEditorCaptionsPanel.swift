@@ -128,6 +128,7 @@ struct VideoEditorCaptionsPanel: View {
         var settings = state.captions.settings
         settings.languageIdentifier = value.isEmpty ? nil : value
         state.setCaptionSettings(settings)
+        VideoEditorState.rememberCaptionLanguage(settings.languageIdentifier)
       }
     )
   }

@@ -4,9 +4,9 @@
 //
 //  Video Editor AI prompt answered by the on-device Apple Intelligence model
 //  (FoundationModels, macOS 26). Its 4K-token context holds instructions, tool
-//  schemas, scene, transcript and answer, so it gets a short text scene and five
-//  coarse tools (cut / zoom / speed / style / auto) that map onto the shared
-//  `VideoEditorAgentToolbox` instead of the full 19-tool catalog.
+//  schemas, scene, transcript and answer, so it gets a short text scene and six
+//  coarse tools (cut / zoom / speed / style / auto / captions) that map onto the shared
+//  `VideoEditorAgentToolbox` instead of the full catalog.
 //
 
 import Foundation
@@ -81,6 +81,11 @@ extension VideoEditorAgentScene {
     lines.append(
       "Frame: background \(background.style), padding \(background.padding), corners \(background.cornerRadius), shadow \(s(background.shadow))."
     )
+    var layers: [String] = []
+    if let cursor { layers.append("cursor \(cursor.visible ? "shown" : "hidden") size \(s(cursor.scale))x") }
+    if let camera { layers.append("camera \(camera.visible ? "shown" : "hidden") \(camera.shape)") }
+    if let captions { layers.append("captions \(captions.count)\(captions.showOnVideo ? "" : " hidden")") }
+    if !layers.isEmpty { lines.append("Layers: " + layers.joined(separator: ", ") + ".") }
     return lines.joined(separator: "\n")
   }
 
@@ -250,6 +255,7 @@ final class VideoEditorAgentAppleIntelligenceProvider: AgentProvider {
       VideoAppleSpeedTool(bridge: bridge),
       VideoAppleStyleTool(bridge: bridge),
       VideoAppleAutoTool(bridge: bridge),
+      VideoAppleCaptionsTool(bridge: bridge),
     ]
   }
 }
@@ -478,7 +484,7 @@ nonisolated struct VideoAppleStyleTool: Tool {
   let bridge: VideoAppleToolBridge
 
   let name = "style"
-  let description = "Frame the video (background, padding, corners, shadow, shape) or change its sound. Only set what the user asked for."
+  let description = "Frame the video (background, padding, corners, shadow, shape), change its sound, or the recorded cursor and camera. Only set what the user asked for."
 
   @Generable
   struct Arguments {
@@ -496,6 +502,14 @@ nonisolated struct VideoAppleStyleTool: Tool {
     var muted: Bool?
     @Guide(description: "Volume percent, 100 = original", .range(0 ... 200))
     var volume: Int?
+    @Guide(description: "Show or hide the recorded cursor")
+    var cursorVisible: Bool?
+    @Guide(description: "Cursor size, 1 = as recorded", .range(0.5 ... 3))
+    var cursorSize: Double?
+    @Guide(description: "Show or hide the camera")
+    var cameraVisible: Bool?
+    @Guide(description: "Where the camera sits", .anyOf(["top left", "top right", "bottom left", "bottom right"]))
+    var cameraPosition: String?
   }
 
   func call(arguments: Arguments) async throws -> String {
@@ -511,12 +525,22 @@ nonisolated struct VideoAppleStyleTool: Tool {
     var sound: [String: Any] = [:]
     if let muted = arguments.muted { sound["muted"] = muted }
     if let volume = arguments.volume { sound["volume"] = volume }
-    guard !frame.isEmpty || !sound.isEmpty else {
-      return VideoAppleToolBridge.error("Set at least one of background, padding, cornerRadius, shadow, shape, muted, volume.")
+    var cursor: [String: Any] = [:]
+    if let visible = arguments.cursorVisible { cursor["visible"] = visible }
+    if let size = arguments.cursorSize { cursor["scale"] = size }
+    var camera: [String: Any] = [:]
+    if let visible = arguments.cameraVisible { camera["visible"] = visible }
+    if let position = VideoEditorAgentAppleArguments.value(arguments.cameraPosition) {
+      camera["position"] = position.lowercased().replacingOccurrences(of: " ", with: "_")
+    }
+    guard !frame.isEmpty || !sound.isEmpty || !cursor.isEmpty || !camera.isEmpty else {
+      return VideoAppleToolBridge.error("Set at least one of background, padding, cornerRadius, shadow, shape, muted, volume, cursor or camera.")
     }
     var results: [AgentToolResult] = []
     if !frame.isEmpty { results.append(try await bridge.call(.setBackground, frame)) }
     if !sound.isEmpty { results.append(try await bridge.call(.setAudio, sound)) }
+    if !cursor.isEmpty { results.append(try await bridge.call(.setCursor, cursor)) }
+    if !camera.isEmpty { results.append(try await bridge.call(.setCamera, camera)) }
     return VideoEditorAgentAppleArguments.joined(results)
   }
 }

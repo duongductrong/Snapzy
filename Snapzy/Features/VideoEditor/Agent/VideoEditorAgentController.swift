@@ -810,6 +810,10 @@ final class VideoEditorAgentController: ObservableObject {
     case .getFrame: L10n.VideoEditorAI.statusLooking
     case .findOnScreen: L10n.VideoEditorAI.statusFinding
     case .getTranscript: L10n.VideoEditorAI.statusTranscribing
+    case .setCursor: L10n.VideoEditorAI.statusCursor
+    case .setCamera: L10n.VideoEditorAI.statusCamera
+    case .generateCaptions: L10n.VideoEditorAI.statusCaptions
+    case .editCaption: L10n.VideoEditorAI.statusEditCaption
     }
   }
 }

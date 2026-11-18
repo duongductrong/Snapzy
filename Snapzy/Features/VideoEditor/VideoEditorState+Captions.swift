@@ -15,8 +15,8 @@ extension VideoEditorState {
 
   var isGeneratingCaptions: Bool { captionTask != nil }
 
-  /// Speech language: the panel's choice, else the app language (with the Mac's region
-  /// when they match), else the Mac's locale.
+  /// Speech language: the panel's choice, else the remembered caption language, else the
+  /// app language (with the Mac's region when they match), else the Mac's locale.
   var captionLocale: Locale {
     if let identifier = captions.settings.languageIdentifier, !identifier.isEmpty {
       return Locale(identifier: identifier)
@@ -32,8 +32,20 @@ extension VideoEditorState {
     return Locale(identifier: appLanguage)
   }
 
-  static func defaultCaptionLocale() -> Locale {
-    defaultCaptionLocale(appLanguage: AppLanguageManager.shared.activeEffectiveLanguageIdentifier)
+  static func defaultCaptionLocale(defaults: UserDefaults = .standard) -> Locale {
+    if let saved = defaults.string(forKey: PreferencesKeys.videoEditorCaptionLanguage), !saved.isEmpty {
+      return Locale(identifier: saved)
+    }
+    return defaultCaptionLocale(appLanguage: AppLanguageManager.shared.activeEffectiveLanguageIdentifier)
+  }
+
+  /// Remembers the language picked in the captions panel for the next video (`nil` = automatic).
+  static func rememberCaptionLanguage(_ identifier: String?, defaults: UserDefaults = .standard) {
+    if let identifier, !identifier.isEmpty {
+      defaults.set(identifier, forKey: PreferencesKeys.videoEditorCaptionLanguage)
+    } else {
+      defaults.removeObject(forKey: PreferencesKeys.videoEditorCaptionLanguage)
+    }
   }
 
   // MARK: - Editing
@@ -116,99 +128,5 @@ extension VideoEditorState {
     return vtt
       ? VideoEditorSubtitleWriter.vtt(cues, maxCharsPerLine: limit)
       : VideoEditorSubtitleWriter.srt(cues, maxCharsPerLine: limit)
-  }
-
-  // MARK: - Generate
-
-  /// Transcribes the primary recording and replaces the captions (one undo step).
-  /// Progress and cancel go through the editor's progress overlay.
-  func generateCaptions() {
-    guard canGenerateCaptions, captionTask == nil, !isExporting else { return }
-    pause()
-    captionNotice = nil
-    setCaptionProgress(.transcribing(fraction: 0))
-    isExporting = true
-
-    let asset = asset
-    let roles = audioTrackRoles
-    let locale = captionLocale
-    let options = captions.settings.segmenterOptions
-    captionTask = Task { @MainActor [weak self] in
-      do {
-        let result = try await VideoEditorTranscriptService.shared.transcribe(
-          asset: asset, roles: roles, locale: locale
-        ) { progress in
-          Task { @MainActor [weak self] in self?.setCaptionProgress(progress) }
-        }
-        try Task.checkCancellation()
-        self?.finishCaptionGeneration(result: result, options: options)
-      } catch is CancellationError {
-        self?.endCaptionGeneration()
-      } catch {
-        self?.captionNotice = Self.captionErrorMessage(error, locale: locale)
-        self?.endCaptionGeneration()
-      }
-    }
-  }
-
-  func cancelCaptionGeneration() {
-    guard let task = captionTask else { return }
-    task.cancel()
-    endCaptionGeneration()
-  }
-
-  private func finishCaptionGeneration(result: TranscriptResult, options: VideoEditorCaptionSegmenterOptions) {
-    guard captionTask != nil else { return }
-    let segments = VideoEditorCaptionSegmenter.segment(result.words, options: options)
-    if segments.isEmpty {
-      captionNotice = L10n.VideoEditor.captionsNoSpeech
-    } else {
-      var value = captions
-      value.segments = segments
-      value.settings.isEnabled = true
-      setCaptions(value)
-      if !result.unrecognizedSpans.isEmpty {
-        captionNotice = L10n.VideoEditor.captionsPartial(result.unrecognizedSpans.count)
-      }
-    }
-    endCaptionGeneration()
-  }
-
-  private func endCaptionGeneration() {
-    captionTask = nil
-    if progressOperation.isCaptionWork { isExporting = false }
-  }
-
-  private func setCaptionProgress(_ progress: TranscriptProgress) {
-    guard captionTask != nil || !isExporting else { return }
-    let operation: VideoEditorProgressOperation
-    let fraction: Double
-    switch progress {
-    case .downloadingModel(let value):
-      operation = .downloadSpeechModel
-      fraction = value
-    case .transcribing(let value):
-      operation = .generateCaptions
-      fraction = value
-    }
-    if progressOperation != operation {
-      progressOperation = operation
-      exportStatusMessage = operation.initialStatusMessage
-    }
-    exportProgress = Float(min(max(fraction, 0), 1))
-  }
-
-  nonisolated static func captionErrorMessage(_ error: Error, locale: Locale) -> String {
-    switch error as? VideoEditorTranscriptError {
-    case .noAudio:
-      return L10n.VideoEditor.captionsErrorNoAudio
-    case .denied:
-      return L10n.VideoEditor.captionsErrorDenied
-    case .unsupported:
-      let name = Locale.current.localizedString(forIdentifier: locale.identifier) ?? locale.identifier
-      return L10n.VideoEditor.captionsErrorUnsupported(name)
-    default:
-      return L10n.VideoEditor.captionsErrorFailed
-    }
   }
 }

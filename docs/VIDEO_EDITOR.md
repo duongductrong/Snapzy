@@ -69,7 +69,7 @@ flowchart TD
 
 ## Reopen and Continue Editing
 
-- Every successful in-place Video Editor Save persists a versioned edit recipe in `Application Support/Snapzy/VideoEditorSessions/`. The recipe includes the ordered cut/trim timeline, zoom blocks, speed blocks, background, audio/export settings, and recording metadata.
+- Every successful in-place Video Editor Save persists a versioned edit recipe in `Application Support/Snapzy/VideoEditorSessions/`. The recipe includes the ordered cut/trim timeline, zoom blocks, speed blocks, background, audio/export settings, recording metadata, and (when present) Studio cursor/camera settings and captions. Those last three are optional fields (`decodeIfPresent`), so manifests from before them still open and the schema version stays 1.
 - The first commit also preserves a private source snapshot captured before rendering. When the file is reopened from Quick Access, History, or a direct URL, `VideoEditorState` loads that snapshot as its editing asset while keeping the current rendered file as the replacement target. A later Save therefore applies the recipe to the original source again instead of applying edits to an already-rendered export.
 - The sidecar is keyed by the current media path and validated against its size, modification time, and extension. A missing, invalid, or incompatible sidecar falls back to opening the flattened media as a legacy session.
 - Temporary capture (`after capture → save = false`) commits the rendered file at its temp URL and keeps the recipe with the Quick Access card. Quick Access Save later promotes both the media and its editor session package to the export destination. Saved capture (`save = true`) keeps the package keyed at the existing destination.
@@ -205,7 +205,7 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 - `VideoEditorCameraSettings`: show, shape (rectangle / square / circle), size (8–60 % of the video width), center (one of nine anchors), mirror, reset to the recording layout. Position and size are relative to the video rect, while the layer is drawn in canvas space (after zoom and background, never zoomed). Undo via `EditorAction.updateCamera` (slider drags commit once).
 - Export: `VideoEditorExporter.addCameraTrack` lays the sidecar out clip by clip like the screen track (same source windows, empty over inserted files and past the sidecar end) and speed-scales it the same way; the compositor reads it as the `.camera` auxiliary track and `VideoEditorCameraLayer` draws it into the video rect the compositor passes (`VideoEditorStudioLayerContext.videoRect`, padding included), skipping recorded gaps. `VideoEditorCameraRenderer` (aspect fill, mirror, rounded-rect mask) is shared with the Studio recording flatten pass.
 - Preview (D2, simplified): `VideoEditorCameraPreviewController` owns a second, muted `AVPlayer` on the sidecar, whose time axis is recording source time. On each playback tick the playhead is mapped to source time (same mapping as the cursor): while playing it runs at the current speed segment's rate and re-seeks when drift exceeds 120 ms; while paused/scrubbing it seeks exactly, coalescing seeks. Rendered by an `AVPlayerLayer` (corner mask and mirroring in Core Animation) in the canvas-space overlay host; hidden over inserted clips, trimmed footage and gaps.
-- Not yet: dragging the camera directly on the preview, hide-camera time segments on the timeline, session persistence (phase 6).
+- Not yet: dragging the camera directly on the preview, hide-camera time segments on the timeline.
 
 ## Captions
 
@@ -216,7 +216,8 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 - Preview: `VideoEditorCaptionOverlayView` in the canvas-space host above the camera, playhead → source time via `cursorSourceTime(atSequence:)`, rate via `previewSourceRate`.
 - Export: `VideoEditorCaptionLayer` (canvas space, last in the recipe) is added by `makeStudioRecipe` whenever captions are shown; output → source through `VideoEditorSourceTimeMapping`.
 - SRT / WebVTT: panel buttons; `VideoEditorCaptionResolver.outputCues` maps source → output time over the playable placements and `TimelineSequenceMap` (cut footage dropped, a caption split by a cut becomes two cues, back-to-back pieces merge, speed shrinks cues), written by `VideoEditorSubtitleWriter`. Independent of "Show on Video".
-- Not yet: session persistence, agent tools, caption language preference (phase 6).
+- Language picked in the panel is remembered for the next video (`videoEditor.captions.language`, TOML `recording.video_editor_caption_language`; empty = automatic).
+- Saved with the session (see below) and editable by the agent (`generate_captions`, `edit_caption`).
 
 ## Background and Padding
 

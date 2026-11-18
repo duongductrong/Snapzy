@@ -370,6 +370,14 @@ enum SnapzyConfigurationImporter {
     collectDouble(&reader, "recording", "video_editor_zoom_transition_duration", range: 0.15...0.75, mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.videoEditorZoomTransitionDuration)
     }
+    collectString(&reader, "recording", "video_editor_caption_language", mutations: &mutations) {
+      let value = $0.trimmingCharacters(in: .whitespaces)
+      if value.isEmpty {
+        defaults.removeObject(forKey: PreferencesKeys.videoEditorCaptionLanguage)
+      } else {
+        defaults.set(value, forKey: PreferencesKeys.videoEditorCaptionLanguage)
+      }
+    }
   }
 
   private static func collectQuickAccess(

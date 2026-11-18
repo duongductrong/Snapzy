@@ -166,6 +166,15 @@ enum VideoEditorAgentStepDescriber {
       return oneStep(.speedUpIdle, payload: payload, symbolName: "forward.fill")
     case .autoZoomActivity:
       return oneStep(.autoZoom, payload: payload, symbolName: "plus.magnifyingglass")
+    case .setCursor:
+      return VideoEditorAgentStep(symbolName: "cursorarrow.rays", title: L10n.VideoEditorAI.stepCursor)
+    case .setCamera:
+      return VideoEditorAgentStep(symbolName: "person.crop.square", title: L10n.VideoEditorAI.stepCamera)
+    case .generateCaptions:
+      let count = number(payload["captions"]).map { Int($0) } ?? 0
+      return VideoEditorAgentStep(symbolName: "captions.bubble", title: L10n.VideoEditorAI.stepCaptions(count))
+    case .editCaption:
+      return VideoEditorAgentStep(symbolName: "captions.bubble", title: L10n.VideoEditorAI.stepEditCaption)
     case .getTimeline, .seek, .getActivity, .getFrame, .findOnScreen, .getTranscript:
       return nil
     }

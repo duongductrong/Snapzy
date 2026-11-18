@@ -720,6 +720,7 @@ final class VideoEditorState: ObservableObject {
   /// Studio camera layer settings (only meaningful when `hasEditableCamera`).
   @Published private(set) var cameraSettings = VideoEditorCameraSettings.default
   private(set) var initialCameraSettings = VideoEditorCameraSettings.default
+  private var didSeedCameraSettings = false
   /// Camera sidecar movie of a Studio recording, when present on disk.
   private(set) var cameraSourceURL: URL?
   /// Second, muted player on the camera sidecar for the preview.
@@ -1214,6 +1215,7 @@ final class VideoEditorState: ObservableObject {
     backgroundAspectRatio = sessionData.backgroundAspectRatio
     exportSettings = sessionData.exportSettings
     isMuted = sessionData.isMuted
+    restoreStudioLayers(from: sessionData)
     rebuildAutoFocusPaths(for: zoomSegments)
 
     // Restored values are the new clean baseline. A later user change should
@@ -3064,6 +3066,23 @@ final class VideoEditorState: ObservableObject {
     updateHasUnsavedChanges()
   }
 
+  /// Cursor, camera and captions saved with the session become the clean baseline.
+  private func restoreStudioLayers(from sessionData: VideoEditorSessionData) {
+    if let cursor = sessionData.cursorSettings {
+      cursorSettings = cursor
+      initialCursorSettings = cursor
+      rebuildCursorResolver()
+    }
+    if let camera = sessionData.cameraSettings {
+      cameraSettings = camera
+      initialCameraSettings = camera
+      didSeedCameraSettings = true
+    }
+    if let captions = sessionData.captions, !isGIF {
+      self.captions = captions
+    }
+  }
+
   private func reloadCameraLayer() {
     guard let source = recordingMetadata?.cameraSource,
           let url = try? RecordingMetadataStore.sidecarURL(named: source.fileName, kind: .camera),
@@ -3079,8 +3098,10 @@ final class VideoEditorState: ObservableObject {
       cameraPreview = VideoEditorCameraPreviewController(url: url)
     }
     cameraSourceURL = url
-    // A fresh editor starts from the placement used while recording.
-    if cameraSettings == initialCameraSettings {
+    // A fresh editor starts from the placement used while recording (once: a later
+    // metadata reload or a restored session keeps the user's layout).
+    if !didSeedCameraSettings {
+      didSeedCameraSettings = true
       let recorded = VideoEditorCameraSettings.recorded(source)
       cameraSettings = recorded
       initialCameraSettings = recorded

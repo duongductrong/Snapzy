@@ -10697,6 +10697,18 @@ extension L10n {
     static var statusTranscribing: String {
       string("video-editor.ai.status-transcribing", defaultValue: "Transcribing…", comment: "AI working status while speech is transcribed on this Mac")
     }
+    static var statusCursor: String {
+      string("video-editor.ai.status-cursor", defaultValue: "Styling the cursor…", comment: "AI working status while the cursor layer is styled")
+    }
+    static var statusCamera: String {
+      string("video-editor.ai.status-camera", defaultValue: "Adjusting the camera…", comment: "AI working status while the camera layer is adjusted")
+    }
+    static var statusCaptions: String {
+      string("video-editor.ai.status-captions", defaultValue: "Writing captions…", comment: "AI working status while captions are generated from speech")
+    }
+    static var statusEditCaption: String {
+      string("video-editor.ai.status-edit-caption", defaultValue: "Editing captions…", comment: "AI working status while a caption is edited")
+    }
     static var suggestionSilences: String {
       string("video-editor.ai.suggestion-silences", defaultValue: "Remove silences", comment: "Quick action chip above the Video Editor AI prompt")
     }
@@ -10819,6 +10831,18 @@ extension L10n {
     }
     static var stepBackground: String {
       string("video-editor.ai.step-background", defaultValue: "Changed the background", comment: "AI edit step")
+    }
+    static var stepCursor: String {
+      string("video-editor.ai.step-cursor", defaultValue: "Changed the cursor", comment: "AI edit step")
+    }
+    static var stepCamera: String {
+      string("video-editor.ai.step-camera", defaultValue: "Changed the camera", comment: "AI edit step")
+    }
+    static func stepCaptions(_ count: Int) -> String {
+      format("video-editor.ai.step-captions", defaultValue: "Added captions (%lld)", comment: "AI edit step. %lld = number of captions created", count)
+    }
+    static var stepEditCaption: String {
+      string("video-editor.ai.step-edit-caption", defaultValue: "Edited captions", comment: "AI edit step")
     }
     static var stepMuted: String {
       string("video-editor.ai.step-muted", defaultValue: "Muted the audio", comment: "AI edit step")

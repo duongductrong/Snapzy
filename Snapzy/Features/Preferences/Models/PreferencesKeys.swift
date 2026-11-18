@@ -189,6 +189,8 @@ enum PreferencesKeys {
   static let videoEditorZoomTransitionDuration = "videoEditor.zoom.transitionDuration"
   /// Video Editor AI assistant layout: "sidebar" (right panel, default) or "dock" (floating over the player).
   static let videoEditorAILayout = "videoEditor.ai.layout"
+  /// Speech language for new captions (BCP-47); unset = app language, then the Mac's.
+  static let videoEditorCaptionLanguage = "videoEditor.captions.language"
 
   // Mouse Highlight Customization
   static let mouseHighlightSize = "recording.mouseHighlight.size"

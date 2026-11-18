@@ -67,6 +67,43 @@ nonisolated struct VideoEditorAgentScene: Encodable, Equatable {
     let speed: String?
   }
 
+  /// Studio cursor; nil when the recording has no editable cursor.
+  struct Cursor: Encodable, Equatable {
+    let visible: Bool
+    let scale: Double
+    let smoothing: Double
+    let hideWhenIdle: Bool
+    let clickEffect: String
+    let clickSound: Bool
+  }
+
+  /// Studio camera; nil without a camera sidecar.
+  struct Camera: Encodable, Equatable {
+    let visible: Bool
+    let shape: String
+    let size: Double
+    /// [x, y] 0…1 from the top left of the video.
+    let center: [Double]
+    let mirrored: Bool
+  }
+
+  struct Caption: Encodable, Equatable {
+    let id: String
+    /// Where it first shows on the timeline; nil when its footage is trimmed out.
+    let start: Double?
+    let end: Double?
+    let text: String
+  }
+
+  struct Captions: Encodable, Equatable {
+    let showOnVideo: Bool
+    let position: String
+    let textSize: Double
+    let count: Int
+    /// The first captions only; `count` tells how many there are.
+    let items: [Caption]
+  }
+
   /// Timeline length, trimmed footage included.
   let duration: Double
   /// What plays, before speed changes.
@@ -82,4 +119,8 @@ nonisolated struct VideoEditorAgentScene: Encodable, Equatable {
   let audio: Audio
   let selection: Selection
   let hasMouseData: Bool
+  var cursor: Cursor?
+  var camera: Camera?
+  /// nil before captions are generated.
+  var captions: Captions?
 }

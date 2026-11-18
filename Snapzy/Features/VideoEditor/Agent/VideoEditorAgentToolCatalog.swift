@@ -32,6 +32,10 @@ nonisolated enum VideoEditorAgentToolName: String, CaseIterable {
   case getFrame = "get_frame"
   case findOnScreen = "find_on_screen"
   case getTranscript = "get_transcript"
+  case setCursor = "set_cursor"
+  case setCamera = "set_camera"
+  case generateCaptions = "generate_captions"
+  case editCaption = "edit_caption"
 
   /// Read-only tools are not paced and don't count as changes. `seek` only moves the playhead.
   var isReadOnly: Bool {
@@ -44,7 +48,7 @@ nonisolated enum VideoEditorAgentToolName: String, CaseIterable {
   /// Looks at frames or listens to speech, which takes a while (`VideoEditorAgentVision`,
   /// `VideoEditorAgentTranscriber`). `add_zoom` does too when it is given `text`.
   var readsMedia: Bool {
-    self == .getFrame || self == .findOnScreen || self == .getTranscript
+    self == .getFrame || self == .findOnScreen || self == .getTranscript || self == .generateCaptions
   }
 
   /// Reads the recording's audio and cursor first (`VideoEditorAgentAnalyzer`).
@@ -316,6 +320,51 @@ nonisolated enum VideoEditorAgentToolCatalog {
         ("start", time("Only from here.")),
         ("end", time("Only up to here.")),
         ("language", string("Spoken language, BCP-47 like en-US or vi-VN (default: the Mac's language).")),
+      ])
+    ),
+    spec(
+      .setCursor,
+      "Change how the recorded cursor looks (Studio recordings only; get_timeline shows cursor when it can be edited).",
+      object([
+        ("visible", bool("Show the cursor.")),
+        ("scale", number("Cursor size multiplier, \(fmt(VideoEditorCursorSettings.scaleRange.lowerBound))–\(fmt(VideoEditorCursorSettings.scaleRange.upperBound)).")),
+        ("smoothing", number("Movement smoothing 0–1 (0 = as recorded).")),
+        ("hide_when_idle", bool("Fade the cursor out while it doesn't move.")),
+        ("click_effect", string("Effect drawn on clicks.", enum: VideoEditorCursorClickEffect.allCases.map(\.rawValue))),
+        ("click_sound", bool("Play a click sound on each click.")),
+      ])
+    ),
+    spec(
+      .setCamera,
+      "Change the recorded camera bubble (Studio recordings with a camera only; get_timeline shows camera when it can be edited).",
+      object([
+        ("visible", bool("Show the camera.")),
+        ("shape", string("Camera shape.", enum: RecordingCameraShape.allCases.map(\.rawValue))),
+        ("size", number("Width as a fraction of the video width, \(fmt(VideoEditorCameraSettings.sizeRange.lowerBound))–\(fmt(VideoEditorCameraSettings.sizeRange.upperBound)).")),
+        ("position", string("Corner or edge.", enum: VideoEditorAgentStudioTools.cameraPositions.map(\.name))),
+        ("center", point("Or an exact center [x, y], 0–1 from the top left of the video.")),
+        ("mirrored", bool("Flip the camera horizontally.")),
+      ])
+    ),
+    spec(
+      .generateCaptions,
+      "Create captions from the speech (on this Mac; takes a while) and replace any existing ones. They show on the video and can be exported as SRT.",
+      object([
+        ("language", string("Spoken language, BCP-47 like en-US or vi-VN (default: the app's language).")),
+        ("show_on_video", bool("Burn the captions into the video (default true).")),
+      ])
+    ),
+    spec(
+      .editCaption,
+      "Change a caption's text or timing (ids from get_timeline captions), or style all captions.",
+      object([
+        ("id", string("Caption id like \"t3\". Leave out to change only the style.")),
+        ("text", string("New text; empty deletes the caption.")),
+        ("start", time("New start.")),
+        ("end", time("New end.")),
+        ("show_on_video", bool("Show captions on the video.")),
+        ("position", string("Where captions sit.", enum: ["bottom", "top"])),
+        ("text_size", number("Text height as a fraction of the video height, \(fmt(VideoEditorCaptionSettings.fontSizeRange.lowerBound))–\(fmt(VideoEditorCaptionSettings.fontSizeRange.upperBound)).")),
       ])
     ),
   ]

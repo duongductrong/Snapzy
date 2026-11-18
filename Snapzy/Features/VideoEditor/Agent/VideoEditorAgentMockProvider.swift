@@ -102,7 +102,22 @@ final class VideoEditorAgentMockProvider: AgentProvider {
       let padding = take(#"padding\s*(\d+(?:\.\d+)?)"#, from: &text)
       let times = Self.times(in: text)
 
-      if has("silence", "im lang", "pause", "khoang lang"), !has("mute", "tat tieng") {
+      let hide = has("hide", "an ", "tat ") || text.hasPrefix("an")
+      if has("cursor", "con tro") {
+        // "hide the cursor", "cursor 1.5x" / "phong to cursor 1.5x".
+        var args: [String: Any] = [:]
+        if let rate { args["scale"] = rate } else { args["visible"] = !hide }
+        calls.append(Call(name: "set_cursor", arguments: json(args)))
+      } else if has("camera", "webcam") {
+        calls.append(Call(name: "set_camera", arguments: json(["visible": !hide])))
+      } else if has("caption", "subtitle", "phu de") {
+        if hide {
+          calls.append(Call(name: "edit_caption", arguments: json(["show_on_video": false])))
+        } else {
+          let language = has("tieng viet", "vietnamese") ? "vi-VN" : (has("english", "tieng anh") ? "en-US" : nil)
+          calls.append(Call(name: "generate_captions", arguments: language.map { json(["language": $0]) } ?? "{}"))
+        }
+      } else if has("silence", "im lang", "pause", "khoang lang"), !has("mute", "tat tieng") {
         calls.append(Call(name: "remove_silences", arguments: "{}"))
       } else if has("idle", "waiting", "cho doi", "dung yen") {
         calls.append(Call(name: "speed_up_idle", arguments: rate.map { json(["rate": $0]) } ?? "{}"))

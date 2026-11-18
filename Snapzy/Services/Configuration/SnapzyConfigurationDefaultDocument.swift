@@ -107,6 +107,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("highlight_clicks", false)
     writer.value("show_keystrokes", false)
     writer.value("video_editor_zoom_transition_duration", 0.4)
+    writer.value("video_editor_caption_language", "")
 
     writer.section("recording.mouse_highlight")
     writer.value("size", 50)

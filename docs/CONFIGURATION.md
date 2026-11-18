@@ -192,6 +192,7 @@ dim_non_selected_area = true
 highlight_clicks = false
 show_keystrokes = false
 video_editor_zoom_transition_duration = 0.4
+video_editor_caption_language = ""
 
 [quick_access]
 enabled = true
