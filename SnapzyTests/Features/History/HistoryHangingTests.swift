@@ -403,6 +403,33 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testCaptureOverlayTemporarilyHidesAndRestoresSamePinnedShelf() async throws {
+    try await withCaptureWindows { shelf, overlay, controls, screen in
+      shelf.show(on: screen)
+      shelf.keepOpen = true
+      try await Task.sleep(nanoseconds: 250_000_000)
+      let panel = try XCTUnwrap(self.hangingWindow)
+      let cable = try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "SnapzyHistoryCable" && $0.isVisible })
+      controls.orderFrontRegardless()
+      overlay.orderFrontRegardless()
+      try await Task.sleep(nanoseconds: 250_000_000)
+      XCTAssertFalse(shelf.isVisible)
+      XCTAssertFalse(panel.isVisible)
+      XCTAssertFalse(cable.isVisible)
+      XCTAssertTrue(shelf.keepOpen)
+      XCTAssertTrue(shelf.isMonitoring)
+      shelf.show(on: screen)
+      XCTAssertFalse(shelf.isVisible)
+      overlay.orderOut(nil)
+      try await Task.sleep(nanoseconds: 250_000_000)
+      XCTAssertTrue(shelf.isVisible)
+      XCTAssertTrue(panel.isVisible)
+      XCTAssertTrue(cable.isVisible)
+      XCTAssertTrue(shelf.keepOpen)
+      XCTAssertTrue(self.hangingWindow === panel)
+    }
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
