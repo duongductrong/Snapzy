@@ -54,6 +54,9 @@ final class HistoryThumbnailGenerator {
     memoryCache.totalCostLimit = 48 * 1024 * 1024
   }
 
+  // Avoid the synthesized isolated-deinit back-deployment path on macOS 13–15.
+  deinit {}
+
   private static func defaultThumbnailsDirectory() -> URL {
     let appSupport = FileManager.default.urls(
       for: .applicationSupportDirectory, in: .userDomainMask
