@@ -91,6 +91,14 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertEqual(HistoryHangingRowLayout(width: 1120).capacity, 5)
   }
 
+  func testSelectionCapsConfiguredMaximumAndFiltersBeforeLimiting() {
+    let records = (0 ..< 12).map { selectionRecord(index: $0, type: $0.isMultiple(of: 2) ? .screenshot : .video) }
+    let visible = HistoryHangingLayout.visibleRecords(records, filter: .video, maximum: 20, width: 1120)
+    XCTAssertEqual(visible.map(\.id), records.filter { $0.captureType == .video }.prefix(5).map(\.id))
+    XCTAssertEqual(HistoryHangingLayout.visibleRecords(records, filter: nil, maximum: 3, width: 1120).count, 3)
+    XCTAssertTrue(HistoryHangingLayout.visibleRecords(records, filter: .gif, maximum: 20, width: 1120).isEmpty)
+  }
+
   private func selectionRecord(index: Int, type: CaptureHistoryType = .screenshot) -> CaptureHistoryRecord {
     CaptureHistoryRecord(id: UUID(), filePath: "/tmp/history-selection-\(index).png", fileName: "Capture \(index)",
                          captureType: type, fileSize: 1000, capturedAt: Date().addingTimeInterval(-Double(index)),
