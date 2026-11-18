@@ -326,7 +326,7 @@ private struct HangingCardArrival: ViewModifier {
       .rotationEffect(.degrees(-14 * progress), anchor: .top)
       .scaleEffect(1 - 0.08 * progress, anchor: .top)
       .offset(x: -18 * progress, y: -96 * progress)
-      .opacity(1 - min(1, max(0, progress)))
+      .opacity(1 - min(1, max(0, Double(progress))))
   }
 }
 
