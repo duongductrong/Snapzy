@@ -782,6 +782,9 @@ final class VideoEditorState: ObservableObject {
 
   @Published var hasUnsavedChanges: Bool = false
 
+  /// Runs caption translations for the agent (`VideoEditorCaptionTranslationHost` in the window).
+  let captionTranslator = VideoEditorCaptionTranslator()
+
   /// The AI prompt of this editor window, created on first use.
   private(set) var agentIfLoaded: VideoEditorAgentController?
   var agent: VideoEditorAgentController {

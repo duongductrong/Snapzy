@@ -75,6 +75,15 @@ nonisolated struct VideoEditorAgentScene: Encodable, Equatable {
     let hideWhenIdle: Bool
     let clickEffect: String
     let clickSound: Bool
+    /// Clicks the recording captured (`get_activity` lists them; `auto_zoom_activity` source clicks).
+    let clicks: Int
+  }
+
+  /// A stretch where the camera is hidden; one stretch may show in pieces after cuts.
+  struct HiddenStretch: Encodable, Equatable {
+    let id: String
+    let start: Double
+    let end: Double
   }
 
   /// Studio camera; nil without a camera sidecar.
@@ -85,8 +94,8 @@ nonisolated struct VideoEditorAgentScene: Encodable, Equatable {
     /// [x, y] 0…1 from the top left of the video.
     let center: [Double]
     let mirrored: Bool
-    /// [start, end] timeline seconds where the camera is hidden.
-    let hidden: [[Double]]
+    /// Timeline stretches where the camera is hidden (ids h1…).
+    let hidden: [HiddenStretch]
   }
 
   struct Caption: Encodable, Equatable {
@@ -101,6 +110,12 @@ nonisolated struct VideoEditorAgentScene: Encodable, Equatable {
     let showOnVideo: Bool
     let position: String
     let textSize: Double
+    let bold: Bool
+    let textColor: String
+    let backgroundOpacity: Double
+    let hideWhenFast: Bool
+    /// Spoken language the captions were made from, when known.
+    let language: String?
     let count: Int
     /// The first captions only; `count` tells how many there are.
     let items: [Caption]
@@ -121,6 +136,8 @@ nonisolated struct VideoEditorAgentScene: Encodable, Equatable {
   let audio: Audio
   let selection: Selection
   let hasMouseData: Bool
+  /// Studio recording: cursor and/or camera were recorded apart and can be edited.
+  var studio = false
   var cursor: Cursor?
   var camera: Camera?
   /// nil before captions are generated.

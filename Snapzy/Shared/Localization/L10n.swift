@@ -10761,6 +10761,21 @@ extension L10n {
     static var noActivity: String {
       string("video-editor.ai.no-activity", defaultValue: "No focused activity to zoom on", comment: "Result of the Zoom on activity quick action when nothing changed")
     }
+    static var suggestionClickZoom: String {
+      string("video-editor.ai.suggestion-click-zoom", defaultValue: "Zoom on clicks", comment: "Quick action chip above the Video Editor AI prompt")
+    }
+    static var suggestionCaptions: String {
+      string("video-editor.ai.suggestion-captions", defaultValue: "Add captions", comment: "Quick action chip above the Video Editor AI prompt")
+    }
+    static func addedClickZooms(_ count: Int) -> String {
+      format("video-editor.ai.added-click-zooms", defaultValue: "Added %lld zooms on clicks", comment: "Result of the Zoom on clicks quick action. %lld = number of zooms added", count)
+    }
+    static var noClicks: String {
+      string("video-editor.ai.no-clicks", defaultValue: "No clicks to zoom on", comment: "Result of the Zoom on clicks quick action when nothing changed")
+    }
+    static var statusTranslateCaptions: String {
+      string("video-editor.ai.status-translate-captions", defaultValue: "Translating captions…", comment: "AI working status while captions are translated")
+    }
     static var panelTitle: String {
       string("video-editor.ai.panel-title", defaultValue: "AI Assistant", comment: "Title of the Video Editor AI side panel")
     }
@@ -10868,6 +10883,18 @@ extension L10n {
     }
     static var stepEditCaption: String {
       string("video-editor.ai.step-edit-caption", defaultValue: "Edited captions", comment: "AI edit step")
+    }
+    static var stepAddCaption: String {
+      string("video-editor.ai.step-add-caption", defaultValue: "Added a caption", comment: "AI edit step")
+    }
+    static func stepRemoveCaptions(_ count: Int) -> String {
+      format("video-editor.ai.step-remove-captions", defaultValue: "Removed captions (%lld)", comment: "AI edit step. %lld = number of captions removed", count)
+    }
+    static func stepFixCaptions(_ count: Int) -> String {
+      format("video-editor.ai.step-fix-captions", defaultValue: "Fixed captions (%lld)", comment: "AI edit step: words replaced across captions. %lld = number of captions changed", count)
+    }
+    static func stepTranslateCaptions(_ language: String) -> String {
+      format("video-editor.ai.step-translate-captions", defaultValue: "Translated captions to %@", comment: "AI edit step. %@ = target language name", language)
     }
     static var stepMuted: String {
       string("video-editor.ai.step-muted", defaultValue: "Muted the audio", comment: "AI edit step")

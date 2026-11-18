@@ -43,6 +43,10 @@ final class VideoEditorAgentController: ObservableObject {
     case removeSilences
     case speedUpIdle
     case autoZoom
+    /// Studio recordings with clicks: zoom on each burst of clicks.
+    case clickZoom
+    /// Captions from the speech, while the video has none.
+    case captions
 
     var id: String { rawValue }
 
@@ -50,8 +54,13 @@ final class VideoEditorAgentController: ObservableObject {
       switch self {
       case .removeSilences: .removeSilences
       case .speedUpIdle: .speedUpIdle
-      case .autoZoom: .autoZoomActivity
+      case .autoZoom, .clickZoom: .autoZoomActivity
+      case .captions: .generateCaptions
       }
+    }
+
+    var argumentsJSON: String {
+      self == .clickZoom ? #"{"source":"clicks"}"# : "{}"
     }
 
     var title: String {
@@ -59,6 +68,8 @@ final class VideoEditorAgentController: ObservableObject {
       case .removeSilences: L10n.VideoEditorAI.suggestionSilences
       case .speedUpIdle: L10n.VideoEditorAI.suggestionIdle
       case .autoZoom: L10n.VideoEditorAI.suggestionAutoZoom
+      case .clickZoom: L10n.VideoEditorAI.suggestionClickZoom
+      case .captions: L10n.VideoEditorAI.suggestionCaptions
       }
     }
 
@@ -67,6 +78,8 @@ final class VideoEditorAgentController: ObservableObject {
       case .removeSilences: "waveform.badge.minus"
       case .speedUpIdle: "forward.fill"
       case .autoZoom: "plus.magnifyingglass"
+      case .clickZoom: "cursorarrow.click.2"
+      case .captions: "captions.bubble"
       }
     }
   }
@@ -184,12 +197,20 @@ final class VideoEditorAgentController: ObservableObject {
   }
 
   /// Quick actions the open video has the data for: audio for silences, the recorded cursor
-  /// for idle parts and activity zooms.
+  /// for idle parts and activity zooms (click zooms when a Studio recording captured clicks),
+  /// speech for captions while there are none.
   var quickActions: [QuickAction] {
     guard let state, !state.isGIF, !state.clips.isEmpty else { return [] }
     var actions: [QuickAction] = []
     if !state.audioTrackRoles.isEmpty { actions.append(.removeSilences) }
-    if state.hasMouseTrackingData { actions += [.speedUpIdle, .autoZoom] }
+    let hasClicks = state.recordingMetadata?.cursorCapture?.clicks.contains { $0.phase == .down } == true
+    if state.hasMouseTrackingData { actions.append(.speedUpIdle) }
+    if hasClicks {
+      actions.append(.clickZoom)
+    } else if state.hasMouseTrackingData {
+      actions.append(.autoZoom)
+    }
+    if state.canGenerateCaptions, state.captions.isEmpty { actions.append(.captions) }
     return actions
   }
 
@@ -662,15 +683,17 @@ final class VideoEditorAgentController: ObservableObject {
   private func runQuick(_ action: QuickAction, operationID: UUID) async {
     guard isCurrent(operationID), let state else { return }
     // Analyze before the undo group opens, so a Stop while listening changes nothing.
-    do {
-      _ = try await analyzer.activity(for: state)
-    } catch {
-      guard isCurrent(operationID) else { return }
-      self.operationID = nil
-      endRun()
-      finishReply(outcome: .failed(offersSettings: false), text: L10n.AnnotateAI.failed, changeCount: 0)
-      showNotice(.failed(message: L10n.AnnotateAI.failed, offersSettings: false))
-      return
+    if action.tool.needsAnalysis {
+      do {
+        _ = try await analyzer.activity(for: state)
+      } catch {
+        guard isCurrent(operationID) else { return }
+        self.operationID = nil
+        endRun()
+        finishReply(outcome: .failed(offersSettings: false), text: L10n.AnnotateAI.failed, changeCount: 0)
+        showNotice(.failed(message: L10n.AnnotateAI.failed, offersSettings: false))
+        return
+      }
     }
     guard isCurrent(operationID) else { return }
 
@@ -679,7 +702,7 @@ final class VideoEditorAgentController: ObservableObject {
     didBeginRun = true
     status = Self.status(for: action.tool) ?? status
     phase = .acting
-    let result = await toolbox.execute(name: action.tool.rawValue, argumentsJSON: "{}")
+    let result = await toolbox.execute(name: action.tool.rawValue, argumentsJSON: action.argumentsJSON)
     guard isCurrent(operationID) else { return }
     self.operationID = nil
 
@@ -725,6 +748,11 @@ final class VideoEditorAgentController: ObservableObject {
     case .autoZoom:
       let count = (payload["added"] as? [Any])?.count ?? 0
       return count > 0 ? L10n.VideoEditorAI.addedZooms(count) : L10n.VideoEditorAI.noActivity
+    case .clickZoom:
+      let count = (payload["added"] as? [Any])?.count ?? 0
+      return count > 0 ? L10n.VideoEditorAI.addedClickZooms(count) : L10n.VideoEditorAI.noClicks
+    case .captions:
+      return L10n.VideoEditorAI.stepCaptions(payload["captions"] as? Int ?? 0)
     }
   }
 
@@ -813,7 +841,9 @@ final class VideoEditorAgentController: ObservableObject {
     case .setCursor: L10n.VideoEditorAI.statusCursor
     case .setCamera: L10n.VideoEditorAI.statusCamera
     case .generateCaptions: L10n.VideoEditorAI.statusCaptions
-    case .editCaption: L10n.VideoEditorAI.statusEditCaption
+    case .editCaption, .addCaption, .removeCaptions, .replaceInCaptions: L10n.VideoEditorAI.statusEditCaption
+    case .getCaptions: nil
+    case .translateCaptions: L10n.VideoEditorAI.statusTranslateCaptions
     }
   }
 }

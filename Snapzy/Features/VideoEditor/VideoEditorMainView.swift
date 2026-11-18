@@ -126,6 +126,8 @@ struct VideoEditorMainView: View {
           .accessibilityHidden(!showsAIPanel)
       }
     }
+    // Apple Translation for the agent's translate_captions (needs a view to hand out sessions).
+    .modifier(VideoEditorCaptionTranslationHost(translator: state.captionTranslator))
     .onReceive(agent.chromePublisher) { aiChrome = $0 }
     .onAppear {
       aiChrome = agent.chrome

@@ -82,10 +82,12 @@ extension VideoEditorAgentScene {
       "Frame: background \(background.style), padding \(background.padding), corners \(background.cornerRadius), shadow \(s(background.shadow))."
     )
     var layers: [String] = []
-    if let cursor { layers.append("cursor \(cursor.visible ? "shown" : "hidden") size \(s(cursor.scale))x") }
+    if let cursor {
+      layers.append("cursor \(cursor.visible ? "shown" : "hidden") size \(s(cursor.scale))x\(cursor.clicks > 0 ? ", \(cursor.clicks) clicks" : "")")
+    }
     if let camera { layers.append("camera \(camera.visible ? "shown" : "hidden") \(camera.shape)") }
     if let captions { layers.append("captions \(captions.count)\(captions.showOnVideo ? "" : " hidden")") }
-    if !layers.isEmpty { lines.append("Layers: " + layers.joined(separator: ", ") + ".") }
+    if !layers.isEmpty { lines.append((studio ? "Studio layers: " : "Layers: ") + layers.joined(separator: ", ") + ".") }
     return lines.joined(separator: "\n")
   }
 
@@ -189,6 +191,8 @@ final class VideoEditorAgentAppleIntelligenceProvider: AgentProvider {
   cut removes footage. To delete zooms or speed blocks use zoom or speed with action remove; that never cuts the video.
   Cut first, then add zooms and speeds. Put every part to remove in one cut call.
   For silences, pauses (im lặng), waiting or "zoom where I work", use the auto tool: it finds those parts itself.
+  Studio layers (cursor, camera) can only change when the scene lists them; otherwise say they are part of the picture.
+  Subtitles: the captions tool adds, translates, fixes words, shows, hides or clears them.
   "It"/"that" usually means what you changed in the previous turn. You cannot export, save or share.
   When done, reply with one short sentence in the user's language saying what you changed.
   """
@@ -556,12 +560,13 @@ nonisolated struct VideoAppleAutoTool: Tool {
   let description = """
   Edits worked out from the recording: remove_silences cuts pauses in the audio; \
   speed_up_idle speeds up waiting (cursor still, nobody talking); zoom_on_activity zooms where the cursor works; \
+  zoom_on_clicks zooms where the user clicks (Studio recordings); \
   list_activity tells when the user talks, waits or moves the cursor, changing nothing.
   """
 
   @Generable
   struct Arguments {
-    @Guide(description: "What to do", .anyOf(["remove_silences", "speed_up_idle", "zoom_on_activity", "list_activity"]))
+    @Guide(description: "What to do", .anyOf(["remove_silences", "speed_up_idle", "zoom_on_activity", "zoom_on_clicks", "list_activity"]))
     var action: String
     @Guide(description: "speed_up_idle: how much faster; zoom_on_activity: zoom factor", .range(1 ... 8))
     var amount: Double?
@@ -583,13 +588,20 @@ nonisolated struct VideoAppleAutoTool: Tool {
       if let amount = arguments.amount { payload["level"] = min(amount, 4) }
       payload["min_duration"] = nil
       return try await bridge.call(.autoZoomActivity, payload).text
+    case "zoom_on_clicks", "clicks", "click_zoom":
+      if let amount = arguments.amount { payload["level"] = min(amount, 4) }
+      payload["min_duration"] = nil
+      payload["source"] = "clicks"
+      return try await bridge.call(.autoZoomActivity, payload).text
     case "list_activity", "activity":
       let result = try await bridge.call(.getActivity, [:])
       return result.isError
         ? result.text
         : VideoEditorAgentAppleArguments.compactActivity(result.text, maximumSpans: Self.maximumActivitySpans)
     default:
-      return VideoAppleToolBridge.error("Unknown action. Use remove_silences, speed_up_idle, zoom_on_activity or list_activity.")
+      return VideoAppleToolBridge.error(
+        "Unknown action. Use remove_silences, speed_up_idle, zoom_on_activity, zoom_on_clicks or list_activity."
+      )
     }
   }
 }

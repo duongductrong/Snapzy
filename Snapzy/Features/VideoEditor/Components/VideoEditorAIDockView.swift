@@ -269,13 +269,16 @@ private struct VideoEditorAIDockFieldSlot: View {
 
 // MARK: - Quick actions
 
-/// One-click edits worked out in the app; they need no provider.
+/// One-click edits worked out in the app; they need no provider. The row floats over the
+/// player at its natural width, so it keeps to three chips (the panel lists them all).
 private struct VideoEditorAIQuickActionChips: View {
   @ObservedObject var agent: VideoEditorAgentController
 
+  static let maximumChips = 3
+
   var body: some View {
     HStack(spacing: 6) {
-      ForEach(agent.quickActions) { action in
+      ForEach(Array(agent.quickActions.prefix(Self.maximumChips))) { action in
         Button {
           agent.runQuickAction(action)
         } label: {

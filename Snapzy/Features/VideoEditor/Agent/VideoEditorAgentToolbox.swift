@@ -62,7 +62,7 @@ final class VideoEditorAgentToolbox {
   let analyzer: VideoEditorAgentAnalyzer
 
   private var references: [Kind: (byID: [UUID: String], byRef: [String: UUID], next: Int)] = [
-    .clip: ([:], [:], 1), .zoom: ([:], [:], 1), .speed: ([:], [:], 1), .caption: ([:], [:], 1),
+    .clip: ([:], [:], 1), .zoom: ([:], [:], 1), .speed: ([:], [:], 1), .caption: ([:], [:], 1), .hidden: ([:], [:], 1),
   ]
 
   private var isRunOpen = false
@@ -101,6 +101,7 @@ final class VideoEditorAgentToolbox {
     case zoom = "z"
     case speed = "s"
     case caption = "t"
+    case hidden = "h"
   }
 
   func reference(_ kind: Kind, for id: UUID) -> String {
@@ -199,6 +200,7 @@ final class VideoEditorAgentToolbox {
       audio: .init(muted: settings.audioMode == .mute, tracks: tracks),
       selection: selection,
       hasMouseData: state.hasMouseTrackingData,
+      studio: isStudioRecording(state),
       cursor: studioCursorScene(state),
       camera: studioCameraScene(state),
       captions: captionsScene(state)
@@ -330,7 +332,15 @@ final class VideoEditorAgentToolbox {
       return try setCamera(decode(VideoEditorAgentCameraArguments.self, arguments), state: state)
     case .editCaption:
       return try editCaption(decode(VideoEditorAgentCaptionEditArguments.self, arguments), state: state)
-    case .getFrame, .findOnScreen, .getTranscript, .generateCaptions:
+    case .getCaptions:
+      return try getCaptions(decode(VideoEditorAgentCaptionRangeArguments.self, arguments), state: state)
+    case .addCaption:
+      return try addCaption(decode(VideoEditorAgentAddCaptionArguments.self, arguments), state: state)
+    case .removeCaptions:
+      return try removeCaptions(decode(VideoEditorAgentCaptionIDsArguments.self, arguments), state: state)
+    case .replaceInCaptions:
+      return try replaceInCaptions(decode(VideoEditorAgentReplaceCaptionArguments.self, arguments), state: state)
+    case .getFrame, .findOnScreen, .getTranscript, .generateCaptions, .translateCaptions:
       // Only through `execute(name:argumentsJSON:)`, which can wait for frames and speech.
       throw VideoEditorAgentToolError.unavailable("This tool is still working; call it again.")
     }
@@ -615,6 +625,7 @@ final class VideoEditorAgentToolbox {
     if segment.zoomType != .auto {
       payload["center"] = [Self.round(segment.zoomCenter.x), Self.round(segment.zoomCenter.y)]
     }
+    if let note = zoomCameraNote(segment, state) { payload["note"] = note }
     return payload
   }
 
@@ -880,7 +891,7 @@ final class VideoEditorAgentToolbox {
       spans += silences.map { ("silence", $0, nil) } + speech.map { ("speech", $0, nil) }
     }
     if activity.hasMouseData {
-      spans += clipped(timeline(activity.idle, state), to: window).map { ("idle", $0, nil) }
+      spans += clipped(idleWithoutClicks(timeline(activity.idle, state), state), to: window).map { ("idle", $0, nil) }
       for motion in activity.motion {
         for range in clipped(timeline([motion.range], state), to: window) {
           spans.append(("motion", range, motion.bounds))
@@ -910,6 +921,7 @@ final class VideoEditorAgentToolbox {
       },
     ]
     if omitted > 0 { payload["omitted_short_spans"] = omitted }
+    if let clicks = clickActivityPayload(state, window: window) { payload.merge(clicks) { current, _ in current } }
     if state.hasInsertedClips { payload["note"] = "Inserted videos are not analyzed." }
     if activity.audio == .none, !activity.hasMouseData {
       payload["note"] = "This video has no audio and no recorded cursor, so there is no activity to report."
@@ -984,7 +996,7 @@ final class VideoEditorAgentToolbox {
     let minDuration = max(args.minDuration ?? Self.idleDefaults.minDuration, SpeedSegment.minDuration)
     let padding = Self.idleDefaults.padding
 
-    let idle = clipped(timeline(activity.idle, state), to: window)
+    let idle = clipped(idleWithoutClicks(timeline(activity.idle, state), state), to: window)
       .filter { $0.upperBound - $0.lowerBound >= minDuration - 1e-9 }
       .map { ($0.lowerBound + padding) ... max($0.lowerBound + padding, $0.upperBound - padding) }
     let taken = state.speedSegments.filter(\.isEnabled).map { $0.startTime ... $0.endTime }
@@ -1021,41 +1033,68 @@ final class VideoEditorAgentToolbox {
 
   private func autoZoomActivity(_ args: AutoZoomArguments, state: VideoEditorState) throws -> AgentToolResult {
     let activity = try activity(state)
-    guard activity.hasMouseData else {
-      throw VideoEditorAgentToolError.unavailable(
-        "This video has no recorded cursor (only Snapzy screen recordings do). Add zooms with add_zoom and a center instead."
-      )
+    let source = (args.source ?? "motion").lowercased()
+    guard source == "motion" || source == "clicks" else {
+      throw VideoEditorAgentToolError.invalidArguments("source must be motion or clicks.")
     }
     let window = try window(args.start, args.end, state)
     let level = min(max(args.level ?? Double(ZoomSegment.defaultZoomLevel), Double(ZoomSegment.minZoomLevel)), Double(ZoomSegment.maxZoomLevel))
     let maxZooms = min(max(args.maxZooms ?? Self.autoZoomDefaults.maxZooms, 1), 30)
     let total = duration(state)
 
-    // Work in a small area for a while → one zoom, with a short lead-in and hold.
-    var candidates: [(range: ClosedRange<TimeInterval>, weight: TimeInterval)] = []
-    for motion in activity.motion
-    where motion.bounds.width <= Self.autoZoomDefaults.maxArea && motion.bounds.height <= Self.autoZoomDefaults.maxArea {
-      for range in clipped(timeline([motion.range], state), to: window)
-      where range.upperBound - range.lowerBound >= Self.autoZoomDefaults.minActivity {
-        let start = max(0, range.lowerBound - 0.3)
-        let end = min(total, range.upperBound + 0.5)
-        candidates.append((start ... end, range.upperBound - range.lowerBound))
+    var merged: [(range: ClosedRange<TimeInterval>, weight: TimeInterval, center: CGPoint?)] = []
+    if source == "clicks" {
+      guard !recordedClickDowns(state).isEmpty else {
+        throw VideoEditorAgentToolError.unavailable(
+          "This video has no recorded clicks (only Studio recordings record them). Use source motion, or add_zoom with a center."
+        )
       }
-    }
-    // Close bursts become one zoom rather than a zoom pumping in and out.
-    candidates.sort { $0.range.lowerBound < $1.range.lowerBound }
-    var merged: [(range: ClosedRange<TimeInterval>, weight: TimeInterval)] = []
-    for candidate in candidates {
-      if let last = merged.last, candidate.range.lowerBound - last.range.upperBound < 1.0,
-         candidate.range.upperBound - last.range.lowerBound <= ZoomSegment.maxDuration {
-        merged[merged.count - 1] = (last.range.lowerBound ... max(last.range.upperBound, candidate.range.upperBound), last.weight + candidate.weight)
-      } else {
-        merged.append(candidate)
+      // Each burst of clicks → one zoom held on where they land; bursts already sit apart.
+      merged = clickZoomCandidates(state, window: window, total: total)
+    } else {
+      guard activity.hasMouseData else {
+        throw VideoEditorAgentToolError.unavailable(
+          "This video has no recorded cursor (only Snapzy screen recordings do). Add zooms with add_zoom and a center instead."
+        )
+      }
+      // Work in a small area for a while → one zoom, with a short lead-in and hold.
+      var candidates: [(range: ClosedRange<TimeInterval>, weight: TimeInterval)] = []
+      for motion in activity.motion
+      where motion.bounds.width <= Self.autoZoomDefaults.maxArea && motion.bounds.height <= Self.autoZoomDefaults.maxArea {
+        for range in clipped(timeline([motion.range], state), to: window)
+        where range.upperBound - range.lowerBound >= Self.autoZoomDefaults.minActivity {
+          let start = max(0, range.lowerBound - 0.3)
+          let end = min(total, range.upperBound + 0.5)
+          candidates.append((start ... end, range.upperBound - range.lowerBound))
+        }
+      }
+      // Close bursts become one zoom rather than a zoom pumping in and out.
+      candidates.sort { $0.range.lowerBound < $1.range.lowerBound }
+      for candidate in candidates {
+        if let last = merged.last, candidate.range.lowerBound - last.range.upperBound < 1.0,
+           candidate.range.upperBound - last.range.lowerBound <= ZoomSegment.maxDuration {
+          merged[merged.count - 1] = (
+            last.range.lowerBound ... max(last.range.upperBound, candidate.range.upperBound), last.weight + candidate.weight, nil
+          )
+        } else {
+          merged.append((candidate.range, candidate.weight, nil))
+        }
       }
     }
     let existing = state.zoomSegments.map { $0.startTime ... $0.endTime }
     var chosen = merged.filter { candidate in
       !existing.contains { $0.lowerBound < candidate.range.upperBound && $0.upperBound > candidate.range.lowerBound }
+    }
+    // Click zooms are held a moment after the last click; never let two of them overlap.
+    if source == "clicks" {
+      var kept: [(range: ClosedRange<TimeInterval>, weight: TimeInterval, center: CGPoint?)] = []
+      for candidate in chosen {
+        if let last = kept.last, candidate.range.lowerBound < last.range.upperBound {
+          kept[kept.count - 1].range = last.range.lowerBound ... max(last.range.lowerBound + ZoomSegment.minDuration, candidate.range.lowerBound)
+        }
+        kept.append(candidate)
+      }
+      chosen = kept
     }
     let limit = min(maxZooms, remainingChanges)
     guard limit > 0 || chosen.isEmpty else { throw VideoEditorAgentToolError.limitReached(Self.maximumChangesPerRun) }
@@ -1068,17 +1107,25 @@ final class VideoEditorAgentToolbox {
       let length = min(max(candidate.range.upperBound - candidate.range.lowerBound, ZoomSegment.minDuration), ZoomSegment.maxDuration)
       let start = min(candidate.range.lowerBound, max(0, total - length))
       let id = state.addZoom(at: start + length / 2)
-      state.updateZoom(id: id, startTime: start, duration: length, zoomLevel: CGFloat(level), zoomType: .auto)
+      state.updateZoom(
+        id: id, startTime: start, duration: length, zoomLevel: CGFloat(level),
+        zoomCenter: candidate.center, zoomType: candidate.center == nil ? .auto : .manual
+      )
       guard let segment = state.zoomSegments.first(where: { $0.id == id }) else { continue }
       changeCount += 1
-      added.append([
+      var item: [String: Any] = [
         "id": reference(.zoom, for: id),
         "start": Self.round(segment.startTime),
         "end": Self.round(segment.endTime),
-      ])
+      ]
+      if candidate.center != nil { item["center"] = [Self.round(segment.zoomCenter.x), Self.round(segment.zoomCenter.y)] }
+      if let note = zoomCameraNote(segment, state) { item["note"] = note }
+      added.append(item)
     }
-    var payload: [String: Any] = ["added": added, "level": Self.round(level)]
-    if added.isEmpty { payload["note"] = "No focused cursor work outside existing zooms." }
+    var payload: [String: Any] = ["added": added, "level": Self.round(level), "source": source]
+    if added.isEmpty {
+      payload["note"] = source == "clicks" ? "No clicks outside existing zooms." : "No focused cursor work outside existing zooms."
+    }
     return .success(payload)
   }
 
@@ -1107,6 +1154,12 @@ final class VideoEditorAgentToolbox {
         throw VideoEditorAgentToolError.limitReached(Self.maximumChangesPerRun)
       }
       return try await generateCaptions(decode(VideoEditorAgentCaptionArguments.self, arguments), state: state)
+    case .translateCaptions:
+      let state = try readyState()
+      guard changeCount < Self.maximumChangesPerRun else {
+        throw VideoEditorAgentToolError.limitReached(Self.maximumChangesPerRun)
+      }
+      return try await translateCaptions(decode(VideoEditorAgentTranslateCaptionArguments.self, arguments), state: state)
     case .addZoom:
       let args = try decode(AddZoomArguments.self, arguments)
       guard let raw = args.text else { return nil }
@@ -1494,6 +1547,7 @@ private struct IdleArguments: Decodable {
 }
 
 private struct AutoZoomArguments: Decodable {
+  let source: String?
   let level: Double?
   let maxZooms: Int?
   let start: VideoEditorAgentTime?
