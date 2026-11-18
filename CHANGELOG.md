@@ -4,180 +4,53 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [2.2.0-beta.16] - 2026-11-17
-
-### Bug Fixes
-- use sidebar.left icon for the sidebar toggle (#754) (507a31eb)
-
-### Contributors
-- @github-actions[bot]
-- @heyztb
-
-## [2.2.0-beta.15] - 2026-11-15
+## [2.2.0] - 2026-11-18
 
 ### Features
 - Auto Translate in Annotate (auto scan and area) (#750) (881a5a8d)
 - Added Snip to Translate (OCR + translation card) (#749) (710d0864)
 - Added Hebrew (he) localization (#737) (d3628e1e)
-
-### Bug Fixes
-- release preferences window content on close to stop idle CPU burn (18fe56ad)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-- @meir9884
-
-## [2.2.0-beta.14] - 2026-11-14
-
-### Features
 - Added flip horizontal/vertical and group rotate+flip into one toolbar menu (#747) (88a87bc2)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.2.0-beta.13] - 2026-11-14
-
-### Bug Fixes
-- clear stuck drop preview frame after dropping an image on annotate canvas (#745) (bba5596b)
-
-### Contributors
-- @duongductrong
-
-## [2.2.0-beta.12] - 2026-11-14
-
-### Features
 - free-layer combine images with auto-growing canvas (#743) (0c2fd053)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.2.0-beta.11] - 2026-11-14
-
-### Features
 - Smart drop-to-stitch and layer arrange for combine images (#741) (5027699f)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.2.0-beta.10] - 2026-11-10
-
-### Features
 - Option to copy screenshots as image data only (#734) (eacb77cb)
 - Confirm before restarting or deleting a recording in progress (#732) (04ae542f)
+- Added clear-history and per-card remove actions to floating history panel (#718) (ceac75f4)
+- Added swap shortcuts from the duplicate-shortcut warning (#716) (07a5599e)
+- Added Measure Screen ruler, Annotate Measure tool and snapzy measure CLI (#714) (865852eb)
+- Add share link style setting for cloud uploads (#702) (b5b63def)
+- Redesign Preferences sidebar and settings layout (#687) (d34a789c)
+- Added the snapzy command line tool for AI Agent (#685) (908119ae)
 
 ### Bug Fixes
+- use sidebar.left icon for the sidebar toggle (#754) (507a31eb)
+- release preferences window content on close to stop idle CPU burn (18fe56ad)
+- clear stuck drop preview frame after dropping an image on annotate canvas (#745) (bba5596b)
 - Quick Access card buttons no longer ignore the first click (#733) (75a5ce58)
 - Settings tooltips no longer grow huge on macOS 15 (#731) (01fe19e0)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.2.0-beta.9] - 2026-11-09
-
-### Bug Fixes
 - Snapzy no longer crashes at launch on macOS 13 and 14 (#725) (#727) (432657c3)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.2.0-beta.8] - 2026-11-08
-
-### Bug Fixes
 - Cloud keys stay within the S3 limit and short keys get 12 characters (#719) (c7ea38ac)
+- carry share link style through cloud transfer and reset (#711) (ee306f47)
+- Keep the app responsive while OCR runs (#708) (44278b1c)
+- Fixed Capture Markup crosshair tracking the pointer on macOS 27 (#707) (96054e5d)
+- make trackpad area selection use the final pointer position (#697) (72806d49)
+- Stop live capture session instead of re-enabling a timed-out event tap (#690) (#692) (dd9171c1)
 
 ### Chore
 - refactor: Improved history empty state ui (fa36b971)
 - ci: reset SwiftPM artifact cache before xcodebuild (#723) (f78e43a4)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-- @gtmcknight
-
-## [2.2.0-beta.7] - 2026-11-08
-
-### Features
-- Added clear-history and per-card remove actions to floating history panel (#718) (ceac75f4)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.2.0-beta.6] - 2026-11-07
-
-### Features
-- Added swap shortcuts from the duplicate-shortcut warning (#716) (07a5599e)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.2.0-beta.5] - 2026-11-07
-
-### Features
-- Added Measure Screen ruler, Annotate Measure tool and snapzy measure CLI (#714) (865852eb)
-
-### Chore
 - docs: sync localized READMEs with the new README layout (#713) (11fe00e1)
 - docs: improve README readability (#706) (79c7acd9)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-- @tukuyomil032
-
-## [2.2.0-beta.4] - 2026-11-07
-
-### Features
-- Add share link style setting for cloud uploads (#702) (b5b63def)
-
-### Bug Fixes
-- carry share link style through cloud transfer and reset (#711) (ee306f47)
-
-### Chore
 - ci: force stapler onto TCP and allow re-publishing a merged release (#710) (ba7aa393)
 
 ### Contributors
 - @duongductrong
 - @github-actions[bot]
 - @gtmcknight
-
-## [2.2.0-beta.3] - 2026-11-07
-
-### Bug Fixes
-- Keep the app responsive while OCR runs (#708) (44278b1c)
-- Fixed Capture Markup crosshair tracking the pointer on macOS 27 (#707) (96054e5d)
-- make trackpad area selection use the final pointer position (#697) (72806d49)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
+- @heyztb
+- @meir9884
 - @mvanhorn
-
-## [2.2.0-beta.2] - 2026-10-28
-
-### Bug Fixes
-- Stop live capture session instead of re-enabling a timed-out event tap (#690) (#692) (dd9171c1)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.2.0-beta.1] - 2026-10-26
-
-### Features
-- Redesign Preferences sidebar and settings layout (#687) (d34a789c)
-- Added the snapzy command line tool for AI Agent (#685) (908119ae)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
+- @tukuyomil032
 
 ## [2.1.0] - 2026-10-25
 
