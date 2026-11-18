@@ -3,17 +3,25 @@ name: CI Build Check
 on:
   push:
     branches: [master, beta]
+    paths-ignore:
+      - 'docs/**'
+      - 'plans/**'
+      - '**/*.md'
   pull_request:
     branches: [master, beta]
+    paths-ignore:
+      - 'docs/**'
+      - 'plans/**'
+      - '**/*.md'
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  checks:
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -38,6 +46,25 @@ jobs:
 
       - name: Test SnapzyCLIKit package
         run: swift test --package-path Packages/SnapzyCLIKit
+
+  test:
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.2'
+
+      - name: Reset SwiftPM artifact cache
+        # Fresh macos-15 images can ship a stale entry for the Sparkle binary
+        # artifact, which makes package resolution fail with
+        # "... already exists in file system".
+        run: rm -rf "$HOME/Library/Caches/org.swift.swiftpm/artifacts"
 
       - name: Run tests
         env:
@@ -157,12 +184,45 @@ jobs:
             build/ci-test.log
             build/ci-test.xcresult
 
-      - name: Build
+  release-build:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      # Pull requests build arm64 only to keep the Release (WMO) compile short; the
+      # SIL optimizer is arch-independent, so optimizer crashes still surface.
+      # Pushes to master/beta build universal exactly like release-publish.yml.
+      BUILD_MODE: ${{ github.event_name == 'pull_request' && 'arm64' || 'universal' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.2'
+
+      - name: Reset SwiftPM artifact cache
+        # Fresh macos-15 images can ship a stale entry for the Sparkle binary
+        # artifact, which makes package resolution fail with
+        # "... already exists in file system".
+        run: rm -rf "$HOME/Library/Caches/org.swift.swiftpm/artifacts"
+
+      - name: Build Release
         run: |
           set -euo pipefail
           mkdir -p build
 
-          if ! xcodebuild \
+          if [ "$BUILD_MODE" = "universal" ]; then
+            arch_args=(ONLY_ACTIVE_ARCH=NO)
+          else
+            arch_args=(ARCHS=arm64 ONLY_ACTIVE_ARCH=YES)
+          fi
+          echo "Build mode: $BUILD_MODE (${arch_args[*]})"
+
+          start=$(date +%s)
+          set +e
+          xcodebuild \
             -project Snapzy.xcodeproj \
             -scheme Snapzy \
             -configuration Release \
@@ -170,8 +230,22 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO \
-            build > build/ci-build.log 2>&1; then
+            "${arch_args[@]}" \
+            build > build/ci-build.log 2>&1
+          status=$?
+          set -e
+          elapsed=$(( $(date +%s) - start ))
+
+          {
+            echo "### Release build ($BUILD_MODE)"
+            echo ""
+            echo "| Result | Duration |"
+            echo "| --- | --- |"
+            if [ "$status" -eq 0 ]; then result="success"; else result="failed ($status)"; fi
+            printf '| %s | %dm %02ds |\n' "$result" $((elapsed / 60)) $((elapsed % 60))
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$status" -ne 0 ]; then
             tail -100 build/ci-build.log
             exit 1
           fi
@@ -202,3 +276,28 @@ jobs:
             exit 1
           fi
           echo "Embedded snapzy CLI verified"
+
+      # Release-only crash class (#725): optimized builds call macOS 15+ Swift
+      # runtime symbols without a fallback, so the app dies at launch on 13/14.
+      # Same guard as release-publish.yml, so a green PR cannot fail the release.
+      - name: Guard Swift runtime imports for deployment target
+        run: |
+          set -euo pipefail
+          bash scripts/check-runtime-weak-imports.sh build/DerivedData/Build/Products/Release/Snapzy.app
+
+      - name: Verify universal binaries
+        if: env.BUILD_MODE == 'universal'
+        run: |
+          set -euo pipefail
+          APP_PATH="build/DerivedData/Build/Products/Release/Snapzy.app"
+          APP_EXEC=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_PATH/Contents/Info.plist")
+          for bin in "$APP_PATH/Contents/MacOS/$APP_EXEC" "$APP_PATH/Contents/Helpers/snapzy"; do
+            archs=$(lipo -archs "$bin")
+            echo "$bin: $archs"
+            for want in x86_64 arm64; do
+              if ! grep -qw "$want" <<<"$archs"; then
+                echo "::error::$bin is missing $want (has: $archs)"
+                exit 1
+              fi
+            done
+          done

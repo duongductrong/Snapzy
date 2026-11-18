@@ -6,6 +6,39 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 2.2.0</title>
+      <sparkle:version>233</sparkle:version>
+      <sparkle:shortVersionString>2.2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 18 Nov 2026 05:12:42 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Auto Translate in Annotate (auto scan and area) (881a5a8d)</li><li>Added Snip to Translate (OCR + translation card) (710d0864)</li><li>Added Hebrew (he) localization (d3628e1e)</li><li>Added flip horizontal/vertical and group rotate+flip into one toolbar menu (88a87bc2)</li><li>free-layer combine images with auto-growing canvas (0c2fd053)</li><li>Smart drop-to-stitch and layer arrange for combine images (5027699f)</li><li>Option to copy screenshots as image data only (eacb77cb)</li><li>Confirm before restarting or deleting a recording in progress (04ae542f)</li><li>Added clear-history and per-card remove actions to floating history panel (ceac75f4)</li><li>Added swap shortcuts from the duplicate-shortcut warning (07a5599e)</li><li>Added Measure Screen ruler, Annotate Measure tool and snapzy measure CLI (865852eb)</li><li>Add share link style setting for cloud uploads (b5b63def)</li><li>Redesign Preferences sidebar and settings layout (d34a789c)</li><li>Added the snapzy command line tool for AI Agent (908119ae)</li></ul><h3>🐛 Bug Fixes</h3><ul><li>use sidebar.left icon for the sidebar toggle (507a31eb)</li><li>release preferences window content on close to stop idle CPU burn (18fe56ad)</li><li>clear stuck drop preview frame after dropping an image on annotate canvas (bba5596b)</li><li>Quick Access card buttons no longer ignore the first click (75a5ce58)</li><li>Settings tooltips no longer grow huge on macOS 15 (01fe19e0)</li><li>Snapzy no longer crashes at launch on macOS 13 and 14 (432657c3)</li><li>Cloud keys stay within the S3 limit and short keys get 12 characters (c7ea38ac)</li><li>carry share link style through cloud transfer and reset (ee306f47)</li><li>Keep the app responsive while OCR runs (44278b1c)</li><li>Fixed Capture Markup crosshair tracking the pointer on macOS 27 (96054e5d)</li><li>make trackpad area selection use the final pointer position (72806d49)</li><li>Stop live capture session instead of re-enabling a timed-out event tap (dd9171c1)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v2.2.0/Snapzy-v2.2.0.dmg"
+        sparkle:edSignature="PRrfKyNJnL8BJ+tIX3fRzP8QAtT2p6O/GOjSvIcsBdoYrQApTy9yWD8RDMwkhoh7pgwKcODd79C1GSCZCDkSCw=="
+        length="53566743"
+        type="application/octet-stream"/>
+    </item>
+    <item>
+      <title>Version 2.2.0-beta.16</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>232</sparkle:version>
+      <sparkle:shortVersionString>2.2.0-beta.16</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Tue, 17 Nov 2026 19:56:18 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>🐛 Bug Fixes</h3><ul><li>use sidebar.left icon for the sidebar toggle (507a31eb)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v2.2.0-beta.16/Snapzy-v2.2.0-beta.16.dmg"
+        sparkle:edSignature="4OAcIuKW0uegHJbBKkJJD6g1PD2HYMyCQ1JU5l6R0dHguOfEKluUqjtX5n7TESQqQrL4UONLjIY430lnH+XgBA=="
+        length="53566665"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 2.2.0-beta.15</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>231</sparkle:version>

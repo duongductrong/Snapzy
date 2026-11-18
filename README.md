@@ -70,7 +70,7 @@ brew install --cask snapzy
 Or install a specific version:
 
 ~~~bash
-curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v2.1.0/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v2.2.0/install.sh | bash
 ~~~
 
 You can also [download a release](https://github.com/duongductrong/Snapzy/releases). Move Snapzy.app to /Applications, launch it, and grant Screen Recording permission when prompted. Relaunch if macOS asks. Microphone and Camera permissions are needed only for those recording inputs. Snapzy is signed and notarized by Apple.
