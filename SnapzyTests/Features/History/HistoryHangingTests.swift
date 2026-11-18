@@ -508,6 +508,36 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testReturningFromBrowserReleasesEscapeAndPinState() async throws {
+    try await withCaptureWindows { shelf, _, _, _ in
+      let history = HistoryFloatingManager.shared
+      let probe = EscapeProbeView()
+      let window = NSWindow(contentRect: CGRect(x: 300, y: 300, width: 100, height: 100),
+                            styleMask: .titled, backing: .buffered, defer: false)
+      window.isReleasedWhenClosed = false
+      window.contentView = probe
+      defer { window.close() }
+      for action in [history.show, history.showCompact, history.collapse] {
+        history.showExpanded()
+        history.togglePin()
+        XCTAssertTrue(history.isPinned)
+        action()
+        XCTAssertFalse(history.isPinned)
+        shelf.hide(animated: false)
+        window.makeKeyAndOrderFront(nil)
+        window.makeFirstResponder(probe)
+        let event = try XCTUnwrap(NSEvent.keyEvent(
+          with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+          windowNumber: window.windowNumber, context: nil, characters: "\u{1B}",
+          charactersIgnoringModifiers: "\u{1B}", isARepeat: false, keyCode: 53
+        ))
+        let previousCount = probe.escapeCount
+        NSApp.sendEvent(event)
+        XCTAssertEqual(probe.escapeCount, previousCount + 1)
+      }
+    }
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
