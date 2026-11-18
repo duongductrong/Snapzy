@@ -590,6 +590,103 @@ final class HistoryHangingTests: XCTestCase {
     try await body(shelf, windows[0], windows[1], screen)
   }
 
+  func testNativeHangingDuringScreenRecordingAndScreenshot() async throws {
+    guard ProcessInfo.processInfo.environment["SNAPZY_HANGING_CAPTURE_INTERACTIVE"] == "1" else {
+      throw XCTSkip("Opt-in native capture interaction")
+    }
+    guard CGPreflightScreenCaptureAccess() else { throw XCTSkip("Screen Recording permission required") }
+    try await withCaptureWindows { shelf, overlay, controls, screen in
+      let directory = FileManager.default.temporaryDirectory.appendingPathComponent("HangingCapture-\(UUID())")
+      try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+      let frame = HistoryHangingLayout.frame(screenFrame: screen.frame, visibleFrame: screen.visibleFrame,
+                                             safeAreaTop: screen.safeAreaInsets.top)
+      let fixture = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+      fixture.isReleasedWhenClosed = false
+      fixture.backgroundColor = .white
+      fixture.sharingType = .readOnly
+      fixture.title = "Hanging Capture Test Background"
+      fixture.orderFrontRegardless()
+      let defaults = UserDefaults.standard
+      let inclusion = defaults.object(forKey: PreferencesKeys.screenshotIncludeOwnApp)
+      defaults.set(false, forKey: PreferencesKeys.screenshotIncludeOwnApp)
+      defer {
+        fixture.close()
+        defaults.set(inclusion, forKey: PreferencesKeys.screenshotIncludeOwnApp)
+        try? FileManager.default.removeItem(at: directory)
+      }
+      let recorder = ScreenRecordingManager.shared
+      let originalPointer = NSEvent.mouseLocation
+      let primaryTop = NSScreen.screens[0].frame.maxY
+      func movePointer(to point: CGPoint) {
+        CGWarpMouseCursorPosition(CGPoint(x: point.x, y: primaryTop - point.y))
+      }
+      defer { movePointer(to: originalPointer) }
+      do {
+        controls.orderFrontRegardless()
+        try await recorder.prepareRecording(rect: frame, format: .mp4, quality: .high, fps: 15,
+                                            maxResolution: .native, captureSystemAudio: false,
+                                            captureMicrophone: false, showCursor: false,
+                                            saveDirectory: directory, fileName: "Hanging Capture Test",
+                                            excludeOwnApplication: true)
+        await recorder.addExceptedWindow(windowID: CGWindowID(fixture.windowNumber))
+        try await recorder.startRecording()
+        movePointer(to: CGPoint(x: screen.frame.midX, y: screen.frame.minY + 30))
+        try await Task.sleep(nanoseconds: 150_000_000)
+        movePointer(to: CGPoint(x: screen.frame.midX, y: screen.frame.maxY))
+        print("HANGING_CAPTURE_RECORDING pid=\(ProcessInfo.processInfo.processIdentifier)")
+        try await self.waitForCaptureInteraction { shelf.isVisible && shelf.isRevealed }
+        shelf.keepOpen = true
+        print("HANGING_CAPTURE_REVEALED")
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        recorder.pauseRecording()
+        shelf.hide(animated: false)
+        movePointer(to: CGPoint(x: screen.frame.midX, y: screen.frame.minY + 30))
+        try await Task.sleep(nanoseconds: 150_000_000)
+        movePointer(to: CGPoint(x: screen.frame.midX, y: screen.frame.maxY))
+        print("HANGING_CAPTURE_PAUSED")
+        try await self.waitForCaptureInteraction { shelf.isVisible && shelf.isRevealed }
+        shelf.keepOpen = true
+        recorder.resumeRecording()
+        let panel = try XCTUnwrap(self.hangingWindow)
+        overlay.orderFrontRegardless()
+        try await self.waitForCaptureInteraction { !shelf.isVisible }
+        overlay.orderOut(nil)
+        try await self.waitForCaptureInteraction { shelf.isVisible }
+        XCTAssertTrue(self.hangingWindow === panel)
+        XCTAssertTrue(shelf.keepOpen)
+        let capture = await ScreenCaptureManager.shared.captureArea(
+          rect: frame, saveDirectory: directory, fileName: "Hanging Screenshot Test",
+          excludeOwnApplication: false, invocation: .headless(includeWindowShadow: false)
+        )
+        guard case .success(let screenshotURL) = capture else {
+          XCTFail("Screenshot capture failed")
+          await recorder.cancelRecording()
+          return
+        }
+        try await self.waitForCaptureInteraction { shelf.isVisible }
+        XCTAssertTrue(shelf.keepOpen)
+        let bitmap = try XCTUnwrap(NSBitmapImageRep(data: Data(contentsOf: screenshotURL)))
+        self.assertWhiteCapture(bitmap)
+        try await Task.sleep(nanoseconds: 700_000_000)
+        let recordingURL = await recorder.stopRecording()
+        let asset = try AVURLAsset(url: XCTUnwrap(recordingURL))
+        let duration = try await asset.load(.duration).seconds
+        XCTAssertGreaterThan(duration, 1)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        for seconds in stride(from: 0.3, to: duration - 0.1, by: 0.3) {
+          let result = try await generator.image(at: CMTime(seconds: seconds, preferredTimescale: 600))
+          self.assertWhiteCapture(NSBitmapImageRep(cgImage: result.image))
+        }
+        XCTAssertTrue(shelf.isVisible)
+        print("HANGING_CAPTURE_VERIFIED duration=\(duration)")
+      } catch {
+        await recorder.cancelRecording()
+        throw error
+      }
+    }
+  }
+
   private func assertWhiteCapture(_ bitmap: NSBitmapImageRep, file: StaticString = #filePath, line: UInt = #line) {
     for x in [0.1, 0.3, 0.5, 0.7, 0.9] {
       for y in [0.2, 0.5, 0.8] {
