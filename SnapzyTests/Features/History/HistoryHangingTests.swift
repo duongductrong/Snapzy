@@ -460,6 +460,24 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testManuallyOpenedShelfResumesEvenWhenHistoryStorageIsDisabled() async throws {
+    try await withCaptureWindows { shelf, overlay, _, screen in
+      UserDefaults.standard.set(false, forKey: PreferencesKeys.historyEnabled)
+      shelf.show(on: screen)
+      try await Task.sleep(nanoseconds: 250_000_000)
+      overlay.orderFrontRegardless()
+      try await Task.sleep(nanoseconds: 250_000_000)
+      shelf.updateConfiguration()
+      XCTAssertFalse(shelf.isVisible)
+      XCTAssertTrue(shelf.isMonitoring)
+      overlay.orderOut(nil)
+      try await Task.sleep(nanoseconds: 250_000_000)
+      XCTAssertTrue(shelf.isVisible)
+      shelf.hide(animated: false)
+      XCTAssertFalse(shelf.isMonitoring)
+    }
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
