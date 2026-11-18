@@ -202,6 +202,15 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertEqual(HistoryHangingLayout.edgeScreenIndex(at: CGPoint(x: 720, y: 1800), frames: [lower, upper]), 1)
   }
 
+  func testSideBySideDisplaysUseTheirOwnTopEdgeAndIgnoreGaps() {
+    let frames = [CGRect(x: 0, y: 0, width: 1440, height: 900),
+                  CGRect(x: -1920, y: 200, width: 1920, height: 1080)]
+    XCTAssertEqual(HistoryHangingLayout.edgeScreenIndex(at: CGPoint(x: -1, y: 1279), frames: frames), 1)
+    XCTAssertEqual(HistoryHangingLayout.edgeScreenIndex(at: CGPoint(x: 0, y: 899), frames: frames), 0)
+    XCTAssertNil(HistoryHangingLayout.edgeScreenIndex(at: CGPoint(x: -100, y: 100), frames: frames))
+    XCTAssertNil(HistoryHangingLayout.edgeScreenIndex(at: CGPoint(x: 1500, y: 900), frames: frames))
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
