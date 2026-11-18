@@ -318,6 +318,27 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertEqual(update(&state, edge: true, time: 3), .none)
   }
 
+  func testHangingOpensWhenTraditionalFloatingPanelDisabledAndStopsOnStyleChange() throws {
+    guard !NSScreen.screens.isEmpty else { throw XCTSkip("Requires WindowServer") }
+    let history = HistoryFloatingManager.shared
+    let style = history.displayStyle
+    let enabled = history.isEnabled
+    let shelf = HistoryHangingManager.shared
+    defer {
+      shelf.stop()
+      history.displayStyle = style
+      history.isEnabled = enabled
+    }
+    history.hide()
+    history.isEnabled = false
+    history.displayStyle = .hanging
+    shelf.start()
+    history.show()
+    XCTAssertTrue(shelf.isVisible)
+    history.displayStyle = .traditional
+    XCTAssertFalse(shelf.isVisible)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
