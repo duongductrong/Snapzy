@@ -248,6 +248,23 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertFalse(HistoryHangingLayout.isAtTopEdge(CGPoint(x: -800, y: 1001), screenFrame: screen))
   }
 
+  func testPointerCanCrossMenuBarGapWithoutDismissal() {
+    let screen = CGRect(x: 0, y: 0, width: 1440, height: 900)
+    let panel = HistoryHangingLayout.frame(screenFrame: screen,
+                                           visibleFrame: CGRect(x: 0, y: 0, width: 1440, height: 876), safeAreaTop: 0)
+    XCTAssertTrue(HistoryHangingLayout.containsPointer(CGPoint(x: 10, y: 890), panelFrame: panel, screenFrame: screen))
+    XCTAssertTrue(HistoryHangingLayout.containsPointer(
+      CGPoint(x: panel.midX, y: panel.midY),
+      panelFrame: panel,
+      screenFrame: screen
+    ))
+    XCTAssertFalse(HistoryHangingLayout.containsPointer(
+      CGPoint(x: panel.midX, y: panel.minY - 20),
+      panelFrame: panel,
+      screenFrame: screen
+    ))
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
