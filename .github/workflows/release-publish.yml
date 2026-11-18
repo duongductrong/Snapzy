@@ -26,7 +26,7 @@ jobs:
       (github.event.pull_request.merged == true &&
       startsWith(github.event.pull_request.head.ref, 'release/v'))
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 75
     permissions:
       contents: write
     env:
