@@ -12505,6 +12505,346 @@
         }
       }
     },
+    "preferences-history.hanging.auto-hide": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-hide"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tự động ẩn"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.browse-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browse All History"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xem toàn bộ lịch sử"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.close": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close Hanging History"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đóng lịch sử kiểu treo"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.empty-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Take a capture to see it here, or try a different filter."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tạo bản chụp để xem tại đây, hoặc thử bộ lọc khác."
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.empty-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing hanging here yet"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có bản chụp nào được treo"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.hanging": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hanging"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kiểu treo"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.hanging-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to the topmost screen edge to reveal captures. Move away to auto-hide."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đưa con trỏ lên mép trên cùng màn hình để hiện các bản chụp. Di chuyển ra ngoài để tự động ẩn."
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.history-disabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture history is turned off. Enable it in Settings to keep new captures here."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lịch sử chụp đang tắt. Bật trong Cài đặt để lưu các bản chụp mới tại đây."
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.keep-open": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Open"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giữ mở"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.missing-file": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The original capture file is no longer available."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tệp chụp gốc không còn khả dụng."
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.pin-image": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin Image"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ghim ảnh"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preview History"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xem thử lịch sử"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.section-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History Experience"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cách xem lịch sử"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.shelf-hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your captures, close at hand. Drag one to use it anywhere."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Các bản chụp luôn trong tầm tay. Kéo một bản chụp để sử dụng ở bất cứ đâu."
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.shelf-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hanging History"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lịch sử kiểu treo"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.style-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two ways to browse the same capture history. Selecting Hanging enables it automatically."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai cách xem cùng một lịch sử chụp. Chọn Kiểu treo để tự động bật chế độ này."
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.style-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display style"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kiểu hiển thị"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.traditional": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traditional"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Truyền thống"
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.traditional-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browse captures in the familiar floating panel."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xem các bản chụp trong bảng nổi quen thuộc."
+          }
+        }
+      }
+    },
+    "preferences-history.hanging.unpin-image": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unpin Image"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bỏ ghim ảnh"
+          }
+        }
+      }
+    },
     "preferences-history.keep-forever": {
       "extractionState": "stale",
       "localizations": {
