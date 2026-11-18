@@ -24,6 +24,15 @@ final class HistoryFloatingManager: ObservableObject {
 
   // MARK: - Published State
 
+  @Published var displayStyle: HistoryDisplayStyle = .stored() {
+    didSet {
+      guard displayStyle != oldValue else { return }
+      UserDefaults.standard.set(displayStyle.rawValue, forKey: PreferencesKeys.historyDisplayStyle)
+      hide()
+      HistoryHangingManager.shared.updateConfiguration()
+    }
+  }
+
   @Published var position: HistoryPanelPosition = .topCenter {
     didSet {
       UserDefaults.standard.set(position.rawValue, forKey: Keys.position)
@@ -194,6 +203,14 @@ final class HistoryFloatingManager: ObservableObject {
 
   /// Toggle the floating history panel visibility
   func toggle() {
+    if displayStyle == .hanging {
+      if panelController.isPresenting {
+        hide()
+      } else {
+        HistoryHangingManager.shared.toggle()
+      }
+      return
+    }
     DiagnosticLogger.shared.log(
       .info,
       .history,
@@ -212,6 +229,11 @@ final class HistoryFloatingManager: ObservableObject {
 
   /// Show the floating history panel
   func show() {
+    if displayStyle == .hanging {
+      hide()
+      HistoryHangingManager.shared.show()
+      return
+    }
     guard isEnabled else {
       DiagnosticLogger.shared.log(.debug, .history, "Floating history show skipped; disabled")
       return
@@ -232,6 +254,7 @@ final class HistoryFloatingManager: ObservableObject {
 
   /// Hide the floating history panel
   func hide() {
+    HistoryHangingManager.shared.hide()
     isPinned = false
     panelController.updatePinnedState(false)
     removeEscapeMonitors()
@@ -240,6 +263,11 @@ final class HistoryFloatingManager: ObservableObject {
   }
 
   func showCompact() {
+    if displayStyle == .hanging {
+      hide()
+      HistoryHangingManager.shared.show()
+      return
+    }
     guard isEnabled else {
       DiagnosticLogger.shared.log(.debug, .history, "Floating history compact show skipped; disabled")
       return
@@ -249,6 +277,7 @@ final class HistoryFloatingManager: ObservableObject {
   }
 
   func showExpanded(initialFilter: CaptureHistoryType? = nil) {
+    HistoryHangingManager.shared.hide(animated: false)
     resetExpandedState(initialFilter: initialFilter ?? expandedFilter ?? defaultFilter)
     presentationMode = .expanded
     DiagnosticLogger.shared.log(
@@ -261,6 +290,11 @@ final class HistoryFloatingManager: ObservableObject {
   }
 
   func collapse() {
+    if displayStyle == .hanging {
+      hide()
+      HistoryHangingManager.shared.show()
+      return
+    }
     guard isEnabled else {
       DiagnosticLogger.shared.log(.debug, .history, "Floating history collapse routed to hide; disabled")
       hide()
@@ -294,6 +328,10 @@ final class HistoryFloatingManager: ObservableObject {
 
   /// Check if panel is currently visible
   var isVisible: Bool {
+    panelController.isVisible || HistoryHangingManager.shared.isVisible
+  }
+
+  var isTraditionalPanelVisible: Bool {
     panelController.isVisible
   }
 
