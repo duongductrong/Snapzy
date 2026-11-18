@@ -21,7 +21,7 @@ enum RecordingStudioFlattenJob {
 
   static func needsFlatten(_ metadata: RecordingMetadata?) -> Bool {
     guard let metadata else { return false }
-    return !metadata.isCursorBaked && metadata.cursorCapture != nil
+    return (!metadata.isCursorBaked && metadata.cursorCapture != nil) || metadata.cameraSource != nil
   }
 
   static func run(
@@ -48,12 +48,15 @@ enum RecordingStudioFlattenJob {
       }
 
       let recipe = makeRecipe(metadata: metadata)
+      let cameraURL = metadata.cameraSource.flatMap { try? RecordingMetadataStore.sidecarURL(named: $0.fileName, kind: .camera) }
+        .flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
       try await Task.detached(priority: .utility) {
         try await RecordingStudioFlattenExporter.flatten(
           sourceURL: url,
           outputURL: tempURL,
           recipe: recipe,
           frameRate: frameRate,
+          cameraURL: cameraURL,
           progress: { value in Task { @MainActor in progress(value) } }
         )
       }.value
@@ -81,10 +84,15 @@ enum RecordingStudioFlattenJob {
       clickEffect: RecordingToolbarPreferences.highlightClicks() ? .ripple : .none,
       clickColor: highlightColor()
     )
-    guard let layer = VideoEditorCursorSpriteStore.load(capture: metadata.cursorCapture)
-      .makeLayer(metadata: metadata, settings: settings, mapping: .identity)
-    else { return .empty }
-    return VideoEditorStudioRecipe(layers: [layer])
+    var layers: [any VideoEditorStudioLayer] = []
+    if let cursor = VideoEditorCursorSpriteStore.load(capture: metadata.cursorCapture)
+      .makeLayer(metadata: metadata, settings: settings, mapping: .identity) {
+      layers.append(cursor)
+    }
+    if let camera = metadata.cameraSource {
+      layers.append(RecordingStudioCameraLayer(source: camera, captureSize: metadata.captureSize))
+    }
+    return VideoEditorStudioRecipe(layers: layers)
   }
 
   private static func highlightColor() -> VideoEditorRGBAColor {

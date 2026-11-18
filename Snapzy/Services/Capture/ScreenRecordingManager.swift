@@ -756,6 +756,9 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   private var shouldPreserveProcessingOutputOnCleanup = false
   private var mouseTracker: RecordingMouseTracker?
   private var cursorTracker: RecordingCursorAppearanceTracker?
+  /// Studio recording camera sidecar writer and the overlay placement it records.
+  private var cameraWriter: RecordingCameraWriter?
+  private var cameraLayout: RecordingStudioCameraLayout?
   private var exportDirectoryAccess: SandboxFileAccessManager.ScopedAccess?
   private var registeredOutputTypes: Set<SCStreamOutputType> = []
 
@@ -1301,6 +1304,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
 
     let mouseSamples = mouseTracker?.stop() ?? []
     let cursorCapture = stopCursorCapture()
+    let cameraSource = await finishStudioCamera(writerURL: outputURL)
     let writerURL = outputURL
     await logRecordingFrameDiagnostics(outputURL: writerURL, stats: videoWriteStats)
     let audioNormalization = await normalizeRecordingAudioForCompatibilityIfNeeded(writerURL: writerURL)
@@ -1316,7 +1320,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
         for: editorAudioSourceURL,
         roles: audioSourceTrackRoles
       )
-      if mouseSamples.count >= 2 || editorAudioSourceURL != nil || cursorCapture != nil {
+      if mouseSamples.count >= 2 || editorAudioSourceURL != nil || cursorCapture != nil || cameraSource != nil {
         do {
           let metadata = RecordingMetadata(
             coordinateSpace: .topLeftNormalized,
@@ -1327,7 +1331,8 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
             audioSourceTrackRoles: audioSourceTrackRoles,
             audioSourceTracks: audioSourceTracks,
             cursorCapture: cursorCapture,
-            isCursorBaked: cursorCapture == nil
+            isCursorBaked: cursorCapture == nil,
+            cameraSource: cameraSource
           )
           try RecordingMetadataStore.save(metadata, for: url)
           DiagnosticLogger.shared.log(.info, .recording, "Recording metadata saved", context: [
@@ -1365,6 +1370,55 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     cleanup()
 
     return url
+  }
+
+  /// Studio recording: a writer for the camera overlay's frames on this recording's
+  /// timeline, or `nil` when the recording is not Studio. The caller attaches
+  /// `writer.output` to the camera capture session.
+  func makeStudioCameraWriter(layout: RecordingStudioCameraLayout) -> RecordingCameraWriter? {
+    guard isStudioRecording, state == .preparing || state == .recording || state == .paused else { return nil }
+    if let cameraWriter { return cameraWriter }
+    let directory = recordingProcessingDirectory ?? FileManager.default.temporaryDirectory
+    let url = directory.appendingPathComponent("camera-\(UUID().uuidString).mov")
+    let session = self.session
+    let writer = RecordingCameraWriter(outputURL: url) { session.recordingTime(forHostTime: $0) }
+    cameraWriter = writer
+    cameraLayout = layout
+    return writer
+  }
+
+  /// Latest camera overlay placement (moved/resized while recording, or before it closes).
+  func updateStudioCameraLayout(_ layout: RecordingStudioCameraLayout) {
+    guard cameraWriter != nil else { return }
+    cameraLayout = layout
+  }
+
+  /// Finishes the camera sidecar and moves it into the metadata store.
+  private func finishStudioCamera(writerURL: URL?) async -> RecordingCameraSource? {
+    guard let cameraWriter, let layout = cameraLayout, let writerURL else { return nil }
+    self.cameraWriter = nil
+    let duration = (try? await AVURLAsset(url: writerURL).load(.duration).seconds) ?? 0
+    guard let result = await cameraWriter.finish(duration: duration) else { return nil }
+    defer { try? FileManager.default.removeItem(at: result.url) }
+    do {
+      let stored = try RecordingMetadataStore.storeSidecar(from: result.url, kind: .camera)
+      DiagnosticLogger.shared.log(.info, .recording, "Studio camera sidecar stored", context: [
+        "size": "\(Int(result.naturalSize.width))x\(Int(result.naturalSize.height))",
+        "gaps": "\(result.gaps.count)",
+      ])
+      return RecordingCameraSource(
+        fileName: stored.lastPathComponent,
+        naturalSize: result.naturalSize,
+        isMirrored: layout.isMirrored,
+        shape: layout.shape.rawValue,
+        normalizedFrame: layout.normalizedFrame,
+        pointSize: layout.pointSize,
+        gaps: result.gaps
+      )
+    } catch {
+      DiagnosticLogger.shared.logError(.recording, error, "Failed to store Studio camera sidecar")
+      return nil
+    }
   }
 
   /// Studio recording: stops cursor capture and stores its images as a sidecar.
@@ -1414,6 +1468,8 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     session.cancelWriting()
     mouseTracker?.reset()
     cursorTracker?.reset()
+    cameraWriter?.cancel()
+    cameraWriter = nil
     DiagnosticLogger.shared.log(.info, .recording, "Recording cancelled")
     if let url = outputURL {
       guard FileManager.default.fileExists(atPath: url.path) else {
@@ -2233,6 +2289,9 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     mouseTracker = nil
     cursorTracker?.reset()
     cursorTracker = nil
+    cameraWriter?.cancel()
+    cameraWriter = nil
+    cameraLayout = nil
     isStudioRecording = false
     microphoneCapturer = nil
     audioLevelMeter.reset()

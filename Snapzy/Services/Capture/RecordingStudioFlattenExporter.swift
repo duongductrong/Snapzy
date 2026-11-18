@@ -38,6 +38,7 @@ nonisolated enum RecordingStudioFlattenExporter {
     outputURL: URL,
     recipe: VideoEditorStudioRecipe,
     frameRate: Int,
+    cameraURL: URL? = nil,
     progress: (@Sendable (Double) -> Void)? = nil
   ) async throws {
     let asset = AVURLAsset(url: sourceURL)
@@ -59,23 +60,27 @@ nonisolated enum RecordingStudioFlattenExporter {
       studioRecipe: recipe
     )
     let timeRange = CMTimeRange(start: .zero, duration: duration)
+    let videoSource = try await videoSource(asset: asset, screenTrack: videoTrack, timeRange: timeRange, cameraURL: cameraURL)
     let videoComposition = try await compositor.createVideoComposition(
-      for: asset,
+      for: videoSource.asset,
       timeRange: timeRange,
-      screenTrackID: videoTrack.trackID
+      screenTrackID: videoSource.screenTrackID,
+      auxiliaryTrackIDs: videoSource.auxiliaryTrackIDs
     )
 
     let reader: AVAssetReader
+    let audioReader: AVAssetReader?
     let writer: AVAssetWriter
     do {
-      reader = try AVAssetReader(asset: asset)
+      reader = try AVAssetReader(asset: videoSource.asset)
+      audioReader = audioTracks.isEmpty ? nil : try AVAssetReader(asset: asset)
       writer = try AVAssetWriter(outputURL: outputURL, fileType: fileType(for: outputURL))
     } catch {
       throw FlattenError.cannotRead(error.localizedDescription)
     }
 
     let videoOutput = AVAssetReaderVideoCompositionOutput(
-      videoTracks: [videoTrack],
+      videoTracks: videoSource.tracks,
       videoSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
     )
     videoOutput.videoComposition = videoComposition
@@ -98,15 +103,16 @@ nonisolated enum RecordingStudioFlattenExporter {
       let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
       let input = AVAssetWriterInput(mediaType: .audio, outputSettings: nil, sourceFormatHint: hint)
       input.expectsMediaDataInRealTime = false
-      guard reader.canAdd(output), writer.canAdd(input) else { continue }
-      reader.add(output)
+      guard let audioReader, audioReader.canAdd(output), writer.canAdd(input) else { continue }
+      audioReader.add(output)
       writer.add(input)
       pairs.append(("audio-\(index)", output, input))
     }
 
-    guard reader.startReading() else {
-      throw FlattenError.cannotRead(reader.error?.localizedDescription ?? "unknown")
+    guard reader.startReading(), audioReader?.startReading() ?? true else {
+      throw FlattenError.cannotRead((reader.error ?? audioReader?.error)?.localizedDescription ?? "unknown")
     }
+    let readers = [reader] + (audioReader.map { [$0] } ?? [])
     guard writer.startWriting() else {
       throw FlattenError.cannotWrite(writer.error?.localizedDescription ?? "unknown")
     }
@@ -114,11 +120,11 @@ nonisolated enum RecordingStudioFlattenExporter {
 
     let totalSeconds = max(duration.seconds, 0.001)
     try await withTaskCancellationHandler {
-      try await copySamples(reader: reader, writer: writer, pairs: pairs) { time in
+      try await copySamples(readers: readers, writer: writer, pairs: pairs) { time in
         progress?(min(max(time.seconds / totalSeconds, 0), 1))
       }
     } onCancel: {
-      reader.cancelReading()
+      readers.forEach { $0.cancelReading() }
       writer.cancelWriting()
     }
     if Task.isCancelled { throw FlattenError.cancelled }
@@ -128,6 +134,42 @@ nonisolated enum RecordingStudioFlattenExporter {
       throw FlattenError.cannotWrite(writer.error?.localizedDescription ?? "status \(writer.status.rawValue)")
     }
     progress?(1)
+  }
+
+  // MARK: - Sources
+
+  private struct VideoSource {
+    let asset: AVAsset
+    let tracks: [AVAssetTrack]
+    let screenTrackID: CMPersistentTrackID
+    let auxiliaryTrackIDs: [VideoEditorStudioAuxiliaryTrack: CMPersistentTrackID]
+  }
+
+  /// The recording alone, or a composition with the camera sidecar as an auxiliary track.
+  private static func videoSource(
+    asset: AVAsset,
+    screenTrack: AVAssetTrack,
+    timeRange: CMTimeRange,
+    cameraURL: URL?
+  ) async throws -> VideoSource {
+    guard let cameraURL else {
+      return VideoSource(asset: asset, tracks: [screenTrack], screenTrackID: screenTrack.trackID, auxiliaryTrackIDs: [:])
+    }
+    let cameraAsset = AVURLAsset(url: cameraURL)
+    let composition = AVMutableComposition()
+    guard let cameraTrack = try await cameraAsset.loadTracks(withMediaType: .video).first,
+          let screen = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
+          let camera = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
+    else { throw FlattenError.cannotRead("camera sidecar") }
+    try screen.insertTimeRange(timeRange, of: screenTrack, at: .zero)
+    let cameraDuration = CMTimeMinimum(try await cameraAsset.load(.duration), timeRange.duration)
+    try camera.insertTimeRange(CMTimeRange(start: .zero, duration: cameraDuration), of: cameraTrack, at: .zero)
+    return VideoSource(
+      asset: composition,
+      tracks: [screen, camera],
+      screenTrackID: screen.trackID,
+      auxiliaryTrackIDs: [.camera: camera.trackID]
+    )
   }
 
   // MARK: - Settings
@@ -175,7 +217,7 @@ nonisolated enum RecordingStudioFlattenExporter {
   // MARK: - Copy loop
 
   private static func copySamples(
-    reader: AVAssetReader,
+    readers: [AVAssetReader],
     writer: AVAssetWriter,
     pairs: [(String, AVAssetReaderOutput, AVAssetWriterInput)],
     onVideoTime: @escaping @Sendable (CMTime) -> Void
@@ -185,7 +227,7 @@ nonisolated enum RecordingStudioFlattenExporter {
       for (label, output, input) in pairs {
         nonisolated(unsafe) let output = output
         nonisolated(unsafe) let input = input
-        nonisolated(unsafe) let reader = reader
+        nonisolated(unsafe) let readers = readers
         nonisolated(unsafe) let writer = writer
         group.addTask {
           await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
@@ -204,7 +246,7 @@ nonisolated enum RecordingStudioFlattenExporter {
                 }
                 if !input.append(buffer) {
                   state.record(FlattenError.appendFailed(label)) {
-                    reader.cancelReading()
+                    readers.forEach { $0.cancelReading() }
                     writer.cancelWriting()
                   }
                   finished = true
@@ -219,8 +261,8 @@ nonisolated enum RecordingStudioFlattenExporter {
       }
     }
     if let error = state.error { throw error }
-    if reader.status == .failed {
-      throw FlattenError.cannotRead(reader.error?.localizedDescription ?? "unknown")
+    if let failed = readers.first(where: { $0.status == .failed }) {
+      throw FlattenError.cannotRead(failed.error?.localizedDescription ?? "unknown")
     }
   }
 

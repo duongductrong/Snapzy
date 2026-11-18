@@ -41,6 +41,7 @@ final class RecordingCoordinator: ObservableObject {
   private var keystrokeMonitorService: KeystrokeMonitorService?
 
   private var cameraOverlayWindow: RecordingCameraOverlayWindow?
+  private var studioCameraWriter: RecordingCameraWriter?
 
   private struct ToolbarConfiguration {
     let format: VideoFormat
@@ -1059,6 +1060,10 @@ final class RecordingCoordinator: ObservableObject {
     // Capture output mode before cleanup closes the toolbar
     let outputMode = toolbarWindow?.state.outputMode ?? .video
 
+    if let window = cameraOverlayWindow {
+      recorder.updateStudioCameraLayout(window.studioLayout)
+    }
+
     Task {
       let url = await recorder.stopRecording()
       DiagnosticLogger.shared.log(.info, .recording, "Recording stopped", context: [
@@ -1335,7 +1340,7 @@ final class RecordingCoordinator: ObservableObject {
     }
 
     if let cameraOverlayWindow {
-      await recorder.addExceptedWindow(windowID: cameraOverlayWindow.overlayWindowID)
+      await registerCameraOverlay(cameraOverlayWindow)
       return
     }
 
@@ -1351,10 +1356,11 @@ final class RecordingCoordinator: ObservableObject {
         sizePreset: sizePreset,
         isMirrored: isMirrored
       )
-      window.onConfigurationChanged = { [weak self] newShape, newSize, newMirrored in
+      window.onConfigurationChanged = { [weak self, weak window] newShape, newSize, newMirrored in
         self?.toolbarWindow?.cameraShape = newShape
         self?.toolbarWindow?.cameraSize = newSize
         self?.toolbarWindow?.cameraMirrored = newMirrored
+        if let window { self?.recorder.updateStudioCameraLayout(window.studioLayout) }
       }
       window.onCloseRequested = { [weak self] in
         self?.toolbarWindow?.state.captureCamera = false
@@ -1364,14 +1370,38 @@ final class RecordingCoordinator: ObservableObject {
 
       cameraOverlayWindow = window
       window.startPreview()
-      await recorder.addExceptedWindow(windowID: window.overlayWindowID)
+      await registerCameraOverlay(window)
     } catch {
       DiagnosticLogger.shared.logError(.recording, error, "Camera overlay setup failed")
       throw RecordingError.setupFailed(L10n.Camera.unavailable)
     }
   }
 
+  /// Normal recordings capture the overlay as part of the screen. Studio recordings keep
+  /// it out of the stream and write the camera to its own sidecar instead.
+  private func registerCameraOverlay(_ window: RecordingCameraOverlayWindow) async {
+    if let previous = studioCameraWriter {
+      // Restart: the previous writer was cancelled with its recording.
+      window.detachRecordingOutput(previous.output)
+      studioCameraWriter = nil
+    }
+    if let toolbarWindow, isStudioRecordingActive(for: toolbarWindow),
+       let writer = recorder.makeStudioCameraWriter(layout: window.studioLayout) {
+      await recorder.addRuntimeExcludedWindow(windowID: window.overlayWindowID)
+      window.attachRecordingOutput(writer.output)
+      studioCameraWriter = writer
+      DiagnosticLogger.shared.log(.info, .recording, "Studio camera sidecar attached")
+    } else {
+      await recorder.addExceptedWindow(windowID: window.overlayWindowID)
+    }
+  }
+
   private func cleanupCameraOverlay() {
+    if let window = cameraOverlayWindow, let writer = studioCameraWriter {
+      recorder.updateStudioCameraLayout(window.studioLayout)
+      window.detachRecordingOutput(writer.output)
+    }
+    studioCameraWriter = nil
     cameraOverlayWindow?.close()
     cameraOverlayWindow = nil
   }

@@ -10,14 +10,61 @@
 import CoreGraphics
 import Foundation
 
-/// Camera recorded as a separate sidecar movie (filled in by phase 3).
-nonisolated struct RecordingCameraSource: Codable, Equatable {
+/// Camera recorded as a separate sidecar movie (Studio recording). The sidecar's
+/// time 0 is the screen recording's time 0; pauses are cut the same way.
+nonisolated struct RecordingCameraSource: Codable, Equatable, Sendable {
   /// File name inside the `CameraSources` sidecar directory.
   var fileName: String
+  /// Camera frame size in pixels (unmirrored, as written).
+  var naturalSize: CGSize
+  /// The overlay showed the camera mirrored while recording.
+  var isMirrored: Bool
+  /// `RecordingCameraShape.rawValue` of the overlay at stop.
+  var shape: String
+  /// Overlay frame at stop, normalized to the capture rect, top-left origin.
+  var normalizedFrame: CGRect
+  /// Overlay frame size in points (corner radius is defined in points).
+  var pointSize: CGSize
+  /// Spans (recording time) with no camera frames, e.g. a disconnected camera.
+  var gaps: [RecordingTimeRange]
 
-  init(fileName: String) {
+  init(
+    fileName: String,
+    naturalSize: CGSize = .zero,
+    isMirrored: Bool = false,
+    shape: String = "rectangle",
+    normalizedFrame: CGRect = .zero,
+    pointSize: CGSize = .zero,
+    gaps: [RecordingTimeRange] = []
+  ) {
     self.fileName = fileName
+    self.naturalSize = naturalSize
+    self.isMirrored = isMirrored
+    self.shape = shape
+    self.normalizedFrame = normalizedFrame
+    self.pointSize = pointSize
+    self.gaps = gaps
   }
+
+  private enum CodingKeys: String, CodingKey {
+    case fileName, naturalSize, isMirrored, shape, normalizedFrame, pointSize, gaps
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    fileName = try c.decode(String.self, forKey: .fileName)
+    naturalSize = try c.decodeIfPresent(CGSize.self, forKey: .naturalSize) ?? .zero
+    isMirrored = try c.decodeIfPresent(Bool.self, forKey: .isMirrored) ?? false
+    shape = try c.decodeIfPresent(String.self, forKey: .shape) ?? "rectangle"
+    normalizedFrame = try c.decodeIfPresent(CGRect.self, forKey: .normalizedFrame) ?? .zero
+    pointSize = try c.decodeIfPresent(CGSize.self, forKey: .pointSize) ?? .zero
+    gaps = try c.decodeIfPresent([RecordingTimeRange].self, forKey: .gaps) ?? []
+  }
+}
+
+nonisolated struct RecordingTimeRange: Codable, Equatable, Sendable {
+  var start: TimeInterval
+  var end: TimeInterval
 }
 
 /// Kinds of files the recording metadata store owns next to recording metadata.

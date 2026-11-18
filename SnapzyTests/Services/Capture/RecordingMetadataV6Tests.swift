@@ -167,7 +167,7 @@ final class RecordingMetadataV6Tests: XCTestCase {
       mouseSamples: [],
       cursorCapture: RecordingCursorCapture(imagesFolderName: cursorFolder),
       isCursorBaked: false,
-      cameraSource: cameraFile.map(RecordingCameraSource.init(fileName:))
+      cameraSource: cameraFile.map { RecordingCameraSource(fileName: $0) }
     )
   }
 
