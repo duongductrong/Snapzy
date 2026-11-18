@@ -204,6 +204,7 @@ enum PreferencesKeys {
 
   // History
   static let historyEnabled = "history.enabled"
+  static let historyDisplayStyle = "history.displayStyle"
   static let historyRetentionDays = "history.retentionDays"
   static let historyMaxCount = "history.maxCount"
   static let historyBackgroundStyle = "history.backgroundStyle"
