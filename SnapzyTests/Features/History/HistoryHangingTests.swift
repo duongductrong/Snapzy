@@ -291,6 +291,16 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertEqual(update(&state, visible: true, time: 12), .dismiss)
   }
 
+  func testModalSuppressionHidesEvenPinnedAndRequiresLeavingEdge() {
+    var state = HistoryEdgeHoverState()
+    XCTAssertEqual(update(&state, edge: true, visible: true, keepOpen: true, suppressed: true, time: 0), .dismiss)
+    XCTAssertEqual(update(&state, edge: true, time: 1), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 2), .none)
+    XCTAssertEqual(update(&state, edge: false, time: 3), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 4), .none)
+    XCTAssertEqual(update(&state, edge: true, time: 4.2), .reveal)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
