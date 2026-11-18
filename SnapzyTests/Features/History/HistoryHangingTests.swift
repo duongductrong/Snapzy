@@ -478,6 +478,21 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testExplicitDismissDuringCaptureDoesNotRestoreShelf() async throws {
+    try await withCaptureWindows { shelf, overlay, _, screen in
+      shelf.show(on: screen)
+      try await Task.sleep(nanoseconds: 250_000_000)
+      overlay.orderFrontRegardless()
+      try await Task.sleep(nanoseconds: 250_000_000)
+      XCTAssertFalse(shelf.isVisible)
+      shelf.toggle()
+      overlay.orderOut(nil)
+      try await Task.sleep(nanoseconds: 250_000_000)
+      XCTAssertFalse(shelf.isVisible)
+      XCTAssertNil(self.hangingWindow)
+    }
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
