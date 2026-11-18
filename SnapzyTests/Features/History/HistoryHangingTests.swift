@@ -149,6 +149,25 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testPreviewFitsOffsetPortraitAndSmallDisplays() {
+    for visible in [CGRect(x: 0, y: 72, width: 1680, height: 940),
+                    CGRect(x: -1080, y: 200, width: 1080, height: 1880),
+                    CGRect(x: 800, y: -280, width: 640, height: 256)] {
+      let shelf = HistoryHangingLayout.frame(screenFrame: visible, visibleFrame: visible, safeAreaTop: 0)
+      for imageSize in [CGSize(width: 1200, height: 750), CGSize(width: 300, height: 1200)] {
+        for x in [visible.minX, visible.midX, visible.maxX] {
+          let preview = HistoryHangingPreviewController.previewFrame(
+            visibleFrame: visible, shelfFrame: shelf,
+            anchor: CGRect(x: x, y: shelf.minY, width: 1, height: 1), imageSize: imageSize
+          )
+          XCTAssertTrue(visible.contains(preview))
+          XCTAssertLessThanOrEqual(preview.width, 600)
+          XCTAssertLessThanOrEqual(preview.height, 420)
+        }
+      }
+    }
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
