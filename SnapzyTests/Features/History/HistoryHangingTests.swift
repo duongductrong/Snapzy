@@ -75,6 +75,22 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testRowFitsWithoutScrollingAtEveryCapacity() {
+    for width: CGFloat in [140, 320, 608, 800, 1048, 1120] {
+      let row = HistoryHangingRowLayout(width: width)
+      for count in 1 ... row.capacity {
+        XCTAssertGreaterThanOrEqual(row.center(at: 0, count: count) - row.cardWidth / 2, 24)
+        XCTAssertLessThanOrEqual(row.center(at: count - 1, count: count) + row.cardWidth / 2, width - 24)
+        XCTAssertEqual(
+          row.center(at: 0, count: count) + row.center(at: count - 1, count: count),
+          width,
+          accuracy: 0.001
+        )
+      }
+    }
+    XCTAssertEqual(HistoryHangingRowLayout(width: 1120).capacity, 5)
+  }
+
   private func selectionRecord(index: Int, type: CaptureHistoryType = .screenshot) -> CaptureHistoryRecord {
     CaptureHistoryRecord(id: UUID(), filePath: "/tmp/history-selection-\(index).png", fileName: "Capture \(index)",
                          captureType: type, fileSize: 1000, capturedAt: Date().addingTimeInterval(-Double(index)),
