@@ -493,6 +493,21 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testChangingStyleDuringCaptureCancelsRestoration() async throws {
+    try await withCaptureWindows { shelf, overlay, _, screen in
+      shelf.show(on: screen)
+      try await Task.sleep(nanoseconds: 250_000_000)
+      overlay.orderFrontRegardless()
+      try await Task.sleep(nanoseconds: 250_000_000)
+      HistoryFloatingManager.shared.displayStyle = .traditional
+      overlay.orderOut(nil)
+      try await Task.sleep(nanoseconds: 250_000_000)
+      XCTAssertFalse(shelf.isVisible)
+      XCTAssertFalse(shelf.isMonitoring)
+      XCTAssertNil(self.hangingWindow)
+    }
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
