@@ -33,6 +33,48 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testCableSpansPhysicalDisplayRegardlessOfDockScaleAndOrientation() {
+    let screens = [
+      CGRect(x: 0, y: 0, width: 1512, height: 982),
+      CGRect(x: -2560, y: -200, width: 2560, height: 1440),
+      CGRect(x: 1512, y: 300, width: 1080, height: 1920),
+      CGRect(x: -500, y: 982, width: 3440, height: 1440),
+      CGRect(x: 0, y: -768, width: 1024, height: 768),
+    ]
+    for screen in screens {
+      for dockWidth: CGFloat in [0, 72] {
+        let visible = CGRect(x: screen.minX + dockWidth, y: screen.minY + 64,
+                             width: screen.width - dockWidth, height: screen.height - 96)
+        let panel = HistoryHangingLayout.frame(screenFrame: screen, visibleFrame: visible, safeAreaTop: 32)
+        let cable = HistoryHangingCableLayout(panelFrame: panel, screenFrame: screen)
+        XCTAssertEqual(cable.frame.minX, screen.minX)
+        XCTAssertEqual(cable.frame.maxX, screen.maxX)
+        XCTAssertEqual(cable.frame.maxY, screen.maxY)
+        XCTAssertTrue(screen.contains(cable.frame))
+        XCTAssertTrue(visible.contains(panel))
+        let row = HistoryHangingRowLayout(width: panel.width)
+        for index in 0 ..< row.capacity {
+          let x = row.center(at: index, count: row.capacity)
+          let t = (panel.minX - screen.minX + x) / screen.width
+          XCTAssertEqual(cable.attachmentHeight(at: x), 4 * cable.depth * t * (1 - t) - (screen.maxY - panel.maxY),
+                         accuracy: 0.001)
+          XCTAssertGreaterThanOrEqual(cable.attachmentHeight(at: x), 12 - 0.001)
+          XCTAssertLessThanOrEqual(cable.attachmentHeight(at: x), cable.maximumAttachmentHeight)
+        }
+        XCTAssertEqual(
+          cable.attachmentHeight(at: screen.minX - panel.minX),
+          -(screen.maxY - panel.maxY),
+          accuracy: 0.001
+        )
+        XCTAssertEqual(
+          cable.attachmentHeight(at: screen.maxX - panel.minX),
+          -(screen.maxY - panel.maxY),
+          accuracy: 0.001
+        )
+      }
+    }
+  }
+
   private func selectionRecord(index: Int, type: CaptureHistoryType = .screenshot) -> CaptureHistoryRecord {
     CaptureHistoryRecord(id: UUID(), filePath: "/tmp/history-selection-\(index).png", fileName: "Capture \(index)",
                          captureType: type, fileSize: 1000, capturedAt: Date().addingTimeInterval(-Double(index)),
