@@ -238,6 +238,16 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testTriggerUsesVeryTopAcrossEntireDisplayNotVisibleMenuBarEdge() {
+    let screen = CGRect(x: -1440, y: 100, width: 1440, height: 900)
+    for x: CGFloat in [-1440, -800, -1] {
+      XCTAssertTrue(HistoryHangingLayout.isAtTopEdge(CGPoint(x: x, y: 999), screenFrame: screen))
+      XCTAssertFalse(HistoryHangingLayout.isAtTopEdge(CGPoint(x: x, y: 976), screenFrame: screen))
+    }
+    XCTAssertFalse(HistoryHangingLayout.isAtTopEdge(CGPoint(x: 1, y: 999), screenFrame: screen))
+    XCTAssertFalse(HistoryHangingLayout.isAtTopEdge(CGPoint(x: -800, y: 1001), screenFrame: screen))
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
