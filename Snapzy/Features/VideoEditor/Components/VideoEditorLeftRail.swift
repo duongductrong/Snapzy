@@ -72,6 +72,7 @@ struct VideoEditorRailButton: View {
     switch panel {
     case .background: return "paintpalette"
     case .zoom: return "plus.magnifyingglass"
+    case .cursor: return "cursorarrow.rays"
     }
   }
 
@@ -79,6 +80,7 @@ struct VideoEditorRailButton: View {
     switch panel {
     case .background: return L10n.Common.background
     case .zoom: return L10n.VideoEditor.zoomSettings
+    case .cursor: return L10n.VideoEditor.cursorSection
     }
   }
 

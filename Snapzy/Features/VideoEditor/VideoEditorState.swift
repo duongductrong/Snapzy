@@ -17,6 +17,7 @@ import SwiftUI
 enum VideoEditorLeftSidebarPanel: Hashable, CaseIterable {
   case background
   case zoom
+  case cursor
 }
 
 /// AVPlayer callbacks and schedule access are serialized on `queue`. Observer
@@ -269,6 +270,7 @@ enum EditorAction: Equatable {
   case replaceClips(old: [TimelineClip], new: [TimelineClip])
   case updateFrame(old: VideoEditorFrameSettings, new: VideoEditorFrameSettings)
   case updateExportSettings(old: ExportSettings, new: ExportSettings)
+  case updateCursor(old: VideoEditorCursorSettings, new: VideoEditorCursorSettings)
   /// Several actions that undo and redo as one step (one AI prompt).
   case group([EditorAction])
 }
@@ -701,7 +703,18 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Auto Focus
 
-  @Published private(set) var recordingMetadata: RecordingMetadata?
+  @Published private(set) var recordingMetadata: RecordingMetadata? {
+    didSet { reloadCursorLayer() }
+  }
+  /// Studio cursor layer settings (only meaningful when `hasEditableCursor`).
+  @Published private(set) var cursorSettings = VideoEditorCursorSettings.default
+  private(set) var initialCursorSettings = VideoEditorCursorSettings.default
+  /// Captured cursor images, loaded once per metadata.
+  private(set) var cursorSprites = VideoEditorCursorSpriteStore.empty
+  /// Resolver for the current metadata + settings; `nil` without an editable cursor.
+  private(set) var cursorResolver: VideoEditorCursorResolver?
+  /// Live Studio click sound for the preview (engine starts only when used).
+  let clickSoundPlayer = VideoEditorClickSoundPlayer()
   @Published private(set) var autoFocusPaths: [UUID: [AutoFocusCameraSample]] = [:]
 
   // MARK: - GIF Metadata
@@ -952,6 +965,7 @@ final class VideoEditorState: ObservableObject {
     previewRateController = VideoEditorPreviewRateController(player: player)
     zoomTransitionDuration = Self.loadZoomTransitionDuration()
     recordingMetadata = initialMetadata
+    reloadCursorLayer()
 
     setupTimeObserver()
     setupEndObserver()
@@ -2139,6 +2153,10 @@ final class VideoEditorState: ObservableObject {
       updateExportSettings(old)
       return .updateExportSettings(old: new, new: old)
 
+    case .updateCursor(let old, let new):
+      applyCursorSettings(old)
+      return .updateCursor(old: new, new: old)
+
     case .group(let actions):
       // Undo the members newest first; the returned group replays them oldest first.
       return .group(actions.reversed().map { revert($0, isRedo: isRedo) })
@@ -2980,6 +2998,41 @@ final class VideoEditorState: ObservableObject {
     )
   }
 
+  // MARK: - Cursor settings
+
+  /// Apply cursor settings. `recordUndo: false` for live slider drags; commit the drag
+  /// with `commitCursorSettings(from:)` so it lands as one undo step.
+  func setCursorSettings(_ settings: VideoEditorCursorSettings, recordUndo: Bool = true) {
+    let old = cursorSettings
+    guard settings != old else { return }
+    applyCursorSettings(settings)
+    if recordUndo { recordAction(.updateCursor(old: old, new: settings)) }
+  }
+
+  func commitCursorSettings(from old: VideoEditorCursorSettings) {
+    guard old != cursorSettings else { return }
+    recordAction(.updateCursor(old: old, new: cursorSettings))
+  }
+
+  private func applyCursorSettings(_ settings: VideoEditorCursorSettings) {
+    cursorSettings = settings
+    rebuildCursorResolver()
+    updateHasUnsavedChanges()
+  }
+
+  private func reloadCursorLayer() {
+    cursorSprites = hasEditableCursor ? VideoEditorCursorSpriteStore.load(capture: recordingMetadata?.cursorCapture) : .empty
+    rebuildCursorResolver()
+  }
+
+  private func rebuildCursorResolver() {
+    guard hasEditableCursor, let metadata = recordingMetadata, let capture = metadata.cursorCapture else {
+      cursorResolver = nil
+      return
+    }
+    cursorResolver = VideoEditorCursorResolver(samples: metadata.mouseSamples, capture: capture, settings: cursorSettings)
+  }
+
   /// Apply background/frame settings as one undoable step.
   func setFrameSettings(_ settings: VideoEditorFrameSettings) {
     let old = frameSettings
@@ -3405,8 +3458,9 @@ final class VideoEditorState: ObservableObject {
     let backgroundChanged = bgStyleChanged || bgPaddingChanged || bgShadowChanged || bgCornerChanged
       || bgLayoutChanged
     let exportSettingsChanged = exportSettings != initialExportSettings
+    let cursorChanged = cursorSettings != initialCursorSettings
     let changed = clipsChanged || muteChanged || zoomsChanged || speedsChanged
-      || backgroundChanged || exportSettingsChanged
+      || backgroundChanged || exportSettingsChanged || cursorChanged
     if hasUnsavedChanges != changed { hasUnsavedChanges = changed }
   }
 
@@ -3556,6 +3610,7 @@ final class VideoEditorState: ObservableObject {
 
   func cancelPendingPerformanceWork() {
     isPerformanceWorkClosed = true
+    clickSoundPlayer.shutdown()
     speedPreviewRevision &+= 1
     estimateRevision &+= 1
     speedTrackDragInProgress = false

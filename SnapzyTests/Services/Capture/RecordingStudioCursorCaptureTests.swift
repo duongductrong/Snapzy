@@ -138,20 +138,33 @@ final class RecordingStudioCursorCaptureTests: XCTestCase {
 
   // MARK: - Layer + flatten
 
-  /// A 10×10 opaque white sprite with its hotspot at the top-left corner.
-  private func whiteCursorLayer(at point: CGPoint, captureSize: CGSize) -> RecordingStudioCursorLayer {
+  /// A 10×10 pt opaque white sprite (20 px) with its hotspot at the top-left corner.
+  static func whiteCursorLayer(
+    samples: [RecordedMouseSample],
+    captureSize: CGSize,
+    settings: VideoEditorCursorSettings = .recorded(clickEffect: .none, clickColor: .defaultClick),
+    hotspot: CGPoint = .zero,
+    mapping: VideoEditorSourceTimeMapping = .identity
+  ) -> VideoEditorCursorLayer {
     let sprite = CIImage(color: .white).cropped(to: CGRect(x: 0, y: 0, width: 20, height: 20))
-    return RecordingStudioCursorLayer(
-      samples: [RecordedMouseSample(time: 0, normalizedX: point.x, normalizedY: point.y, isInsideCapture: true)],
-      capture: RecordingCursorCapture(
-        images: [RecordedCursorImage(id: 0, fileName: "c.png", hotspot: .zero,
-                                     pointSize: CGSize(width: 10, height: 10), scale: 2)],
-        appearance: [RecordedCursorChange(time: 0, imageID: 0, isHidden: false)]
-      ),
+    let capture = RecordingCursorCapture(
+      images: [RecordedCursorImage(id: 0, fileName: "c.png", hotspot: hotspot,
+                                   pointSize: CGSize(width: 10, height: 10), scale: 2)],
+      appearance: [RecordedCursorChange(time: 0, imageID: 0, isHidden: false)]
+    )
+    return VideoEditorCursorLayer(
+      resolver: VideoEditorCursorResolver(samples: samples, capture: capture, settings: settings),
+      mapping: mapping,
       captureSize: captureSize,
-      images: [0: sprite],
-      fallbackImage: nil,
-      clickStyle: nil
+      sprites: [0: VideoEditorCursorSprite(image: sprite, hotspot: hotspot, pointSize: CGSize(width: 10, height: 10))],
+      arrow: nil
+    )
+  }
+
+  private func whiteCursorLayer(at point: CGPoint, captureSize: CGSize) -> VideoEditorCursorLayer {
+    Self.whiteCursorLayer(
+      samples: [RecordedMouseSample(time: 0, normalizedX: point.x, normalizedY: point.y, isInsideCapture: true)],
+      captureSize: captureSize
     )
   }
 
@@ -198,9 +211,7 @@ final class RecordingStudioCursorCaptureTests: XCTestCase {
       let t = Double(index) / 10
       return RecordedMouseSample(time: t, normalizedX: 0.5 + 0.4 * sin(t), normalizedY: 0.5 + 0.4 * cos(t), isInsideCapture: true)
     }
-    var layer = whiteCursorLayer(at: .zero, captureSize: CGSize(width: size.width / 2, height: size.height / 2))
-    layer = RecordingStudioCursorLayer(samples: samples, capture: layer.capture, captureSize: layer.captureSize,
-                                       images: layer.images, fallbackImage: nil, clickStyle: nil)
+    let layer = Self.whiteCursorLayer(samples: samples, captureSize: CGSize(width: size.width / 2, height: size.height / 2))
     let duration = try await AVURLAsset(url: source).load(.duration).seconds
     let started = Date()
     try await RecordingStudioFlattenExporter.flatten(

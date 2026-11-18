@@ -139,7 +139,7 @@ struct ZoomableVideoPlayerSection: View {
       .frame(width: displayedVideoRect.width, height: displayedVideoRect.height)
       // Studio source-space layers (cursor, clicks): zoomed together with the screen.
       .overlay(alignment: .topLeading) {
-        VideoEditorStudioOverlayHost(space: .source, size: displayedVideoRect.size)
+        VideoEditorStudioOverlayHost(space: .source, size: displayedVideoRect.size, state: state)
       }
       .scaleEffect(currentZoomLevel)
       .offset(zoomOffset(in: displayedVideoRect.size))

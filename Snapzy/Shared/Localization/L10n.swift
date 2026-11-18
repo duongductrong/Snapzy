@@ -7045,6 +7045,76 @@ nonisolated enum L10n {
       defaultValue: "Saving Video",
       comment: "Title shown while the Video Editor replaces the current video with saved edits"
     )
+    static let cursorSection = string(
+      "video-editor.cursor-section",
+      defaultValue: "Cursor",
+      comment: "Video editor cursor panel title"
+    )
+    static let cursorBakedNotice = string(
+      "video-editor.cursor-baked-notice",
+      defaultValue: "The cursor is part of this video's pixels. Turn on Studio Recording before you record to edit the cursor here.",
+      comment: "Video editor cursor panel notice for recordings without editable cursor"
+    )
+    static let cursorShow = string(
+      "video-editor.cursor-show",
+      defaultValue: "Show Cursor",
+      comment: "Video editor cursor panel toggle"
+    )
+    static let cursorSize = string(
+      "video-editor.cursor-size",
+      defaultValue: "Size",
+      comment: "Video editor cursor panel size slider"
+    )
+    static let cursorSmoothing = string(
+      "video-editor.cursor-smoothing",
+      defaultValue: "Smoothing",
+      comment: "Video editor cursor panel smoothing slider"
+    )
+    static let cursorHideWhenIdle = string(
+      "video-editor.cursor-hide-when-idle",
+      defaultValue: "Hide When Idle",
+      comment: "Video editor cursor panel toggle"
+    )
+    static let cursorIdleDelay = string(
+      "video-editor.cursor-idle-delay",
+      defaultValue: "Hide After",
+      comment: "Video editor cursor panel idle delay slider"
+    )
+    static let cursorAlwaysArrow = string(
+      "video-editor.cursor-always-arrow",
+      defaultValue: "Always Use Arrow",
+      comment: "Video editor cursor panel toggle"
+    )
+    static let cursorClickEffect = string(
+      "video-editor.cursor-click-effect",
+      defaultValue: "Click Effect",
+      comment: "Video editor cursor panel click effect picker"
+    )
+    static let cursorClickRipple = string(
+      "video-editor.cursor-click-ripple",
+      defaultValue: "Ripple",
+      comment: "Video editor click effect option"
+    )
+    static let cursorClickRing = string(
+      "video-editor.cursor-click-ring",
+      defaultValue: "Ring",
+      comment: "Video editor click effect option"
+    )
+    static let cursorClickColor = string(
+      "video-editor.cursor-click-color",
+      defaultValue: "Effect Color",
+      comment: "Video editor click effect color picker"
+    )
+    static let cursorClickSound = string(
+      "video-editor.cursor-click-sound",
+      defaultValue: "Click Sound",
+      comment: "Video editor cursor panel click sound toggle"
+    )
+    static let cursorClickSoundVolume = string(
+      "video-editor.cursor-click-sound-volume",
+      defaultValue: "Click Volume",
+      comment: "Video editor cursor panel click sound volume slider"
+    )
     static let zoomSettings = string(
       "video-editor.zoom-settings",
       defaultValue: "Zoom Settings",

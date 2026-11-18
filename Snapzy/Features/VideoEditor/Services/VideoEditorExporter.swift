@@ -20,6 +20,15 @@ enum VideoEditorExporter {
       for: snapshot.zoomSegments,
       metadata: snapshot.recordingMetadata
     )
+    snapshot.studioRecipe = state.makeStudioRecipe(
+      sequenceMap: snapshot.sequenceMap,
+      playbackPlacements: snapshot.playbackPlacements
+    )
+    snapshot.clickSoundTimes = state.clickSoundOutputTimes(
+      sequenceMap: snapshot.sequenceMap,
+      playbackPlacements: snapshot.playbackPlacements
+    )
+    snapshot.clickSoundVolume = Float(state.cursorSettings.clickSoundVolume)
     try Task.checkCancellation()
     return snapshot
   }
@@ -54,7 +63,7 @@ enum VideoEditorExporter {
     // Anything beyond a single untouched primary clip needs the composition path.
     let hasSequenceEdits = state.hasSequenceEdits
     // Studio layers (cursor, camera, captions) only render through the compositor.
-    let hasStudioLayers = state.studioRecipe.hasActiveLayers
+    let hasStudioLayers = state.studioRecipe.hasActiveLayers || !state.clickSoundTimes.isEmpty
 
     // If visual effects, custom audio, speed scaling, or a multi-clip sequence are in
     // play, use composition-based export. Speed scaling requires the composition path
@@ -378,6 +387,10 @@ enum VideoEditorExporter {
       speedMap: speedMap,
       logPrefix: "[ZoomExport]"
     )
+    let clickLaneURL = try addClickSoundLane(to: composition, state: state)
+    defer {
+      if let clickLaneURL { try? FileManager.default.removeItem(at: clickLaneURL) }
+    }
 
     // Verify composition duration
     print("🔍 [ZoomExport] Composition duration: \(CMTimeGetSeconds(composition.duration))s")
@@ -819,6 +832,37 @@ enum VideoEditorExporter {
       speedMap: speedMap,
       logPrefix: logPrefix
     )
+  }
+
+  /// Studio click sound: a synthesized PCM lane placed in output time (cuts, reorder and
+  /// speed are already applied to the click times). Returns the temp file to delete
+  /// once the export finishes, or `nil` when there is no lane.
+  private static func addClickSoundLane(
+    to composition: AVMutableComposition,
+    state: VideoEditorExportSnapshot
+  ) throws -> URL? {
+    guard state.exportSettings.shouldIncludeAudio, !state.clickSoundTimes.isEmpty, state.clickSoundVolume > 0 else {
+      return nil
+    }
+    let duration = CMTimeGetSeconds(composition.duration)
+    let url = FileManager.default.temporaryDirectory
+      .appendingPathComponent("snapzy-clicks-\(UUID().uuidString).caf")
+    try VideoEditorClickSound.writeLane(
+      times: state.clickSoundTimes, duration: duration, volume: state.clickSoundVolume, to: url
+    )
+    let laneAsset = AVURLAsset(url: url)
+    guard let laneTrack = laneAsset.tracks(withMediaType: .audio).first,
+          let track = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
+    else {
+      try? FileManager.default.removeItem(at: url)
+      return nil
+    }
+    let range = CMTimeRange(start: .zero, duration: min(laneAsset.duration, composition.duration))
+    try track.insertTimeRange(range, of: laneTrack, at: .zero)
+    DiagnosticLogger.shared.log(.debug, .export, "Click sound lane added", context: [
+      "clicks": "\(state.clickSoundTimes.count)",
+    ])
+    return url
   }
 
   /// Apply per-segment `scaleTimeRange` to a composition track. Scales in reverse order

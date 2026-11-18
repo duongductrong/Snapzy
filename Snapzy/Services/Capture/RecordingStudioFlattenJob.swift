@@ -9,7 +9,6 @@
 //
 
 import AppKit
-import CoreImage
 import Foundation
 
 @MainActor
@@ -78,44 +77,20 @@ enum RecordingStudioFlattenJob {
 
   /// The recording's Studio layers as they were while recording.
   static func makeRecipe(metadata: RecordingMetadata) -> VideoEditorStudioRecipe {
-    guard let capture = metadata.cursorCapture else { return .empty }
-    var images: [Int: CIImage] = [:]
-    if let folder = capture.imagesFolderName,
-       let folderURL = try? RecordingMetadataStore.sidecarURL(named: folder, kind: .cursorImages) {
-      for image in capture.images {
-        if let decoded = CIImage(contentsOf: folderURL.appendingPathComponent(image.fileName)) {
-          images[image.id] = decoded
-        }
-      }
-    }
-    let layer = RecordingStudioCursorLayer(
-      samples: metadata.mouseSamples,
-      capture: capture,
-      captureSize: metadata.captureSize,
-      images: images,
-      fallbackImage: arrowFallback(),
-      clickStyle: RecordingToolbarPreferences.highlightClicks() ? clickStyle() : nil
+    let settings = VideoEditorCursorSettings.recorded(
+      clickEffect: RecordingToolbarPreferences.highlightClicks() ? .ripple : .none,
+      clickColor: highlightColor()
     )
+    guard let layer = VideoEditorCursorSpriteStore.load(capture: metadata.cursorCapture)
+      .makeLayer(metadata: metadata, settings: settings, mapping: .identity)
+    else { return .empty }
     return VideoEditorStudioRecipe(layers: [layer])
   }
 
-  private static func arrowFallback() -> RecordingStudioCursorFallback? {
-    let arrow = NSCursor.arrow
-    var rect = CGRect(origin: .zero, size: CGSize(width: arrow.image.size.width * 2, height: arrow.image.size.height * 2))
-    guard let cgImage = arrow.image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else { return nil }
-    return RecordingStudioCursorFallback(image: CIImage(cgImage: cgImage), hotspot: arrow.hotSpot, pointSize: arrow.image.size)
-  }
-
-  private static func clickStyle() -> RecordingStudioCursorLayer.ClickStyle {
+  private static func highlightColor() -> VideoEditorRGBAColor {
     let config = MouseHighlightConfiguration()
     let color = config.highlightColor.usingColorSpace(.sRGB) ?? .systemBlue
-    return RecordingStudioCursorLayer.ClickStyle(
-      rippleDiameter: config.highlightSize,
-      holdDiameter: config.holdCircleSize,
-      ringWidth: max(config.ringWidth, 2),
-      duration: config.animationDuration,
-      color: CIColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent,
-                     alpha: CGFloat(config.highlightOpacity))
-    )
+    return VideoEditorRGBAColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent,
+                                alpha: CGFloat(config.highlightOpacity))
   }
 }

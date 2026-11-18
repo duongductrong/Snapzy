@@ -31,6 +31,9 @@ struct VideoEditorExportSnapshot {
   /// Studio layers resolved for this export. Empty until cursor/camera/caption phases
   /// populate it; empty keeps the pre-Studio export routing byte-for-byte.
   var studioRecipe: VideoEditorStudioRecipe = .empty
+  /// Studio click sound: output times of clicks (empty = no click lane) and volume.
+  var clickSoundTimes: [TimeInterval] = []
+  var clickSoundVolume: Float = 0
 
   init(state: VideoEditorState) {
     sourceURL = state.sourceURL

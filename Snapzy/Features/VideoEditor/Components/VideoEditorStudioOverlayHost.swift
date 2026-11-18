@@ -17,6 +17,8 @@ struct VideoEditorStudioOverlayHost: View {
   /// Size of the coordinate space the layers draw into: the displayed video rect for
   /// `.source`, the composite (video + padding) for `.canvas`.
   let size: CGSize
+  /// Editor state for layers that need it (`nil` in previews/tests).
+  var state: VideoEditorState?
 
   var body: some View {
     ZStack(alignment: .topLeading) {
@@ -32,10 +34,12 @@ struct VideoEditorStudioOverlayHost: View {
     .accessibilityHidden(true)
   }
 
-  /// Phase 2 adds the cursor + click effect views here.
+  /// Cursor + click effects (phase 2).
   @ViewBuilder
   private var sourceSpaceLayers: some View {
-    EmptyView()
+    if let state {
+      VideoEditorCursorOverlayView(state: state, size: size)
+    }
   }
 
   /// Phase 4 adds the camera view, phase 5 the caption view (on top) here.
