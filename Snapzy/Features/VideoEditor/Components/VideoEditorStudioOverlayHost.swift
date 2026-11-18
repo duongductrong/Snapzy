@@ -19,6 +19,8 @@ struct VideoEditorStudioOverlayHost: View {
   let size: CGSize
   /// Editor state for layers that need it (`nil` in previews/tests).
   var state: VideoEditorState?
+  /// `.canvas` only: where the video sits inside `size`, top-left coordinates.
+  var videoRect: CGRect?
 
   var body: some View {
     ZStack(alignment: .topLeading) {
@@ -42,9 +44,11 @@ struct VideoEditorStudioOverlayHost: View {
     }
   }
 
-  /// Phase 4 adds the camera view, phase 5 the caption view (on top) here.
+  /// Camera (phase 4); phase 5 adds captions on top.
   @ViewBuilder
   private var canvasSpaceLayers: some View {
-    EmptyView()
+    if let state {
+      VideoEditorCameraOverlayView(state: state, videoRect: videoRect ?? CGRect(origin: .zero, size: size))
+    }
   }
 }

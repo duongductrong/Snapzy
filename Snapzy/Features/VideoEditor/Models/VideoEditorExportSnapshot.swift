@@ -34,6 +34,8 @@ struct VideoEditorExportSnapshot {
   /// Studio click sound: output times of clicks (empty = no click lane) and volume.
   var clickSoundTimes: [TimeInterval] = []
   var clickSoundVolume: Float = 0
+  /// Studio camera sidecar read as an auxiliary track when the camera layer is active.
+  var cameraSourceURL: URL?
 
   init(state: VideoEditorState) {
     sourceURL = state.sourceURL

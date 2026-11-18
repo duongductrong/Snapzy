@@ -34,6 +34,21 @@ nonisolated struct VideoEditorStudioLayerContext {
   let extent: CGRect
   /// Decoded frames of auxiliary tracks present at this time, keyed by role.
   let auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer]
+  /// Where the (zoomed) video frame sits inside `extent`, Core Image coordinates.
+  /// Equals `extent` for `.source` layers and when there is no padding.
+  let videoRect: CGRect
+
+  init(
+    outputTime: TimeInterval,
+    extent: CGRect,
+    auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer],
+    videoRect: CGRect? = nil
+  ) {
+    self.outputTime = outputTime
+    self.extent = extent
+    self.auxiliaryFrames = auxiliaryFrames
+    self.videoRect = videoRect ?? extent
+  }
 }
 
 /// A Studio layer the export compositor can draw. Implementations must be pure value
@@ -82,14 +97,16 @@ nonisolated struct VideoEditorStudioRecipe: Sendable {
     _ image: CIImage,
     space: VideoEditorStudioLayerSpace,
     outputTime: TimeInterval,
-    auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer]
+    auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer],
+    videoRect: CGRect? = nil
   ) -> CIImage {
     let spaceLayers = activeLayers(in: space)
     guard !spaceLayers.isEmpty else { return image }
     let context = VideoEditorStudioLayerContext(
       outputTime: outputTime,
       extent: image.extent,
-      auxiliaryFrames: auxiliaryFrames
+      auxiliaryFrames: auxiliaryFrames,
+      videoRect: videoRect
     )
     return spaceLayers.reduce(image) { partial, layer in
       layer.composite(onto: partial, context: context)

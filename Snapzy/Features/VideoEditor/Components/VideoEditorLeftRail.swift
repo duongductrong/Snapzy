@@ -73,6 +73,7 @@ struct VideoEditorRailButton: View {
     case .background: return "paintpalette"
     case .zoom: return "plus.magnifyingglass"
     case .cursor: return "cursorarrow.rays"
+    case .camera: return "person.crop.square"
     }
   }
 
@@ -81,6 +82,7 @@ struct VideoEditorRailButton: View {
     case .background: return L10n.Common.background
     case .zoom: return L10n.VideoEditor.zoomSettings
     case .cursor: return L10n.VideoEditor.cursorSection
+    case .camera: return L10n.VideoEditor.cameraSection
     }
   }
 

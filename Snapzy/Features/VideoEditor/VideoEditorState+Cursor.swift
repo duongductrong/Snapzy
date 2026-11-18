@@ -30,15 +30,23 @@ extension VideoEditorState {
     sequenceMap: TimelineSequenceMap,
     playbackPlacements: [TimelineSequence.Placement]
   ) -> VideoEditorStudioRecipe {
-    guard !isGIF, hasEditableCursor, let metadata = recordingMetadata,
-          let layer = cursorSprites.makeLayer(
-            metadata: metadata,
-            settings: cursorSettings,
-            mapping: VideoEditorSourceTimeMapping(sequenceMap: sequenceMap, playbackPlacements: playbackPlacements)
-          ),
-          layer.isActive
-    else { return .empty }
-    return VideoEditorStudioRecipe(layers: [layer])
+    guard !isGIF, let metadata = recordingMetadata else { return .empty }
+    let mapping = VideoEditorSourceTimeMapping(sequenceMap: sequenceMap, playbackPlacements: playbackPlacements)
+    var layers: [any VideoEditorStudioLayer] = []
+    if hasEditableCursor,
+       let cursor = cursorSprites.makeLayer(metadata: metadata, settings: cursorSettings, mapping: mapping),
+       cursor.isActive {
+      layers.append(cursor)
+    }
+    if hasEditableCamera, let source = metadata.cameraSource, cameraSettings.isVisible {
+      layers.append(VideoEditorCameraLayer(settings: cameraSettings, source: source, mapping: mapping))
+    }
+    return VideoEditorStudioRecipe(layers: layers)
+  }
+
+  /// The recording has a camera sidecar on disk, so the camera can be edited.
+  var hasEditableCamera: Bool {
+    cameraSourceURL != nil && recordingMetadata?.cameraSource != nil
   }
 
   /// Output times for the Studio click sound; empty when it is off or unavailable.
@@ -54,5 +62,14 @@ extension VideoEditorState {
       playbackPlacements: playbackPlacements,
       sequenceMap: sequenceMap
     )
+  }
+
+  /// Recording seconds per wall-clock second at a structural playhead time while
+  /// playing (the speed segment's rate, else 1). Drives the camera preview player.
+  func previewSourceRate(atSequence time: TimeInterval) -> Float {
+    let segment = speedSegments.first {
+      $0.isEnabled && time >= $0.startTime && time < $0.startTime + $0.duration
+    }
+    return Float(segment?.rate ?? 1)
   }
 }

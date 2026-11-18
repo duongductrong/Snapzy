@@ -60,7 +60,12 @@ struct ZoomableVideoPlayerSection: View {
         .padding(scaledPadding)
 
         // Studio canvas-space layers (camera, captions): outside the zoom transform.
-        VideoEditorStudioOverlayHost(space: .canvas, size: compositeSize)
+        VideoEditorStudioOverlayHost(
+          space: .canvas,
+          size: compositeSize,
+          state: state,
+          videoRect: displayedVideoRect.offsetBy(dx: scaledPadding, dy: scaledPadding)
+        )
       }
       .frame(width: compositeSize.width, height: compositeSize.height)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignmentValue)

@@ -7115,6 +7115,36 @@ nonisolated enum L10n {
       defaultValue: "Click Volume",
       comment: "Video editor cursor panel click sound volume slider"
     )
+    static let cameraSection = string(
+      "video-editor.camera-section",
+      defaultValue: "Camera",
+      comment: "Video editor camera panel title"
+    )
+    static let cameraUnavailableNotice = string(
+      "video-editor.camera-unavailable-notice",
+      defaultValue: "This video has no separate camera track. Record with the camera and Studio Recording on to edit the camera here.",
+      comment: "Video editor camera panel notice for recordings without a camera sidecar"
+    )
+    static let cameraShow = string(
+      "video-editor.camera-show",
+      defaultValue: "Show Camera",
+      comment: "Video editor camera panel toggle"
+    )
+    static let cameraPosition = string(
+      "video-editor.camera-position",
+      defaultValue: "Position",
+      comment: "Video editor camera panel position grid"
+    )
+    static let cameraMirror = string(
+      "video-editor.camera-mirror",
+      defaultValue: "Mirror",
+      comment: "Video editor camera panel mirror toggle"
+    )
+    static let cameraResetToRecorded = string(
+      "video-editor.camera-reset-to-recorded",
+      defaultValue: "Reset to Recording Layout",
+      comment: "Video editor camera panel reset button"
+    )
     static let zoomSettings = string(
       "video-editor.zoom-settings",
       defaultValue: "Zoom Settings",

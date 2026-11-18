@@ -111,6 +111,10 @@ enum RecordingCameraDeviceProvider {
   }
 
   private static func captureDevices() -> [AVCaptureDevice] {
+    CaptureDeviceListCache.devices(for: .video, discover: discoverCaptureDevices)
+  }
+
+  private static func discoverCaptureDevices() -> [AVCaptureDevice] {
     let deviceTypes: [AVCaptureDevice.DeviceType] = if #available(macOS 14.0, *) {
       [.builtInWideAngleCamera, .continuityCamera, .external, .deskViewCamera]
     } else {

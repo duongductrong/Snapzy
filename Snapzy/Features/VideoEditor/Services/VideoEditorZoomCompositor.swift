@@ -500,11 +500,13 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
     }
 
     // Studio canvas-space layers (camera, captions) are never zoomed.
+    let padding = instruction.hasBackground ? instruction.backgroundPadding : 0
     processedImage = compositeCanvasSpaceLayers(
       processedImage,
       outputTime: outputTime,
       instruction: instruction,
-      auxiliaryFrames: auxiliaryFrames
+      auxiliaryFrames: auxiliaryFrames,
+      videoRect: fittedRect.offsetBy(dx: padding, dy: padding)
     )
 
     // Create output buffer
@@ -537,13 +539,14 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
     _ image: CIImage,
     outputTime: TimeInterval,
     instruction: ZoomVideoCompositionInstruction,
-    auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer]
+    auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer],
+    videoRect: CGRect
   ) -> CIImage {
     guard instruction.hasStudioLayers else { return image }
     let canvasRect = CGRect(origin: .zero, size: instruction.paddedRenderSize)
     let base = image.extent.isInfinite ? image.cropped(to: canvasRect) : image
     return instruction.studioRecipe
-      .composite(base, space: .canvas, outputTime: outputTime, auxiliaryFrames: auxiliaryFrames)
+      .composite(base, space: .canvas, outputTime: outputTime, auxiliaryFrames: auxiliaryFrames, videoRect: videoRect)
       .cropped(to: canvasRect)
   }
 

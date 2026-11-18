@@ -29,6 +29,9 @@ enum VideoEditorExporter {
       playbackPlacements: snapshot.playbackPlacements
     )
     snapshot.clickSoundVolume = Float(state.cursorSettings.clickSoundVolume)
+    if snapshot.studioRecipe.requiredAuxiliaryTracks.contains(.camera) {
+      snapshot.cameraSourceURL = state.cameraSourceURL
+    }
     try Task.checkCancellation()
     return snapshot
   }
@@ -387,6 +390,7 @@ enum VideoEditorExporter {
       speedMap: speedMap,
       logPrefix: "[ZoomExport]"
     )
+    let cameraTrackID = try await addCameraTrack(to: composition, state: state, clips: clips, speedMap: speedMap)
     let clickLaneURL = try addClickSoundLane(to: composition, state: state)
     defer {
       if let clickLaneURL { try? FileManager.default.removeItem(at: clickLaneURL) }
@@ -454,7 +458,8 @@ enum VideoEditorExporter {
       videoComposition = try await zoomCompositor.createVideoComposition(
         for: composition,
         timeRange: compositionTimeRange,
-        screenTrackID: compositionVideoTrack.trackID
+        screenTrackID: compositionVideoTrack.trackID,
+        auxiliaryTrackIDs: cameraTrackID.map { [.camera: $0] } ?? [:]
       )
       // RenderSize is already set correctly in ZoomCompositor, just use paddedRenderSize for background
       videoComposition.renderSize = zoomCompositor.paddedRenderSize
@@ -832,6 +837,41 @@ enum VideoEditorExporter {
       speedMap: speedMap,
       logPrefix: logPrefix
     )
+  }
+
+  /// Studio camera: the sidecar laid out clip by clip like the screen track (same
+  /// source windows, empty over inserted files), then speed-scaled the same way.
+  private static func addCameraTrack(
+    to composition: AVMutableComposition,
+    state: VideoEditorExportSnapshot,
+    clips: [TimelineClip],
+    speedMap: TimelineSequenceMap?
+  ) async throws -> CMPersistentTrackID? {
+    guard let url = state.cameraSourceURL else { return nil }
+    let asset = AVURLAsset(url: url)
+    guard let source = try await asset.loadTracks(withMediaType: .video).first,
+          let track = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
+    else { return nil }
+    let cameraDuration = try await asset.load(.duration)
+    var cursor = CMTime.zero
+    for clip in clips {
+      let clipDuration = CMTime(seconds: clip.duration, preferredTimescale: 600)
+      let start = CMTime(seconds: clip.sourceStart, preferredTimescale: 600)
+      let available = CMTimeMinimum(clipDuration, CMTimeMaximum(.zero, CMTimeSubtract(cameraDuration, start)))
+      if clip.isPrimary, available > .zero {
+        try track.insertTimeRange(CMTimeRange(start: start, duration: available), of: source, at: cursor)
+        if available < clipDuration {
+          track.insertEmptyTimeRange(CMTimeRange(start: CMTimeAdd(cursor, available), duration: CMTimeSubtract(clipDuration, available)))
+        }
+      } else {
+        track.insertEmptyTimeRange(CMTimeRange(start: cursor, duration: clipDuration))
+      }
+      cursor = CMTimeAdd(cursor, clipDuration)
+    }
+    if let speedMap {
+      applySpeedScaling(to: track, map: speedMap, logPrefix: "[ZoomExport] camera")
+    }
+    return track.trackID
   }
 
   /// Studio click sound: a synthesized PCM lane placed in output time (cuts, reorder and
