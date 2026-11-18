@@ -17,28 +17,53 @@ struct HistorySettingsView: View {
 
   var body: some View {
     Form {
-      Section(L10n.PreferencesHistory.floatingPanelSection) {
-        SettingRow(
-          title: L10n.PreferencesHistory.floatingPanelTitle,
-          description: L10n.PreferencesHistory.floatingPanelDescription
-        ) {
-          Toggle("", isOn: $manager.isEnabled)
-            .labelsHidden()
-        }
-
-        SettingRow(
-          title: L10n.PreferencesHistory.panelPositionTitle,
-          description: L10n.PreferencesHistory.panelPositionDescription
-        ) {
-          Picker("", selection: $manager.position) {
-            ForEach(HistoryPanelPosition.allCases, id: \.self) { position in
-              Text(position.displayName).tag(position)
-            }
+      Section(L10n.HistoryHanging.sectionTitle) {
+        VStack(alignment: .leading, spacing: 16) {
+          VStack(alignment: .leading, spacing: 4) {
+            Text(L10n.HistoryHanging.styleTitle)
+              .font(.headline)
+            Text(L10n.HistoryHanging.styleDescription)
+              .font(.callout)
+              .foregroundStyle(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
           }
-          .labelsHidden()
-          .pickerStyle(.menu)
-          .fixedSize()
-          .frame(width: 140, alignment: .trailing)
+
+          HistoryDisplayStylePicker(selection: $manager.displayStyle)
+
+          Button(L10n.HistoryHanging.preview) {
+            manager.show()
+          }
+          .buttonStyle(.bordered)
+          .controlSize(.regular)
+          .disabled(manager.displayStyle == .traditional && !manager.isEnabled)
+        }
+        .padding(.vertical, 4)
+      }
+
+      if manager.displayStyle == .traditional {
+        Section(L10n.PreferencesHistory.floatingPanelSection) {
+          SettingRow(
+            title: L10n.PreferencesHistory.floatingPanelTitle,
+            description: L10n.PreferencesHistory.floatingPanelDescription
+          ) {
+            Toggle("", isOn: $manager.isEnabled)
+              .labelsHidden()
+          }
+
+          SettingRow(
+            title: L10n.PreferencesHistory.panelPositionTitle,
+            description: L10n.PreferencesHistory.panelPositionDescription
+          ) {
+            Picker("", selection: $manager.position) {
+              ForEach(HistoryPanelPosition.allCases, id: \.self) { position in
+                Text(position.displayName).tag(position)
+              }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+            .frame(width: 140, alignment: .trailing)
+          }
         }
       }
 
@@ -59,33 +84,35 @@ struct HistorySettingsView: View {
           .frame(width: 140, alignment: .trailing)
         }
 
-        SettingRow(
-          title: L10n.PreferencesHistory.backgroundStyleTitle,
-          description: L10n.PreferencesHistory.backgroundStyleDescription,
-          alignment: .top
-        ) {
-          HistoryBackgroundStylePicker(selection: $historyBackgroundStyle, position: manager.position)
-        }
-
-        SettingRow(
-          title: L10n.PreferencesHistory.panelSizeTitle,
-          description: L10n.PreferencesHistory.panelSizeDescription
-        ) {
-          HStack(spacing: 8) {
-            Text(L10n.PreferencesHistory.panelSizeSmall)
-              .font(.caption)
-              .foregroundColor(.secondary)
-            Slider(value: $manager.panelScale.stepped(by: 0.05, in: HistoryFloatingLayout.scaleRange), in: HistoryFloatingLayout.scaleRange)
-              .frame(width: 120)
-            Text(L10n.PreferencesHistory.panelSizeLarge)
-              .font(.caption)
-              .foregroundColor(.secondary)
-            Text("\(Int(manager.panelScale * 100))%")
-              .frame(width: 44, alignment: .trailing)
-              .monospacedDigit()
-              .foregroundColor(.secondary)
+        if manager.displayStyle == .traditional {
+          SettingRow(
+            title: L10n.PreferencesHistory.backgroundStyleTitle,
+            description: L10n.PreferencesHistory.backgroundStyleDescription,
+            alignment: .top
+          ) {
+            HistoryBackgroundStylePicker(selection: $historyBackgroundStyle, position: manager.position)
           }
-          .frame(width: 220, alignment: .trailing)
+
+          SettingRow(
+            title: L10n.PreferencesHistory.panelSizeTitle,
+            description: L10n.PreferencesHistory.panelSizeDescription
+          ) {
+            HStack(spacing: 8) {
+              Text(L10n.PreferencesHistory.panelSizeSmall)
+                .font(.caption)
+                .foregroundColor(.secondary)
+              Slider(value: $manager.panelScale.stepped(by: 0.05, in: HistoryFloatingLayout.scaleRange), in: HistoryFloatingLayout.scaleRange)
+                .frame(width: 120)
+              Text(L10n.PreferencesHistory.panelSizeLarge)
+                .font(.caption)
+                .foregroundColor(.secondary)
+              Text("\(Int(manager.panelScale * 100))%")
+                .frame(width: 44, alignment: .trailing)
+                .monospacedDigit()
+                .foregroundColor(.secondary)
+            }
+            .frame(width: 220, alignment: .trailing)
+          }
         }
 
         SettingRow(
@@ -208,6 +235,137 @@ struct HistorySettingsView: View {
   private func revealCaptureStorage() {
     guard let url = storageManager.ensureCapturesDirectory() else { return }
     NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: url.path)
+  }
+}
+
+private struct HistoryDisplayStylePicker: View {
+  @Binding var selection: HistoryDisplayStyle
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 16) {
+      ForEach(HistoryDisplayStyle.allCases) { style in
+        VStack(spacing: 8) {
+          PreferencesVisualOptionTile(
+            title: style.title,
+            isSelected: selection == style,
+            action: { selection = style }
+          ) {
+            HistoryDisplayStyleDesktopPreview(style: style)
+              .accessibilityHidden(true)
+          }
+          .scaleEffect(1.4)
+          .frame(minWidth: 112, minHeight: 112)
+          .accessibilityIdentifier("history.style.\(style.rawValue)")
+          .accessibilityLabel(style.title)
+          .accessibilityHint(description(for: style))
+
+          Text(description(for: style))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(12)
+        .background(Color.primary.opacity(0.03), in: Radius.rect(Radius.card))
+      }
+    }
+  }
+
+  private func description(for style: HistoryDisplayStyle) -> String {
+    switch style {
+    case .traditional: return L10n.HistoryHanging.traditionalDescription
+    case .hanging: return L10n.HistoryHanging.hangingDescription
+    }
+  }
+}
+
+private struct HistoryDisplayStyleDesktopPreview: View {
+  let style: HistoryDisplayStyle
+
+  var body: some View {
+    PreferencesMiniDesktop {
+      VStack(spacing: 0) {
+        switch style {
+        case .traditional:
+          traditionalPanel
+        case .hanging:
+          hangingPhotos
+        }
+        Spacer(minLength: 0)
+      }
+      .padding(.top, PreferencesMiniDesktop<EmptyView>.menuBarHeight + 6)
+    }
+  }
+
+  private var traditionalPanel: some View {
+    VStack(spacing: 3) {
+      HStack(spacing: 2) {
+        Capsule().fill(Color.accentColor).frame(width: 9, height: 2)
+        Capsule().fill(Color.white.opacity(0.3)).frame(width: 7, height: 2)
+        Spacer(minLength: 0)
+        Circle().fill(Color.white.opacity(0.6)).frame(width: 2, height: 2)
+      }
+      VStack(spacing: 2) {
+        ForEach(0..<2, id: \.self) { row in
+          HStack(spacing: 2) {
+            ForEach(0..<3, id: \.self) { column in
+              photo(index: row + column)
+                .frame(width: 12, height: 8)
+            }
+          }
+        }
+      }
+    }
+    .padding(4)
+    .frame(width: 48)
+    .background(Color.black.opacity(0.65), in: Radius.rect(Radius.ornament))
+    .overlay {
+      Radius.rect(Radius.ornament)
+        .strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5)
+    }
+  }
+
+  private var hangingPhotos: some View {
+    VStack(spacing: 2) {
+      Rectangle()
+        .fill(Color.white.opacity(0.8))
+        .frame(width: 60, height: 1)
+      HStack(alignment: .top, spacing: 5) {
+        ForEach(0..<3, id: \.self) { index in
+          photo(index: index)
+            .frame(width: 13, height: 16)
+            .padding(2)
+            .padding(.bottom, 3)
+            .background(Color.white, in: Radius.rect(Radius.ornament))
+            .overlay(alignment: .top) {
+              Capsule()
+                .fill(Color.gray)
+                .frame(width: 3, height: 6)
+                .offset(y: -3)
+            }
+            .rotationEffect(.degrees(index == 1 ? 6 : -6), anchor: .top)
+            .shadow(color: .black.opacity(0.3), radius: 1, y: 2)
+        }
+      }
+    }
+  }
+
+  private func photo(index: Int) -> some View {
+    Rectangle()
+      .fill(
+        LinearGradient(
+          colors: [index.isMultiple(of: 2) ? Color.cyan : Color.orange, Color.indigo],
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+      )
+      .overlay {
+        Image(systemName: "mountain.2.fill")
+          .font(.system(size: 7))
+          .foregroundStyle(Color.white.opacity(0.8))
+      }
+      .clipped()
   }
 }
 
