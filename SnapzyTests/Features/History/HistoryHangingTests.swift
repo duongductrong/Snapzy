@@ -193,6 +193,15 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertEqual(HistoryHangingCableLayout(panelFrame: panel, screenFrame: screen).frame.maxY, screen.maxY)
   }
 
+  func testStackedDisplaysDoNotTriggerTheWrongScreenAtSharedBoundary() {
+    let lower = CGRect(x: 0, y: 0, width: 1440, height: 900)
+    let upper = CGRect(x: 0, y: 900, width: 1440, height: 900)
+    XCTAssertNil(HistoryHangingLayout.edgeScreenIndex(at: CGPoint(x: 720, y: 900), frames: [lower, upper]))
+    XCTAssertNil(HistoryHangingLayout.edgeScreenIndex(at: CGPoint(x: 720, y: 900), frames: [upper, lower]))
+    XCTAssertEqual(HistoryHangingLayout.edgeScreenIndex(at: CGPoint(x: 720, y: 899), frames: [lower, upper]), 0)
+    XCTAssertEqual(HistoryHangingLayout.edgeScreenIndex(at: CGPoint(x: 720, y: 1800), frames: [lower, upper]), 1)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
