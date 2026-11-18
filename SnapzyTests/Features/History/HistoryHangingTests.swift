@@ -186,6 +186,13 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertNil(controller.recordID)
   }
 
+  func testHiddenMenuBarStillRespectsMacBookNotch() {
+    let screen = CGRect(x: -1512, y: 200, width: 1512, height: 982)
+    let panel = HistoryHangingLayout.frame(screenFrame: screen, visibleFrame: screen, safeAreaTop: 38)
+    XCTAssertEqual(panel.maxY, screen.maxY - 46)
+    XCTAssertEqual(HistoryHangingCableLayout(panelFrame: panel, screenFrame: screen).frame.maxY, screen.maxY)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
