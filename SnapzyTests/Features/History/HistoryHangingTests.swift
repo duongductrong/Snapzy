@@ -339,6 +339,36 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertFalse(shelf.isVisible)
   }
 
+  func testDisabledHistoryMonitorsOnlyWhileManuallyOpened() throws {
+    guard !NSScreen.screens.isEmpty else { throw XCTSkip("Requires WindowServer") }
+    let history = HistoryFloatingManager.shared
+    let shelf = HistoryHangingManager.shared
+    let style = history.displayStyle
+    let enabled = UserDefaults.standard.object(forKey: PreferencesKeys.historyEnabled)
+    defer {
+      shelf.stop()
+      history.displayStyle = style
+      UserDefaults.standard.set(enabled, forKey: PreferencesKeys.historyEnabled)
+    }
+    UserDefaults.standard.set(false, forKey: PreferencesKeys.historyEnabled)
+    history.displayStyle = .hanging
+    shelf.start()
+    shelf.updateConfiguration()
+    XCTAssertFalse(shelf.isMonitoring)
+    shelf.show()
+    XCTAssertTrue(shelf.isVisible)
+    XCTAssertTrue(shelf.isMonitoring)
+    shelf.updateConfiguration()
+    XCTAssertTrue(shelf.isMonitoring)
+    shelf.hide(animated: false)
+    XCTAssertFalse(shelf.isMonitoring)
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.historyEnabled)
+    shelf.updateConfiguration()
+    XCTAssertTrue(shelf.isMonitoring)
+    history.displayStyle = .traditional
+    XCTAssertFalse(shelf.isMonitoring)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
