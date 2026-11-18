@@ -388,6 +388,21 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertEqual(update(&state, edge: true, time: 1.2), .reveal)
   }
 
+  func testRecordingControlsDoNotDismissOrBlockHanging() async throws {
+    try await withCaptureWindows { shelf, _, controls, screen in
+      controls.orderFrontRegardless()
+      for state: RecordingState in [.preparing, .recording, .paused, .stopping] {
+        ScreenRecordingManager.shared.setStateForTesting(state)
+        shelf.show(on: screen, fromEdge: true)
+        shelf.keepOpen = true
+        try await Task.sleep(nanoseconds: 250_000_000)
+        XCTAssertTrue(shelf.isVisible, "Recording state: \(state)")
+        XCTAssertTrue(shelf.isRevealed)
+        shelf.hide(animated: false)
+      }
+    }
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
