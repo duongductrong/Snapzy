@@ -168,6 +168,24 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testCancelledHoverCannotReopenPreview() async throws {
+    let screen = try XCTUnwrap(NSScreen.main)
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("HistoryHover-\(UUID())")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let url = try makeImage(index: 0, directory: directory)
+    var record = selectionRecord(index: 0)
+    record.filePath = url.path
+    let controller = HistoryHangingPreviewController()
+    let shelf = HistoryHangingLayout.frame(screenFrame: screen.frame, visibleFrame: screen.visibleFrame,
+                                           safeAreaTop: screen.safeAreaInsets.top)
+    controller.request(record, anchor: shelf, shelfFrame: shelf, screen: screen)
+    controller.dismiss()
+    try await Task.sleep(nanoseconds: 400_000_000)
+    XCTAssertFalse(controller.isVisible)
+    XCTAssertNil(controller.recordID)
+  }
+
   private final class EscapeProbeView: NSView {
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
