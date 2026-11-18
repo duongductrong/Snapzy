@@ -4,7 +4,8 @@
 //
 //  Preview of the Studio camera layer in the canvas-space host (never zoomed): an
 //  AVPlayerLayer (hardware decode, no pixel copies) placed and masked from the same
-//  `VideoEditorCameraSettings.rect` the export layer uses.
+//  `VideoEditorCameraSettings.rect` the export layer uses. Drag it to move it; it snaps
+//  to the nine anchors within 32 pt, like the recording overlay. Hidden ranges fade it.
 //
 
 import AVFoundation
@@ -15,6 +16,9 @@ struct VideoEditorCameraOverlayView: View {
   @ObservedObject private var playbackState: VideoEditorPlaybackState
   /// Video rect inside the canvas host, top-left coordinates.
   let videoRect: CGRect
+  /// Settings when the drag began; non-nil while dragging.
+  @State private var dragStart: VideoEditorCameraSettings?
+  @State private var isHandCursorPushed = false
 
   init(state: VideoEditorState, videoRect: CGRect) {
     _state = ObservedObject(wrappedValue: state)
@@ -28,7 +32,9 @@ struct VideoEditorCameraOverlayView: View {
       let settings = state.cameraSettings
       let sequenceTime = CMTimeGetSeconds(playbackState.currentTime)
       let sourceTime = state.cursorSourceTime(atSequence: sequenceTime)
-      let visible = settings.isVisible && sourceTime.map { !source.isInGap($0) } == true
+      let opacity = settings.isVisible && sourceTime.map { !source.isInGap($0) } == true
+        ? sourceTime.map { settings.visibility(atSource: $0) } ?? 0
+        : 0
       let rect = settings.rect(in: videoRect, aspect: source.overlayAspect)
       VideoEditorCameraPlayerLayerView(
         player: controller.player,
@@ -36,9 +42,13 @@ struct VideoEditorCameraOverlayView: View {
         isMirrored: settings.isMirrored
       )
       .frame(width: rect.width, height: rect.height)
+      .contentShape(Rectangle())
+      .gesture(dragGesture(cameraSize: rect.size))
+      .onHover { setHandCursor($0) }
+      .allowsHitTesting(opacity > 0)
       .offset(x: rect.minX, y: rect.minY)
-      .opacity(visible ? 1 : 0)
-      .animation(.easeInOut(duration: 0.2), value: visible)
+      .opacity(opacity)
+      .animation(.easeInOut(duration: 0.2), value: opacity == 0)
       .onReceive(playbackState.$currentTime) { time in
         syncCamera(at: CMTimeGetSeconds(time))
       }
@@ -46,7 +56,35 @@ struct VideoEditorCameraOverlayView: View {
         syncCamera(at: CMTimeGetSeconds(playbackState.currentTime))
       }
       .onAppear { syncCamera(at: sequenceTime) }
+      .onDisappear { setHandCursor(false) }
     }
+  }
+
+  private func dragGesture(cameraSize: CGSize) -> some Gesture {
+    DragGesture(minimumDistance: 2)
+      .onChanged { value in
+        let start = dragStart ?? state.cameraSettings
+        if dragStart == nil { dragStart = start }
+        var settings = state.cameraSettings
+        settings.center = VideoEditorCameraSettings.draggedCenter(
+          from: start.center,
+          translation: value.translation,
+          videoSize: videoRect.size,
+          cameraSize: cameraSize,
+          threshold: RecordingCameraOverlayPlacement.snapThreshold
+        )
+        state.setCameraSettings(settings, recordUndo: false)
+      }
+      .onEnded { _ in
+        if let start = dragStart { state.commitCameraSettings(from: start) }
+        dragStart = nil
+      }
+  }
+
+  private func setHandCursor(_ inside: Bool) {
+    guard inside != isHandCursorPushed else { return }
+    isHandCursorPushed = inside
+    if inside { NSCursor.openHand.push() } else { NSCursor.pop() }
   }
 
   private func syncCamera(at sequenceTime: TimeInterval) {

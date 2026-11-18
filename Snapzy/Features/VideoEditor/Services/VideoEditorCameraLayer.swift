@@ -11,12 +11,13 @@ import Foundation
 
 nonisolated enum VideoEditorCameraRenderer {
   /// Draws `buffer` aspect-filled into `target` (Core Image coordinates), optionally
-  /// mirrored, masked to a rounded rect with `cornerRadius`.
+  /// mirrored, masked to a rounded rect with `cornerRadius`, at `opacity` (fades).
   static func draw(
     _ buffer: CVPixelBuffer,
     in target: CGRect,
     cornerRadius: CGFloat,
     mirrored: Bool,
+    opacity: CGFloat = 1,
     onto image: CIImage
   ) -> CIImage {
     var camera = CIImage(cvPixelBuffer: buffer)
@@ -33,16 +34,19 @@ nonisolated enum VideoEditorCameraRenderer {
         y: target.midY - extent.height * scale / 2
       ))
       .cropped(to: target)
-    guard cornerRadius > 0, let mask = CIFilter(name: "CIRoundedRectangleGenerator", parameters: [
+    if cornerRadius > 0, let mask = CIFilter(name: "CIRoundedRectangleGenerator", parameters: [
       "inputExtent": CIVector(cgRect: target),
       "inputRadius": cornerRadius,
       "inputColor": CIColor.white,
-    ])?.outputImage else {
-      return camera.composited(over: image)
+    ])?.outputImage {
+      camera = camera.applyingFilter("CISourceInCompositing", parameters: [kCIInputBackgroundImageKey: mask])
     }
-    return camera
-      .applyingFilter("CISourceInCompositing", parameters: [kCIInputBackgroundImageKey: mask])
-      .composited(over: image)
+    if opacity < 1 {
+      camera = camera.applyingFilter("CIColorMatrix", parameters: [
+        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: max(opacity, 0)),
+      ])
+    }
+    return camera.composited(over: image)
   }
 }
 
@@ -71,12 +75,15 @@ nonisolated struct VideoEditorCameraLayer: VideoEditorStudioLayer, @unchecked Se
           let sourceTime = mapping.sourceTime(output: context.outputTime),
           !source.isInGap(sourceTime)
     else { return image }
+    let opacity = settings.visibility(atSource: sourceTime)
+    guard opacity > 0 else { return image }
     let target = targetRect(videoRect: context.videoRect)
     return VideoEditorCameraRenderer.draw(
       buffer,
       in: target,
       cornerRadius: settings.cornerRadius(for: target, referencePointWidth: source.pointSize.width),
       mirrored: settings.isMirrored,
+      opacity: CGFloat(opacity),
       onto: image
     )
   }

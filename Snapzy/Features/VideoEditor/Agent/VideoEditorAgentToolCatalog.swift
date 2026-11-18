@@ -344,6 +344,9 @@ nonisolated enum VideoEditorAgentToolCatalog {
         ("position", string("Corner or edge.", enum: VideoEditorAgentStudioTools.cameraPositions.map(\.name))),
         ("center", point("Or an exact center [x, y], 0–1 from the top left of the video.")),
         ("mirrored", bool("Flip the camera horizontally.")),
+        ("hide_start", time("Hide the camera from here (with hide_end).")),
+        ("hide_end", time("Hide the camera up to here.")),
+        ("clear_hidden", bool("true shows the camera everywhere again.")),
       ])
     ),
     spec(

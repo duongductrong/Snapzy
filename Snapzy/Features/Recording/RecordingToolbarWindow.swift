@@ -184,6 +184,8 @@ final class RecordingToolbarState: ObservableObject {
   @Published var outputMode: RecordingOutputMode
   @Published var showCursor: Bool
   @Published var studioRecording: Bool
+  /// Studio recording applies to video output with a visible cursor only.
+  var isStudioRecordingActive: Bool { studioRecording && outputMode != .gif && showCursor }
   @Published var highlightClicks: Bool
   @Published var showKeystrokes: Bool
   @Published var dimNonSelectedArea: Bool

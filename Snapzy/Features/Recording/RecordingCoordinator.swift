@@ -1130,7 +1130,7 @@ final class RecordingCoordinator: ObservableObject {
 
   /// Studio recording applies to video output with a visible cursor only.
   private func isStudioRecordingActive(for window: RecordingToolbarWindow) -> Bool {
-    window.state.studioRecording && window.state.outputMode != .gif && window.state.showCursor
+    window.state.isStudioRecordingActive
   }
 
   /// Handle GIF conversion: add to QuickAccess with progress, convert, and update

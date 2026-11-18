@@ -85,6 +85,8 @@ nonisolated struct VideoEditorAgentScene: Encodable, Equatable {
     /// [x, y] 0…1 from the top left of the video.
     let center: [Double]
     let mirrored: Bool
+    /// [start, end] timeline seconds where the camera is hidden.
+    let hidden: [[Double]]
   }
 
   struct Caption: Encodable, Equatable {

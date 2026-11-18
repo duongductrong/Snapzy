@@ -86,6 +86,15 @@ struct VideoEditorCameraSettingsPanel: View {
         .toggleStyle(.switch)
         .controlSize(.small)
 
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        Button(L10n.VideoEditor.cameraHideAtPlayhead) { state.hideCamera() }
+          .controlSize(.small)
+        Text(L10n.VideoEditor.cameraTrackHint)
+          .font(Typography.labelSmall)
+          .foregroundColor(SidebarColors.labelSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+
       Button(L10n.VideoEditor.cameraResetToRecorded) {
         if let source = state.recordingMetadata?.cameraSource {
           state.setCameraSettings(.recorded(source))

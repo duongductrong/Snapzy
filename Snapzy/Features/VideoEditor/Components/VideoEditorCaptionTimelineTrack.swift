@@ -73,20 +73,15 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
 
   /// Caption pieces laid on primary clips of the structural timeline.
   private var pieces: [Piece] {
-    guard duration > 0, timelineWidth > 0 else { return [] }
-    var result: [Piece] = []
-    for placement in state.placements where placement.clip.isPrimary {
-      let low = max(placement.sourceAxisStart, placement.clip.sourceStart)
-      let high = min(placement.sourceAxisEnd, placement.clip.sourceEnd)
-      for segment in state.captions.segments where segment.end > low && segment.start < high {
-        let start = placement.sequenceTime(atSource: max(segment.start, low))
-        let end = placement.sequenceTime(atSource: min(segment.end, high))
-        let x = start / duration * timelineWidth
-        let width = max((end - start) / duration * timelineWidth, 4)
-        result.append(Piece(id: "\(segment.id)-\(placement.id)", segment: segment, x: x, width: width))
-      }
+    let segments = Dictionary(uniqueKeysWithValues: state.captions.segments.map { ($0.id, $0) })
+    return VideoEditorSourceTrackLayout.pieces(
+      state.captions.segments.map { ($0.id, $0.start, $0.end) },
+      placements: state.placements,
+      duration: duration,
+      width: timelineWidth
+    ).compactMap { piece in
+      segments[piece.rangeID].map { Piece(id: piece.id, segment: $0, x: piece.x, width: piece.width) }
     }
-    return result
   }
 
   private func block(_ piece: Piece) -> some View {

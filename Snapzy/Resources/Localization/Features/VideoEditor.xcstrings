@@ -10010,6 +10010,290 @@
         }
       }
     },
+    "video-editor.camera-hidden": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgeblendet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hidden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oculta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מוסתרת"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "숨김"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скрыта"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang ẩn"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已隐藏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已隱藏"
+          }
+        }
+      }
+    },
+    "video-editor.camera-show-here": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera hier einblenden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Camera Here"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar la cámara aquí"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher la caméra ici"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת המצלמה כאן"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ここでカメラを表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여기서 카메라 표시"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать камеру здесь"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiện camera ở đoạn này"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在此显示摄像头"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在此顯示攝影機"
+          }
+        }
+      }
+    },
+    "video-editor.camera-hide-at-playhead": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera am Abspielkopf ausblenden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide Camera at Playhead"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar la cámara en el cursor de reproducción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquer la caméra à la tête de lecture"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסתרת המצלמה בראש ההפעלה"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生ヘッドの位置でカメラを隠す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생 헤드 위치에서 카메라 숨기기"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скрыть камеру у указателя"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ẩn camera tại đầu phát"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在播放头处隐藏摄像头"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在播放頭處隱藏攝影機"
+          }
+        }
+      }
+    },
+    "video-editor.camera-track-hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doppelklicke in die Kameraspur, um die Kamera dort auszublenden; ziehe einen Block, um den Zeitpunkt zu ändern. Ziehe die Kamera in der Vorschau, um sie zu verschieben."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-click the Camera track to hide the camera there; drag a block to change when. Drag the camera in the preview to move it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz doble clic en la pista Cámara para ocultar la cámara ahí; arrastra un bloque para cambiar cuándo. Arrastra la cámara en la vista previa para moverla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-cliquez sur la piste Caméra pour y masquer la caméra ; faites glisser un bloc pour changer le moment. Faites glisser la caméra dans l’aperçu pour la déplacer."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחצו פעמיים על רצועת המצלמה כדי להסתיר שם את המצלמה; גררו בלוק כדי לשנות מתי. גררו את המצלמה בתצוגה המקדימה כדי להזיז אותה."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カメラトラックをダブルクリックするとその位置でカメラを隠します。ブロックをドラッグして時間を変更します。プレビューでカメラをドラッグすると移動できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카메라 트랙을 두 번 클릭하면 그 위치에서 카메라를 숨깁니다. 블록을 드래그해 시점을 바꾸세요. 미리 보기에서 카메라를 드래그하면 이동합니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дважды щёлкните дорожку «Камера», чтобы скрыть там камеру; перетащите блок, чтобы изменить время. Перетащите камеру в превью, чтобы переместить её."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nhấp đúp vào track Camera để ẩn camera tại đó; kéo khối để đổi thời điểm. Kéo camera trên khung xem trước để di chuyển."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "双击“摄像头”轨道可在该处隐藏摄像头；拖动色块可更改时间。在预览中拖动摄像头可移动它。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按兩下「攝影機」軌道可在該處隱藏攝影機；拖移區塊可更改時間。在預覽中拖移攝影機可移動它。"
+          }
+        }
+      }
+    },
     "video-editor.captions-section": {
       "extractionState": "manual",
       "localizations": {

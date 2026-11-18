@@ -23,6 +23,9 @@ nonisolated struct VideoEditorCameraSettings: Codable, Equatable, Sendable {
   /// Center, normalized to the video rect, top-left origin.
   var center: CGPoint = CGPoint(x: 0.85, y: 0.82)
   var isMirrored: Bool = false
+  /// Stretches where the camera is hidden, in SOURCE time of the recording (like captions),
+  /// so they follow cuts, reorder and speed. Sorted by start.
+  var hiddenRanges: [VideoEditorCameraHiddenRange] = []
 
   static let `default` = VideoEditorCameraSettings()
 
@@ -66,7 +69,7 @@ nonisolated struct VideoEditorCameraSettings: Codable, Equatable, Sendable {
   /// The 9 snap anchors the panel offers (top-left normalized centers).
   static let anchors: [CGPoint] = [0.15, 0.5, 0.85].flatMap { y in [0.15, 0.5, 0.85].map { CGPoint(x: $0, y: y) } }
 
-  private enum CodingKeys: String, CodingKey { case isVisible, shape, size, center, isMirrored }
+  private enum CodingKeys: String, CodingKey { case isVisible, shape, size, center, isMirrored, hiddenRanges }
 
   init() {}
 
@@ -78,6 +81,7 @@ nonisolated struct VideoEditorCameraSettings: Codable, Equatable, Sendable {
     size = try c.decodeIfPresent(CGFloat.self, forKey: .size) ?? d.size
     center = try c.decodeIfPresent(CGPoint.self, forKey: .center) ?? d.center
     isMirrored = try c.decodeIfPresent(Bool.self, forKey: .isMirrored) ?? d.isMirrored
+    hiddenRanges = try c.decodeIfPresent([VideoEditorCameraHiddenRange].self, forKey: .hiddenRanges) ?? []
   }
 }
 

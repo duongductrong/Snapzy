@@ -32,7 +32,8 @@ struct VideoEditorStudioOverlayHost: View {
       }
     }
     .frame(width: size.width, height: size.height, alignment: .topLeading)
-    .allowsHitTesting(false)
+    // Only the camera takes the pointer (drag to move); everything else passes through.
+    .allowsHitTesting(space == .canvas)
     .accessibilityHidden(true)
   }
 
@@ -51,6 +52,7 @@ struct VideoEditorStudioOverlayHost: View {
       let rect = videoRect ?? CGRect(origin: .zero, size: size)
       VideoEditorCameraOverlayView(state: state, videoRect: rect)
       VideoEditorCaptionOverlayView(state: state, videoRect: rect)
+        .allowsHitTesting(false)
     }
   }
 }

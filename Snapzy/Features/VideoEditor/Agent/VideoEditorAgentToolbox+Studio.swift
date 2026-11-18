@@ -9,49 +9,6 @@
 
 import Foundation
 
-nonisolated struct VideoEditorAgentCursorArguments: Decodable {
-  var visible: Bool?
-  var scale: Double?
-  var smoothing: Double?
-  var hideWhenIdle: Bool?
-  var clickEffect: String?
-  var clickSound: Bool?
-}
-
-nonisolated struct VideoEditorAgentCameraArguments: Decodable {
-  var visible: Bool?
-  var shape: String?
-  var size: Double?
-  var position: String?
-  var center: [Double]?
-  var mirrored: Bool?
-}
-
-nonisolated struct VideoEditorAgentCaptionArguments: Decodable {
-  var language: String?
-  var showOnVideo: Bool?
-}
-
-nonisolated struct VideoEditorAgentCaptionEditArguments: Decodable {
-  var id: String?
-  var text: String?
-  var start: VideoEditorAgentTime?
-  var end: VideoEditorAgentTime?
-  var showOnVideo: Bool?
-  var position: String?
-  var textSize: Double?
-}
-
-nonisolated enum VideoEditorAgentStudioTools {
-  static let cameraPositions: [(name: String, center: CGPoint)] = [
-    ("top_left", CGPoint(x: 0.15, y: 0.15)), ("top", CGPoint(x: 0.5, y: 0.15)), ("top_right", CGPoint(x: 0.85, y: 0.15)),
-    ("left", CGPoint(x: 0.15, y: 0.5)), ("center", CGPoint(x: 0.5, y: 0.5)), ("right", CGPoint(x: 0.85, y: 0.5)),
-    ("bottom_left", CGPoint(x: 0.15, y: 0.85)), ("bottom", CGPoint(x: 0.5, y: 0.85)), ("bottom_right", CGPoint(x: 0.85, y: 0.85)),
-  ]
-  /// Captions get_timeline lists before it only counts them.
-  static let maximumListedCaptions = 40
-}
-
 extension VideoEditorAgentToolbox {
   private func invalid(_ detail: String) -> VideoEditorAgentToolError { .invalidArguments(detail) }
 
@@ -114,6 +71,18 @@ extension VideoEditorAgentToolbox {
       settings.center = CGPoint(x: center[0], y: center[1])
     }
     if let mirrored = args.mirrored { settings.isMirrored = mirrored }
+    if args.clearHidden == true { settings.hiddenRanges = [] }
+    if args.hideStart != nil || args.hideEnd != nil {
+      guard let rawStart = args.hideStart, let rawEnd = args.hideEnd else {
+        throw invalid("Give both hide_start and hide_end.")
+      }
+      let start = try sourceTime(rawStart, state, name: "hide_start")
+      let end = try sourceTime(rawEnd, state, name: "hide_end")
+      guard end - start >= VideoEditorCameraHiddenRange.minimumDuration else {
+        throw invalid("hide_end must be after hide_start, inside the same clip.")
+      }
+      settings = settings.addingHiddenRange(VideoEditorCameraHiddenRange(start: start, end: end))
+    }
     guard settings != state.cameraSettings else { throw invalid("Give at least one setting to change.") }
     state.setCameraSettings(settings)
     return .success([:])
@@ -188,48 +157,5 @@ extension VideoEditorAgentToolbox {
       throw invalid("\(name) is not over the recording's playing footage.")
     }
     return source
-  }
-
-  // MARK: - Scene
-
-  func studioCursorScene(_ state: VideoEditorState) -> VideoEditorAgentScene.Cursor? {
-    guard state.hasEditableCursor else { return nil }
-    let s = state.cursorSettings
-    return .init(
-      visible: s.isVisible, scale: Self.round(s.scale), smoothing: Self.round(s.smoothing),
-      hideWhenIdle: s.hideWhenIdle, clickEffect: s.clickEffect.rawValue, clickSound: s.clickSound
-    )
-  }
-
-  func studioCameraScene(_ state: VideoEditorState) -> VideoEditorAgentScene.Camera? {
-    guard state.hasEditableCamera else { return nil }
-    let s = state.cameraSettings
-    return .init(
-      visible: s.isVisible, shape: s.shape, size: Self.round(s.size),
-      center: [Self.round(s.center.x), Self.round(s.center.y)], mirrored: s.isMirrored
-    )
-  }
-
-  func captionsScene(_ state: VideoEditorState) -> VideoEditorAgentScene.Captions? {
-    let captions = state.captions
-    guard !captions.isEmpty else { return nil }
-    let items = captions.segments.prefix(VideoEditorAgentStudioTools.maximumListedCaptions).map { segment in
-      let placement = state.placements.first {
-        $0.clip.isPrimary && segment.start < $0.clip.sourceEnd && segment.end > $0.clip.sourceStart
-      }
-      return VideoEditorAgentScene.Caption(
-        id: reference(.caption, for: segment.id),
-        start: placement.map { Self.round($0.sequenceTime(atSource: max(segment.start, $0.clip.sourceStart))) },
-        end: placement.map { Self.round($0.sequenceTime(atSource: min(segment.end, $0.clip.sourceEnd))) },
-        text: segment.text
-      )
-    }
-    return .init(
-      showOnVideo: captions.settings.isEnabled,
-      position: captions.settings.position.rawValue,
-      textSize: Self.round(captions.settings.fontSize),
-      count: captions.segments.count,
-      items: Array(items)
-    )
   }
 }

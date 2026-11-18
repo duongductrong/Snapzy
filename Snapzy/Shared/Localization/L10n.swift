@@ -5086,6 +5086,11 @@ nonisolated enum L10n {
       defaultValue: "Mirror Camera",
       comment: "Camera mirror horizontal toggle option"
     )
+    static let studioNote = string(
+      "camera.studio-note",
+      defaultValue: "Studio Recording: the camera is saved separately, so you can move, resize or hide it in the editor.",
+      comment: "Recording toolbar camera menu note when Studio Recording is on"
+    )
     static let turnOffCamera = string(
       "camera.turn-off-camera",
       defaultValue: "Turn Off Camera",
@@ -7144,6 +7149,26 @@ nonisolated enum L10n {
       "video-editor.camera-reset-to-recorded",
       defaultValue: "Reset to Recording Layout",
       comment: "Video editor camera panel reset button"
+    )
+    static let cameraHidden = string(
+      "video-editor.camera-hidden",
+      defaultValue: "Hidden",
+      comment: "Video editor camera track block for a stretch where the camera is hidden"
+    )
+    static let cameraShowHere = string(
+      "video-editor.camera-show-here",
+      defaultValue: "Show Camera Here",
+      comment: "Video editor camera track context menu item removing a hidden stretch"
+    )
+    static let cameraHideAtPlayhead = string(
+      "video-editor.camera-hide-at-playhead",
+      defaultValue: "Hide Camera at Playhead",
+      comment: "Video editor camera panel button hiding the camera for two seconds from the playhead"
+    )
+    static let cameraTrackHint = string(
+      "video-editor.camera-track-hint",
+      defaultValue: "Double-click the Camera track to hide the camera there; drag a block to change when. Drag the camera in the preview to move it.",
+      comment: "Video editor hint for the camera timeline track"
     )
     static let captionsSection = string(
       "video-editor.captions-section",

@@ -8875,6 +8875,77 @@
         }
       }
     },
+    "camera.studio-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Studio-Aufnahme: Die Kamera wird separat gesichert, sodass du sie im Editor verschieben, skalieren oder ausblenden kannst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Studio Recording: the camera is saved separately, so you can move, resize or hide it in the editor."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabación Studio: la cámara se guarda aparte para que puedas moverla, cambiar su tamaño u ocultarla en el editor."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement Studio : la caméra est enregistrée à part, vous pouvez la déplacer, la redimensionner ou la masquer dans l’éditeur."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת סטודיו: המצלמה נשמרת בנפרד, כך שאפשר להזיז, לשנות גודל או להסתיר אותה בעורך."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スタジオ録画：カメラは別に保存されるため、エディタで移動、サイズ変更、非表示にできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스튜디오 녹화: 카메라가 따로 저장되므로 편집기에서 이동, 크기 조절, 숨기기를 할 수 있습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Студийная запись: камера сохраняется отдельно, её можно перемещать, менять размер или скрывать в редакторе."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quay Studio: camera được lưu riêng nên có thể di chuyển, đổi kích thước hoặc ẩn trong trình chỉnh sửa."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作室录制：摄像头单独保存，可在编辑器中移动、调整大小或隐藏。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作室錄製：攝影機會另外儲存，可在編輯器中移動、調整大小或隱藏。"
+          }
+        }
+      }
+    },
     "camera.turn-off-camera": {
       "extractionState": "manual",
       "localizations": {

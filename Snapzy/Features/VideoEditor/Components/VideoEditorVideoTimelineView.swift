@@ -33,6 +33,7 @@ struct VideoTimelineView: View {
     var height = TimelineRulerView.height + spacing + frameStripHeight
     if state.isZoomTrackVisible { height += spacing + segmentTrackHeight }
     if state.isSpeedTrackVisible, !state.isGIF { height += spacing + segmentTrackHeight }
+    if state.showsCameraTrack { height += spacing + segmentTrackHeight }
     if showsCaptionTrack { height += spacing + segmentTrackHeight }
     return height
   }
@@ -121,6 +122,11 @@ struct VideoTimelineView: View {
       // Speed (timelapse) timeline track — video only; GIF export does not apply timeline edits.
       if state.isSpeedTrackVisible, !state.isGIF {
         SpeedTimelineTrack(state: state, timelineWidth: contentWidth, visibleRange: renderRange).equatable()
+      }
+
+      // Camera track (hidden stretches) — Studio recordings with a camera sidecar.
+      if state.showsCameraTrack {
+        VideoEditorCameraTimelineTrack(state: state, timelineWidth: contentWidth).equatable()
       }
 
       // Captions track — shown once the video has captions.
