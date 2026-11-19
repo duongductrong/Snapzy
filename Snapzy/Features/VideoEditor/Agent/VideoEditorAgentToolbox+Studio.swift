@@ -77,14 +77,16 @@ extension VideoEditorAgentToolbox {
       guard let preset = VideoEditorAgentStudioTools.cameraPositions.first(where: { $0.name == key }) else {
         throw invalid("position must be one of \(VideoEditorAgentStudioTools.cameraPositions.map(\.name).joined(separator: ", ")).")
       }
-      settings.center = preset.center
+      settings.anchor = preset.anchor
     }
     if let center = args.center {
       guard center.count == 2, center.allSatisfy({ (0 ... 1).contains($0) }) else {
         throw invalid("center must be [x, y] with values from 0 to 1.")
       }
       settings.center = CGPoint(x: center[0], y: center[1])
+      settings.anchor = nil
     }
+    settings.syncCenter(videoSize: state.naturalSize, aspect: source.overlayAspect, edgeInset: source.edgeInsetFraction)
     if let mirrored = args.mirrored { settings.isMirrored = mirrored }
     if args.clearHidden == true { settings.hiddenRanges = [] }
     if let references = args.showHidden {
@@ -174,7 +176,7 @@ extension VideoEditorAgentToolbox {
     }
     let size = state.naturalSize
     guard size.width > 0, size.height > 0 else { return nil }
-    let rect = state.cameraSettings.rect(in: CGRect(origin: .zero, size: size), aspect: source.overlayAspect)
+    let rect = state.cameraSettings.rect(in: CGRect(origin: .zero, size: size), aspect: source.overlayAspect, edgeInset: source.edgeInsetFraction)
     return CGRect(x: rect.minX / size.width, y: rect.minY / size.height, width: rect.width / size.width, height: rect.height / size.height)
   }
 

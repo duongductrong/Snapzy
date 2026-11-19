@@ -50,17 +50,19 @@ nonisolated extension VideoEditorCameraSettings {
     return copy
   }
 
-  /// Center after dragging the camera by `translation` (points) from `startCenter` over a
-  /// video of `videoSize` points. Snaps to the nearest of the nine anchors within
-  /// `threshold` points (square distance, like the recording overlay), else stays free.
-  static func draggedCenter(
+  /// Placement after dragging the camera by `translation` (points) from `startCenter` over
+  /// a video of `videoSize` points. Snaps to the nearest of the nine anchors (placed with
+  /// the `edgeInset` gap, as `rect(in:aspect:edgeInset:)` draws them) within `threshold`
+  /// points (square distance, like the recording overlay); else the camera stays free.
+  static func draggedPlacement(
     from startCenter: CGPoint,
     translation: CGSize,
     videoSize: CGSize,
     cameraSize: CGSize,
+    edgeInset: CGFloat = defaultEdgeInset,
     threshold: CGFloat
-  ) -> CGPoint {
-    guard videoSize.width > 0, videoSize.height > 0 else { return startCenter }
+  ) -> (center: CGPoint, anchor: CGPoint?) {
+    guard videoSize.width > 0, videoSize.height > 0 else { return (startCenter, nil) }
     // Keep the whole camera inside the video, as `rect(in:aspect:)` draws it.
     let halfX = min(cameraSize.width / 2 / videoSize.width, 0.5)
     let halfY = min(cameraSize.height / 2 / videoSize.height, 0.5)
@@ -68,16 +70,24 @@ nonisolated extension VideoEditorCameraSettings {
       x: min(max(startCenter.x + translation.width / videoSize.width, halfX), 1 - halfX),
       y: min(max(startCenter.y + translation.height / videoSize.height, halfY), 1 - halfY)
     )
-    var best: (anchor: CGPoint, distance: CGFloat)?
+    let inset = max(0, edgeInset) * videoSize.width
+    let insetX = min(inset, max(0, (videoSize.width - cameraSize.width) / 2))
+    let insetY = min(inset, max(0, (videoSize.height - cameraSize.height) / 2))
+    var best: (anchor: CGPoint, center: CGPoint, distance: CGFloat)?
     for anchor in anchors {
+      let target = CGPoint(
+        x: (insetX + cameraSize.width / 2 + anchor.x * max(0, videoSize.width - 2 * insetX - cameraSize.width)) / videoSize.width,
+        y: (insetY + cameraSize.height / 2 + anchor.y * max(0, videoSize.height - 2 * insetY - cameraSize.height)) / videoSize.height
+      )
       let distance = max(
-        abs(anchor.x - proposed.x) * videoSize.width,
-        abs(anchor.y - proposed.y) * videoSize.height
+        abs(target.x - proposed.x) * videoSize.width,
+        abs(target.y - proposed.y) * videoSize.height
       )
       if distance <= threshold, distance < (best?.distance ?? .greatestFiniteMagnitude) {
-        best = (anchor, distance)
+        best = (anchor, target, distance)
       }
     }
-    return best?.anchor ?? proposed
+    if let best { return (best.center, best.anchor) }
+    return (proposed, nil)
   }
 }

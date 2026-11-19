@@ -161,7 +161,7 @@ final class VideoEditorStudioAgentAdaptiveTests: XCTestCase {
 
     XCTAssertFalse(call(toolbox, "set_camera", #"{"reset": true, "mirrored": true, "position": "top-right"}"#).isError)
     XCTAssertTrue(state.cameraSettings.isMirrored)
-    XCTAssertEqual(state.cameraSettings.center, CGPoint(x: 0.85, y: 0.15))
+    XCTAssertEqual(state.cameraSettings.anchor, CGPoint(x: 1, y: 0))
   }
 
   func testZoomUnderTheCameraGetsANoteAndHideDuringZoomsClearsIt() async throws {

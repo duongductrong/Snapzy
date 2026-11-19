@@ -18,6 +18,7 @@ struct VideoEditorCameraOverlayView: View {
   let videoRect: CGRect
   /// Settings when the drag began; non-nil while dragging.
   @State private var dragStart: VideoEditorCameraSettings?
+  @State private var dragStartCenter: CGPoint?
   @State private var isHandCursorPushed = false
 
   init(state: VideoEditorState, videoRect: CGRect) {
@@ -35,7 +36,7 @@ struct VideoEditorCameraOverlayView: View {
       let opacity = settings.isVisible && sourceTime.map { !source.isInGap($0) } == true
         ? sourceTime.map { settings.visibility(atSource: $0) } ?? 0
         : 0
-      let rect = settings.rect(in: videoRect, aspect: source.overlayAspect)
+      let rect = settings.rect(in: videoRect, aspect: source.overlayAspect, edgeInset: source.edgeInsetFraction)
       VideoEditorCameraPlayerLayerView(
         player: controller.player,
         cornerRadius: settings.cornerRadius(for: rect, referencePointWidth: source.pointSize.width),
@@ -43,7 +44,7 @@ struct VideoEditorCameraOverlayView: View {
       )
       .frame(width: rect.width, height: rect.height)
       .contentShape(Rectangle())
-      .gesture(dragGesture(cameraSize: rect.size))
+      .gesture(dragGesture(cameraRect: rect, edgeInset: source.edgeInsetFraction))
       .onHover { setHandCursor($0) }
       .allowsHitTesting(opacity > 0)
       .offset(x: rect.minX, y: rect.minY)
@@ -60,24 +61,37 @@ struct VideoEditorCameraOverlayView: View {
     }
   }
 
-  private func dragGesture(cameraSize: CGSize) -> some Gesture {
-    DragGesture(minimumDistance: 2)
+  private func dragGesture(cameraRect: CGRect, edgeInset: CGFloat) -> some Gesture {
+    // Global space: the camera view moves as it is dragged, so its local space would shift
+    // under the cursor every update and the camera would lag, then jump away from it.
+    DragGesture(minimumDistance: 2, coordinateSpace: .global)
       .onChanged { value in
         let start = dragStart ?? state.cameraSettings
-        if dragStart == nil { dragStart = start }
+        if dragStart == nil {
+          dragStart = start
+          // Drag from where the camera is drawn (an anchored camera ignores `center`).
+          dragStartCenter = CGPoint(
+            x: (cameraRect.midX - videoRect.minX) / max(videoRect.width, 1),
+            y: (cameraRect.midY - videoRect.minY) / max(videoRect.height, 1)
+          )
+        }
         var settings = state.cameraSettings
-        settings.center = VideoEditorCameraSettings.draggedCenter(
-          from: start.center,
+        let placement = VideoEditorCameraSettings.draggedPlacement(
+          from: dragStartCenter ?? start.center,
           translation: value.translation,
           videoSize: videoRect.size,
-          cameraSize: cameraSize,
+          cameraSize: cameraRect.size,
+          edgeInset: edgeInset,
           threshold: RecordingCameraOverlayPlacement.snapThreshold
         )
+        settings.center = placement.center
+        settings.anchor = placement.anchor
         state.setCameraSettings(settings, recordUndo: false)
       }
       .onEnded { _ in
         if let start = dragStart { state.commitCameraSettings(from: start) }
         dragStart = nil
+        dragStartCenter = nil
       }
   }
 

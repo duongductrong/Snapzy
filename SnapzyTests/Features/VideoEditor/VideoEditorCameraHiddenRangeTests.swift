@@ -52,23 +52,40 @@ final class VideoEditorCameraHiddenRangeTests: XCTestCase {
   func testDragSnapsToNearbyAnchorAndStaysFreeElsewhere() {
     let video = CGSize(width: 400, height: 300)
     let camera = CGSize(width: 80, height: 80)
-    let snapped = VideoEditorCameraSettings.draggedCenter(
-      from: CGPoint(x: 0.5, y: 0.5), translation: CGSize(width: 130, height: 95),
-      videoSize: video, cameraSize: camera, threshold: 32
+    // 10 % inset = 40 pt: the bottom-right anchor centers the camera at (320, 220).
+    let snapped = VideoEditorCameraSettings.draggedPlacement(
+      from: CGPoint(x: 0.5, y: 0.5), translation: CGSize(width: 115, height: 65),
+      videoSize: video, cameraSize: camera, edgeInset: 0.1, threshold: 32
     )
-    XCTAssertEqual(snapped, CGPoint(x: 0.85, y: 0.85))
+    XCTAssertEqual(snapped.anchor, CGPoint(x: 1, y: 1))
+    XCTAssertEqual(snapped.center.x, 0.8, accuracy: 0.001)
+    XCTAssertEqual(snapped.center.y, 220.0 / 300, accuracy: 0.001)
 
-    let free = VideoEditorCameraSettings.draggedCenter(
+    let free = VideoEditorCameraSettings.draggedPlacement(
       from: CGPoint(x: 0.5, y: 0.5), translation: CGSize(width: 60, height: 0),
-      videoSize: video, cameraSize: camera, threshold: 32
+      videoSize: video, cameraSize: camera, edgeInset: 0.1, threshold: 32
     )
-    XCTAssertEqual(free.x, 0.65, accuracy: 0.001)
+    XCTAssertNil(free.anchor)
+    XCTAssertEqual(free.center.x, 0.65, accuracy: 0.001)
 
-    let clamped = VideoEditorCameraSettings.draggedCenter(
+    let clamped = VideoEditorCameraSettings.draggedPlacement(
       from: CGPoint(x: 0.5, y: 0.5), translation: CGSize(width: -1000, height: 0),
       videoSize: video, cameraSize: camera, threshold: 0
     )
-    XCTAssertEqual(clamped.x, 0.1, accuracy: 0.001, "half the camera width keeps it inside")
+    XCTAssertEqual(clamped.center.x, 0.1, accuracy: 0.001, "half the camera width keeps it inside")
+  }
+
+  func testAnchoredCameraKeepsTheSameEdgeGapAtAnySize() {
+    var settings = VideoEditorCameraSettings.default
+    settings.shape = "square"
+    settings.anchor = CGPoint(x: 1, y: 1)
+    let video = CGRect(x: 0, y: 0, width: 1000, height: 500)
+    for size in [0.1, 0.2, 0.4] as [CGFloat] {
+      settings.size = size
+      let rect = settings.rect(in: video, aspect: 1, edgeInset: 0.02)
+      XCTAssertEqual(video.maxX - rect.maxX, 20, accuracy: 1e-6)
+      XCTAssertEqual(video.maxY - rect.maxY, 20, accuracy: 1e-6)
+    }
   }
 
   func testExportLayerFadesOutInsideHiddenRange() {

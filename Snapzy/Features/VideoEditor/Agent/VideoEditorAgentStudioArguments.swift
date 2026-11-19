@@ -84,10 +84,11 @@ nonisolated struct VideoEditorAgentTranslateCaptionArguments: Decodable {
 }
 
 nonisolated enum VideoEditorAgentStudioTools {
-  static let cameraPositions: [(name: String, center: CGPoint)] = [
-    ("top_left", CGPoint(x: 0.15, y: 0.15)), ("top", CGPoint(x: 0.5, y: 0.15)), ("top_right", CGPoint(x: 0.85, y: 0.15)),
-    ("left", CGPoint(x: 0.15, y: 0.5)), ("center", CGPoint(x: 0.5, y: 0.5)), ("right", CGPoint(x: 0.85, y: 0.5)),
-    ("bottom_left", CGPoint(x: 0.15, y: 0.85)), ("bottom", CGPoint(x: 0.5, y: 0.85)), ("bottom_right", CGPoint(x: 0.85, y: 0.85)),
+  /// Named camera anchors (alignments, as `VideoEditorCameraSettings.anchors`).
+  static let cameraPositions: [(name: String, anchor: CGPoint)] = [
+    ("top_left", CGPoint(x: 0, y: 0)), ("top", CGPoint(x: 0.5, y: 0)), ("top_right", CGPoint(x: 1, y: 0)),
+    ("left", CGPoint(x: 0, y: 0.5)), ("center", CGPoint(x: 0.5, y: 0.5)), ("right", CGPoint(x: 1, y: 0.5)),
+    ("bottom_left", CGPoint(x: 0, y: 1)), ("bottom", CGPoint(x: 0.5, y: 1)), ("bottom_right", CGPoint(x: 1, y: 1)),
   ]
   /// Captions get_timeline lists before it only counts them.
   static let maximumListedCaptions = 40

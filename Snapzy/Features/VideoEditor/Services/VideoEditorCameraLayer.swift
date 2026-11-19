@@ -61,7 +61,7 @@ nonisolated struct VideoEditorCameraLayer: VideoEditorStudioLayer, @unchecked Se
 
   /// Camera rect in Core Image coordinates for a video placed at `videoRect`.
   func targetRect(videoRect: CGRect) -> CGRect {
-    let topLeft = settings.rect(in: CGRect(origin: .zero, size: videoRect.size), aspect: source.overlayAspect)
+    let topLeft = settings.rect(in: CGRect(origin: .zero, size: videoRect.size), aspect: source.overlayAspect, edgeInset: source.edgeInsetFraction)
     return CGRect(
       x: videoRect.minX + topLeft.minX,
       y: videoRect.maxY - topLeft.maxY,

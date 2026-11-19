@@ -106,11 +106,13 @@ struct VideoEditorCameraSettingsPanel: View {
   }
 
   private func anchorButton(_ anchor: CGPoint) -> some View {
-    let center = state.cameraSettings.center
-    let isSelected = abs(center.x - anchor.x) < 0.05 && abs(center.y - anchor.y) < 0.05
+    let isSelected = state.cameraSettings.anchor == anchor
     return Button {
+      guard let source = state.recordingMetadata?.cameraSource else { return }
       var settings = state.cameraSettings
-      settings.center = anchor
+      settings.setAnchor(
+        anchor, videoSize: state.naturalSize, aspect: source.overlayAspect, edgeInset: source.edgeInsetFraction
+      )
       state.setCameraSettings(settings)
     } label: {
       RoundedRectangle(cornerRadius: 4, style: .continuous)
@@ -126,6 +128,12 @@ struct VideoEditorCameraSettingsPanel: View {
       set: { newValue in
         var settings = state.cameraSettings
         settings[keyPath: keyPath] = newValue
+        if let source = state.recordingMetadata?.cameraSource {
+          // An anchored camera keeps its edge gap as it resizes; keep `center` in step.
+          settings.syncCenter(
+            videoSize: state.naturalSize, aspect: source.overlayAspect, edgeInset: source.edgeInsetFraction
+          )
+        }
         state.setCameraSettings(settings, recordUndo: dragStart == nil)
       }
     )
