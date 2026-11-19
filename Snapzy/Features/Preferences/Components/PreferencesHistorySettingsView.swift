@@ -51,6 +51,16 @@ struct HistorySettingsView: View {
           }
 
           SettingRow(
+            title: L10n.PreferencesHistory.edgeRevealTitle,
+            description: L10n.PreferencesHistory.edgeRevealDescription
+          ) {
+            Toggle("", isOn: $manager.isEdgeRevealEnabled)
+              .labelsHidden()
+              .disabled(!manager.isEnabled)
+              .accessibilityIdentifier("history.edgeReveal")
+          }
+
+          SettingRow(
             title: L10n.PreferencesHistory.panelPositionTitle,
             description: L10n.PreferencesHistory.panelPositionDescription
           ) {

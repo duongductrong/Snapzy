@@ -11645,6 +11645,40 @@
         }
       }
     },
+    "preferences-history.edge-reveal-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move the pointer to the topmost screen edge to slide the panel down. Move away to auto-hide."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đưa con trỏ lên mép trên cùng màn hình để bảng trượt xuống hiện. Di chuyển ra ngoài để tự động ẩn."
+          }
+        }
+      }
+    },
+    "preferences-history.edge-reveal-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reveal at Top Edge"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiện khi rê lên cạnh trên"
+          }
+        }
+      }
+    },
     "preferences-history.empty-hint": {
       "comment": "History empty state hint when there are no captures",
       "extractionState": "manual",
