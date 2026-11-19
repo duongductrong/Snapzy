@@ -123,24 +123,24 @@ struct HistorySettingsView: View {
             }
             .frame(width: 220, alignment: .trailing)
           }
-        }
 
-        SettingRow(
-          title: L10n.PreferencesHistory.maxItemsTitle,
-          description: L10n.PreferencesHistory.maxItemsDescription
-        ) {
-          HStack(spacing: 8) {
-            Text("\(manager.maxDisplayedItems)")
-              .frame(width: 28, alignment: .trailing)
-              .monospacedDigit()
-              .foregroundColor(.secondary)
-            Slider(value: Binding(
-              get: { Double(manager.maxDisplayedItems) },
-              set: { manager.maxDisplayedItems = Int($0) }
-            ).stepped(by: 1, in: 3...20), in: 3...20)
-            .frame(width: 120)
+          SettingRow(
+            title: L10n.PreferencesHistory.maxItemsTitle,
+            description: L10n.PreferencesHistory.maxItemsDescription
+          ) {
+            HStack(spacing: 8) {
+              Text("\(manager.maxDisplayedItems)")
+                .frame(width: 28, alignment: .trailing)
+                .monospacedDigit()
+                .foregroundColor(.secondary)
+              Slider(value: Binding(
+                get: { Double(manager.maxDisplayedItems) },
+                set: { manager.maxDisplayedItems = Int($0) }
+              ).stepped(by: 1, in: 3...20), in: 3...20)
+              .frame(width: 120)
+            }
+            .frame(width: 220, alignment: .trailing)
           }
-          .frame(width: 220, alignment: .trailing)
         }
       }
 

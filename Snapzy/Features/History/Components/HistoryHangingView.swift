@@ -9,10 +9,13 @@ struct HistoryHangingView: View {
   @ObservedObject private var store = CaptureHistoryStore.shared
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var filter: CaptureHistoryType?
+  @State private var isToolbarExpanded = false
+  @State private var isToolbarBandHovering = false
+  @State private var isFilterMenuOpen = false
+  @State private var toolbarCollapseTask: Task<Void, Never>?
 
   private var records: [CaptureHistoryRecord] {
-    HistoryHangingLayout.visibleRecords(store.records, filter: filter,
-                                        maximum: history.maxDisplayedItems, width: size.width)
+    HistoryHangingLayout.visibleRecords(store.records, filter: filter, width: size.width)
   }
 
   var body: some View {
@@ -31,6 +34,20 @@ struct HistoryHangingView: View {
         .frame(maxWidth: 680)
         .frame(height: HistoryHangingLayout.toolbarHeight)
         .padding(.horizontal, Spacing.lg)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+          isToolbarBandHovering = hovering
+          if hovering {
+            expandToolbar()
+          } else {
+            scheduleToolbarCollapse()
+          }
+        }
+        .onTapGesture {
+          if !isToolbarExpanded {
+            expandToolbar()
+          }
+        }
     }
     .padding(.bottom, Spacing.md)
     .frame(width: size.width, height: size.height, alignment: .top)
@@ -42,6 +59,19 @@ struct HistoryHangingView: View {
     .onChange(of: history.defaultFilter) { filter = $0 }
     .onChange(of: records.map(\.id)) { _ in manager.dismissPreview() }
     .onChange(of: filter) { _ in manager.dismissPreview() }
+    .onChange(of: manager.isRevealed) { revealed in
+      if !revealed {
+        collapseToolbarNow()
+      }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: NSMenu.didBeginTrackingNotification)) { _ in
+      isFilterMenuOpen = true
+      toolbarCollapseTask?.cancel()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: NSMenu.didEndTrackingNotification)) { _ in
+      isFilterMenuOpen = false
+      scheduleToolbarCollapse()
+    }
     .accessibilityElement(children: .contain)
     .accessibilityIdentifier("history.hanging")
   }
@@ -51,38 +81,64 @@ struct HistoryHangingView: View {
       Image(systemName: "photo.on.rectangle.angled")
         .font(.system(size: 16, weight: .medium))
         .foregroundStyle(Color.accentColor)
-      Text(L10n.HistoryHanging.shelfTitle)
-        .font(Typography.labelMedium)
-        .lineLimit(1)
-      Text(verbatim: "\(records.count)")
-        .font(Typography.labelSmall)
-        .monospacedDigit()
-        .foregroundStyle(LiquidGlassTokens.inkMuted)
-      Spacer(minLength: Spacing.sm)
-      Picker(L10n.PreferencesHistory.defaultFilterTitle, selection: $filter) {
-        Text(L10n.PreferencesHistory.defaultFilterAll).tag(CaptureHistoryType?.none)
-        Text(L10n.PreferencesHistory.defaultFilterScreenshots).tag(CaptureHistoryType?.some(.screenshot))
-        Text(L10n.PreferencesHistory.defaultFilterVideos).tag(CaptureHistoryType?.some(.video))
-        Text(L10n.PreferencesHistory.defaultFilterGifs).tag(CaptureHistoryType?.some(.gif))
+      if isToolbarExpanded {
+        Text(L10n.HistoryHanging.shelfTitle)
+          .font(Typography.labelMedium)
+          .lineLimit(1)
+        Text(verbatim: "\(records.count)")
+          .font(Typography.labelSmall)
+          .monospacedDigit()
+          .foregroundStyle(LiquidGlassTokens.inkMuted)
+        Spacer(minLength: Spacing.sm)
+        Picker(L10n.PreferencesHistory.defaultFilterTitle, selection: $filter) {
+          Text(L10n.PreferencesHistory.defaultFilterAll).tag(CaptureHistoryType?.none)
+          Text(L10n.PreferencesHistory.defaultFilterScreenshots).tag(CaptureHistoryType?.some(.screenshot))
+          Text(L10n.PreferencesHistory.defaultFilterVideos).tag(CaptureHistoryType?.some(.video))
+          Text(L10n.PreferencesHistory.defaultFilterGifs).tag(CaptureHistoryType?.some(.gif))
+        }
+        .labelsHidden()
+        .frame(maxWidth: 140)
+        .accessibilityIdentifier("history.hanging.filter")
+        HangingIconButton(symbol: "square.grid.2x2", title: L10n.HistoryHanging.browseAll, action: manager.browseAll)
+          .accessibilityIdentifier("history.hanging.browse")
+        HangingIconButton(
+          symbol: manager.keepOpen ? "pin.fill" : "pin",
+          title: manager.keepOpen ? L10n.HistoryHanging.autoHide : L10n.HistoryHanging.keepOpen,
+          isActive: manager.keepOpen,
+          action: manager.toggleKeepOpen
+        )
+        .accessibilityIdentifier("history.hanging.keepOpen")
+        HangingIconButton(symbol: "xmark", title: L10n.HistoryHanging.close, action: manager.hide)
+          .accessibilityIdentifier("history.hanging.close")
       }
-      .labelsHidden()
-      .frame(maxWidth: 140)
-      .accessibilityIdentifier("history.hanging.filter")
-      HangingIconButton(symbol: "square.grid.2x2", title: L10n.HistoryHanging.browseAll, action: manager.browseAll)
-        .accessibilityIdentifier("history.hanging.browse")
-      HangingIconButton(
-        symbol: manager.keepOpen ? "pin.fill" : "pin",
-        title: manager.keepOpen ? L10n.HistoryHanging.autoHide : L10n.HistoryHanging.keepOpen,
-        isActive: manager.keepOpen,
-        action: manager.toggleKeepOpen
-      )
-      .accessibilityIdentifier("history.hanging.keepOpen")
-      HangingIconButton(symbol: "xmark", title: L10n.HistoryHanging.close, action: manager.hide)
-        .accessibilityIdentifier("history.hanging.close")
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.sm)
     .modifier(HangingSurface(radius: Radius.panel))
+    .animation(reduceMotion ? nil : .spring(response: 0.34, dampingFraction: 0.86), value: isToolbarExpanded)
+  }
+
+  private func expandToolbar() {
+    toolbarCollapseTask?.cancel()
+    toolbarCollapseTask = nil
+    isToolbarExpanded = true
+  }
+
+  /// The menu guard keeps a control usable while its popup is up, even if the pointer drifts off the band.
+  private func scheduleToolbarCollapse() {
+    toolbarCollapseTask?.cancel()
+    toolbarCollapseTask = Task {
+      try? await Task.sleep(nanoseconds: UInt64(HistoryHangingLayout.toolbarCollapseDelay * 1_000_000_000))
+      guard !Task.isCancelled, !isToolbarBandHovering, !isFilterMenuOpen else { return }
+      isToolbarExpanded = false
+    }
+  }
+
+  private func collapseToolbarNow() {
+    toolbarCollapseTask?.cancel()
+    toolbarCollapseTask = nil
+    isToolbarBandHovering = false
+    isToolbarExpanded = false
   }
 
   private var gallery: some View {

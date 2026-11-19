@@ -114,26 +114,26 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertEqual(HistoryHangingRowLayout(width: 1120).capacity, 5)
   }
 
-  func testSelectionCapsConfiguredMaximumAndFiltersBeforeLimiting() {
+  func testSelectionCapsToRowCapacityAndFiltersBeforeLimiting() {
     let records = (0 ..< 12).map { selectionRecord(index: $0, type: $0.isMultiple(of: 2) ? .screenshot : .video) }
-    let visible = HistoryHangingLayout.visibleRecords(records, filter: .video, maximum: 20, width: 1120)
+    let visible = HistoryHangingLayout.visibleRecords(records, filter: .video, width: 1120)
     XCTAssertEqual(visible.map(\.id), records.filter { $0.captureType == .video }.prefix(5).map(\.id))
-    XCTAssertEqual(HistoryHangingLayout.visibleRecords(records, filter: nil, maximum: 3, width: 1120).count, 3)
-    XCTAssertTrue(HistoryHangingLayout.visibleRecords(records, filter: .gif, maximum: 20, width: 1120).isEmpty)
+    XCTAssertEqual(HistoryHangingLayout.visibleRecords(records, filter: nil, width: 1120).count, 5)
+    XCTAssertTrue(HistoryHangingLayout.visibleRecords(records, filter: .gif, width: 1120).isEmpty)
   }
 
   func testNewCaptureDisplacesOnlyLastVisibleRecordWithoutDeletingHistory() {
     var records = (0 ..< 10).map { selectionRecord(index: $0) }
-    let before = HistoryHangingLayout.visibleRecords(records, filter: nil, maximum: 20, width: 1120)
+    let before = HistoryHangingLayout.visibleRecords(records, filter: nil, width: 1120)
     let newRecord = selectionRecord(index: 100)
     records.insert(newRecord, at: 0)
-    let after = HistoryHangingLayout.visibleRecords(records, filter: nil, maximum: 20, width: 1120)
+    let after = HistoryHangingLayout.visibleRecords(records, filter: nil, width: 1120)
     XCTAssertEqual(after.map(\.id), [newRecord.id] + before.dropLast().map(\.id))
     XCTAssertTrue(records.contains { $0.id == before.last?.id })
     XCTAssertEqual(records.count, 11)
     records[0].thumbnailPath = "/tmp/updated-thumbnail.jpg"
     XCTAssertEqual(
-      HistoryHangingLayout.visibleRecords(records, filter: nil, maximum: 20, width: 1120).map(\.id),
+      HistoryHangingLayout.visibleRecords(records, filter: nil, width: 1120).map(\.id),
       after.map(\.id)
     )
   }
@@ -141,7 +141,7 @@ final class HistoryHangingTests: XCTestCase {
   func testBurstAndDeletedRecordsDoNotOverflowTheRow() {
     var records = (0 ..< 40).map { selectionRecord(index: $0) }
     records[0].isDeleted = true
-    let visible = HistoryHangingLayout.visibleRecords(records, filter: nil, maximum: 20, width: 608)
+    let visible = HistoryHangingLayout.visibleRecords(records, filter: nil, width: 608)
     XCTAssertEqual(visible.map(\.id), Array(records.dropFirst().prefix(2)).map(\.id))
     XCTAssertFalse(visible.contains { $0.isDeleted })
   }
@@ -790,9 +790,7 @@ final class HistoryHangingTests: XCTestCase {
     let enabled = history.isEnabled
     let oldDefaults = store.userDefaults
     let oldFilter = history.defaultFilter
-    let oldMaximum = history.maxDisplayedItems
     history.defaultFilter = nil
-    history.maxDisplayedItems = 20
     let defaultsName = "HangingHistory-\(UUID())"
     let defaults = try XCTUnwrap(UserDefaults(suiteName: defaultsName))
     defaults.set(true, forKey: PreferencesKeys.historyEnabled)
@@ -813,7 +811,6 @@ final class HistoryHangingTests: XCTestCase {
       store.remove(ids: ids)
       store.userDefaults = oldDefaults
       history.defaultFilter = oldFilter
-      history.maxDisplayedItems = oldMaximum
       defaults.removePersistentDomain(forName: defaultsName)
       NSApp.appearance = originalAppearance
       try? FileManager.default.removeItem(at: directory)

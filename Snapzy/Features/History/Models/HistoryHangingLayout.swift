@@ -6,6 +6,7 @@ nonisolated enum HistoryHangingLayout {
   static let edgeDepth: CGFloat = 3
   static let revealDelay: TimeInterval = 0.18
   static let dismissDelay: TimeInterval = 0.65
+  static let toolbarCollapseDelay: TimeInterval = 0.45
   static let toolbarHeight: CGFloat = 44
   static let galleryTop: CGFloat = 56
   static let clipTop: CGFloat = 8
@@ -30,10 +31,10 @@ nonisolated enum HistoryHangingLayout {
   }
 
   static func visibleRecords(_ records: [CaptureHistoryRecord], filter: CaptureHistoryType?,
-                             maximum: Int, width: CGFloat) -> [CaptureHistoryRecord] {
+                             width: CGFloat) -> [CaptureHistoryRecord] {
     let capacity = HistoryHangingRowLayout(width: width).capacity
     return Array(records.lazy.filter { !$0.isDeleted && (filter == nil || $0.captureType == filter) }
-      .prefix(min(capacity, max(1, maximum))))
+      .prefix(capacity))
   }
 
   static func edgeScreenIndex(at point: CGPoint, frames: [CGRect]) -> Int? {
