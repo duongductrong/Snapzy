@@ -29,6 +29,7 @@ struct QuickAccessCardView: View {
   @State private var isCloudUploading = false
   @State private var cloudUploadProgress: Double = 0
   @State private var cardAnchor = QuickAccessCardAnchor()
+  @State private var optimizeButtonAnchor = QuickAccessCardAnchor()
   @Environment(\.accessibilityReduceMotion) var reduceMotion
 
   private let cornerRadius = Radius.card
@@ -448,8 +449,8 @@ struct QuickAccessCardView: View {
   private func presentOptimizeMenu() {
     QuickAccessOptimizePanelController.shared.present(
       for: item,
-      anchoredTo: cardAnchor.screenFrame,
-      opensTowardLeading: !manager.position.isLeftSide
+      buttonFrame: optimizeButtonAnchor.screenFrame,
+      cardFrame: cardAnchor.screenFrame
     )
   }
 
@@ -578,6 +579,7 @@ struct QuickAccessCardView: View {
       performAction(action)
     }
       .help(actionHelpText(for: action))
+      .background(optimizeAnchor(for: action))
       .disabled(!isActionEnabled(action))
       .opacity(isActionEnabled(action) ? 1 : 0.6)
       .transition(buttonTransition(delay: delay))
@@ -620,10 +622,19 @@ struct QuickAccessCardView: View {
       action: { performAction(action) },
       helpText: actionHelpText(for: action)
     )
+    .background(optimizeAnchor(for: action))
     .transition(cornerButtonTransition(delay: delay))
     .padding(6)
     .disabled(!isActionEnabled(action))
     .opacity(isActionEnabled(action) ? 1 : 0.6)
+  }
+
+  /// Lets the Optimize menu open over the button that triggered it.
+  @ViewBuilder
+  private func optimizeAnchor(for action: QuickAccessActionKind) -> some View {
+    if action == .optimize {
+      QuickAccessCardAnchorView(anchor: optimizeButtonAnchor)
+    }
   }
 
   private func cornerButtonTransition(delay: Int) -> AnyTransition {

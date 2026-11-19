@@ -2,8 +2,8 @@
 //  QuickAccessOptimizeMenuView.swift
 //  Snapzy
 //
-//  Vertical Liquid Glass (clear) list of Optimize levels shown beside a Quick
-//  Access card. Each row shows the level, its pixel size and its encoded size.
+//  Optimize levels (`0.5x`, `1x`, `2x`…) as a native-style pop-up menu on clear
+//  Liquid Glass, opened with the current level over the Optimize button.
 //
 
 import AppKit
@@ -43,6 +43,8 @@ final class QuickAccessOptimizeMenuModel: ObservableObject {
   @Published private(set) var rows: [Row]
   @Published private(set) var currentFraction: CGFloat
   @Published var highlightedFraction: CGFloat?
+  /// Drives the bubble in/out animation; the panel stays up until it has played.
+  @Published var isShown = false
 
   var onChoose: ((Row) -> Void)?
 
@@ -88,25 +90,38 @@ final class QuickAccessOptimizeMenuModel: ObservableObject {
 struct QuickAccessOptimizeMenuView: View {
   @ObservedObject var model: QuickAccessOptimizeMenuModel
 
-  static let width: CGFloat = 224
-  private let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+  // Geometry mirrors a native pop-up menu; the panel controller reads it to put
+  // the current row right over the Optimize button.
+  static let shadowPadding: CGFloat = 14
+  static let inset: CGFloat = 4
+  static let rowHeight: CGFloat = 21
+  static let rowSpacing: CGFloat = 1
+
+  /// Distance from the hosting view's top edge to the centre of row `index`.
+  static func rowCenterOffset(at index: Int) -> CGFloat {
+    shadowPadding + inset + CGFloat(index) * (rowHeight + rowSpacing) + rowHeight / 2
+  }
+
+  private let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  /// The bubble grows out of (and shrinks back into) the current row, which sits
+  /// over the Optimize button.
+  private var bubbleAnchor: UnitPoint {
+    let height = 2 * (Self.shadowPadding + Self.inset)
+      + CGFloat(model.rows.count) * Self.rowHeight
+      + CGFloat(max(model.rows.count - 1, 0)) * Self.rowSpacing
+    let index = model.rows.firstIndex { $0.level.fraction == model.currentFraction } ?? 0
+    return UnitPoint(x: 0.5, y: Self.rowCenterOffset(at: index) / max(height, 1))
+  }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 2) {
-      Text(L10n.QuickAccess.optimizeMenuTitle)
-        .font(.system(size: 10, weight: .semibold))
-        .textCase(.uppercase)
-        .tracking(0.6)
-        .foregroundColor(.white.opacity(0.6))
-        .padding(.horizontal, 10)
-        .padding(.top, 4)
-        .padding(.bottom, 2)
-
+    VStack(alignment: .leading, spacing: Self.rowSpacing) {
       ForEach(model.rows) { row in
         QuickAccessOptimizeRowView(
           row: row,
-          isCurrent: row.level.fraction == model.currentFraction,
           isHighlighted: row.level.fraction == model.highlightedFraction,
+          isCurrent: row.level.fraction == model.currentFraction,
           originalByteCount: model.originalByteCount,
           onHover: { hovering in
             if hovering { model.highlightedFraction = row.level.fraction }
@@ -115,113 +130,89 @@ struct QuickAccessOptimizeMenuView: View {
         )
       }
     }
-    .padding(6)
-    .frame(width: Self.width)
-    // Clear glass over a busy screenshot needs a dim layer for legible text.
-    .background(shape.fill(Color.black.opacity(0.22)))
+    // Every row takes the widest label's width, so the menu hugs its longest value.
+    .fixedSize(horizontal: true, vertical: false)
+    .padding(Self.inset)
+    // Clear glass over a busy screenshot needs a light dim for legible text.
+    // The shadow rides on the dim layer: compositing the glass itself would stop it
+    // sampling the backdrop.
+    .background(
+      shape.fill(Color.black.opacity(0.18))
+        .shadow(color: .black, radius: 12, y: 5)
+    )
     .liquidGlassSurface(
       shape: shape,
       substrate: 0.3,
       layer: .backdrop,
       nativeVariant: .clear
     )
-    .overlay(shape.strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5))
+    .overlay(shape.strokeBorder(Color.white.opacity(0.16), lineWidth: 0.5))
     .environment(\.colorScheme, .dark)
-    .padding(10)
+    .scaleEffect(model.isShown || reduceMotion ? 1 : 0.4, anchor: bubbleAnchor)
+    .opacity(model.isShown ? 1 : 0)
+    .padding(Self.shadowPadding)
     .accessibilityElement(children: .contain)
     .accessibilityLabel(L10n.QuickAccess.optimizeMenuTitle)
   }
 }
 
+/// One `Nx` row, laid out like a native menu item. The highlighted row (the current
+/// level when the menu opens, then whatever the pointer or arrow keys land on) sits
+/// on accent-tinted native glass. Pixel and byte sizes live in the tooltip.
 private struct QuickAccessOptimizeRowView: View {
   let row: QuickAccessOptimizeMenuModel.Row
-  let isCurrent: Bool
   let isHighlighted: Bool
+  let isCurrent: Bool
   let originalByteCount: Int?
   let onHover: (Bool) -> Void
   let onChoose: () -> Void
 
+  private let shape = RoundedRectangle(cornerRadius: 7, style: .continuous)
+
   var body: some View {
     Button(action: onChoose) {
-      HStack(spacing: 10) {
-        scaleBadge
-
-        VStack(alignment: .leading, spacing: 1) {
-          if row.level.isOriginal {
-            Text(L10n.QuickAccess.optimizeOriginal)
-              .font(.system(size: 12, weight: .semibold))
-              .foregroundColor(.white)
-          }
-          Text(row.level.dimensionsLabel)
-            .font(.system(size: row.level.isOriginal ? 10 : 12, weight: .medium).monospacedDigit())
-            .foregroundColor(.white.opacity(row.level.isOriginal ? 0.6 : 0.9))
-        }
-
-        Spacer(minLength: 4)
-
-        sizeColumn
-      }
-      .padding(.horizontal, 8)
-      .padding(.vertical, 6)
-      .contentShape(Rectangle())
-      .background(
-        RoundedRectangle(cornerRadius: 11, style: .continuous)
-          .fill(Color.white.opacity(isHighlighted ? 0.16 : 0))
-      )
+      Text(row.level.scaleLabel)
+        .font(.system(size: 12, weight: .medium).monospacedDigit())
+        .foregroundColor(.white.opacity(isHighlighted ? 1 : 0.9))
+        .lineLimit(1)
+        .fixedSize()
+        .padding(.horizontal, 9)
+        .frame(
+          maxWidth: .infinity,
+          minHeight: QuickAccessOptimizeMenuView.rowHeight,
+          maxHeight: QuickAccessOptimizeMenuView.rowHeight,
+          alignment: .leading
+        )
+        .liquidGlassSurface(
+          shape: shape,
+          isVisible: isHighlighted,
+          substrate: 0,
+          highlight: .none,
+          glassTint: Color.accentColor.opacity(0.85)
+        )
+        .contentShape(shape)
     }
     .buttonStyle(.plain)
-    .onHover { hovering in
-      onHover(hovering)
-      if hovering { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
-    }
-    .accessibilityLabel(accessibilityText)
+    .onHover(perform: onHover)
+    .help(tooltip)
+    .accessibilityLabel(tooltip)
     .accessibilityAddTraits(isCurrent ? .isSelected : [])
   }
 
-  /// The scale label, circled when it is what the file currently holds (as in the mockup).
-  private var scaleBadge: some View {
-    Text(row.level.scaleLabel)
-      .font(.system(size: 13, weight: .bold, design: .rounded).monospacedDigit())
-      .foregroundColor(.white)
-      .lineLimit(1)
-      .minimumScaleFactor(0.7)
-      .frame(width: 38, height: 30)
-      .background(
-        Capsule(style: .continuous)
-          .strokeBorder(Color.white.opacity(isCurrent ? 0.9 : 0), lineWidth: 1.5)
-      )
-  }
-
-  @ViewBuilder
-  private var sizeColumn: some View {
-    if row.isEstimating {
-      ProgressView()
-        .controlSize(.small)
-        .scaleEffect(0.7)
-        .frame(width: 18, height: 18)
-        .help(L10n.QuickAccess.optimizeEstimating)
-    } else if let byteCount = row.byteCount {
-      VStack(alignment: .trailing, spacing: 1) {
-        Text(QuickAccessImageOptimizer.formatByteCount(byteCount))
-          .font(.system(size: 11, weight: .semibold).monospacedDigit())
-          .foregroundColor(.white.opacity(0.95))
-        if let savings = QuickAccessOptimizeMenuFormatting.savingsLabel(
-          byteCount: byteCount,
-          originalByteCount: originalByteCount
-        ) {
-          Text(savings)
-            .font(.system(size: 10, weight: .medium).monospacedDigit())
-            .foregroundColor(Color(red: 0.45, green: 0.9, blue: 0.6))
-        }
-      }
-    }
-  }
-
-  private var accessibilityText: String {
+  /// "Original (2x) · 2880×1800 · 1.2 MB · −62%"
+  private var tooltip: String {
     var parts = [QuickAccessOptimizeMenuFormatting.title(for: row.level), row.level.dimensionsLabel]
     if let byteCount = row.byteCount {
       parts.append(QuickAccessImageOptimizer.formatByteCount(byteCount))
+      if let savings = QuickAccessOptimizeMenuFormatting.savingsLabel(
+        byteCount: byteCount,
+        originalByteCount: originalByteCount
+      ) {
+        parts.append(savings)
+      }
+    } else if row.isEstimating {
+      parts.append(L10n.QuickAccess.optimizeEstimating)
     }
-    return parts.joined(separator: ", ")
+    return parts.joined(separator: " · ")
   }
 }

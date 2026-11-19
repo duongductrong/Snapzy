@@ -54,7 +54,8 @@ final class QuickAccessOptimizePanel: NSPanel {
     hidesOnDeactivate = false
     isOpaque = false
     backgroundColor = .clear
-    hasShadow = true
+    // The SwiftUI view draws its own shadow so it can scale with the bubble animation.
+    hasShadow = false
     isReleasedWhenClosed = false
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
     animationBehavior = .utilityWindow
@@ -82,10 +83,10 @@ final class QuickAccessOptimizePanelController {
 
   var isPresented: Bool { panel != nil }
 
-  /// Opens the list next to `cardFrame` (screen coordinates). With `opensTowardLeading`
-  /// the list hugs the card's trailing edge and grows inward, which keeps it on screen
-  /// when Quick Access sits on the right.
-  func present(for item: QuickAccessItem, anchoredTo cardFrame: NSRect?, opensTowardLeading: Bool) {
+  /// Opens the list like a native pop-up menu: the current level lands right over
+  /// `buttonFrame` (screen coordinates), or over the card's centre when the menu was
+  /// opened without the button (e.g. from a shortcut).
+  func present(for item: QuickAccessItem, buttonFrame: NSRect?, cardFrame: NSRect?) {
     if model?.itemID == item.id {
       dismiss()
       return
@@ -124,7 +125,11 @@ final class QuickAccessOptimizePanelController {
     let panel = QuickAccessOptimizePanel(contentRect: NSRect(origin: .zero, size: size))
     panel.contentView = hostingView
     panel.setFrame(
-      Self.frame(for: size, cardFrame: cardFrame, opensTowardLeading: opensTowardLeading),
+      Self.frame(
+        for: size,
+        anchor: buttonFrame ?? cardFrame,
+        currentIndex: plan.levels.firstIndex { $0.fraction == plan.currentFraction } ?? 0
+      ),
       display: false
     )
 
@@ -134,13 +139,11 @@ final class QuickAccessOptimizePanelController {
     } else {
       panel.level = .statusBar
     }
-    panel.alphaValue = 0
     panel.makeKeyAndOrderFront(nil)
-    NSAnimationContext.runAnimationGroup { context in
-      context.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 0.14
-      panel.animator().alphaValue = 1
-    }
     self.panel = panel
+    DispatchQueue.main.async { [weak model] in
+      withAnimation(Self.openAnimation) { model?.isShown = true }
+    }
 
     QuickAccessManager.shared.pauseCountdownForActivity(item.id)
     heldItemID = item.id
@@ -166,38 +169,53 @@ final class QuickAccessOptimizePanelController {
     }
 
     if let panel {
-      panel.parent?.removeChildWindow(panel)
-      panel.orderOut(nil)
-      panel.close()
+      // Let the bubble shrink back before the window goes away.
+      panel.ignoresMouseEvents = true
+      withAnimation(Self.closeAnimation) { model?.isShown = false }
+      DispatchQueue.main.asyncAfter(deadline: .now() + Self.closeDuration) {
+        panel.parent?.removeChildWindow(panel)
+        panel.orderOut(nil)
+        panel.close()
+      }
     }
     panel = nil
     model = nil
   }
 
+  // MARK: - Animation
+
+  private static var reduceMotion: Bool {
+    NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+  }
+
+  private static var openAnimation: Animation {
+    reduceMotion ? .easeOut(duration: 0.12) : .spring(response: 0.32, dampingFraction: 0.72)
+  }
+
+  private static let closeDuration: TimeInterval = 0.16
+
+  private static var closeAnimation: Animation {
+    .easeIn(duration: reduceMotion ? 0.1 : closeDuration)
+  }
+
   // MARK: - Placement
 
-  /// The list overlaps the card's bottom corner and runs past its bottom edge,
-  /// matching the mockup, then gets clamped into the visible screen area.
-  static func frame(for size: NSSize, cardFrame: NSRect?, opensTowardLeading: Bool) -> NSRect {
-    let screenPoint = cardFrame.map { NSPoint(x: $0.midX, y: $0.midY) } ?? NSEvent.mouseLocation
-    let screen = NSScreen.screens.first { $0.frame.contains(screenPoint) } ?? NSScreen.main
+  /// Centres the list on the anchor horizontally and lines the current row up with
+  /// the anchor's centre vertically, then clamps the result into the visible screen.
+  static func frame(for size: NSSize, anchor: NSRect?, currentIndex: Int) -> NSRect {
+    let anchorPoint = anchor.map { NSPoint(x: $0.midX, y: $0.midY) } ?? NSEvent.mouseLocation
+    let screen = NSScreen.screens.first { $0.frame.contains(anchorPoint) } ?? NSScreen.main
     let visible = screen?.visibleFrame ?? NSRect(origin: .zero, size: size)
 
-    var origin: NSPoint
-    if let cardFrame {
-      // The view adds 10pt of padding around the glass for its shadow.
-      let overhang: CGFloat = 4
-      let x = opensTowardLeading
-        ? cardFrame.maxX + overhang - size.width
-        : cardFrame.minX - overhang
-      let top = cardFrame.minY + cardFrame.height * 0.5
-      origin = NSPoint(x: x, y: top - size.height)
-    } else {
-      origin = NSPoint(x: screenPoint.x - size.width / 2, y: screenPoint.y - size.height)
-    }
-
-    origin.x = min(max(origin.x, visible.minX), visible.maxX - size.width)
-    origin.y = min(max(origin.y, visible.minY), visible.maxY - size.height)
+    let rowCenter = QuickAccessOptimizeMenuView.rowCenterOffset(at: currentIndex)
+    var origin = NSPoint(
+      x: (anchorPoint.x - size.width / 2).rounded(),
+      y: (anchorPoint.y + rowCenter - size.height).rounded()
+    )
+    // The view's shadow padding may hang off screen; the glass itself may not.
+    let pad = QuickAccessOptimizeMenuView.shadowPadding
+    origin.x = min(max(origin.x, visible.minX - pad), visible.maxX - size.width + pad)
+    origin.y = min(max(origin.y, visible.minY - pad), visible.maxY - size.height + pad)
     return NSRect(origin: origin, size: size)
   }
 
