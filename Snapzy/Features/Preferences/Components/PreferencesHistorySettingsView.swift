@@ -275,11 +275,12 @@ private struct HistoryDisplayStylePicker: View {
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(12)
         .background(Color.primary.opacity(0.03), in: Radius.rect(Radius.card))
       }
     }
+    .fixedSize(horizontal: false, vertical: true)
   }
 
   private func description(for style: HistoryDisplayStyle) -> String {
