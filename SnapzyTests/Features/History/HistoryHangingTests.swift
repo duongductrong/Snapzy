@@ -531,6 +531,21 @@ final class HistoryHangingTests: XCTestCase {
     }
   }
 
+  func testBrowserModelsReleaseWithoutAnIsolatedDeinitHop() {
+    weak var search: HistorySearchViewModel?
+    weak var scroll: HistoryScrollController?
+    autoreleasepool {
+      let searchModel = HistorySearchViewModel()
+      let scrollController = HistoryScrollController()
+      search = searchModel
+      scroll = scrollController
+      XCTAssertNotNil(search)
+      XCTAssertNotNil(scroll)
+    }
+    XCTAssertNil(search)
+    XCTAssertNil(scroll)
+  }
+
   func testReturningFromBrowserReleasesEscapeAndPinState() async throws {
     try await withCaptureWindows { shelf, _, _, _ in
       let history = HistoryFloatingManager.shared
