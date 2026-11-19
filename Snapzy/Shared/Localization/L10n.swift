@@ -3245,6 +3245,41 @@ nonisolated enum L10n {
       defaultValue: "Optimize",
       comment: "Quick access configurable action title for shrinking a screenshot"
     )
+    static let optimizePresetsSection = string(
+      "preferences-quick-access.optimize-presets-section",
+      defaultValue: "Optimize Presets",
+      comment: "Quick access settings section listing Optimize presets"
+    )
+    static let optimizePresetsDescription = string(
+      "preferences-quick-access.optimize-presets-description",
+      defaultValue: "Presets appear in the Optimize menu and the card’s context menu.",
+      comment: "Footer of the Optimize presets settings section"
+    )
+    static let optimizePresetsEmpty = string(
+      "preferences-quick-access.optimize-presets-empty",
+      defaultValue: "No presets yet.",
+      comment: "Shown when there are no Optimize presets"
+    )
+    static let addOptimizePreset = string(
+      "preferences-quick-access.add-optimize-preset",
+      defaultValue: "Add Preset",
+      comment: "Button that adds an Optimize preset"
+    )
+    static let newOptimizePresetTitle = string(
+      "preferences-quick-access.new-optimize-preset-title",
+      defaultValue: "New Preset",
+      comment: "Title of the sheet that creates an Optimize preset"
+    )
+    static let editOptimizePresetTitle = string(
+      "preferences-quick-access.edit-optimize-preset-title",
+      defaultValue: "Edit Preset",
+      comment: "Title of the sheet that edits an Optimize preset"
+    )
+    static let optimizePresetNameLabel = string(
+      "preferences-quick-access.optimize-preset-name-label",
+      defaultValue: "Name",
+      comment: "Label of the name field in the Optimize preset editor"
+    )
     static let unpinAction = string(
       "preferences-quick-access.action-unpin",
       defaultValue: "Unpin",
@@ -9016,6 +9051,100 @@ nonisolated enum L10n {
       "quick-access.optimize.failed",
       defaultValue: "Couldn't optimize this screenshot.",
       comment: "Toast shown when shrinking a screenshot fails"
+    )
+    static let optimizeCustom = string(
+      "quick-access.optimize.custom",
+      defaultValue: "Custom…",
+      comment: "Optimize menu entry that opens the custom size/format/quality editor"
+    )
+    static let optimizeCustomHelp = string(
+      "quick-access.optimize.custom-help",
+      defaultValue: "Choose size, format, quality and a file-size limit",
+      comment: "Tooltip of the Custom… entry in the Optimize menu"
+    )
+    static let optimizeCustomTitle = string(
+      "quick-access.optimize.custom-title",
+      defaultValue: "Custom Optimize",
+      comment: "Title of the custom Optimize editor"
+    )
+    static let optimizeSizeLabel = string(
+      "quick-access.optimize.size-label",
+      defaultValue: "Size",
+      comment: "Label of the size slider in the custom Optimize editor"
+    )
+    static let optimizeFormatLabel = string(
+      "quick-access.optimize.format-label",
+      defaultValue: "Format",
+      comment: "Label of the format picker in the custom Optimize editor"
+    )
+    static let optimizeFormatOriginal = string(
+      "quick-access.optimize.format-original",
+      defaultValue: "Original",
+      comment: "Format option that keeps the screenshot file format"
+    )
+    static func optimizeFormatKeep(_ value: String) -> String {
+      format(
+        "quick-access.optimize.format-keep",
+        defaultValue: "Keep %@",
+        comment: "Format option that keeps the file format. %@ is the format name, e.g. PNG.",
+        value
+      )
+    }
+    static let optimizeQualityLabel = string(
+      "quick-access.optimize.quality-label",
+      defaultValue: "Quality",
+      comment: "Label of the quality slider in the custom Optimize editor"
+    )
+    static let optimizeQualityLossless = string(
+      "quick-access.optimize.quality-lossless",
+      defaultValue: "Lossless",
+      comment: "Shown instead of a quality value when the output format is lossless (PNG)"
+    )
+    static let optimizeMaxSizeLabel = string(
+      "quick-access.optimize.max-size-label",
+      defaultValue: "Max size",
+      comment: "Label of the file-size limit picker in the custom Optimize editor"
+    )
+    static func optimizeLimitNotMet(_ value: String) -> String {
+      format(
+        "quick-access.optimize.limit-not-met",
+        defaultValue: "Couldn't get under %@; this is the smallest result.",
+        comment: "Warning when the file-size limit could not be reached. %@ is the limit, e.g. 500 KB.",
+        value
+      )
+    }
+    static let optimizeSaveAsPreset = string(
+      "quick-access.optimize.save-as-preset",
+      defaultValue: "Save as Preset…",
+      comment: "Button in the custom Optimize editor that saves the settings as a preset"
+    )
+    static let optimizePresetNamePlaceholder = string(
+      "quick-access.optimize.preset-name-placeholder",
+      defaultValue: "Preset name",
+      comment: "Placeholder of the preset name field"
+    )
+    static func optimizePresetSaved(_ value: String) -> String {
+      format(
+        "quick-access.optimize.preset-saved",
+        defaultValue: "Saved “%@”",
+        comment: "Confirmation after saving an Optimize preset. %@ is the preset name.",
+        value
+      )
+    }
+    static let optimizePresetUntitled = string(
+      "quick-access.optimize.preset-untitled",
+      defaultValue: "Untitled Preset",
+      comment: "Name given to an Optimize preset saved without a name"
+    )
+    static let optimizePresetStarterChat = string(
+      "quick-access.optimize.preset-starter-chat",
+      defaultValue: "Chat",
+      comment: "Name of the built-in Optimize preset for sharing in chat apps (WebP, half size)"
+    )
+    static let optimizePresetStarterUnderOneMB = string(
+      "quick-access.optimize.preset-starter-under-1mb",
+      defaultValue: "Under 1 MB",
+      comment: "Name of the built-in Optimize preset that keeps the file under 1 MB"
     )
     static let editVideo = string(
       "quick-access.edit-video",

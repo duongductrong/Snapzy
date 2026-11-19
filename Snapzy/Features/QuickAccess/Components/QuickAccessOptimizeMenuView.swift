@@ -2,8 +2,9 @@
 //  QuickAccessOptimizeMenuView.swift
 //  Snapzy
 //
-//  Optimize levels (`0.5x`, `1x`, `2x`…) as a native-style pop-up menu on clear
-//  Liquid Glass, opened with the current level over the Optimize button.
+//  Optimize levels (`0.5x`, `1x`, `2x`…), saved presets and "Custom…" as a
+//  native-style pop-up menu on clear Liquid Glass, opened with the current level
+//  over the Optimize button.
 //
 
 import AppKit
@@ -30,19 +31,35 @@ enum QuickAccessOptimizeMenuFormatting {
 @MainActor
 final class QuickAccessOptimizeMenuModel: ObservableObject {
   struct Row: Identifiable, Equatable {
-    let level: QuickAccessOptimizeLevel
+    enum Kind: Equatable {
+      case level(QuickAccessOptimizeLevel)
+      case preset(QuickAccessOptimizePreset)
+      case custom
+    }
+
+    let id: String
+    let kind: Kind
+    /// Draws a separator above the row, like a native menu group break.
+    let startsGroup: Bool
     var byteCount: Int?
     var encodedData: Data?
     var isEstimating: Bool
 
-    var id: CGFloat { level.fraction }
+    var level: QuickAccessOptimizeLevel? {
+      if case let .level(level) = kind { return level }
+      return nil
+    }
+
+    static func id(for level: QuickAccessOptimizeLevel) -> String { "level-\(level.fraction)" }
   }
 
   let itemID: UUID
   let originalByteCount: Int?
+  let originalExtension: String
   @Published private(set) var rows: [Row]
-  @Published private(set) var currentFraction: CGFloat
-  @Published var highlightedFraction: CGFloat?
+  /// The level on disk, or nil when custom settings produced the file.
+  let currentRowID: String?
+  @Published var highlightedID: String?
   /// Drives the bubble in/out animation; the panel stays up until it has played.
   @Published var isShown = false
 
@@ -52,19 +69,41 @@ final class QuickAccessOptimizeMenuModel: ObservableObject {
   /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
   nonisolated deinit {}
 
-  init(itemID: UUID, plan: QuickAccessOptimizePlan) {
+  init(itemID: UUID, plan: QuickAccessOptimizePlan, presets: [QuickAccessOptimizePreset]) {
     self.itemID = itemID
     originalByteCount = plan.originalByteCount
-    currentFraction = plan.currentFraction
-    highlightedFraction = plan.currentFraction
-    rows = plan.levels.map { level in
+    originalExtension = plan.fileExtension
+
+    var rows = plan.levels.map { level in
       Row(
-        level: level,
+        id: Row.id(for: level),
+        kind: .level(level),
+        startsGroup: false,
         byteCount: level.isOriginal ? plan.originalByteCount : nil,
         encodedData: nil,
         isEstimating: !level.isOriginal
       )
     }
+    rows += presets.enumerated().map { index, preset in
+      Row(
+        id: "preset-\(preset.id.uuidString)",
+        kind: .preset(preset),
+        startsGroup: index == 0,
+        byteCount: nil,
+        encodedData: nil,
+        isEstimating: false
+      )
+    }
+    rows.append(Row(id: "custom", kind: .custom, startsGroup: true, byteCount: nil, encodedData: nil, isEstimating: false))
+    self.rows = rows
+
+    currentRowID = plan.levels.first { $0.fraction == plan.currentFraction }.map(Row.id(for:))
+    highlightedID = currentRowID ?? rows.last?.id
+  }
+
+  /// Row the menu opens on (and grows out of): the current level, else "Custom…".
+  var anchorIndex: Int {
+    rows.firstIndex { $0.id == (currentRowID ?? "custom") } ?? 0
   }
 
   func record(_ level: QuickAccessOptimizeLevel, data: Data?) {
@@ -80,13 +119,13 @@ final class QuickAccessOptimizeMenuModel: ObservableObject {
 
   func moveHighlight(by offset: Int) {
     guard !rows.isEmpty else { return }
-    let currentIndex = rows.firstIndex { $0.level.fraction == highlightedFraction } ?? 0
+    let currentIndex = rows.firstIndex { $0.id == highlightedID } ?? 0
     let nextIndex = min(max(currentIndex + offset, 0), rows.count - 1)
-    highlightedFraction = rows[nextIndex].level.fraction
+    highlightedID = rows[nextIndex].id
   }
 
   func chooseHighlighted() {
-    guard let row = rows.first(where: { $0.level.fraction == highlightedFraction }) else { return }
+    guard let row = rows.first(where: { $0.id == highlightedID }) else { return }
     choose(row)
   }
 }
@@ -100,10 +139,24 @@ struct QuickAccessOptimizeMenuView: View {
   static let inset: CGFloat = 4
   static let rowHeight: CGFloat = 19
   static let rowSpacing: CGFloat = 1
+  /// Height of a group separator, hairline included.
+  static let separatorHeight: CGFloat = 9
 
   /// Distance from the hosting view's top edge to the centre of row `index`.
-  static func rowCenterOffset(at index: Int) -> CGFloat {
-    shadowPadding + inset + CGFloat(index) * (rowHeight + rowSpacing) + rowHeight / 2
+  static func rowCenterOffset(at index: Int, in rows: [QuickAccessOptimizeMenuModel.Row]) -> CGFloat {
+    let separators = rows.prefix(index + 1).filter(\.startsGroup).count
+    return shadowPadding + inset
+      + CGFloat(index) * (rowHeight + rowSpacing)
+      + CGFloat(separators) * (separatorHeight + rowSpacing)
+      + rowHeight / 2
+  }
+
+  static func contentHeight(for rows: [QuickAccessOptimizeMenuModel.Row]) -> CGFloat {
+    let separators = rows.filter(\.startsGroup).count
+    return 2 * (shadowPadding + inset)
+      + CGFloat(rows.count) * rowHeight
+      + CGFloat(max(rows.count - 1, 0)) * rowSpacing
+      + CGFloat(separators) * (separatorHeight + rowSpacing)
   }
 
   /// On native glass the menu is concentric with its capsule rows (row radius +
@@ -128,24 +181,31 @@ struct QuickAccessOptimizeMenuView: View {
   /// The bubble grows out of (and shrinks back into) the current row, which sits
   /// over the Optimize button.
   private var bubbleAnchor: UnitPoint {
-    let height = 2 * (Self.shadowPadding + Self.inset)
-      + CGFloat(model.rows.count) * Self.rowHeight
-      + CGFloat(max(model.rows.count - 1, 0)) * Self.rowSpacing
-    let index = model.rows.firstIndex { $0.level.fraction == model.currentFraction } ?? 0
-    return UnitPoint(x: 0.5, y: Self.rowCenterOffset(at: index) / max(height, 1))
+    let height = Self.contentHeight(for: model.rows)
+    let offset = Self.rowCenterOffset(at: model.anchorIndex, in: model.rows)
+    return UnitPoint(x: 0.5, y: offset / max(height, 1))
   }
 
   var body: some View {
     VStack(alignment: .leading, spacing: Self.rowSpacing) {
       ForEach(model.rows) { row in
+        if row.startsGroup {
+          Rectangle()
+            .fill(Color.white.opacity(0.14))
+            .frame(height: 1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, (Self.separatorHeight - 1) / 2)
+            .accessibilityHidden(true)
+        }
         QuickAccessOptimizeRowView(
           row: row,
-          isHighlighted: row.level.fraction == model.highlightedFraction,
-          isCurrent: row.level.fraction == model.currentFraction,
+          isHighlighted: row.id == model.highlightedID,
+          isCurrent: row.id == model.currentRowID,
           originalByteCount: model.originalByteCount,
+          originalExtension: model.originalExtension,
           usesNativeGlass: usesNativeGlass,
           onHover: { hovering in
-            if hovering { model.highlightedFraction = row.level.fraction }
+            if hovering { model.highlightedID = row.id }
           },
           onChoose: { model.choose(row) }
         )
@@ -184,7 +244,7 @@ struct QuickAccessOptimizeMenuView: View {
   }
 }
 
-/// One `Nx` row, laid out like a native menu item. The highlighted row (the current
+/// One row (`Nx` level, preset name or "Custom…"), laid out like a native menu item. The highlighted row (the current
 /// level when the menu opens, then whatever the pointer or arrow keys land on) sits
 /// on accent-tinted native glass. Pixel and byte sizes live in the tooltip.
 private struct QuickAccessOptimizeRowView: View {
@@ -192,6 +252,7 @@ private struct QuickAccessOptimizeRowView: View {
   let isHighlighted: Bool
   let isCurrent: Bool
   let originalByteCount: Int?
+  let originalExtension: String
   let usesNativeGlass: Bool
   let onHover: (Bool) -> Void
   let onChoose: () -> Void
@@ -205,7 +266,7 @@ private struct QuickAccessOptimizeRowView: View {
 
   var body: some View {
     Button(action: onChoose) {
-      Text(row.level.scaleLabel)
+      Text(title)
         .font(.system(size: 12, weight: .medium).monospacedDigit())
         .foregroundColor(.white.opacity(isHighlighted ? 1 : 0.9))
         .lineLimit(1)
@@ -233,9 +294,26 @@ private struct QuickAccessOptimizeRowView: View {
     .accessibilityAddTraits(isCurrent ? .isSelected : [])
   }
 
-  /// "Original (2x) · 2880×1800 · 1.2 MB · −62%"
+  private var title: String {
+    switch row.kind {
+    case let .level(level): level.scaleLabel
+    case let .preset(preset): preset.name
+    case .custom: L10n.QuickAccess.optimizeCustom
+    }
+  }
+
+  /// "Original (2x) · 2880×1800 · 1.2 MB · −62%", or a preset's settings.
   private var tooltip: String {
-    var parts = [QuickAccessOptimizeMenuFormatting.title(for: row.level), row.level.dimensionsLabel]
+    let level: QuickAccessOptimizeLevel
+    switch row.kind {
+    case let .level(rowLevel):
+      level = rowLevel
+    case let .preset(preset):
+      return "\(preset.name) · \(preset.settings.summary(originalExtension: originalExtension))"
+    case .custom:
+      return L10n.QuickAccess.optimizeCustomHelp
+    }
+    var parts = [QuickAccessOptimizeMenuFormatting.title(for: level), level.dimensionsLabel]
     if let byteCount = row.byteCount {
       parts.append(QuickAccessImageOptimizer.formatByteCount(byteCount))
       if let savings = QuickAccessOptimizeMenuFormatting.savingsLabel(

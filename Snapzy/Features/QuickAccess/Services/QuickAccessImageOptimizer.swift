@@ -136,9 +136,12 @@ nonisolated enum QuickAccessImageOptimizer {
 
   // MARK: - Rendering
 
-  static func resized(_ image: CGImage, width: Int, height: Int) -> CGImage? {
+  /// `flattensAlpha` composites onto white first, for formats without alpha (JPEG),
+  /// where transparent window shadows would otherwise turn black.
+  static func resized(_ image: CGImage, width: Int, height: Int, flattensAlpha: Bool = false) -> CGImage? {
     guard width > 0, height > 0 else { return nil }
-    if width == image.width, height == image.height { return image }
+    let hasAlpha = ![.none, .noneSkipFirst, .noneSkipLast].contains(image.alphaInfo)
+    if width == image.width, height == image.height, !(flattensAlpha && hasAlpha) { return image }
 
     let colorSpace: CGColorSpace = {
       if let space = image.colorSpace, space.model == .rgb { return space }
@@ -157,16 +160,21 @@ nonisolated enum QuickAccessImageOptimizer {
       return nil
     }
     context.interpolationQuality = .high
+    if flattensAlpha {
+      context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+      context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    }
     context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
     return context.makeImage()
   }
 
   /// Encodes `image` in the format implied by `fileExtension`, stamping DPI for `scale`
-  /// so the next Optimize (and other apps) read the new density correctly.
-  static func encode(_ image: CGImage, fileExtension: String, scale: CGFloat) -> Data? {
+  /// so the next Optimize (and other apps) read the new density correctly. `quality`
+  /// overrides the default for lossy formats.
+  static func encode(_ image: CGImage, fileExtension: String, scale: CGFloat, quality: CGFloat? = nil) -> Data? {
     let ext = fileExtension.lowercased()
     if ext == "webp" {
-      return WebPEncoderService.encode(image, quality: webpQuality)
+      return WebPEncoderService.encode(image, quality: quality ?? webpQuality)
     }
 
     let utType: CFString
@@ -180,7 +188,11 @@ nonisolated enum QuickAccessImageOptimizer {
     guard let destination = CGImageDestinationCreateWithData(data as CFMutableData, utType, 1, nil) else {
       return nil
     }
-    CGImageDestinationAddImage(destination, image, destinationProperties(fileExtension: ext, scale: scale))
+    CGImageDestinationAddImage(
+      destination,
+      image,
+      destinationProperties(fileExtension: ext, scale: scale, quality: quality)
+    )
     guard CGImageDestinationFinalize(destination) else { return nil }
     return data as Data
   }
@@ -197,7 +209,11 @@ nonisolated enum QuickAccessImageOptimizer {
     return encode(image, fileExtension: fileExtension, scale: level.scale)
   }
 
-  private static func destinationProperties(fileExtension: String, scale: CGFloat) -> CFDictionary {
+  private static func destinationProperties(
+    fileExtension: String,
+    scale: CGFloat,
+    quality: CGFloat?
+  ) -> CFDictionary {
     let dpi = max(Double(scale), 0.25) * 72.0
     var properties: [CFString: Any] = [
       kCGImagePropertyDPIWidth: dpi,
@@ -211,7 +227,7 @@ nonisolated enum QuickAccessImageOptimizer {
         kCGImagePropertyPNGYPixelsPerMeter: pixelsPerMeter,
       ] as CFDictionary
     case "jpg", "jpeg":
-      properties[kCGImageDestinationLossyCompressionQuality] = jpegQuality
+      properties[kCGImageDestinationLossyCompressionQuality] = quality ?? jpegQuality
     default:
       break
     }

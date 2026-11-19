@@ -704,14 +704,36 @@ struct QuickAccessCardView: View {
       makeEntries: {
         let store = QuickAccessOptimizeStore.shared
         guard let plan = store.plan(for: item) else { return [] }
-        return plan.levels.map { level in
+        var entries: [QuickAccessContextMenuEntry] = plan.levels.map { level in
           .option(
             title: QuickAccessOptimizeMenuFormatting.title(for: level),
             detail: level.dimensionsLabel,
             isChecked: level.fraction == plan.currentFraction,
-            action: { store.applyReportingFailure(level, to: item.id) }
+            action: { store.applyReportingFailure(.level(level), to: item.id) }
           )
         }
+        let presets = QuickAccessOptimizePresetStore.shared.presets
+        if !presets.isEmpty {
+          entries.append(.separator)
+          entries += presets.map { preset in
+            .option(
+              title: preset.name,
+              detail: preset.settings.summary(originalExtension: plan.fileExtension),
+              isChecked: false,
+              action: { store.applyReportingFailure(.custom(preset.settings), to: item.id) }
+            )
+          }
+        }
+        entries.append(.separator)
+        entries.append(.option(
+          title: L10n.QuickAccess.optimizeCustom,
+          detail: nil,
+          isChecked: false,
+          action: { [cardAnchor] in
+            QuickAccessOptimizePanelController.shared.presentCustom(for: item, anchor: cardAnchor.screenFrame)
+          }
+        ))
+        return entries
       }
     )
   }

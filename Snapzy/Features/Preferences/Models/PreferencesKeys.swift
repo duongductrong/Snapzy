@@ -158,6 +158,8 @@ enum PreferencesKeys {
   static let quickAccessAnimationStyle = "quickAccess.animationStyle"
   static let quickAccessPlaySounds = "quickAccess.playSounds"
   static let quickAccessOpenInFinderAfterSave = "quickAccess.openInFinderAfterSave"
+  static let quickAccessOptimizePresets = "quickAccess.optimize.presets.v1"
+  static let quickAccessOptimizeLastCustom = "quickAccess.optimize.lastCustom.v1"
 
   // Recording
   static let recordingFormat = "recording.format"
