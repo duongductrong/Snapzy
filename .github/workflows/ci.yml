@@ -131,6 +131,7 @@ jobs:
             SnapzyTests/RecordingSessionHotkeyRegistrationTests
             SnapzyTests/SnapzyOnboardingStateTests/testStep2ScreenRecordingWorkflow
             SnapzyTests/VideoEditorSessionStoreTests/testEditorHostingReplay_preservesFinalZoomAndSpeedValues
+            SnapzyTests/VideoEditorSessionStoreTests/testAIPanelOpen_withLeftSidebar_keepsWindowWidth
             SnapzyTests/VideoEditorTimelineViewportTests
             SnapzyTests/VideoEditorTimelineScrollCatcherTests
             SnapzyTests/Issue690InputLockRegressionTests
