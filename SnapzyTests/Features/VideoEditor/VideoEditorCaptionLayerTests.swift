@@ -34,6 +34,28 @@ final class VideoEditorCaptionLayerTests: XCTestCase {
     XCTAssertNil(resolver.segment(atSource: 2))
   }
 
+  func testResolverBinarySearchMatchesLinearLookupOnOverlappingCaptions() {
+    var generator = SystemRandomNumberGenerator()
+    for _ in 0 ..< 40 {
+      var segments: [CaptionSegment] = []
+      for index in 0 ..< Int.random(in: 0 ... 60, using: &generator) {
+        let start = Double.random(in: 0 ... 100, using: &generator)
+        let length = Double.random(in: 0.2 ... 12, using: &generator)
+        let text = index % 7 == 0 ? "  " : "c\(index)"
+        segments.append(segment(start, start + length, text))
+      }
+      let resolver = VideoEditorCaptionResolver(captions: VideoEditorCaptions(segments: segments))
+      let sorted = segments.sorted { $0.start < $1.start }
+      for _ in 0 ..< 200 {
+        let time = Double.random(in: -1 ... 115, using: &generator)
+        let expected = sorted.last {
+          time >= $0.start && time < $0.end && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        XCTAssertEqual(resolver.segment(atSource: time)?.id, expected?.id)
+      }
+    }
+  }
+
   // MARK: - Output cues
 
   func testCuesFollowCutsWithoutRegenerating() {

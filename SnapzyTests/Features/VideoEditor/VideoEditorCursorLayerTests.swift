@@ -66,6 +66,37 @@ final class VideoEditorCursorLayerTests: XCTestCase {
     XCTAssertEqual(ring.resolve(sourceTime: 2.5)?.held.count, 0)
   }
 
+  /// Changing settings on an existing resolver must resolve exactly like a fresh one.
+  func testUpdatingSettingsMatchesFreshResolver() {
+    let capture = RecordingCursorCapture(clicks: [
+      RecordedClick(time: 1, button: .left, phase: .down, normalizedX: 0.4, normalizedY: 0.4),
+      RecordedClick(time: 1.3, button: .left, phase: .up, normalizedX: 0.4, normalizedY: 0.4),
+    ])
+    let samples = (0 ..< 200).map { index in
+      let t = Double(index) * 0.05
+      return sample(t, 0.5 + 0.3 * CGFloat(sin(t)), index > 120 ? 0.7 : 0.3 + CGFloat(index) * 0.002)
+    }
+    var settings = VideoEditorCursorSettings.default
+    let base = VideoEditorCursorResolver(samples: samples, capture: capture, settings: settings)
+    let variants: [(inout VideoEditorCursorSettings) -> Void] = [
+      { $0.scale = 2 },
+      { $0.smoothing = 0.9 },
+      { $0.smoothing = 0 },
+      { $0.hideWhenIdle = true; $0.idleDelay = 0.6 },
+      { $0.clickEffect = .ring },
+      { $0.isVisible = false },
+    ]
+    for change in variants {
+      change(&settings)
+      let updated = base.updating(settings: settings)
+      let fresh = VideoEditorCursorResolver(samples: samples, capture: capture, settings: settings)
+      for step in 0 ..< 220 {
+        let time = Double(step) * 0.047
+        XCTAssertEqual(updated.resolve(sourceTime: time), fresh.resolve(sourceTime: time))
+      }
+    }
+  }
+
   // MARK: - Time mapping
 
   func testMappingFollowsReorderedClipsAndSkipsInsertedFiles() {

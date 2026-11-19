@@ -9,8 +9,17 @@ final class VideoEditorTimelineObservation: ObservableObject {
   private var subscriptions = Set<AnyCancellable>()
 
   init(state: VideoEditorState, surface: Surface) {
+    // Zoom and speed blocks live on the structural axis, which a trim never moves
+    // (clip slots are fixed): they only need the axis length, not every in/out change.
+    // Their hover placeholder reads `isPlayableMaterial` live, so nothing goes stale.
+    let clipsChange: AnyPublisher<Void, Never> = switch surface {
+    case .zoom, .speed:
+      state.$clips.map(TimelineSequence.duration).removeDuplicates().map { _ in () }.eraseToAnyPublisher()
+    case .container, .clips, .captions, .camera:
+      state.$clips.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
+    }
     var changes: [AnyPublisher<Void, Never>] = [
-      state.$clips.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
+      clipsChange,
       state.$duration.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
     ]
     switch surface {

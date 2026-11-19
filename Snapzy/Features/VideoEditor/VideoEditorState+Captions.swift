@@ -65,7 +65,12 @@ extension VideoEditorState {
 
   func applyCaptions(_ value: VideoEditorCaptions) {
     var value = value
-    value.segments.sort { $0.start < $1.start }
+    // Sorting always copies the (shared) storage, which also defeats the identity fast
+    // path of every `captions` comparison downstream. Slider and drag ticks already
+    // arrive in order, so sort only when needed.
+    if !value.segments.isSortedByStart {
+      value.segments.sort { $0.start < $1.start }
+    }
     captions = value
     updateHasUnsavedChanges()
   }
@@ -112,9 +117,12 @@ extension VideoEditorState {
 
   /// The caption shown at a structural playhead time (preview).
   func captionSegment(atSequence time: TimeInterval) -> CaptionSegment? {
-    guard !isGIF, let source = cursorSourceTime(atSequence: time) else { return nil }
-    return VideoEditorCaptionResolver(captions: captions)
-      .segment(atSource: source, rate: Double(previewSourceRate(atSequence: time)))
+    guard !isGIF, captions.settings.isEnabled, !captions.segments.isEmpty,
+          let source = cursorSourceTime(atSequence: time)
+    else { return nil }
+    let resolver = cachedCaptionResolver ?? VideoEditorCaptionResolver(captions: captions)
+    cachedCaptionResolver = resolver
+    return resolver.segment(atSource: source, rate: Double(previewSourceRate(atSequence: time)))
   }
 
   /// SRT or WebVTT text in output time (cuts dropped, speed applied).
@@ -128,5 +136,11 @@ extension VideoEditorState {
     return vtt
       ? VideoEditorSubtitleWriter.vtt(cues, maxCharsPerLine: limit)
       : VideoEditorSubtitleWriter.srt(cues, maxCharsPerLine: limit)
+  }
+}
+
+private extension Array where Element == CaptionSegment {
+  var isSortedByStart: Bool {
+    zip(self, dropFirst()).allSatisfy { $0.start <= $1.start }
   }
 }

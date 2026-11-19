@@ -1278,6 +1278,91 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     XCTAssertEqual(host.bounds.size, NSSize(width: 1280, height: 800))
   }
 
+  /// Opening the AI sidebar narrows the editor; it must never raise the window's content
+  /// minimum (NSHostingView `.minSize`), which made AppKit widen the window on ⌘K.
+  func testAIPanelOpen_withLeftSidebar_keepsWindowWidth() async throws {
+    try skipIfRunningInCI("Requires a real SwiftUI/AppKit hosting surface")
+    let videoURL = try await makeVideoFile(named: "ai-panel-window-width.mov")
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+    _ = state.addZoom(at: 1)
+    state.leftSidebarPanel = .zoom
+    state.isLeftSidebarVisible = true
+    let window = NSWindow(
+      contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
+      styleMask: [.titled, .resizable],
+      backing: .buffered,
+      defer: false
+    )
+    window.isReleasedWhenClosed = false
+    window.contentView = NSHostingView(rootView: VideoEditorMainView(state: state))
+    window.orderFront(nil)
+    defer {
+      state.agent.dismissPrompt()
+      window.orderOut(nil)
+      window.contentView = nil
+    }
+    try await Task.sleep(nanoseconds: 400_000_000)
+
+    state.agent.presentPrompt()
+    try await Task.sleep(nanoseconds: 1_000_000_000)
+
+    XCTAssertEqual(window.frame.width, 1200)
+    // Settled: the editor (with the Zoom sidebar) compressed enough to leave the panel its
+    // whole slot, so the panel sits beside the editor rather than over it.
+    XCTAssertLessThanOrEqual(window.contentMinSize.width, 1200 - 356)
+  }
+
+  /// A fast scrub coalesces player seeks, but the transport must land exactly on the last
+  /// scrubbed frame once scrubbing ends.
+  func testScrubbing_chasesLatestTargetAndLandsExactlyOnRelease() async throws {
+    let videoURL = try await makeVideoFile(named: "scrub-chase-seek.mov")
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    state.startScrubbing()
+    for step in 1 ... 30 {
+      state.scrub(to: CMTime(seconds: Double(step) * 0.1, preferredTimescale: 600))
+    }
+    state.endScrubbing()
+    XCTAssertEqual(state.playbackState.currentTime.seconds, 3, accuracy: 0.001)
+
+    let deadline = Date().addingTimeInterval(3)
+    while abs(state.player.currentTime().seconds - 3) > 0.02, Date() < deadline {
+      try await Task.sleep(nanoseconds: 20_000_000)
+    }
+    XCTAssertEqual(state.player.currentTime().seconds, 3, accuracy: 0.02)
+    XCTAssertEqual(state.playbackState.currentTime.seconds, 3, accuracy: 0.001)
+  }
+
+  /// Ticks, seeks and scrubs that don't change split/delete availability must not notify
+  /// the whole editor state: every view observing it would re-render at playback rate.
+  func testPlaybackTicksAndScrubbing_doNotPublishEditorStateWhenNothingChanged() async throws {
+    let videoURL = try await makeVideoFile(named: "playback-no-state-publish.mov")
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+    state.seek(to: CMTime(seconds: 1, preferredTimescale: 600))
+    try await Task.sleep(nanoseconds: 200_000_000)
+
+    var notifications = 0
+    let subscription = state.objectWillChange.sink { notifications += 1 }
+    defer { subscription.cancel() }
+
+    for itemTime in stride(from: 1.1, through: 2.5, by: 0.1) {
+      state.handlePlaybackTick(itemTime: itemTime)
+    }
+    state.startScrubbing()
+    for seconds in stride(from: 2.5, through: 1.0, by: -0.1) {
+      state.scrub(to: CMTime(seconds: seconds, preferredTimescale: 600))
+    }
+    state.endScrubbing()
+    state.stepTimeline(by: 0.5)
+    try await Task.sleep(nanoseconds: 300_000_000)
+
+    XCTAssertGreaterThan(state.playbackState.currentTime.seconds, 0)
+    XCTAssertEqual(notifications, 0)
+  }
+
   // MARK: - Helpers
 
   private func waitForScaledPreview(

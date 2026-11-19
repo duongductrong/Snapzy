@@ -75,6 +75,7 @@ struct VideoEditorMainView: View {
   }
 
   var body: some View {
+    let _ = VideoEditorRenderRateGuard.record("VideoEditorMainView", isPlaying: state.isPlaying)
     // The AI panel sits beside the whole editor, toolbar included: it runs the full window
     // height and the editor narrows to make room. Its header sits on the toolbar line.
     HStack(spacing: 0) {
@@ -110,8 +111,14 @@ struct VideoEditorMainView: View {
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
       if reservesAIPanelSpace {
+        // Compressible on purpose. The hosting view publishes this HStack's minimum width
+        // as the window's content minimum, so a rigid slot would make AppKit widen the
+        // window whenever editor min + slot exceeds it. The slot is offered space first
+        // (priority) after the editor's minimum, so normally it is full width; in a window
+        // too narrow for both, the panel overlaps the editor's trailing edge instead.
         Color.clear
-          .frame(width: Self.aiPanelSlotWidth)
+          .frame(minWidth: 0, idealWidth: Self.aiPanelSlotWidth, maxWidth: Self.aiPanelSlotWidth)
+          .layoutPriority(1)
           .transition(.identity)
       }
     }
@@ -119,6 +126,7 @@ struct VideoEditorMainView: View {
       if mountsAIPanel, aiLayout == .sidebar {
         // Offset only: an opacity fade on glass re-samples the backdrop every frame.
         VideoEditorAIPanelView(state: state)
+          .environment(\.aiStatusAnimationPaused, parksAIPanel)
           .padding(VideoEditorAIPanelView.inset)
           .offset(x: showsAIPanel ? 0 : Self.aiPanelSlotWidth + Self.aiPanelShadowOverhang)
           .opacity(parksAIPanel ? 0 : 1)
@@ -154,13 +162,17 @@ struct VideoEditorMainView: View {
     }
     .disabled(state.isExporting)
     .overlay {
-      // Export progress overlay
-      if state.isExporting {
-        ExportProgressOverlay(state: state)
-          .transition(.opacity.combined(with: .scale(scale: 0.96)))
+      // Export progress overlay. The spring is scoped to the overlay: on the whole editor
+      // it also animated everything that changed with the same update (e.g. the caption
+      // panel's new sections when caption generation finished).
+      ZStack {
+        if state.isExporting {
+          ExportProgressOverlay(state: state)
+            .transition(.opacity.combined(with: .scale(scale: 0.96)))
+        }
       }
+      .animation(.spring(response: 0.4, dampingFraction: 0.85), value: state.isExporting)
     }
-    .animation(.spring(response: 0.4, dampingFraction: 0.85), value: state.isExporting)
     .ignoresSafeArea(.all, edges: .top)
     .task {
       await state.loadMetadata()
@@ -189,18 +201,16 @@ struct VideoEditorMainView: View {
     }
 
     if visible {
-      let firstMount = !mountsAIPanel
       withTransaction(instant) {
         mountsAIPanel = true
         parksAIPanel = false
       }
-      // A panel mounted just now must lay out off-window first, or it would appear in place.
-      if firstMount {
-        DispatchQueue.main.async {
-          guard generation == aiPanelGeneration else { return }
-          withAnimation(aiPanelAnimation) { showsAIPanel = true }
-        }
-      } else {
+      // Always slide on the next turn. A panel mounted just now must lay out off-window
+      // first, or it would appear in place; and for a mounted panel, the editor's one-step
+      // narrowing above (player, sidebar, every timeline track) would otherwise share the
+      // slide's first frames and make the spring start late and jump.
+      DispatchQueue.main.async {
+        guard generation == aiPanelGeneration else { return }
         withAnimation(aiPanelAnimation) { showsAIPanel = true }
       }
     } else {
@@ -332,8 +342,15 @@ struct VideoEditorMainView: View {
         Divider()
 
         if state.isLeftSidebarVisible {
+          // The player column resizes in one step: animating the row's layout re-laid out
+          // the player (AVPlayerView, background raster, shadow) and every timeline track
+          // on each frame for 200 ms. Only the panel's content fades in, which is cheap.
           VideoEditorLeftSidebar(state: state, previewImage: currentFrameImage)
             .frame(maxHeight: .infinity, alignment: .top)
+            .transition(.asymmetric(
+              insertion: .opacity.animation(.easeOut(duration: 0.18)),
+              removal: .identity
+            ))
 
           Divider()
         }
@@ -342,8 +359,6 @@ struct VideoEditorMainView: View {
 
       videoPlayerColumn
     }
-    .animation(.easeInOut(duration: 0.2), value: state.isLeftSidebarVisible)
-    .animation(.easeInOut(duration: 0.2), value: state.leftSidebarPanel)
   }
 
   private var videoPlayerColumn: some View {

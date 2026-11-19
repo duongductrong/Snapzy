@@ -13,6 +13,11 @@ import Foundation
 nonisolated struct VideoEditorCaptionResolver: Sendable {
   let segments: [CaptionSegment]
   let settings: VideoEditorCaptionSettings
+  /// Segments with visible text, in `segments` order, and the running maximum of their
+  /// end times. Lookups run per preview tick and per export frame, so they binary-search
+  /// instead of scanning (and trimming the text of) every caption.
+  private let visible: [CaptionSegment]
+  private let maxEndThrough: [TimeInterval]
 
   /// Faster than this, captions hide when `hideDuringFastSpeed` is on.
   static let fastSpeedThreshold = 2.0
@@ -20,14 +25,34 @@ nonisolated struct VideoEditorCaptionResolver: Sendable {
   init(captions: VideoEditorCaptions) {
     segments = captions.segments.sorted { $0.start < $1.start }
     settings = captions.settings
+    visible = segments.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    var running = -TimeInterval.infinity
+    maxEndThrough = visible.map { segment in
+      running = max(running, segment.end)
+      return running
+    }
   }
 
   /// The caption under a recording time; `rate` is the playback speed there.
   func segment(atSource time: TimeInterval, rate: Double = 1) -> CaptionSegment? {
     guard settings.isEnabled else { return nil }
     if settings.hideDuringFastSpeed, rate > Self.fastSpeedThreshold { return nil }
-    // Later captions win where two overlap (a dragged edge).
-    return segments.last { time >= $0.start && time < $0.end && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    // Later captions win where two overlap (a dragged edge): the highest index whose
+    // range contains `time`. Only segments starting at or before `time` qualify, and
+    // walking back can stop once no earlier segment ends after `time`.
+    var low = 0
+    var high = visible.count
+    while low < high {
+      let mid = (low + high) / 2
+      if visible[mid].start <= time { low = mid + 1 } else { high = mid }
+    }
+    var index = low - 1
+    while index >= 0, maxEndThrough[index] > time {
+      let candidate = visible[index]
+      if time < candidate.end { return candidate }
+      index -= 1
+    }
+    return nil
   }
 
   /// Captions as cues in OUTPUT time. A caption split by a cut becomes several cues;

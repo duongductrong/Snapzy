@@ -218,8 +218,10 @@ final class VideoEditorAgentController: ObservableObject {
   var layout: VideoEditorAILayout { VideoEditorAILayout.current(defaults) }
 
   /// Quick actions show in the panel's empty state, or as chips over the dock's empty, idle prompt.
-  var showsQuickActions: Bool {
-    guard isPromptPresented, !isRunning, !isConfirmingRemoteUse, !quickActions.isEmpty else { return false }
+  var showsQuickActions: Bool { showsQuickActions(for: quickActions) }
+
+  private func showsQuickActions(for actions: [QuickAction]) -> Bool {
+    guard isPromptPresented, !isRunning, !isConfirmingRemoteUse, !actions.isEmpty else { return false }
     switch layout {
     case .sidebar:
       return messages.isEmpty
@@ -260,13 +262,14 @@ final class VideoEditorAgentController: ObservableObject {
   }
 
   var transcript: Transcript {
-    Transcript(
+    let actions = quickActions
+    return Transcript(
       messages: messages,
       status: isRunning ? status : "",
       undoableMessageID: undoableMessageID,
       isRunning: isRunning,
-      quickActions: quickActions,
-      showsQuickActions: showsQuickActions
+      quickActions: actions,
+      showsQuickActions: showsQuickActions(for: actions)
     )
   }
 
@@ -276,8 +279,11 @@ final class VideoEditorAgentController: ObservableObject {
   private lazy var settledChanges: AnyPublisher<Void, Never> = {
     var sources: [AnyPublisher<Void, Never>] = [objectWillChange.map { _ in () }.eraseToAnyPublisher()]
     if let state { sources.append(state.$canUndo.map { _ in () }.eraseToAnyPublisher()) }
+    // One snapshot pass per main-queue turn: `presentPrompt` alone writes three
+    // properties, and each used to rebuild every snapshot (quick actions included) and add
+    // a hop before the editor could start the panel slide.
     return Publishers.MergeMany(sources)
-      .receive(on: DispatchQueue.main)
+      .debounce(for: .zero, scheduler: DispatchQueue.main)
       .share()
       .eraseToAnyPublisher()
   }()
@@ -350,8 +356,9 @@ final class VideoEditorAgentController: ObservableObject {
     DispatchQueue.main.asyncAfter(deadline: .now() + Self.prewarmDelay, execute: work)
   }
 
-  /// A little longer than the panel's slide-in.
-  static let prewarmDelay: TimeInterval = 0.45
+  /// After the panel's slide-in has settled (spring ~0.32 s, started one turn after ⌘K),
+  /// so the prewarm's main-thread setup never lands in the last frames of the slide.
+  static let prewarmDelay: TimeInterval = 0.6
 
   /// Hides the panel; a run in flight keeps going (the toolbar button shows it working).
   /// The dock stays up through a run: its prompt row is where the status and Stop live.

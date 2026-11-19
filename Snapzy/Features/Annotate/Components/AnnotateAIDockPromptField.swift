@@ -73,7 +73,10 @@ struct AnnotateAIDockPromptField: NSViewRepresentable {
     }
     if context.coordinator.lastFocusRequest != focusRequest {
       context.coordinator.lastFocusRequest = focusRequest
-      field.requestFocus()
+      // Not inside the SwiftUI update: `makeFirstResponder` sets up the field editor and
+      // resigns the previous responder synchronously, which held up the first frames of
+      // the panel/dock opening animation. The caret lands one turn later.
+      DispatchQueue.main.async { [weak field] in field?.requestFocus() }
     }
   }
 

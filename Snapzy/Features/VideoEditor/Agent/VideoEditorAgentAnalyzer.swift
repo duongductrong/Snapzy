@@ -76,7 +76,10 @@ final class VideoEditorAgentAnalyzer {
   }
 
   /// The analysis for the open video, from cache when the source hasn't changed.
-  func activity(for state: VideoEditorState) async throws -> VideoEditorActivity {
+  func activity(
+    for state: VideoEditorState,
+    priority: TaskPriority = .userInitiated
+  ) async throws -> VideoEditorActivity {
     let key = Self.key(for: state)
     if let cached, cached.key == key { return cached.activity }
     if let inFlight, inFlight.key == key { return try await inFlight.task.value }
@@ -86,7 +89,9 @@ final class VideoEditorAgentAnalyzer {
     let samples = state.recordingMetadata?.mouseSamples ?? []
     let space = state.recordingMetadata?.coordinateSpace ?? .topLeftNormalized
     let duration = CMTimeGetSeconds(state.duration)
-    let task = Task.detached(priority: .userInitiated) {
+    // A prewarm runs at utility so its audio decode doesn't compete with playback; a tool
+    // that later awaits the same in-flight task escalates it to its own priority.
+    let task = Task.detached(priority: priority) {
       try await Self.analyze(asset: asset, roles: roles, samples: samples, coordinateSpace: space, duration: duration)
     }
     inFlight = (key, task)
@@ -105,9 +110,11 @@ final class VideoEditorAgentAnalyzer {
   /// Starts the analysis early (the prompt opened) so the first tool doesn't wait.
   func prewarm(_ state: VideoEditorState) {
     guard !state.isGIF, !state.clips.isEmpty, cachedActivity(for: state) == nil else { return }
-    Task { [weak self, weak state] in
+    // Utility on the awaiting task too: a main-actor (user-initiated) awaiter would
+    // escalate the analysis right back.
+    Task(priority: .utility) { [weak self, weak state] in
       guard let self, let state else { return }
-      _ = try? await self.activity(for: state)
+      _ = try? await self.activity(for: state, priority: .utility)
     }
   }
 

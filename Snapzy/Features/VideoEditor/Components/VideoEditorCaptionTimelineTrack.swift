@@ -14,10 +14,15 @@ import SwiftUI
 struct VideoEditorCaptionTimelineTrack: View, Equatable {
   static func == (lhs: Self, rhs: Self) -> Bool {
     lhs.state === rhs.state && lhs.timelineWidth == rhs.timelineWidth
+      && lhs.visibleRange == rhs.visibleRange
   }
 
   let state: VideoEditorState
   let timelineWidth: CGFloat
+  /// Content-space range to draw (the container's snapped render range). Blocks outside
+  /// it are skipped, except the selected / edited / dragged one, whose gesture and
+  /// popover must stay mounted.
+  let visibleRange: ClosedRange<CGFloat>
   @StateObject private var observation: VideoEditorTimelineObservation
   @State private var selectedId: UUID?
   @State private var editingId: UUID?
@@ -42,9 +47,10 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
     let original: VideoEditorCaptions
   }
 
-  init(state: VideoEditorState, timelineWidth: CGFloat) {
+  init(state: VideoEditorState, timelineWidth: CGFloat, visibleRange: ClosedRange<CGFloat>) {
     self.state = state
     self.timelineWidth = timelineWidth
+    self.visibleRange = visibleRange
     _observation = StateObject(wrappedValue: VideoEditorTimelineObservation(state: state, surface: .captions))
   }
 
@@ -62,7 +68,7 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
       .frame(height: trackHeight)
       .allowsHitTesting(false)
 
-      ForEach(pieces) { piece in
+      ForEach(visiblePieces) { piece in
         block(piece)
       }
     }
@@ -81,6 +87,15 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
       width: timelineWidth
     ).compactMap { piece in
       segments[piece.rangeID].map { Piece(id: piece.id, segment: $0, x: piece.x, width: piece.width) }
+    }
+  }
+
+  private var visiblePieces: [Piece] {
+    pieces.filter { piece in
+      (piece.x + piece.width >= visibleRange.lowerBound && piece.x <= visibleRange.upperBound)
+        || piece.segment.id == selectedId
+        || piece.segment.id == editingId
+        || piece.segment.id == drag?.id
     }
   }
 

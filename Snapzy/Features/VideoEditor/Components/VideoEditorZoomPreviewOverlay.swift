@@ -11,14 +11,17 @@ import SwiftUI
 /// Wrapper view that applies zoom transforms and background to the video player
 struct ZoomableVideoPlayerSection: View {
   @ObservedObject var state: VideoEditorState
-  @ObservedObject private var playbackState: VideoEditorPlaybackState
+  /// Not observed: the body never reads the playhead. `.onReceive` alone drives the zoom
+  /// transform, so a playback tick doesn't re-run this whole preview (background,
+  /// shadow, overlay hosts) 30 times a second.
+  private let playbackState: VideoEditorPlaybackState
 
   @State private var currentZoomLevel: CGFloat = 1.0
   @State private var currentZoomCenter: CGPoint = .init(x: 0.5, y: 0.5)
 
   init(state: VideoEditorState) {
     _state = ObservedObject(wrappedValue: state)
-    _playbackState = ObservedObject(wrappedValue: state.playbackState)
+    playbackState = state.playbackState
   }
 
   var body: some View {
@@ -150,12 +153,25 @@ struct ZoomableVideoPlayerSection: View {
       .offset(zoomOffset(in: displayedVideoRect.size))
       .clipped()
       .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-      .shadow(
-        color: .black.opacity(Double(state.backgroundShadowIntensity) * 0.5),
-        radius: shadowRadius,
-        x: 0,
-        y: shadowY
-      )
+      // The shadow is cast by a static shape of the same rounded frame behind the video,
+      // not by the video itself: a shadow on the player's content is re-derived from its
+      // alpha offscreen on every video frame. The video is opaque across this rect, so
+      // the result looks the same.
+      .background {
+        if state.backgroundShadowIntensity > 0 {
+          // Inset a hair so the opaque fill never shows through the video's
+          // anti-aliased rounded edge as a dark fringe.
+          RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .inset(by: 0.5)
+            .fill(Color.black)
+            .shadow(
+              color: .black.opacity(Double(state.backgroundShadowIntensity) * 0.5),
+              radius: shadowRadius,
+              x: 0,
+              y: shadowY
+            )
+        }
+      }
       .overlay(alignment: .topTrailing) {
         zoomIndicator
           .allowsHitTesting(false)
@@ -318,8 +334,9 @@ struct ZoomableVideoPlayerSection: View {
 
   private func updateZoomState(at time: TimeInterval) {
     let cameraState = state.cameraState(at: time)
-    currentZoomLevel = cameraState.zoomLevel
-    currentZoomCenter = cameraState.center
+    // Called every tick; write only real changes so a tick outside a zoom block is free.
+    if currentZoomLevel != cameraState.zoomLevel { currentZoomLevel = cameraState.zoomLevel }
+    if currentZoomCenter != cameraState.center { currentZoomCenter = cameraState.center }
   }
 }
 

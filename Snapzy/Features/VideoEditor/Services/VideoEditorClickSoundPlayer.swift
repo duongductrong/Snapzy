@@ -15,6 +15,10 @@ final class VideoEditorClickSoundPlayer {
   private static let lookAhead: TimeInterval = 0.15
 
   private var engine: AVAudioEngine?
+  /// The engine ran at least once. A started engine found stopped was stopped by the
+  /// system (output device change), so it is rebuilt against the new output rather
+  /// than restarted with its old wiring.
+  private var engineHasRun = false
   private var node: AVAudioPlayerNode?
   private var buffer: AVAudioPCMBuffer?
   private var placementsKey: [TimelineSequence.Placement] = []
@@ -83,6 +87,14 @@ final class VideoEditorClickSoundPlayer {
     engine?.stop()
     engine = nil
     node = nil
+    engineHasRun = false
+  }
+
+  /// Build the graph and preallocate its resources ahead of Play. Building the engine and
+  /// touching `mainMixerNode` (audio device setup) on the first playing tick was a visible
+  /// hitch on pressing Play. The engine is not started here, so nothing runs while idle.
+  func prepare() {
+    _ = makeGraphIfNeeded()
   }
 
   private func startIfNeeded() -> AVAudioPlayerNode? {
@@ -90,6 +102,22 @@ final class VideoEditorClickSoundPlayer {
       if !node.isPlaying { node.play() }
       return node
     }
+    if engineHasRun { shutdown() }
+    guard let (engine, node) = makeGraphIfNeeded() else { return nil }
+    do {
+      try engine.start()
+    } catch {
+      DiagnosticLogger.shared.logError(.editor, error, "Click sound engine failed to start")
+      shutdown()
+      return nil
+    }
+    engineHasRun = true
+    node.play()
+    return node
+  }
+
+  private func makeGraphIfNeeded() -> (AVAudioEngine, AVAudioPlayerNode)? {
+    if let engine, let node { return (engine, node) }
     let engine = AVAudioEngine()
     let node = AVAudioPlayerNode()
     engine.attach(node)
@@ -98,17 +126,11 @@ final class VideoEditorClickSoundPlayer {
           let monoFormat = AVAudioFormat(standardFormatWithSampleRate: format.sampleRate, channels: 1)
     else { return nil }
     engine.connect(node, to: engine.mainMixerNode, format: monoFormat)
-    do {
-      try engine.start()
-    } catch {
-      DiagnosticLogger.shared.logError(.editor, error, "Click sound engine failed to start")
-      return nil
-    }
+    engine.prepare()
     buffer = VideoEditorClickSound.makeBuffer(format: monoFormat)
-    node.play()
     self.engine = engine
     self.node = node
-    return node
+    return (engine, node)
   }
 
   private func firstIndex(atOrAfter time: TimeInterval) -> Int {

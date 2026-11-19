@@ -104,7 +104,10 @@ extension VideoEditorState {
       progressOperation = operation
       exportStatusMessage = operation.initialStatusMessage
     }
-    exportProgress = Float(min(max(fraction, 0), 1))
+    // The recognizer reports per audio buffer (thousands per run). Each write re-renders
+    // every view observing the editor, so publish only visible 0.5% steps.
+    let quantized = Float((min(max(fraction, 0), 1) * 200).rounded(.down) / 200)
+    if exportProgress != quantized { exportProgress = quantized }
   }
 
   nonisolated static func captionErrorMessage(_ error: Error, locale: Locale) -> String {

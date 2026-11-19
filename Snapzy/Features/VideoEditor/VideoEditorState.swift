@@ -315,7 +315,7 @@ final class VideoEditorPlaybackState: ObservableObject {
     isScrubbing = value
   }
 
-  private static func formatTime(_ time: CMTime) -> String {
+  nonisolated static func formatTime(_ time: CMTime) -> String {
     let totalSeconds = Int(CMTimeGetSeconds(time))
     let hours = totalSeconds / 3600
     let minutes = (totalSeconds % 3600) / 60
@@ -726,7 +726,11 @@ final class VideoEditorState: ObservableObject {
   /// Second, muted player on the camera sidecar for the preview.
   private(set) var cameraPreview: VideoEditorCameraPreviewController?
   /// Captions (segments in source time + style); see `VideoEditorState+Captions`.
-  @Published internal(set) var captions = VideoEditorCaptions.empty
+  @Published internal(set) var captions = VideoEditorCaptions.empty {
+    didSet { cachedCaptionResolver = nil }
+  }
+  /// Preview caption lookup, rebuilt only when `captions` changes (not per tick).
+  var cachedCaptionResolver: VideoEditorCaptionResolver?
   internal(set) var initialCaptions = VideoEditorCaptions.empty
   /// Caption generation in flight (transcription), cancellable from the progress overlay.
   internal(set) var captionTask: Task<Void, Never>?
@@ -745,6 +749,11 @@ final class VideoEditorState: ObservableObject {
 
   @Published var backgroundStyle: BackgroundStyle = .none {
     didSet {
+      // Re-picking the current wallpaper reloaded and re-blurred it. Still retry when the
+      // last load produced nothing.
+      if backgroundStyle == oldValue, loadingBackgroundURL != nil || hasCachedBackgroundForStyle {
+        return
+      }
       handleBackgroundStyleChange()
     }
   }
@@ -1297,6 +1306,8 @@ final class VideoEditorState: ObservableObject {
   private var speedTrackDragDidChange = false
   /// Pre-drag snapshot for clip trim gestures (one undo entry per gesture).
   private var clipTrimOriginal: TimelineClip?
+  /// Latest scrub position waiting for the in-flight seek to land (chase seek).
+  private var pendingScrubSeekSeconds: TimeInterval?
   private let primaryPlayerItem: AVPlayerItem
 
   func play() {
@@ -1453,15 +1464,31 @@ final class VideoEditorState: ObservableObject {
 
   /// Scrubbing follows the structural timeline but snaps over inactive trim slots,
   /// keeping the playhead on playable material.
+  ///
+  /// Chase seek: the playhead follows every event, but only one frame-exact player seek
+  /// is in flight at a time. A newer target waits and is issued when that seek lands;
+  /// otherwise each mouse event cancelled the previous decode and the frame rarely
+  /// landed during a fast drag. `endScrubbing` flushes the last target, so the final
+  /// frame is exactly the one the playhead shows.
   func scrub(to time: CMTime) {
     let clampedTime = normalizedTimelineTime(time)
     playbackState.setCurrentTime(clampedTime)
-    seekPlayerInternally(to: CMTimeGetSeconds(clampedTime))
+    let seconds = CMTimeGetSeconds(clampedTime)
+    if playbackState.isScrubbing, internalSeekToken != nil {
+      pendingScrubSeekSeconds = seconds
+    } else {
+      seekPlayerInternally(to: seconds)
+    }
     updateClipActionAvailability()
   }
 
   func endScrubbing() {
     playbackState.setScrubbing(false)
+    // With a seek still decoding, its completion chases the pending target; issuing it
+    // here would only cancel that decode.
+    if let pending = pendingScrubSeekSeconds, internalSeekToken == nil {
+      seekPlayerInternally(to: pending)
+    }
   }
 
   // MARK: - Player Item Management (clip sequence)
@@ -1677,6 +1704,8 @@ final class VideoEditorState: ObservableObject {
   /// Point the player at whichever clip covers a sequence time, seeking to that
   /// clip's own source time.
   private func seekPlayerInternally(to sequenceSeconds: TimeInterval) {
+    // Any seek supersedes a scrub target still waiting for the previous seek.
+    pendingScrubSeekSeconds = nil
     previewRateController?.setEnabled(false)
     player.pause()
     // A seek supersedes any pending clip handoff, even when it lands inside that
@@ -1724,6 +1753,11 @@ final class VideoEditorState: ObservableObject {
       Task { @MainActor [weak self] in
         guard let self, internalSeekToken == token else { return }
         internalSeekToken = nil
+        // The scrub moved on while this seek was decoding: chase the latest target.
+        if let pending = pendingScrubSeekSeconds {
+          seekPlayerInternally(to: pending)
+          return
+        }
         setupTimeObserver()
         refreshPreviewRateSchedule()
         guard finished else {
@@ -2868,12 +2902,19 @@ final class VideoEditorState: ObservableObject {
 
   /// Start a trim drag. Captures the pre-drag clip so the gesture collapses into a
   /// single undo entry.
+  ///
+  /// Like a speed drag, a trim holds the speed preview rebuild until release: otherwise
+  /// every mouse event cancels and restarts the composition build and reparks the player.
   func beginClipTrim(id: UUID) {
     clipTrimOriginal = clips.first { $0.id == id }
+    beginSpeedTrackDrag()
   }
 
   func endClipTrim() {
-    defer { clipTrimOriginal = nil }
+    defer {
+      clipTrimOriginal = nil
+      endSpeedTrackDrag()
+    }
     guard let old = clipTrimOriginal,
           let new = clips.first(where: { $0.id == old.id }),
           new != old
@@ -2929,22 +2970,28 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: Availability
 
+  /// Runs on every playback tick and scrub event. `@Published` notifies on every
+  /// assignment, equal or not, so write only real changes: an unconditional write here
+  /// re-renders every view observing the whole editor state ~30×/s while playing.
   private func updateClipActionAvailability() {
-    guard !isGIF else {
-      canSplitAtPlayhead = false
-      canDeleteSelectedClip = false
-      return
-    }
-
-    if let placement = activePlacement {
-      let cutPoint = placement.sourceTime(at: CMTimeGetSeconds(currentTime))
-      canSplitAtPlayhead = cutPoint - placement.clip.sourceStart >= TimelineClip.minDuration
-        && placement.clip.sourceEnd - cutPoint >= TimelineClip.minDuration
+    let canSplit: Bool
+    let canDelete: Bool
+    if isGIF {
+      canSplit = false
+      canDelete = false
     } else {
-      canSplitAtPlayhead = false
+      if let placement = activePlacement {
+        let cutPoint = placement.sourceTime(at: CMTimeGetSeconds(currentTime))
+        canSplit = cutPoint - placement.clip.sourceStart >= TimelineClip.minDuration
+          && placement.clip.sourceEnd - cutPoint >= TimelineClip.minDuration
+      } else {
+        canSplit = false
+      }
+      canDelete = clips.count > 1 && targetClip != nil
     }
 
-    canDeleteSelectedClip = clips.count > 1 && targetClip != nil
+    if canSplitAtPlayhead != canSplit { canSplitAtPlayhead = canSplit }
+    if canDeleteSelectedClip != canDelete { canDeleteSelectedClip = canDelete }
   }
 
   /// Currently selected speed segment, if any.
@@ -3048,7 +3095,13 @@ final class VideoEditorState: ObservableObject {
 
   private func applyCursorSettings(_ settings: VideoEditorCursorSettings) {
     cursorSettings = settings
-    rebuildCursorResolver()
+    // Same recording, new settings: reuse the resolver's smoothed path and activity
+    // times when possible (slider ticks land here).
+    if let resolver = cursorResolver {
+      cursorResolver = resolver.updating(settings: settings)
+    } else {
+      rebuildCursorResolver()
+    }
     updateHasUnsavedChanges()
   }
 
@@ -3307,8 +3360,10 @@ final class VideoEditorState: ObservableObject {
         guard latestItemTime.isNumeric else { return }
         // AVPlayer's interval is measured in source time. At 8x, a 30 fps
         // interval can publish the whole editor over 200 times per wall second.
+        // Gate below the 1/30 s period: callbacks jitter early by a few ms, and a gate
+        // equal to the period dropped about half of them at 1x (overlays at 15–30 Hz).
         let now = ProcessInfo.processInfo.systemUptime
-        guard now - self.lastTimeObserverUpdate >= 1.0 / 30.0 else { return }
+        guard now - self.lastTimeObserverUpdate >= 0.8 / 30.0 else { return }
         self.lastTimeObserverUpdate = now
         self.handlePlaybackTick(itemTime: CMTimeGetSeconds(latestItemTime))
       }
@@ -3533,28 +3588,24 @@ final class VideoEditorState: ObservableObject {
       return
     }
 
-    // Trim now lives inside the clip sequence, so `clipsChanged` covers it.
-    let clipsChanged = clips != initialClips
-    let muteChanged = isMuted != initialIsMuted
-    // Use passed segments if available, otherwise read from self
+    // Runs on every edit tick. Short-circuit from the cheap scalar checks to the arrays
+    // (clips, segments, captions with their words), stopping at the first difference.
+    // Trim lives inside the clip sequence, so the clips comparison covers it.
     let segments = currentZoomSegments ?? zoomSegments
-    let zoomsChanged = segments != initialZoomSegments
-    let speedsChanged = speedSegments != initialSpeedSegments
-    // Background changes
-    let bgStyleChanged = backgroundStyle != initialBackgroundStyle
-    let bgPaddingChanged = backgroundPadding != initialBackgroundPadding
-    let bgShadowChanged = backgroundShadowIntensity != initialBackgroundShadowIntensity
-    let bgCornerChanged = backgroundCornerRadius != initialBackgroundCornerRadius
-    let bgLayoutChanged = backgroundAlignment != initialBackgroundAlignment
+    let changed = isMuted != initialIsMuted
+      || backgroundStyle != initialBackgroundStyle
+      || backgroundPadding != initialBackgroundPadding
+      || backgroundShadowIntensity != initialBackgroundShadowIntensity
+      || backgroundCornerRadius != initialBackgroundCornerRadius
+      || backgroundAlignment != initialBackgroundAlignment
       || backgroundAspectRatio != initialBackgroundAspectRatio
-    let backgroundChanged = bgStyleChanged || bgPaddingChanged || bgShadowChanged || bgCornerChanged
-      || bgLayoutChanged
-    let exportSettingsChanged = exportSettings != initialExportSettings
-    let cursorChanged = cursorSettings != initialCursorSettings
-    let cameraChanged = cameraSettings != initialCameraSettings
-    let captionsChanged = captions != initialCaptions
-    let changed = clipsChanged || muteChanged || zoomsChanged || speedsChanged
-      || backgroundChanged || exportSettingsChanged || cursorChanged || cameraChanged || captionsChanged
+      || exportSettings != initialExportSettings
+      || cursorSettings != initialCursorSettings
+      || cameraSettings != initialCameraSettings
+      || clips != initialClips
+      || segments != initialZoomSegments
+      || speedSegments != initialSpeedSegments
+      || captions != initialCaptions
     if hasUnsavedChanges != changed { hasUnsavedChanges = changed }
   }
 
@@ -3599,14 +3650,21 @@ final class VideoEditorState: ObservableObject {
         self.cachedBackgroundImage = image
         self.loadingBackgroundURL = nil
 
-        // Pre-compute blur if needed
-        if case .blurred = self.backgroundStyle {
-          self.cachedBlurredImage = self.applyGaussianBlur(
-            to: image,
-            radius: WallpaperQualityConfig.blurRadius
-          )
-        } else {
-          self.cachedBlurredImage = nil
+        // Pre-compute blur if needed, off the main thread. The preview shows the sharp
+        // wallpaper until it lands (the background view's existing fallback).
+        self.cachedBlurredImage = nil
+        if case .blurred = self.backgroundStyle,
+           let source = image?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+          let radius = WallpaperQualityConfig.blurRadius
+          Task.detached(priority: .userInitiated) {
+            let blurred = Self.renderGaussianBlur(of: source, radius: radius)
+            await MainActor.run { [weak self] in
+              guard let self, case .blurred(let current) = self.backgroundStyle, current == url,
+                    self.loadingBackgroundURL == nil
+              else { return }
+              self.cachedBlurredImage = blurred.map { NSImage(cgImage: $0, size: .zero) }
+            }
+          }
         }
       }
     }
@@ -3680,7 +3738,14 @@ final class VideoEditorState: ObservableObject {
     let paths = autoFocusPaths
     let layout = placements
     let worker = autoFocusWorker
+    // A trim drag changes the layout per mouse event; let the edge settle briefly so
+    // superseded remaps are cancelled before they reach the worker.
+    let settleDelay: UInt64 = clipTrimOriginal != nil ? 100_000_000 : 0
     mappedAutoFocusBuildTask = Task { [weak self] in
+      if settleDelay > 0 {
+        try? await Task.sleep(nanoseconds: settleDelay)
+        guard !Task.isCancelled else { return }
+      }
       let mapped = await worker.timelinePaths(paths, placements: layout)
       guard !Task.isCancelled, let self,
             self.autoFocusPathRevision == sourceRevision,
@@ -3719,22 +3784,28 @@ final class VideoEditorState: ObservableObject {
     speedPreviewBuildTask?.cancel()
   }
 
-  /// Apply Gaussian blur to image (computed once, reused during render)
-  private func applyGaussianBlur(to image: NSImage?, radius: CGFloat) -> NSImage? {
-    guard let image,
-          let tiffData = image.tiffRepresentation,
-          let ciImage = CIImage(data: tiffData) else { return nil }
+  /// The current style's images are in place (for `.blurred`, the blur too).
+  private var hasCachedBackgroundForStyle: Bool {
+    guard cachedBackgroundImage != nil else { return false }
+    if case .blurred = backgroundStyle { return cachedBlurredImage != nil }
+    return true
+  }
 
-    let filter = CIFilter(name: "CIGaussianBlur")
-    filter?.setValue(ciImage, forKey: kCIInputImageKey)
-    filter?.setValue(radius, forKey: kCIInputRadiusKey)
+  private nonisolated static let blurContext = CIContext(options: [.useSoftwareRenderer: false])
 
-    guard let output = filter?.outputImage else { return nil }
-    let croppedOutput = output.cropped(to: ciImage.extent)
-
-    let rep = NSCIImageRep(ciImage: croppedOutput)
-    let blurred = NSImage(size: rep.size)
-    blurred.addRepresentation(rep)
-    return blurred
+  /// Gaussian blur rendered once into a bitmap. The old path TIFF-encoded the wallpaper on
+  /// the main thread and returned a lazy `NSCIImageRep`, so the full-resolution blur ran
+  /// again on every redraw of the preview background (resizes, sidebar and panel changes).
+  nonisolated static func renderGaussianBlur(of image: CGImage, radius: CGFloat) -> CGImage? {
+    let input = CIImage(cgImage: image)
+    guard let filter = CIFilter(name: "CIGaussianBlur") else { return nil }
+    filter.setValue(input, forKey: kCIInputImageKey)
+    filter.setValue(radius, forKey: kCIInputRadiusKey)
+    guard let output = filter.outputImage?.cropped(to: input.extent) else { return nil }
+    // Keep the wallpaper's own color space (a P3 wallpaper would otherwise clip to sRGB).
+    if let colorSpace = image.colorSpace {
+      return blurContext.createCGImage(output, from: input.extent, format: .RGBA8, colorSpace: colorSpace)
+    }
+    return blurContext.createCGImage(output, from: input.extent)
   }
 }

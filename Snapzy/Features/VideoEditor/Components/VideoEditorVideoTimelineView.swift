@@ -131,7 +131,7 @@ struct VideoTimelineView: View {
 
       // Captions track — shown once the video has captions.
       if showsCaptionTrack {
-        VideoEditorCaptionTimelineTrack(state: state, timelineWidth: contentWidth).equatable()
+        VideoEditorCaptionTimelineTrack(state: state, timelineWidth: contentWidth, visibleRange: renderRange).equatable()
       }
     }
   }
@@ -140,23 +140,23 @@ struct VideoTimelineView: View {
     !state.isGIF && !state.captions.isEmpty
   }
 
-  /// One viewport of overscan on either side preserves smooth panning.
+  /// One viewport of overscan on either side, snapped to whole viewports (see
+  /// `VideoEditorTimelineViewport.renderRange`).
   private var renderRange: ClosedRange<CGFloat> {
-    let leading = min(viewport.contentWidth, max(0, viewport.scrollOffset - viewport.viewportWidth))
-    let trailing = max(leading, min(viewport.contentWidth, viewport.scrollOffset + 2 * viewport.viewportWidth))
-    return leading ... trailing
+    viewport.renderRange
   }
 
   // MARK: - Viewport Sync
 
   private func syncViewport(width: CGFloat) {
-    viewport.viewportWidth = width
-    syncViewportDuration()
+    viewport.setGeometry(
+      viewportWidth: width,
+      durationSeconds: max(0, CMTimeGetSeconds(state.timelineDuration))
+    )
   }
 
   private func syncViewportDuration() {
-    viewport.durationSeconds = max(0, CMTimeGetSeconds(state.timelineDuration))
-    viewport.clampScroll()
+    syncViewport(width: viewport.viewportWidth)
   }
 
   // MARK: - Playhead Follow
@@ -167,7 +167,7 @@ struct VideoTimelineView: View {
       contentX: contentX,
       margin: Self.playheadFollowMargin
     ) else { return }
-    viewport.scrollOffset = target
+    viewport.setScrollOffset(target)
   }
 
   // MARK: - Pinch Zoom

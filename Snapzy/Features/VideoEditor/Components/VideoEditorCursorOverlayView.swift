@@ -39,8 +39,20 @@ struct VideoEditorCursorOverlayView: View {
       .onReceive(playbackState.$isPlaying) { _ in
         updateClickSound(at: CMTimeGetSeconds(playbackState.currentTime))
       }
+      .onAppear { prepareClickSoundIfEnabled() }
+      .onChange(of: state.cursorSettings.clickSound) { _ in prepareClickSoundIfEnabled() }
       .onDisappear { state.clickSoundPlayer.reset() }
     }
+  }
+
+  /// Off the Play path: one main-queue turn after the overlay appears or the setting
+  /// turns on, never inside the tick that starts playback.
+  private func prepareClickSoundIfEnabled() {
+    guard state.cursorSettings.clickSound,
+          state.recordingMetadata?.cursorCapture?.clicks.isEmpty == false
+    else { return }
+    let player = state.clickSoundPlayer
+    DispatchQueue.main.async { player.prepare() }
   }
 
   private func updateClickSound(at sequenceTime: TimeInterval) {

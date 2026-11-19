@@ -40,9 +40,13 @@ nonisolated struct VideoEditorCursorResolver: Sendable {
   /// Sorted times with movement or clicks (idle detection).
   private let activityTimes: [TimeInterval]
 
+  /// Raw samples, kept so a smoothing change can re-smooth without the recording.
+  private let rawSamples: [RecordedMouseSample]
+
   init(samples rawSamples: [RecordedMouseSample], capture: RecordingCursorCapture, settings: VideoEditorCursorSettings) {
     self.settings = settings
     self.capture = capture
+    self.rawSamples = rawSamples
     let smoothed = Self.smooth(rawSamples, tau: settings.smoothing * Self.maxSmoothingTau)
     samples = smoothed
     var activity: [TimeInterval] = []
@@ -55,6 +59,36 @@ nonisolated struct VideoEditorCursorResolver: Sendable {
     if let first = rawSamples.first { activity.append(first.time) }
     activity.append(contentsOf: capture.clicks.map(\.time))
     activityTimes = activity.sorted()
+  }
+
+  private init(
+    settings: VideoEditorCursorSettings,
+    capture: RecordingCursorCapture,
+    rawSamples: [RecordedMouseSample],
+    samples: [RecordedMouseSample],
+    activityTimes: [TimeInterval]
+  ) {
+    self.settings = settings
+    self.capture = capture
+    self.rawSamples = rawSamples
+    self.samples = samples
+    self.activityTimes = activityTimes
+  }
+
+  /// The same recording with new settings. Activity times never depend on settings, and
+  /// the smoothed path only on `smoothing`, so a slider tick on size, idle delay, click
+  /// effect or volume reuses both instead of re-smoothing every mouse sample.
+  func updating(settings newSettings: VideoEditorCursorSettings) -> VideoEditorCursorResolver {
+    let smoothed = newSettings.smoothing == settings.smoothing
+      ? samples
+      : Self.smooth(rawSamples, tau: newSettings.smoothing * Self.maxSmoothingTau)
+    return VideoEditorCursorResolver(
+      settings: newSettings,
+      capture: capture,
+      rawSamples: rawSamples,
+      samples: smoothed,
+      activityTimes: activityTimes
+    )
   }
 
   func resolve(sourceTime time: TimeInterval) -> VideoEditorCursorFrame? {

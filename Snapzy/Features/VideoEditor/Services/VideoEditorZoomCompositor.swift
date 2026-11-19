@@ -706,7 +706,11 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
         return CIImage(color: .black).cropped(to: rect)
       }
       let scaled = scaleToFill(image: image, targetSize: size)
-      let blurred = scaled.applyingGaussianBlur(sigma: 20).cropped(to: rect)
+      let lazyBlur = scaled.applyingGaussianBlur(sigma: 20).cropped(to: rect)
+      // Materialize once: a cached lazy CIImage re-runs the blur on every exported frame.
+      let blurred = ciContext.createCGImage(lazyBlur, from: rect)
+        .map { CIImage(cgImage: $0).transformed(by: CGAffineTransform(translationX: rect.minX, y: rect.minY)) }
+        ?? lazyBlur
 
       // Store in cache
       cachedBlurredURL = url

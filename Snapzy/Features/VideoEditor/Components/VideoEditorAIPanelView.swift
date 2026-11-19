@@ -71,7 +71,11 @@ struct VideoEditorAIPanelView: View {
       layer: .backdrop,
       withRimLighting: true
     )
-    .shadow(color: .black.opacity(0.22), radius: 18, y: 6)
+    // The shadow comes from a static copy of the panel's shape, not from the glass panel
+    // itself: a shadow on the panel content is re-derived offscreen from its alpha on every
+    // frame the panel moves (the slide) or redraws (status shimmer, transcript). The fill
+    // is cut out where the panel sits, so the glass still samples the real backdrop.
+    .background { VideoEditorAIPanelShadow(shape: panelShape) }
     .accessibilityElement(children: .contain)
     .accessibilityLabel(L10n.VideoEditorAI.panelTitle)
   }
@@ -672,5 +676,28 @@ private struct VideoEditorAIHairline: View {
       .fill(Color.primary.opacity(0.08))
       .frame(height: 1)
       .padding(.horizontal, 12)
+  }
+}
+
+/// Outer drop shadow of a glass panel, drawn only outside `shape`.
+struct VideoEditorAIPanelShadow<S: Shape>: View {
+  let shape: S
+  var opacity: Double = 0.22
+  var radius: CGFloat = 18
+  var y: CGFloat = 6
+
+  var body: some View {
+    shape
+      .fill(Color.black)
+      .shadow(color: .black.opacity(opacity), radius: radius, y: y)
+      .mask {
+        // Everything around the panel, with the panel's own area punched out.
+        Rectangle()
+          .padding(-(radius * 3 + abs(y)))
+          .overlay { shape.blendMode(.destinationOut) }
+          .compositingGroup()
+      }
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
   }
 }

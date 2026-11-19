@@ -5,6 +5,7 @@
 //  Unit tests for the timeline viewport zoom/scroll math.
 //
 
+import Combine
 @testable import Snapzy
 import XCTest
 
@@ -220,5 +221,51 @@ final class VideoEditorTimelineViewportTests: XCTestCase {
       924,
       accuracy: 0.001
     )
+  }
+
+  // MARK: - Render range / redundant writes
+
+  func testRenderRange_alwaysCoversOverscanWindowAndStaysStableInsideBand() {
+    let viewport = makeViewport(viewportWidth: 800, duration: 600)
+    viewport.zoomIn(anchorTime: 0)
+    for _ in 0 ..< 6 { viewport.zoomIn(anchorTime: 0) }
+    var generator = SystemRandomNumberGenerator()
+    for _ in 0 ..< 500 {
+      viewport.setScrollOffset(CGFloat.random(in: 0 ... viewport.contentWidth, using: &generator))
+      let range = viewport.renderRange
+      let required = max(0, viewport.scrollOffset - 800) ... min(viewport.contentWidth, viewport.scrollOffset + 1600)
+      XCTAssertLessThanOrEqual(range.lowerBound, required.lowerBound)
+      XCTAssertGreaterThanOrEqual(range.upperBound, required.upperBound)
+      XCTAssertLessThanOrEqual(range.upperBound - range.lowerBound, 5 * 800)
+    }
+
+    // Auto-follow sized steps inside one band keep the same range.
+    viewport.setScrollOffset(1610)
+    let start = viewport.renderRange
+    for step in 1 ... 20 {
+      viewport.setScrollOffset(1610 + CGFloat(step) * 9)
+      XCTAssertEqual(viewport.renderRange, start)
+    }
+  }
+
+  func testPanAtEdgeAndFit_doNotPublish() {
+    let viewport = makeViewport()
+    var notifications = 0
+    let subscription = viewport.objectWillChange.sink { notifications += 1 }
+    defer { subscription.cancel() }
+
+    viewport.pan(byContentDeltaX: 40, contentDeltaY: 0) // fit: nothing to scroll
+    viewport.clampScroll()
+    viewport.setGeometry(viewportWidth: 1000, durationSeconds: 60)
+    viewport.fit()
+    XCTAssertEqual(notifications, 0)
+
+    viewport.zoomIn(anchorTime: 0)
+    notifications = 0
+    viewport.pan(byContentDeltaX: 40, contentDeltaY: 0) // already at leading edge
+    XCTAssertEqual(notifications, 0)
+    viewport.pan(byContentDeltaX: -40, contentDeltaY: 0)
+    XCTAssertEqual(viewport.scrollOffset, 40)
+    XCTAssertEqual(notifications, 1)
   }
 }

@@ -664,11 +664,25 @@ private struct AnnotateAIDockTranslateStatusRow: View {
   }
 }
 
+/// Pauses the AI status shimmer while its host is off screen (a parked side panel
+/// stays mounted at zero opacity, and a run keeps going after the panel closes).
+private struct AIStatusAnimationPausedKey: EnvironmentKey {
+  static let defaultValue = false
+}
+
+extension EnvironmentValues {
+  var aiStatusAnimationPaused: Bool {
+    get { self[AIStatusAnimationPausedKey.self] }
+    set { self[AIStatusAnimationPausedKey.self] = newValue }
+  }
+}
+
 /// Live status while the agent works: the text in body ink with a band of the AI hues
 /// passing through it, like the dock's reading rim.
 struct AnnotateAIDockStatusLine: View {
   let text: String
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.aiStatusAnimationPaused) private var isAnimationPaused
 
   var body: some View {
     let label = Text(text.isEmpty ? L10n.AnnotateAI.statusThinking : text)
@@ -678,7 +692,9 @@ struct AnnotateAIDockStatusLine: View {
       .foregroundStyle(LiquidGlassTokens.inkBody)
       .overlay {
         if !reduceMotion {
-          TimelineView(.animation) { timeline in
+          // 30 fps is plenty for a soft band 1.8 s across; display rate (60–120 Hz)
+          // rebuilt this body on the main thread for the whole run.
+          TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: isAnimationPaused)) { timeline in
             GeometryReader { proxy in
               let cycle = 1.8
               let t = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: cycle) / cycle
