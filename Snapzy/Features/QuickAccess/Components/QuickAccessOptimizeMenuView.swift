@@ -48,6 +48,10 @@ final class QuickAccessOptimizeMenuModel: ObservableObject {
 
   var onChoose: ((Row) -> Void)?
 
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   init(itemID: UUID, plan: QuickAccessOptimizePlan) {
     self.itemID = itemID
     originalByteCount = plan.originalByteCount

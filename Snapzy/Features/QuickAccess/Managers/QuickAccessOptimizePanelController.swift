@@ -16,6 +16,10 @@ import SwiftUI
 final class QuickAccessCardAnchor {
   weak var view: NSView?
 
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   var screenFrame: NSRect? {
     guard let view, let window = view.window else { return nil }
     return window.convertToScreen(view.convert(view.bounds, to: nil))
