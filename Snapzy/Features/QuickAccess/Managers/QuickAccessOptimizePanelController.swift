@@ -139,10 +139,18 @@ final class QuickAccessOptimizePanelController {
     } else {
       panel.level = .statusBar
     }
+    let fadesWindow = Self.fadesWindow
+    if fadesWindow { panel.alphaValue = 0 }
     panel.makeKeyAndOrderFront(nil)
     self.panel = panel
-    DispatchQueue.main.async { [weak model] in
+    DispatchQueue.main.async { [weak model, weak panel] in
       withAnimation(Self.openAnimation) { model?.isShown = true }
+      if fadesWindow, let panel {
+        NSAnimationContext.runAnimationGroup { context in
+          context.duration = 0.16
+          panel.animator().alphaValue = 1
+        }
+      }
     }
 
     QuickAccessManager.shared.pauseCountdownForActivity(item.id)
@@ -172,6 +180,12 @@ final class QuickAccessOptimizePanelController {
       // Let the bubble shrink back before the window goes away.
       panel.ignoresMouseEvents = true
       withAnimation(Self.closeAnimation) { model?.isShown = false }
+      if Self.fadesWindow {
+        NSAnimationContext.runAnimationGroup { context in
+          context.duration = Self.closeDuration
+          panel.animator().alphaValue = 0
+        }
+      }
       DispatchQueue.main.asyncAfter(deadline: .now() + Self.closeDuration) {
         panel.parent?.removeChildWindow(panel)
         panel.orderOut(nil)
@@ -193,6 +207,12 @@ final class QuickAccessOptimizePanelController {
   }
 
   private static let closeDuration: TimeInterval = 0.16
+
+  /// On macOS 13–15 the backdrop is an `NSVisualEffectView`, which does not always
+  /// honour SwiftUI opacity; fading the window too keeps open/close smooth there.
+  private static var fadesWindow: Bool {
+    !LiquidGlassCapabilities.usesNativeGlass(for: .system)
+  }
 
   private static var closeAnimation: Animation {
     .easeIn(duration: reduceMotion ? 0.1 : closeDuration)

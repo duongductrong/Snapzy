@@ -102,8 +102,19 @@ struct QuickAccessOptimizeMenuView: View {
     shadowPadding + inset + CGFloat(index) * (rowHeight + rowSpacing) + rowHeight / 2
   }
 
-  private let shape = RoundedRectangle(cornerRadius: 11, style: .continuous)
+  private var shape: RoundedRectangle {
+    RoundedRectangle(cornerRadius: usesNativeGlass ? 13 : 11, style: .continuous)
+  }
+
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.liquidGlassRenderMode) private var renderMode
+  @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
+
+  /// macOS 26 glass gets the borderless clear water-drop look; macOS 13–15 (or glass
+  /// turned off) keeps the classic pop-up menu look with a light dim and hairline.
+  private var usesNativeGlass: Bool {
+    LiquidGlassCapabilities.usesNativeGlass(for: renderMode, userEnabled: isLiquidGlassEnabled)
+  }
 
   /// The bubble grows out of (and shrinks back into) the current row, which sits
   /// over the Optimize button.
@@ -133,20 +144,27 @@ struct QuickAccessOptimizeMenuView: View {
     // Every row takes the widest label's width, so the menu hugs its longest value.
     .fixedSize(horizontal: true, vertical: false)
     .padding(Self.inset)
-    // Clear glass over a busy screenshot needs a light dim for legible text.
-    // The shadow rides on the dim layer: compositing the glass itself would stop it
-    // sampling the backdrop.
+    // Dark tint under the glass keeps labels legible over any screenshot. The shadow
+    // rides on the dim layer: compositing the glass itself would stop it sampling
+    // the backdrop.
     .background(
-      shape.fill(Color.black.opacity(0.18))
-        .shadow(color: .black, radius: 12, y: 5)
+      shape.fill(Color.black.opacity(usesNativeGlass ? 0.5 : 0.18))
+        .shadow(color: .black.opacity(usesNativeGlass ? 0.35 : 1), radius: 12, y: 5)
     )
+    // Native: no drawn border, clear glass supplies its own refractive edge and
+    // `interactive` lets it react to the pointer like system glass.
     .liquidGlassSurface(
       shape: shape,
       substrate: 0.3,
       layer: .backdrop,
+      isInteractive: true,
       nativeVariant: .clear
     )
-    .overlay(shape.strokeBorder(Color.white.opacity(0.16), lineWidth: 0.5))
+    .overlay {
+      if !usesNativeGlass {
+        shape.strokeBorder(Color.white.opacity(0.16), lineWidth: 0.5)
+      }
+    }
     .environment(\.colorScheme, .dark)
     .scaleEffect(model.isShown || reduceMotion ? 1 : 0.4, anchor: bubbleAnchor)
     .opacity(model.isShown ? 1 : 0)
