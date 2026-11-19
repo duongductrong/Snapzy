@@ -206,7 +206,7 @@ private struct QuickAccessOptimizeRowView: View {
   var body: some View {
     Button(action: onChoose) {
       Text(row.level.scaleLabel)
-        .font(.system(size: 11, weight: .medium).monospacedDigit())
+        .font(.system(size: 12, weight: .medium).monospacedDigit())
         .foregroundColor(.white.opacity(isHighlighted ? 1 : 0.9))
         .lineLimit(1)
         .fixedSize()
