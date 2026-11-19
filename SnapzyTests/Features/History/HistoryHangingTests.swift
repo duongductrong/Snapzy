@@ -209,6 +209,32 @@ final class HistoryHangingTests: XCTestCase {
     XCTAssertNil(controller.recordID)
   }
 
+  func testVideoHoverShowsPlayingPreview() async throws {
+    let screen = try XCTUnwrap(NSScreen.main)
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("HistoryVideoHover-\(UUID())")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let url = try await makeVideoFixture(directory: directory)
+    let record = CaptureHistoryRecord(
+      id: UUID(), filePath: url.path, fileName: "Recording.mov", captureType: .video,
+      fileSize: 1000, capturedAt: Date(), width: 64, height: 64, thumbnailPath: nil, isDeleted: false
+    )
+    let controller = HistoryHangingPreviewController()
+    defer { controller.dismiss() }
+    let shelf = HistoryHangingLayout.frame(screenFrame: screen.frame, visibleFrame: screen.visibleFrame,
+                                           safeAreaTop: screen.safeAreaInsets.top)
+    controller.request(record, anchor: shelf, shelfFrame: shelf, screen: screen)
+    let deadline = Date().addingTimeInterval(5)
+    while !controller.isVisible, Date() < deadline {
+      try await Task.sleep(nanoseconds: 50_000_000)
+    }
+    XCTAssertTrue(controller.isVisible, "Video hover should open a preview panel")
+    XCTAssertEqual(controller.recordID, record.id)
+    controller.dismiss()
+    XCTAssertFalse(controller.isVisible)
+    XCTAssertNil(controller.recordID)
+  }
+
   func testHiddenMenuBarStillRespectsMacBookNotch() {
     let screen = CGRect(x: -1512, y: 200, width: 1512, height: 982)
     let panel = HistoryHangingLayout.frame(screenFrame: screen, visibleFrame: screen, safeAreaTop: 38)
@@ -555,7 +581,7 @@ final class HistoryHangingTests: XCTestCase {
       window.isReleasedWhenClosed = false
       window.contentView = probe
       defer { window.close() }
-      for action in [history.show, history.showCompact, history.collapse] {
+      for action in [history.show, { history.showCompact() }, history.collapse] {
         history.showExpanded()
         history.togglePin()
         XCTAssertTrue(history.isPinned)
@@ -880,6 +906,60 @@ final class HistoryHangingTests: XCTestCase {
     if !condition() {
       throw NSError(domain: "HistoryHangingTest", code: 1)
     }
+  }
+
+  private func makeVideoFixture(directory: URL) async throws -> URL {
+    let url = directory.appendingPathComponent("preview.mov")
+    let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+    let input = AVAssetWriterInput(
+      mediaType: .video,
+      outputSettings: [
+        AVVideoCodecKey: AVVideoCodecType.h264,
+        AVVideoWidthKey: 64,
+        AVVideoHeightKey: 64,
+      ]
+    )
+    input.expectsMediaDataInRealTime = false
+    let adaptor = AVAssetWriterInputPixelBufferAdaptor(
+      assetWriterInput: input,
+      sourcePixelBufferAttributes: [
+        kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA),
+        kCVPixelBufferWidthKey as String: 64,
+        kCVPixelBufferHeightKey as String: 64,
+      ]
+    )
+    writer.add(input)
+    guard writer.startWriting() else {
+      throw writer.error ?? NSError(domain: "HistoryHangingTests", code: 1)
+    }
+    writer.startSession(atSourceTime: .zero)
+    let frameRate: Int32 = 30
+    let frameCount = 12
+    for index in 0 ..< frameCount {
+      while !input.isReadyForMoreMediaData {
+        try await Task.sleep(nanoseconds: 1_000_000)
+      }
+      var pixelBuffer: CVPixelBuffer?
+      let status = CVPixelBufferCreate(kCFAllocatorDefault, 64, 64, kCVPixelFormatType_32BGRA, nil, &pixelBuffer)
+      guard status == kCVReturnSuccess, let pixelBuffer else {
+        throw NSError(domain: "HistoryHangingTests", code: 2)
+      }
+      CVPixelBufferLockBaseAddress(pixelBuffer, [])
+      if let base = CVPixelBufferGetBaseAddress(pixelBuffer) {
+        memset(base, Int32(index * 16 % 256), CVPixelBufferGetDataSize(pixelBuffer))
+      }
+      CVPixelBufferUnlockBaseAddress(pixelBuffer, [])
+      guard adaptor.append(pixelBuffer, withPresentationTime: CMTime(value: Int64(index), timescale: frameRate)) else {
+        throw writer.error ?? NSError(domain: "HistoryHangingTests", code: 3)
+      }
+    }
+    input.markAsFinished()
+    writer.endSession(atSourceTime: CMTime(value: Int64(frameCount), timescale: frameRate))
+    await writer.finishWriting()
+    if let error = writer.error {
+      throw error
+    }
+    return url
   }
 
   private func makeImage(index: Int, directory: URL) throws -> URL {

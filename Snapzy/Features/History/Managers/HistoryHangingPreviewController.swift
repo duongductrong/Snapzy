@@ -1,4 +1,5 @@
 import AppKit
+import AVKit
 import SwiftUI
 
 @MainActor
@@ -6,6 +7,9 @@ final class HistoryHangingPreviewController {
   private var panel: HistoryHangingPreviewPanel?
   private var previewTask: Task<Void, Never>?
   private var requestID: UUID?
+  private var videoPlayer: AVQueuePlayer?
+  private var videoLooper: AVPlayerLooper?
+  private var videoAccess: SandboxFileAccessManager.ScopedAccess?
 
   var isVisible: Bool {
     panel?.isVisible == true
@@ -17,7 +21,14 @@ final class HistoryHangingPreviewController {
   deinit {
     previewTask?.cancel()
     let panel = panel
-    Task { @MainActor in panel?.close() }
+    let player = videoPlayer
+    let access = videoAccess
+    Task { @MainActor in
+      player?.pause()
+      player?.replaceCurrentItem(with: nil)
+      access?.stop()
+      panel?.close()
+    }
   }
 
   func request(_ record: CaptureHistoryRecord, anchor: CGRect, shelfFrame: CGRect, screen: NSScreen) {
@@ -37,8 +48,9 @@ final class HistoryHangingPreviewController {
       guard SandboxFileAccessManager.shared.withScopedAccess(to: record.fileURL, {
         record.fileExists
       }) else { return }
+      let player = record.captureType == .video ? makeVideoPlayer(for: record) : nil
       previewTask = nil
-      show(image, record: record, anchor: anchor, shelfFrame: shelfFrame, screen: screen)
+      show(image, record: record, anchor: anchor, shelfFrame: shelfFrame, screen: screen, player: player)
     }
   }
 
@@ -47,8 +59,31 @@ final class HistoryHangingPreviewController {
     previewTask = nil
     requestID = nil
     recordID = nil
+    stopVideo()
     panel?.close()
     panel = nil
+  }
+
+  private func makeVideoPlayer(for record: CaptureHistoryRecord) -> AVQueuePlayer {
+    let access = SandboxFileAccessManager.shared.beginAccessingURL(record.fileURL)
+    let player = AVQueuePlayer()
+    player.isMuted = true
+    player.preventsDisplaySleepDuringVideoPlayback = false
+    let looper = AVPlayerLooper(player: player, templateItem: AVPlayerItem(url: record.fileURL))
+    videoAccess = access
+    videoPlayer = player
+    videoLooper = looper
+    player.play()
+    return player
+  }
+
+  private func stopVideo() {
+    videoPlayer?.pause()
+    videoPlayer?.replaceCurrentItem(with: nil)
+    videoPlayer = nil
+    videoLooper = nil
+    videoAccess?.stop()
+    videoAccess = nil
   }
 
   nonisolated static func previewFrame(
@@ -83,7 +118,8 @@ final class HistoryHangingPreviewController {
   }
 
   private func show(
-    _ image: NSImage, record: CaptureHistoryRecord, anchor: CGRect, shelfFrame: CGRect, screen: NSScreen
+    _ image: NSImage, record: CaptureHistoryRecord, anchor: CGRect, shelfFrame: CGRect, screen: NSScreen,
+    player: AVPlayer?
   ) {
     let frame = Self.previewFrame(
       visibleFrame: screen.visibleFrame, shelfFrame: shelfFrame, anchor: anchor, imageSize: image.size
@@ -110,7 +146,7 @@ final class HistoryHangingPreviewController {
     panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
     panel.appearance = ThemeManager.shared.nsAppearance
     let hosting = NSHostingView(rootView: HistoryHangingPreviewView(
-      image: image, fileName: record.fileName, size: frame.size
+      image: image, fileName: record.fileName, size: frame.size, player: player
     ))
     hosting.sizingOptions = []
     hosting.frame = CGRect(origin: .zero, size: frame.size)
@@ -153,15 +189,21 @@ private struct HistoryHangingPreviewView: View {
   let image: NSImage
   let fileName: String
   let size: CGSize
+  var player: AVPlayer?
   @ObservedObject private var theme = ThemeManager.shared
 
   var body: some View {
     VStack(spacing: Spacing.sm) {
-      Image(nsImage: image)
-        .resizable()
-        .scaledToFit()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityHidden(true)
+      ZStack {
+        Image(nsImage: image)
+          .resizable()
+          .scaledToFit()
+        if let player {
+          HangingPreviewPlayerView(player: player)
+        }
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .accessibilityHidden(true)
       Text(verbatim: fileName)
         .font(Typography.labelSmall)
         .foregroundStyle(.secondary)
@@ -177,5 +219,25 @@ private struct HistoryHangingPreviewView: View {
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(Text(verbatim: fileName))
     .accessibilityIdentifier("history.hanging.preview")
+  }
+}
+
+private struct HangingPreviewPlayerView: NSViewRepresentable {
+  let player: AVPlayer
+
+  func makeNSView(context _: Context) -> AVPlayerView {
+    let view = AVPlayerView()
+    view.controlsStyle = .none
+    view.showsFullScreenToggleButton = false
+    view.allowsPictureInPicturePlayback = false
+    view.videoGravity = .resizeAspect
+    view.player = player
+    return view
+  }
+
+  func updateNSView(_ nsView: AVPlayerView, context _: Context) {
+    if nsView.player !== player {
+      nsView.player = player
+    }
   }
 }
