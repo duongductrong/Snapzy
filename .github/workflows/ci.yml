@@ -183,6 +183,25 @@ jobs:
 
           tail -20 build/ci-test.log
 
+      - name: Collect crash reports
+        # A test-host abort leaves only "malloc: ..." in the log; the backtrace lives in
+        # the crash report ReportCrash writes, which the xcresult does not include.
+        if: failure() || cancelled()
+        run: |
+          mkdir -p build/crash-reports
+          find "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports \
+            \( -name 'Snapzy*' -o -name 'xctest*' \) -type f -mmin -60 \
+            -exec cp {} build/crash-reports/ \; 2>/dev/null || true
+          ls -la build/crash-reports
+
+      - name: Upload crash reports
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-crash-reports
+          path: build/crash-reports
+          if-no-files-found: ignore
+
       - name: Upload test diagnostics
         if: failure() || cancelled()
         uses: actions/upload-artifact@v7
