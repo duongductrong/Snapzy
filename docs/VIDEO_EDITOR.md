@@ -64,7 +64,7 @@ flowchart TD
 ## State and Playback
 
 - `VideoEditorState` (`VideoEditorState.swift`) is the central model: asset, trim range, zoom/speed segments, background, export settings, undo stacks. `VideoEditorPlaybackState` holds playhead/playing/scrubbing.
-- Playback position comes from an `AVPlayer` time observer, limited to roughly 30 UI updates per wall second even during fast playback. An item-end observer handles the source asset's end. Space is routed by `VideoEditorWindow` through the same Play/Pause action as the transport button, while text fields retain normal Space input.
+- Playback position comes from an `AVPlayer` time observer, limited to roughly 30 UI updates per wall second even during fast playback (the wall-clock gate is `0.8/30` s, below the period, so jittery callbacks are not dropped at 1×). Scrubbing uses a chase seek: the playhead follows every event, at most one frame-exact player seek is in flight, the latest target is issued when it lands, and `endScrubbing` flushes it. An item-end observer handles the source asset's end. Space is routed by `VideoEditorWindow` through the same Play/Pause action as the transport button, while text fields retain normal Space input.
 - When a Snapzy recording has an editor audio source sidecar, the state's asset URL is swapped to the multitrack sidecar (`editorAssetURL(for:metadata:)`) while save/replace keeps targeting the user-facing compatible file.
 
 ## Reopen and Continue Editing
@@ -275,6 +275,18 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 - Export captures an immutable recipe and asset references before awaiting exact autofocus paths. Subsequent editor changes cannot mix into that export.
 - The editor disables authoring controls and shortcuts while exporting and persisting the session; the exported file and saved session use the same recipe.
 - Debug builds expose `VideoEditor` signposts when the `perf.signposts` user-default is enabled before launch. Use Instruments to measure pointer handling, model updates, path work and release settling. Close cancels pending performance work.
+### Rendering rules
+
+These keep playback, scrubbing, sidebar edits and opening ⌘K smooth. Break one and the editor re-renders at playback rate again.
+
+- **No unguarded `@Published` writes on hot paths.** `@Published` notifies on every assignment, equal or not, and about 20 views observe the whole `VideoEditorState`. Anything called per tick, scrub, seek or drag event writes only real changes (`updateClipActionAvailability`, caption progress, viewport `setScrollOffset` / `setGeometry`). `testPlaybackTicksAndScrubbing_doNotPublishEditorStateWhenNothingChanged` guards this. In Debug, `VideoEditorRenderRateGuard` logs a warning when `VideoEditorMainView` or `VideoControlsView` re-renders more than 5×/s while playing.
+- **Only leaf views follow the playhead.** Views observing the editor state hold `playbackState` as a plain `let` and use `.onReceive`. The controls bar's time label (whole seconds), play glyph and auto-zoom badge are leaves.
+- **The timeline draws a snapped range.** `viewport.renderRange` is the visible window ±1 viewport, snapped to whole viewport widths, so scrolling and auto-follow don't invalidate the equatable tracks. The caption track culls to it too. Zoom and speed tracks ignore trims, which never move clip slots.
+- **Drags preview cheaply and commit once.** Clip trims hold the speed preview rebuild until release (like speed drags), and the auto-focus remap waits 100 ms while trimming. Clip drag sessions are written only when they change.
+- **No layout animation of the player column.** The left sidebar and the ⌘K panel change width in one non-animated step. The sidebar's content fades in; the AI panel slides by offset one main-queue turn after the editor narrows, and its prompt field takes focus one turn later. The controls bar must stay horizontally compressible, because the hosting view turns its minimum into the window's content minimum. A rigid row made ⌘K widen the window. The AI slot is compressible with layout priority, and the status badges drop out (measured, not `ViewThatFits`) when they don't fit. `testAIPanelOpen_withLeftSidebar_keepsWindowWidth` guards this.
+- **No per-frame offscreen work on live content.** The preview shadow and the AI panel shadow are cast by static shapes, not by the video or glass content. The blurred wallpaper is rendered once into a bitmap (preview off main, export once per size). The AI status shimmer runs at 30 fps and pauses while the panel is parked.
+- **Lookups that run per tick are indexed.** The caption resolver is cached and binary-searches visible segments. The cursor resolver's `updating(settings:)` reuses the smoothed path and activity times.
+
 - Run `scripts/run-video-editor-performance-probe.sh` for the reproducible CPU matrix, or `--quick` for a shorter equality check. The runner can attach Instruments to a running process with `--attach PID --duration 30 --template 'Time Profiler'`. CPU results isolate camera algorithms; they do not measure native pointer-to-frame latency.
 
 ## AI Prompt
