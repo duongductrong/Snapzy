@@ -14,6 +14,14 @@ enum LiquidGlassLayer {
   case control
 }
 
+/// Which native Liquid Glass material to use on macOS 26+. `.clear` is the more
+/// transparent variant for surfaces over rich media; pair it with a dim layer so
+/// text stays legible. The macOS 13–15 composite ignores this.
+enum LiquidGlassNativeVariant: Equatable {
+  case regular
+  case clear
+}
+
 enum LiquidGlassHighlight: Equatable {
   case specular
   case custom(top: Double, bottom: Double)
@@ -171,7 +179,8 @@ extension View {
     isInteractive: Bool = false,
     glassTint: Color? = nil,
     nativeGlassTint: Color? = nil,
-    nativeHighlight: LiquidGlassHighlight? = nil
+    nativeHighlight: LiquidGlassHighlight? = nil,
+    nativeVariant: LiquidGlassNativeVariant = .regular
   ) -> some View {
     modifier(LiquidGlassSurfaceModifier(
       shape: shape,
@@ -185,7 +194,8 @@ extension View {
       isInteractive: isInteractive,
       glassTint: glassTint,
       nativeGlassTint: nativeGlassTint,
-      nativeHighlight: nativeHighlight
+      nativeHighlight: nativeHighlight,
+      nativeVariant: nativeVariant
     ))
   }
 
@@ -233,6 +243,7 @@ private struct LiquidGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
   let glassTint: Color?
   let nativeGlassTint: Color?
   let nativeHighlight: LiquidGlassHighlight?
+  let nativeVariant: LiquidGlassNativeVariant
 
   @Environment(\.liquidGlassRenderMode) private var renderMode
   @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
@@ -251,7 +262,8 @@ private struct LiquidGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
           LiquidGlassNativeStyle.glass(
             isVisible: isVisible,
             isInteractive: isInteractive,
-            tint: nativeGlassTint ?? glassTint
+            tint: nativeGlassTint ?? glassTint,
+            variant: nativeVariant
           ),
           in: shape
         )
@@ -294,9 +306,14 @@ private struct LiquidGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
 
 enum LiquidGlassNativeStyle {
   @available(macOS 26.0, *)
-  static func glass(isVisible: Bool, isInteractive: Bool, tint: Color?) -> Glass {
+  static func glass(
+    isVisible: Bool,
+    isInteractive: Bool,
+    tint: Color?,
+    variant: LiquidGlassNativeVariant = .regular
+  ) -> Glass {
     guard isVisible else { return .identity }
-    var glass = Glass.regular
+    var glass: Glass = variant == .clear ? .clear : .regular
     if let tint {
       glass = glass.tint(tint)
     }

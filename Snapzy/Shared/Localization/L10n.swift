@@ -3240,6 +3240,11 @@ nonisolated enum L10n {
       defaultValue: "Pin to Screen",
       comment: "Quick access configurable action title"
     )
+    static let optimizeAction = string(
+      "preferences-quick-access.action-optimize",
+      defaultValue: "Optimize",
+      comment: "Quick access configurable action title for shrinking a screenshot"
+    )
     static let unpinAction = string(
       "preferences-quick-access.action-unpin",
       defaultValue: "Unpin",
@@ -8992,6 +8997,26 @@ nonisolated enum L10n {
   }
 
   enum QuickAccess {
+    static let optimizeMenuTitle = string(
+      "quick-access.optimize.title",
+      defaultValue: "Optimize",
+      comment: "Title of the Quick Access list that shrinks a screenshot"
+    )
+    static let optimizeOriginal = string(
+      "quick-access.optimize.original",
+      defaultValue: "Original",
+      comment: "Optimize list entry that keeps or restores the original screenshot size"
+    )
+    static let optimizeEstimating = string(
+      "quick-access.optimize.estimating",
+      defaultValue: "Estimating…",
+      comment: "Shown while the file size of an Optimize level is being calculated"
+    )
+    static let optimizeFailed = string(
+      "quick-access.optimize.failed",
+      defaultValue: "Couldn't optimize this screenshot.",
+      comment: "Toast shown when shrinking a screenshot fails"
+    )
     static let editVideo = string(
       "quick-access.edit-video",
       defaultValue: "Edit Video",

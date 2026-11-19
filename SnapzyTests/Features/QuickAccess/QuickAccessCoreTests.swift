@@ -1653,9 +1653,10 @@ final class QuickAccessCoreTests: XCTestCase {
 
     XCTAssertEqual(
       store.actionOrder,
-      [.delete, .copy, .saveOrOpen, .dismiss, .edit, .uploadToCloud, .pinToScreen]
+      [.delete, .copy, .saveOrOpen, .dismiss, .edit, .uploadToCloud, .pinToScreen, .optimize]
     )
-    XCTAssertEqual(store.orderedActions(includeDisabled: false), [.copy])
+    // Optimize postdates this saved list, so it arrives enabled rather than disabled.
+    XCTAssertEqual(store.orderedActions(includeDisabled: false), [.copy, .optimize])
   }
 
   func testQuickAccessActionConfigurationStore_preservesExplicitPinToScreenDisable() {
@@ -1677,6 +1678,30 @@ final class QuickAccessCoreTests: XCTestCase {
     XCTAssertFalse(store.orderedActions(includeDisabled: false).contains(.pinToScreen))
   }
 
+  func testQuickAccessActionConfigurationStore_keepsExplicitOptimizeDisableAfterKnownListIsSaved() {
+    let defaults = makeIsolatedDefaults()
+    let store = makeActionConfigurationStore(defaults: defaults)
+    store.setEnabled(.optimize, enabled: false)
+
+    let reloaded = makeActionConfigurationStore(defaults: defaults)
+
+    XCTAssertFalse(reloaded.isEnabled(.optimize))
+    XCTAssertTrue(reloaded.isEnabled(.pinToScreen))
+  }
+
+  func testQuickAccessActionConfigurationStore_enablesOptimizeForLegacySavedLists() {
+    let defaults = makeIsolatedDefaults()
+    defaults.set(
+      QuickAccessActionKind.legacyKnownActions.map(\.rawValue),
+      forKey: PreferencesKeys.quickAccessEnabledActions
+    )
+
+    let store = makeActionConfigurationStore(defaults: defaults)
+
+    XCTAssertTrue(store.isEnabled(.optimize))
+    XCTAssertNil(store.assignedSlot(for: .optimize))
+  }
+
   func testQuickAccessActionConfigurationStore_togglesMovesAndPersistsActions() {
     let defaults = makeIsolatedDefaults()
     let store = makeActionConfigurationStore(defaults: defaults)
@@ -1687,7 +1712,7 @@ final class QuickAccessCoreTests: XCTestCase {
     XCTAssertFalse(store.isEnabled(.uploadToCloud))
     XCTAssertEqual(
       store.actionOrder,
-      [.saveOrOpen, .dismiss, .copy, .delete, .edit, .uploadToCloud, .pinToScreen]
+      [.saveOrOpen, .dismiss, .copy, .delete, .edit, .uploadToCloud, .pinToScreen, .optimize]
     )
     XCTAssertEqual(store.slotAssignments, QuickAccessActionSlot.defaultAssignments)
 

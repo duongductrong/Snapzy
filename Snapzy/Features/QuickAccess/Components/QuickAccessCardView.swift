@@ -28,6 +28,7 @@ struct QuickAccessCardView: View {
   @State private var swipeOffset: CGFloat = 0
   @State private var isCloudUploading = false
   @State private var cloudUploadProgress: Double = 0
+  @State private var cardAnchor = QuickAccessCardAnchor()
   @Environment(\.accessibilityReduceMotion) var reduceMotion
 
   private let cornerRadius = Radius.card
@@ -122,6 +123,11 @@ struct QuickAccessCardView: View {
     .background(
       QuickAccessContextMenuPresenter(entries: quickAccessContextMenuEntries)
         .frame(width: scaledWidth, height: scaledHeight)
+    )
+    .background(
+      QuickAccessCardAnchorView(anchor: cardAnchor)
+        .frame(width: scaledWidth, height: scaledHeight)
+        .allowsHitTesting(false)
     )
     .overlay(dragInteractionBridge.frame(width: scaledWidth, height: scaledHeight))
     .onDisappear {
@@ -349,6 +355,8 @@ struct QuickAccessCardView: View {
       return cloudActionTitle
     case .pinToScreen:
       return item.isPinned ? L10n.PreferencesQuickAccess.unpinAction : L10n.PreferencesQuickAccess.pinToScreenAction
+    case .optimize:
+      return L10n.PreferencesQuickAccess.optimizeAction
     }
   }
 
@@ -393,6 +401,8 @@ struct QuickAccessCardView: View {
       return shouldShowCloudButton
     case .delete:
       return true
+    case .optimize:
+      return QuickAccessOptimizeStore.shared.canOptimize(item)
     }
   }
 
@@ -402,6 +412,10 @@ struct QuickAccessCardView: View {
       return !item.isVideo
     case .uploadToCloud:
       return shouldShowCloudButton && !alreadyUploadedToCloud && !isCloudUploading
+    case .optimize:
+      // An open editor would write its own pixels back over the optimized file.
+      let isEditorOpen = item.isWindowOpen && !item.isPinned
+      return QuickAccessOptimizeStore.shared.canOptimize(item) && !isEditorOpen
     case .copy, .saveOrOpen, .dismiss, .delete, .edit:
       return true
     }
@@ -426,7 +440,17 @@ struct QuickAccessCardView: View {
     case .pinToScreen:
       guard !item.isVideo else { return }
       manager.togglePin(id: item.id)
+    case .optimize:
+      presentOptimizeMenu()
     }
+  }
+
+  private func presentOptimizeMenu() {
+    QuickAccessOptimizePanelController.shared.present(
+      for: item,
+      anchoredTo: cardAnchor.screenFrame,
+      opensTowardLeading: !manager.position.isLeftSide
+    )
   }
 
   private func handleDoubleClick() {
@@ -640,6 +664,11 @@ struct QuickAccessCardView: View {
         insertedDestructiveSeparator = true
       }
 
+      if action == .optimize {
+        entries.append(optimizeContextMenuEntry)
+        continue
+      }
+
       entries.append(
         .action(
           title: actionTitle(for: action),
@@ -651,6 +680,29 @@ struct QuickAccessCardView: View {
     }
 
     return entries
+  }
+
+  /// Optimize as a submenu so the levels stay reachable from the context menu even
+  /// when the action has no slot on the card. Levels are read when the menu opens.
+  private var optimizeContextMenuEntry: QuickAccessContextMenuEntry {
+    let item = item
+    return .submenu(
+      title: actionTitle(for: .optimize),
+      systemImage: actionIcon(for: .optimize),
+      isEnabled: isActionEnabled(.optimize),
+      makeEntries: {
+        let store = QuickAccessOptimizeStore.shared
+        guard let plan = store.plan(for: item) else { return [] }
+        return plan.levels.map { level in
+          .option(
+            title: QuickAccessOptimizeMenuFormatting.title(for: level),
+            detail: level.dimensionsLabel,
+            isChecked: level.fraction == plan.currentFraction,
+            action: { store.applyReportingFailure(level, to: item.id) }
+          )
+        }
+      }
+    )
   }
 
   // MARK: - Cloud Upload
@@ -770,6 +822,18 @@ private enum QuickAccessContextMenuEntry {
     isEnabled: Bool = true,
     action: () -> Void
   )
+  case submenu(
+    title: String,
+    systemImage: String,
+    isEnabled: Bool,
+    makeEntries: () -> [QuickAccessContextMenuEntry]
+  )
+  case option(
+    title: String,
+    detail: String?,
+    isChecked: Bool,
+    action: () -> Void
+  )
   case separator
 }
 
@@ -800,8 +864,10 @@ private struct QuickAccessContextMenuPresenter: NSViewRepresentable {
 
     var hasMenuItems: Bool {
       entries.contains { entry in
-        if case .action = entry { return true }
-        return false
+        switch entry {
+        case .action, .submenu, .option: return true
+        case .separator: return false
+        }
       }
     }
 
@@ -812,6 +878,19 @@ private struct QuickAccessContextMenuPresenter: NSViewRepresentable {
       let menu = NSMenu()
       menu.autoenablesItems = false
 
+      populate(menu, with: entries)
+      menu.update()
+
+      let screenPoint = window.convertPoint(toScreen: event.locationInWindow)
+      let menuLocation = menuTopLeftLocationWithCursorNearTailItem(
+        from: screenPoint,
+        menu: menu,
+        window: window
+      )
+      menu.popUp(positioning: nil, at: menuLocation, in: nil)
+    }
+
+    private func populate(_ menu: NSMenu, with entries: [QuickAccessContextMenuEntry]) {
       for entry in entries {
         switch entry {
         case .action(let title, let systemImage, let isEnabled, let action):
@@ -822,20 +901,45 @@ private struct QuickAccessContextMenuPresenter: NSViewRepresentable {
           item.representedObject = QuickAccessContextMenuAction(action)
 
           menu.addItem(item)
+        case .submenu(let title, let systemImage, let isEnabled, let makeEntries):
+          let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+          item.image = NSImage(systemSymbolName: systemImage, accessibilityDescription: title)
+          let children = isEnabled ? makeEntries() : []
+          item.isEnabled = isEnabled && !children.isEmpty
+          if item.isEnabled {
+            let submenu = NSMenu(title: title)
+            submenu.autoenablesItems = false
+            populate(submenu, with: children)
+            item.submenu = submenu
+          }
+          menu.addItem(item)
+        case .option(let title, let detail, let isChecked, let action):
+          let item = NSMenuItem(title: title, action: #selector(performMenuAction(_:)), keyEquivalent: "")
+          item.target = self
+          item.isEnabled = true
+          item.state = isChecked ? .on : .off
+          item.representedObject = QuickAccessContextMenuAction(action)
+          if let detail {
+            item.attributedTitle = Self.optionTitle(title, detail: detail)
+          }
+          menu.addItem(item)
         case .separator:
           menu.addItem(.separator())
         }
       }
+    }
 
-      menu.update()
-
-      let screenPoint = window.convertPoint(toScreen: event.locationInWindow)
-      let menuLocation = menuTopLeftLocationWithCursorNearTailItem(
-        from: screenPoint,
-        menu: menu,
-        window: window
-      )
-      menu.popUp(positioning: nil, at: menuLocation, in: nil)
+    private static func optionTitle(_ title: String, detail: String) -> NSAttributedString {
+      let font = NSFont.menuFont(ofSize: 0)
+      let result = NSMutableAttributedString(string: title, attributes: [.font: font])
+      result.append(NSAttributedString(
+        string: "   \(detail)",
+        attributes: [
+          .font: NSFont.monospacedDigitSystemFont(ofSize: font.pointSize - 1, weight: .regular),
+          .foregroundColor: NSColor.secondaryLabelColor,
+        ]
+      ))
+      return result
     }
 
     @objc private func performMenuAction(_ sender: NSMenuItem) {

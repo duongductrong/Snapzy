@@ -78,6 +78,7 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
   case edit
   case uploadToCloud
   case pinToScreen
+  case optimize
 
   var id: String { rawValue }
 
@@ -89,15 +90,23 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
     .edit,
     .uploadToCloud,
     .pinToScreen,
+    .optimize,
   ]
 
   static let defaultEnabledActions = Set(defaultOrder)
+
+  /// Actions that existed before the known-actions list was persisted. A saved
+  /// enabled list written back then never had a chance to include later actions,
+  /// so those are treated as new (enabled) rather than explicitly disabled.
+  static let legacyKnownActions: Set<QuickAccessActionKind> = [
+    .copy, .saveOrOpen, .dismiss, .delete, .edit, .uploadToCloud, .pinToScreen,
+  ]
 
   var displayStyle: QuickAccessActionDisplayStyle {
     switch self {
     case .copy, .saveOrOpen:
       return .primary
-    case .dismiss, .delete, .edit, .uploadToCloud, .pinToScreen:
+    case .dismiss, .delete, .edit, .uploadToCloud, .pinToScreen, .optimize:
       return .corner
     }
   }
@@ -118,6 +127,8 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
       return L10n.AnnotateUI.uploadToCloud
     case .pinToScreen:
       return L10n.PreferencesQuickAccess.pinToScreenAction
+    case .optimize:
+      return L10n.PreferencesQuickAccess.optimizeAction
     }
   }
 
@@ -134,7 +145,7 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
     switch self {
     case .dismiss, .delete:
       return true
-    case .copy, .saveOrOpen, .edit, .uploadToCloud, .pinToScreen:
+    case .copy, .saveOrOpen, .edit, .uploadToCloud, .pinToScreen, .optimize:
       return false
     }
   }
@@ -161,6 +172,8 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
       return "icloud.and.arrow.up"
     case .pinToScreen:
       return "pin"
+    case .optimize:
+      return "arrow.down.right.and.arrow.up.left"
     }
   }
 }
