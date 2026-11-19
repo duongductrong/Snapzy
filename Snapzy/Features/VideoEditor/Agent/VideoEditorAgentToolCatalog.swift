@@ -4,7 +4,8 @@
 //
 //  Names, descriptions and JSON schemas of the Video Editor agent tools. Times
 //  are seconds on the structural timeline (the ruler the user sees); a number or
-//  "m:ss.s" text is accepted. Ids are short: c1… clips, z1… zooms, s1… speeds.
+//  "m:ss.s" text is accepted. Ids are short: c1… clips, z1… zooms, s1… speeds,
+//  t1… captions, h1… hidden-camera stretches.
 //
 
 import Foundation
@@ -32,11 +33,20 @@ nonisolated enum VideoEditorAgentToolName: String, CaseIterable {
   case getFrame = "get_frame"
   case findOnScreen = "find_on_screen"
   case getTranscript = "get_transcript"
+  case setCursor = "set_cursor"
+  case setCamera = "set_camera"
+  case generateCaptions = "generate_captions"
+  case editCaption = "edit_caption"
+  case getCaptions = "get_captions"
+  case addCaption = "add_caption"
+  case removeCaptions = "remove_captions"
+  case replaceInCaptions = "replace_in_captions"
+  case translateCaptions = "translate_captions"
 
   /// Read-only tools are not paced and don't count as changes. `seek` only moves the playhead.
   var isReadOnly: Bool {
     switch self {
-    case .getTimeline, .seek, .getActivity, .getFrame, .findOnScreen, .getTranscript: true
+    case .getTimeline, .seek, .getActivity, .getFrame, .findOnScreen, .getTranscript, .getCaptions: true
     default: false
     }
   }
@@ -44,7 +54,8 @@ nonisolated enum VideoEditorAgentToolName: String, CaseIterable {
   /// Looks at frames or listens to speech, which takes a while (`VideoEditorAgentVision`,
   /// `VideoEditorAgentTranscriber`). `add_zoom` does too when it is given `text`.
   var readsMedia: Bool {
-    self == .getFrame || self == .findOnScreen || self == .getTranscript
+    self == .getFrame || self == .findOnScreen || self == .getTranscript || self == .generateCaptions
+      || self == .translateCaptions
   }
 
   /// Reads the recording's audio and cursor first (`VideoEditorAgentAnalyzer`).
@@ -257,7 +268,8 @@ nonisolated enum VideoEditorAgentToolCatalog {
     spec(
       .getActivity,
       "What happens when in the recording: silence and speech in the audio, idle (cursor still, nobody talking) "
-        + "and motion (cursor moving; area = [x, y, w, h] it covered, 0–1 from the top left). Inserted videos are not analyzed.",
+        + "and motion (cursor moving; area = [x, y, w, h] it covered, 0–1 from the top left); Studio recordings also "
+        + "list clicks (time and [x, y]). Inserted videos are not analyzed.",
       object([
         ("start", time("Only report from here (default: the start).")),
         ("end", time("Only report up to here (default: the end).")),
@@ -285,8 +297,10 @@ nonisolated enum VideoEditorAgentToolCatalog {
     ),
     spec(
       .autoZoomActivity,
-      "Add zooms that follow the cursor where it works in a small area (typing, clicking through a form). Skips parts that already zoom.",
+      "Add zooms that follow the cursor where it works in a small area (typing, clicking through a form). Skips parts that already zoom. "
+        + "source clicks (Studio recordings, get_activity lists clicks) zooms on each burst of clicks instead, held on where they land.",
       object([
+        ("source", string("What to zoom on (default motion).", enum: ["motion", "clicks"])),
         ("level", number("Zoom factor \(fmt(ZoomSegment.minZoomLevel))–\(fmt(ZoomSegment.maxZoomLevel)) (default \(fmt(ZoomSegment.defaultZoomLevel))).")),
         ("max_zooms", integer("At most this many zooms (default \(VideoEditorAgentToolbox.autoZoomDefaults.maxZooms)).")),
         ("start", time("Only from here.")),
@@ -317,6 +331,104 @@ nonisolated enum VideoEditorAgentToolCatalog {
         ("end", time("Only up to here.")),
         ("language", string("Spoken language, BCP-47 like en-US or vi-VN (default: the Mac's language).")),
       ])
+    ),
+    spec(
+      .setCursor,
+      "Change how the recorded cursor looks (Studio recordings only; get_timeline shows cursor when it can be edited).",
+      object([
+        ("visible", bool("Show the cursor.")),
+        ("scale", number("Cursor size multiplier, \(fmt(VideoEditorCursorSettings.scaleRange.lowerBound))–\(fmt(VideoEditorCursorSettings.scaleRange.upperBound)).")),
+        ("smoothing", number("Movement smoothing 0–1 (0 = as recorded).")),
+        ("hide_when_idle", bool("Fade the cursor out while it doesn't move.")),
+        ("click_effect", string("Effect drawn on clicks.", enum: VideoEditorCursorClickEffect.allCases.map(\.rawValue))),
+        ("click_sound", bool("Play a click sound on each click.")),
+        ("idle_delay", number("Seconds still before the cursor fades, \(fmt(VideoEditorCursorSettings.idleDelayRange.lowerBound))–\(fmt(VideoEditorCursorSettings.idleDelayRange.upperBound)) (with hide_when_idle).")),
+        ("always_arrow", bool("Draw the arrow cursor everywhere instead of the recorded shapes (hand, text beam).")),
+        ("click_color", string("Color of the click effect: a color name or #RRGGBB.")),
+        ("click_volume", number("Click sound volume 0–1.")),
+      ])
+    ),
+    spec(
+      .setCamera,
+      "Change the recorded camera bubble (Studio recordings with a camera only; get_timeline shows camera when it can be edited).",
+      object([
+        ("visible", bool("Show the camera.")),
+        ("shape", string("Camera shape.", enum: RecordingCameraShape.allCases.map(\.rawValue))),
+        ("size", number("Width as a fraction of the video width, \(fmt(VideoEditorCameraSettings.sizeRange.lowerBound))–\(fmt(VideoEditorCameraSettings.sizeRange.upperBound)).")),
+        ("position", string("Corner or edge.", enum: VideoEditorAgentStudioTools.cameraPositions.map(\.name))),
+        ("center", point("Or an exact center [x, y], 0–1 from the top left of the video.")),
+        ("mirrored", bool("Flip the camera horizontally.")),
+        ("hide_start", time("Hide the camera from here (with hide_end).")),
+        ("hide_end", time("Hide the camera up to here.")),
+        ("hide_during_zooms", bool("true hides the camera while each zoom block plays, so it doesn't cover what the zoom shows.")),
+        ("show_hidden", ids("Hidden stretches to show again, like [\"h1\"], or [\"all\"] (ids from get_timeline camera.hidden).")),
+        ("clear_hidden", bool("true shows the camera everywhere again.")),
+        ("reset", bool("true puts the camera back as it was recorded (shape, size, place, mirroring) and shows it everywhere. Other settings in the same call apply after.")),
+      ])
+    ),
+    spec(
+      .generateCaptions,
+      "Create captions from the speech (on this Mac; takes a while) and replace any existing ones. They show on the video and can be exported as SRT.",
+      object([
+        ("language", string("Spoken language, BCP-47 like en-US or vi-VN (default: the app's language).")),
+        ("show_on_video", bool("Burn the captions into the video (default true).")),
+      ])
+    ),
+    spec(
+      .editCaption,
+      "Change a caption's text or timing (ids from get_timeline captions), or style all captions.",
+      object([
+        ("id", string("Caption id like \"t3\". Leave out to change only the style.")),
+        ("text", string("New text; empty deletes the caption.")),
+        ("start", time("New start.")),
+        ("end", time("New end.")),
+        ("show_on_video", bool("Show captions on the video.")),
+        ("position", string("Where captions sit.", enum: ["bottom", "top"])),
+        ("text_size", number("Text height as a fraction of the video height, \(fmt(VideoEditorCaptionSettings.fontSizeRange.lowerBound))–\(fmt(VideoEditorCaptionSettings.fontSizeRange.upperBound)).")),
+        ("bold", bool("Bold text.")),
+        ("text_color", string("Text color: a color name or #RRGGBB.")),
+        ("background_opacity", number("Opacity of the dark box behind the text, 0–1 (0 = no box).")),
+        ("hide_when_fast", bool("Hide captions while a part plays faster than 2x.")),
+      ])
+    ),
+    spec(
+      .getCaptions,
+      "List captions with ids and timeline times (get_timeline shows only the first \(VideoEditorAgentStudioTools.maximumListedCaptions)).",
+      object([
+        ("start", time("Only from here.")),
+        ("end", time("Only up to here.")),
+      ])
+    ),
+    spec(
+      .addCaption,
+      "Add one caption over the recording's footage. It may not overlap another caption.",
+      object([
+        ("start", time("When it shows.")),
+        ("end", time("When it goes away.")),
+        ("text", string("The caption text.")),
+      ], required: ["start", "end", "text"])
+    ),
+    spec(
+      .removeCaptions,
+      "Delete captions.",
+      object([("ids", ids("Caption ids like [\"t3\"], or [\"all\"]."))], required: ["ids"])
+    ),
+    spec(
+      .replaceInCaptions,
+      "Replace words in every caption at once, e.g. fix a name the speech recognizer got wrong.",
+      object([
+        ("find", string("Text to look for.")),
+        ("replace", string("Text to put instead (empty removes it).")),
+        ("match_case", bool("Only exact-case matches (default false).")),
+        ("whole_word", bool("Only whole words (default true).")),
+      ], required: ["find", "replace"])
+    ),
+    spec(
+      .translateCaptions,
+      "Translate every caption's text into another language; timing stays. Uses the translation engine picked in Snapzy's settings.",
+      object([
+        ("language", string("Target language: \(VideoEditorAgentStudioTools.translationTargets.joined(separator: ", ")).")),
+      ], required: ["language"])
     ),
   ]
 

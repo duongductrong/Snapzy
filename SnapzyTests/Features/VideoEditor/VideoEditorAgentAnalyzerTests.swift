@@ -273,7 +273,7 @@ final class VideoEditorAgentAnalyzerTests: XCTestCase {
   func testQuickActions_matchTheVideosData() async throws {
     // Dock layout: chips sit over an empty, idle prompt and hide once the user types.
     let full = makeController(try await makeState(), layout: .dock)
-    XCTAssertEqual(full.quickActions, [.removeSilences, .speedUpIdle, .autoZoom])
+    XCTAssertEqual(full.quickActions, [.removeSilences, .speedUpIdle, .autoZoom, .captions])
     XCTAssertFalse(full.showsQuickActions, "only over an open prompt")
     full.presentPrompt()
     XCTAssertTrue(full.showsQuickActions)

@@ -102,7 +102,38 @@ final class VideoEditorAgentMockProvider: AgentProvider {
       let padding = take(#"padding\s*(\d+(?:\.\d+)?)"#, from: &text)
       let times = Self.times(in: text)
 
-      if has("silence", "im lang", "pause", "khoang lang"), !has("mute", "tat tieng") {
+      let hide = has("hide", "an ", "tat ") || text.hasPrefix("an")
+      if has("cursor", "con tro") {
+        // "hide the cursor", "cursor 1.5x" / "phong to cursor 1.5x".
+        var args: [String: Any] = [:]
+        if let rate { args["scale"] = rate } else { args["visible"] = !hide }
+        calls.append(Call(name: "set_cursor", arguments: json(args)))
+      } else if has("camera", "webcam") {
+        if hide, has("zoom", "phong") {
+          // "hide the camera while zoomed" / "an camera khi zoom".
+          calls.append(Call(name: "set_camera", arguments: json(["hide_during_zooms": true])))
+        } else {
+          calls.append(Call(name: "set_camera", arguments: json(["visible": !hide])))
+        }
+      } else if has("caption", "subtitle", "phu de") {
+        let quotes = quotedAll(in: clause)
+        if has("translate", "dich") {
+          let target = has("tieng viet", "vietnamese") ? "vi" : has("english", "tieng anh") ? "en" : has("japanese", "tieng nhat") ? "ja" : nil
+          if let target { calls.append(Call(name: "translate_captions", arguments: json(["language": target]))) }
+        } else if has("replace", "thay", "fix", "sua"), quotes.count >= 2 {
+          // "replace "snapsy" with "Snapzy" in captions" / "thay "snapsy" bang "Snapzy" trong phu de".
+          calls.append(Call(name: "replace_in_captions", arguments: json(["find": quotes[0], "replace": quotes[1]])))
+        } else if has("clear", "delete", "remove", "xoa") {
+          calls.append(Call(name: "remove_captions", arguments: json(["ids": ["all"]])))
+        } else if hide {
+          calls.append(Call(name: "edit_caption", arguments: json(["show_on_video": false])))
+        } else {
+          let language = has("tieng viet", "vietnamese") ? "vi-VN" : (has("english", "tieng anh") ? "en-US" : nil)
+          calls.append(Call(name: "generate_captions", arguments: language.map { json(["language": $0]) } ?? "{}"))
+        }
+      } else if has("zoom", "phong"), has("click", "nhap chuot", "bam chuot"), times.isEmpty {
+        calls.append(Call(name: "auto_zoom_activity", arguments: json(["source": "clicks"])))
+      } else if has("silence", "im lang", "pause", "khoang lang"), !has("mute", "tat tieng") {
         calls.append(Call(name: "remove_silences", arguments: "{}"))
       } else if has("idle", "waiting", "cho doi", "dung yen") {
         calls.append(Call(name: "speed_up_idle", arguments: rate.map { json(["rate": $0]) } ?? "{}"))
@@ -152,6 +183,14 @@ final class VideoEditorAgentMockProvider: AgentProvider {
           let range = Range(match.range(at: 1), in: text) else { return nil }
     let words = text[range].trimmingCharacters(in: .whitespaces)
     return words.isEmpty ? nil : words
+  }
+
+  /// Every quoted piece of a clause, in order (clauses are case-folded, so quotes come back lowercased).
+  static func quotedAll(in text: String) -> [String] {
+    guard let regex = try? NSRegularExpression(pattern: #"["“'‘]([^"”'’]+)["”'’]"#) else { return [] }
+    return regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).compactMap { match in
+      Range(match.range(at: 1), in: text).map { text[$0].trimmingCharacters(in: .whitespaces) }
+    }.filter { !$0.isEmpty }
   }
 
   /// Times in a clause: "1:05.5", "0:10", "12s", "12". Rates and paddings are taken out first.

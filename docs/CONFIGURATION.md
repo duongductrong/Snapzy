@@ -187,10 +187,12 @@ fps = 30
 capture_system_audio = false
 capture_microphone = false
 show_cursor = true
+studio_mode = false
 dim_non_selected_area = true
 highlight_clicks = false
 show_keystrokes = false
 video_editor_zoom_transition_duration = 0.4
+video_editor_caption_language = ""
 
 [quick_access]
 enabled = true

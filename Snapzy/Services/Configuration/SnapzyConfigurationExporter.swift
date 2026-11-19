@@ -124,10 +124,12 @@ enum SnapzyConfigurationExporter {
     writer.value("remember_last_area", defaults.boolValue(PreferencesKeys.recordingRememberLastArea, default: true))
     writer.value("include_snapzy", defaults.boolValue(PreferencesKeys.recordingIncludeOwnApp, default: false))
     writer.value("show_cursor", RecordingToolbarPreferences.showCursor(defaults: defaults))
+    writer.value("studio_mode", RecordingToolbarPreferences.studioRecording(defaults: defaults))
     writer.value("dim_non_selected_area", RecordingToolbarPreferences.dimNonSelectedArea(defaults: defaults))
     writer.value("highlight_clicks", RecordingToolbarPreferences.highlightClicks(defaults: defaults))
     writer.value("show_keystrokes", RecordingToolbarPreferences.showKeystrokes(defaults: defaults))
     writer.value("video_editor_zoom_transition_duration", defaults.doubleValue(PreferencesKeys.videoEditorZoomTransitionDuration, default: 0.4))
+    writer.value("video_editor_caption_language", defaults.string(forKey: PreferencesKeys.videoEditorCaptionLanguage) ?? "")
 
     writer.section("recording.mouse_highlight")
     let color = storedMouseColor(defaults: defaults)

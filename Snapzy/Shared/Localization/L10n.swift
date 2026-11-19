@@ -3598,6 +3598,16 @@ nonisolated enum L10n {
       defaultValue: "Hover passthrough needs Accessibility permission to observe global mouse and keyboard events.",
       comment: "Capture preferences permission hint"
     )
+    static let recordingStudioModeTitle = string(
+      "preferences-capture.recording-studio-mode-title",
+      defaultValue: "Studio Recording",
+      comment: "Recording preferences setting title"
+    )
+    static let recordingStudioModeDescription = string(
+      "preferences-capture.recording-studio-mode-description",
+      defaultValue: "Edit the cursor after recording in the Video Editor. Saved videos take a few extra seconds to process after you stop.",
+      comment: "Recording preferences setting description"
+    )
     static let recordingShowCursorDescription = string(
       "preferences-capture.recording-show-cursor-description",
       defaultValue: "Include mouse pointer in recorded videos and GIFs",
@@ -5075,6 +5085,11 @@ nonisolated enum L10n {
       "camera.mirror-camera",
       defaultValue: "Mirror Camera",
       comment: "Camera mirror horizontal toggle option"
+    )
+    static let studioNote = string(
+      "camera.studio-note",
+      defaultValue: "Studio Recording: the camera is saved separately, so you can move, resize or hide it in the editor.",
+      comment: "Recording toolbar camera menu note when Studio Recording is on"
     )
     static let turnOffCamera = string(
       "camera.turn-off-camera",
@@ -7035,6 +7050,290 @@ nonisolated enum L10n {
       defaultValue: "Saving Video",
       comment: "Title shown while the Video Editor replaces the current video with saved edits"
     )
+    static let cursorSection = string(
+      "video-editor.cursor-section",
+      defaultValue: "Cursor",
+      comment: "Video editor cursor panel title"
+    )
+    static let cursorBakedNotice = string(
+      "video-editor.cursor-baked-notice",
+      defaultValue: "The cursor is part of this video's pixels. Turn on Studio Recording before you record to edit the cursor here.",
+      comment: "Video editor cursor panel notice for recordings without editable cursor"
+    )
+    static let cursorShow = string(
+      "video-editor.cursor-show",
+      defaultValue: "Show Cursor",
+      comment: "Video editor cursor panel toggle"
+    )
+    static let cursorSize = string(
+      "video-editor.cursor-size",
+      defaultValue: "Size",
+      comment: "Video editor cursor panel size slider"
+    )
+    static let cursorSmoothing = string(
+      "video-editor.cursor-smoothing",
+      defaultValue: "Smoothing",
+      comment: "Video editor cursor panel smoothing slider"
+    )
+    static let cursorHideWhenIdle = string(
+      "video-editor.cursor-hide-when-idle",
+      defaultValue: "Hide When Idle",
+      comment: "Video editor cursor panel toggle"
+    )
+    static let cursorIdleDelay = string(
+      "video-editor.cursor-idle-delay",
+      defaultValue: "Hide After",
+      comment: "Video editor cursor panel idle delay slider"
+    )
+    static let cursorAlwaysArrow = string(
+      "video-editor.cursor-always-arrow",
+      defaultValue: "Always Use Arrow",
+      comment: "Video editor cursor panel toggle"
+    )
+    static let cursorClickEffect = string(
+      "video-editor.cursor-click-effect",
+      defaultValue: "Click Effect",
+      comment: "Video editor cursor panel click effect picker"
+    )
+    static let cursorClickRipple = string(
+      "video-editor.cursor-click-ripple",
+      defaultValue: "Ripple",
+      comment: "Video editor click effect option"
+    )
+    static let cursorClickRing = string(
+      "video-editor.cursor-click-ring",
+      defaultValue: "Ring",
+      comment: "Video editor click effect option"
+    )
+    static let cursorClickColor = string(
+      "video-editor.cursor-click-color",
+      defaultValue: "Effect Color",
+      comment: "Video editor click effect color picker"
+    )
+    static let cursorClickSound = string(
+      "video-editor.cursor-click-sound",
+      defaultValue: "Click Sound",
+      comment: "Video editor cursor panel click sound toggle"
+    )
+    static let cursorClickSoundVolume = string(
+      "video-editor.cursor-click-sound-volume",
+      defaultValue: "Click Volume",
+      comment: "Video editor cursor panel click sound volume slider"
+    )
+    static let cameraSection = string(
+      "video-editor.camera-section",
+      defaultValue: "Camera",
+      comment: "Video editor camera panel title"
+    )
+    static let cameraUnavailableNotice = string(
+      "video-editor.camera-unavailable-notice",
+      defaultValue: "This video has no separate camera track. Record with the camera and Studio Recording on to edit the camera here.",
+      comment: "Video editor camera panel notice for recordings without a camera sidecar"
+    )
+    static let cameraShow = string(
+      "video-editor.camera-show",
+      defaultValue: "Show Camera",
+      comment: "Video editor camera panel toggle"
+    )
+    static let cameraPosition = string(
+      "video-editor.camera-position",
+      defaultValue: "Position",
+      comment: "Video editor camera panel position grid"
+    )
+    static let cameraMirror = string(
+      "video-editor.camera-mirror",
+      defaultValue: "Mirror",
+      comment: "Video editor camera panel mirror toggle"
+    )
+    static let cameraResetToRecorded = string(
+      "video-editor.camera-reset-to-recorded",
+      defaultValue: "Reset to Recording Layout",
+      comment: "Video editor camera panel reset button"
+    )
+    static let cameraHidden = string(
+      "video-editor.camera-hidden",
+      defaultValue: "Hidden",
+      comment: "Video editor camera track block for a stretch where the camera is hidden"
+    )
+    static let cameraShowHere = string(
+      "video-editor.camera-show-here",
+      defaultValue: "Show Camera Here",
+      comment: "Video editor camera track context menu item removing a hidden stretch"
+    )
+    static let cameraHideAtPlayhead = string(
+      "video-editor.camera-hide-at-playhead",
+      defaultValue: "Hide Camera at Playhead",
+      comment: "Video editor camera panel button hiding the camera for two seconds from the playhead"
+    )
+    static let cameraTrackHint = string(
+      "video-editor.camera-track-hint",
+      defaultValue: "Double-click the Camera track to hide the camera there; drag a block to change when. Drag the camera in the preview to move it.",
+      comment: "Video editor hint for the camera timeline track"
+    )
+    static let captionsSection = string(
+      "video-editor.captions-section",
+      defaultValue: "Captions",
+      comment: "Video editor captions panel and timeline track title"
+    )
+    static let captionsHint = string(
+      "video-editor.captions-hint",
+      defaultValue: "Create captions from the speech in this video. Speech is recognized on this Mac.",
+      comment: "Video editor captions panel explanation before captions exist"
+    )
+    static let captionsUnavailableNotice = string(
+      "video-editor.captions-unavailable-notice",
+      defaultValue: "Captions need a video with sound.",
+      comment: "Video editor captions panel notice when the video has no audio or is a GIF"
+    )
+    static let captionsGenerate = string(
+      "video-editor.captions-generate",
+      defaultValue: "Generate Captions",
+      comment: "Video editor button that creates captions from speech"
+    )
+    static let captionsRegenerate = string(
+      "video-editor.captions-regenerate",
+      defaultValue: "Regenerate",
+      comment: "Video editor button that replaces captions with newly generated ones"
+    )
+    static let captionsLanguage = string(
+      "video-editor.captions-language",
+      defaultValue: "Language",
+      comment: "Video editor captions speech language picker label"
+    )
+    static func captionsLanguageAutomatic(_ name: String) -> String {
+      format(
+        "video-editor.captions-language-automatic",
+        defaultValue: "Automatic (%@)",
+        comment: "Video editor captions language option that follows the app language. %@ is the resolved language name.",
+        name
+      )
+    }
+    static let captionsShow = string(
+      "video-editor.captions-show",
+      defaultValue: "Show on Video",
+      comment: "Video editor toggle that shows captions on the video and burns them into the export"
+    )
+    static let captionsPosition = string(
+      "video-editor.captions-position",
+      defaultValue: "Position",
+      comment: "Video editor captions position picker label"
+    )
+    static let captionsPositionBottom = string(
+      "video-editor.captions-position-bottom",
+      defaultValue: "Bottom",
+      comment: "Video editor captions position option"
+    )
+    static let captionsPositionTop = string(
+      "video-editor.captions-position-top",
+      defaultValue: "Top",
+      comment: "Video editor captions position option"
+    )
+    static let captionsTextSize = string(
+      "video-editor.captions-text-size",
+      defaultValue: "Text Size",
+      comment: "Video editor captions text size slider"
+    )
+    static let captionsBackground = string(
+      "video-editor.captions-background",
+      defaultValue: "Background",
+      comment: "Video editor captions background opacity slider"
+    )
+    static let captionsBold = string(
+      "video-editor.captions-bold",
+      defaultValue: "Bold Text",
+      comment: "Video editor captions bold text toggle"
+    )
+    static let captionsTextColor = string(
+      "video-editor.captions-text-color",
+      defaultValue: "Text Color",
+      comment: "Video editor captions text color picker"
+    )
+    static let captionsHideFastSpeed = string(
+      "video-editor.captions-hide-fast-speed",
+      defaultValue: "Hide When Faster Than 2×",
+      comment: "Video editor toggle hiding captions where the video plays faster than 2x"
+    )
+    static let captionsExportSRT = string(
+      "video-editor.captions-export-srt",
+      defaultValue: "Export SRT…",
+      comment: "Video editor button that saves captions as an SRT file"
+    )
+    static let captionsExportVTT = string(
+      "video-editor.captions-export-vtt",
+      defaultValue: "Export WebVTT…",
+      comment: "Video editor button that saves captions as a WebVTT file"
+    )
+    static let captionsExportFailed = string(
+      "video-editor.captions-export-failed",
+      defaultValue: "The caption file could not be saved.",
+      comment: "Video editor captions panel message when a subtitle file cannot be written"
+    )
+    static let captionsClear = string(
+      "video-editor.captions-clear",
+      defaultValue: "Remove All Captions",
+      comment: "Video editor button removing all captions"
+    )
+    static let captionsDelete = string(
+      "video-editor.captions-delete",
+      defaultValue: "Delete Caption",
+      comment: "Video editor help text for the button deleting one caption"
+    )
+    static let captionsNoSpeech = string(
+      "video-editor.captions-no-speech",
+      defaultValue: "No speech was found in this video.",
+      comment: "Video editor captions message when transcription found no words"
+    )
+    static func captionsPartial(_ count: Int) -> String {
+      format(
+        "video-editor.captions-partial",
+        defaultValue: "%d part(s) of the audio could not be recognized and have no captions.",
+        comment: "Video editor captions message when some audio chunks failed. %d is the number of failed parts.",
+        count
+      )
+    }
+    static let captionsErrorNoAudio = string(
+      "video-editor.captions-error-no-audio",
+      defaultValue: "This video has no audio to transcribe.",
+      comment: "Video editor captions error when the video has no audio track"
+    )
+    static let captionsErrorDenied = string(
+      "video-editor.captions-error-denied",
+      defaultValue: "Speech Recognition is off for Snapzy. Allow it in System Settings › Privacy & Security › Speech Recognition, then try again.",
+      comment: "Video editor captions error when Speech Recognition permission is off"
+    )
+    static func captionsErrorUnsupported(_ name: String) -> String {
+      format(
+        "video-editor.captions-error-unsupported",
+        defaultValue: "On-device speech recognition isn’t available for %@ on this Mac. Choose another language.",
+        comment: "Video editor captions error when the language has no on-device recognizer. %@ is the language name.",
+        name
+      )
+    }
+    static let captionsErrorFailed = string(
+      "video-editor.captions-error-failed",
+      defaultValue: "Captions could not be generated. Try again.",
+      comment: "Video editor captions error for an unexpected transcription failure"
+    )
+    static let generatingCaptions = string(
+      "video-editor.generating-captions",
+      defaultValue: "Generating Captions",
+      comment: "Video editor progress overlay title while captions are generated"
+    )
+    static let transcribingSpeech = string(
+      "video-editor.transcribing-speech",
+      defaultValue: "Recognizing speech…",
+      comment: "Video editor progress overlay status while speech is transcribed"
+    )
+    static let downloadingSpeechModel = string(
+      "video-editor.downloading-speech-model",
+      defaultValue: "Downloading Speech Model",
+      comment: "Video editor progress overlay title while the speech model downloads"
+    )
+    static let downloadingSpeechModelDetail = string(
+      "video-editor.downloading-speech-model-detail",
+      defaultValue: "Needed once per language.",
+      comment: "Video editor progress overlay status while the on-device speech model downloads"
+    )
     static let zoomSettings = string(
       "video-editor.zoom-settings",
       defaultValue: "Zoom Settings",
@@ -8126,6 +8425,16 @@ nonisolated enum L10n {
       "recording-toolbar.show-keystrokes",
       defaultValue: "Show Keystrokes",
       comment: "Recording toolbar setting label"
+    )
+    static let studioRecording = string(
+      "recording-toolbar.studio-recording",
+      defaultValue: "Studio Recording",
+      comment: "Recording toolbar setting label"
+    )
+    static let studioRecordingHelp = string(
+      "recording-toolbar.studio-recording-help",
+      defaultValue: "Edit the cursor after recording. Takes a few extra seconds to process after you stop.",
+      comment: "Recording toolbar Studio recording toggle tooltip"
     )
     static let showCursor = string(
       "recording-toolbar.show-cursor",
@@ -10413,6 +10722,18 @@ extension L10n {
     static var statusTranscribing: String {
       string("video-editor.ai.status-transcribing", defaultValue: "Transcribing…", comment: "AI working status while speech is transcribed on this Mac")
     }
+    static var statusCursor: String {
+      string("video-editor.ai.status-cursor", defaultValue: "Styling the cursor…", comment: "AI working status while the cursor layer is styled")
+    }
+    static var statusCamera: String {
+      string("video-editor.ai.status-camera", defaultValue: "Adjusting the camera…", comment: "AI working status while the camera layer is adjusted")
+    }
+    static var statusCaptions: String {
+      string("video-editor.ai.status-captions", defaultValue: "Writing captions…", comment: "AI working status while captions are generated from speech")
+    }
+    static var statusEditCaption: String {
+      string("video-editor.ai.status-edit-caption", defaultValue: "Editing captions…", comment: "AI working status while a caption is edited")
+    }
     static var suggestionSilences: String {
       string("video-editor.ai.suggestion-silences", defaultValue: "Remove silences", comment: "Quick action chip above the Video Editor AI prompt")
     }
@@ -10439,6 +10760,21 @@ extension L10n {
     }
     static var noActivity: String {
       string("video-editor.ai.no-activity", defaultValue: "No focused activity to zoom on", comment: "Result of the Zoom on activity quick action when nothing changed")
+    }
+    static var suggestionClickZoom: String {
+      string("video-editor.ai.suggestion-click-zoom", defaultValue: "Zoom on clicks", comment: "Quick action chip above the Video Editor AI prompt")
+    }
+    static var suggestionCaptions: String {
+      string("video-editor.ai.suggestion-captions", defaultValue: "Add captions", comment: "Quick action chip above the Video Editor AI prompt")
+    }
+    static func addedClickZooms(_ count: Int) -> String {
+      format("video-editor.ai.added-click-zooms", defaultValue: "Added %lld zooms on clicks", comment: "Result of the Zoom on clicks quick action. %lld = number of zooms added", count)
+    }
+    static var noClicks: String {
+      string("video-editor.ai.no-clicks", defaultValue: "No clicks to zoom on", comment: "Result of the Zoom on clicks quick action when nothing changed")
+    }
+    static var statusTranslateCaptions: String {
+      string("video-editor.ai.status-translate-captions", defaultValue: "Translating captions…", comment: "AI working status while captions are translated")
     }
     static var panelTitle: String {
       string("video-editor.ai.panel-title", defaultValue: "AI Assistant", comment: "Title of the Video Editor AI side panel")
@@ -10535,6 +10871,30 @@ extension L10n {
     }
     static var stepBackground: String {
       string("video-editor.ai.step-background", defaultValue: "Changed the background", comment: "AI edit step")
+    }
+    static var stepCursor: String {
+      string("video-editor.ai.step-cursor", defaultValue: "Changed the cursor", comment: "AI edit step")
+    }
+    static var stepCamera: String {
+      string("video-editor.ai.step-camera", defaultValue: "Changed the camera", comment: "AI edit step")
+    }
+    static func stepCaptions(_ count: Int) -> String {
+      format("video-editor.ai.step-captions", defaultValue: "Added captions (%lld)", comment: "AI edit step. %lld = number of captions created", count)
+    }
+    static var stepEditCaption: String {
+      string("video-editor.ai.step-edit-caption", defaultValue: "Edited captions", comment: "AI edit step")
+    }
+    static var stepAddCaption: String {
+      string("video-editor.ai.step-add-caption", defaultValue: "Added a caption", comment: "AI edit step")
+    }
+    static func stepRemoveCaptions(_ count: Int) -> String {
+      format("video-editor.ai.step-remove-captions", defaultValue: "Removed captions (%lld)", comment: "AI edit step. %lld = number of captions removed", count)
+    }
+    static func stepFixCaptions(_ count: Int) -> String {
+      format("video-editor.ai.step-fix-captions", defaultValue: "Fixed captions (%lld)", comment: "AI edit step: words replaced across captions. %lld = number of captions changed", count)
+    }
+    static func stepTranslateCaptions(_ language: String) -> String {
+      format("video-editor.ai.step-translate-captions", defaultValue: "Translated captions to %@", comment: "AI edit step. %@ = target language name", language)
     }
     static var stepMuted: String {
       string("video-editor.ai.step-muted", defaultValue: "Muted the audio", comment: "AI edit step")

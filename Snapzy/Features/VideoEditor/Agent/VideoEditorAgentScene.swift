@@ -67,6 +67,60 @@ nonisolated struct VideoEditorAgentScene: Encodable, Equatable {
     let speed: String?
   }
 
+  /// Studio cursor; nil when the recording has no editable cursor.
+  struct Cursor: Encodable, Equatable {
+    let visible: Bool
+    let scale: Double
+    let smoothing: Double
+    let hideWhenIdle: Bool
+    let clickEffect: String
+    let clickSound: Bool
+    /// Clicks the recording captured (`get_activity` lists them; `auto_zoom_activity` source clicks).
+    let clicks: Int
+  }
+
+  /// A stretch where the camera is hidden; one stretch may show in pieces after cuts.
+  struct HiddenStretch: Encodable, Equatable {
+    let id: String
+    let start: Double
+    let end: Double
+  }
+
+  /// Studio camera; nil without a camera sidecar.
+  struct Camera: Encodable, Equatable {
+    let visible: Bool
+    let shape: String
+    let size: Double
+    /// [x, y] 0…1 from the top left of the video.
+    let center: [Double]
+    let mirrored: Bool
+    /// Timeline stretches where the camera is hidden (ids h1…).
+    let hidden: [HiddenStretch]
+  }
+
+  struct Caption: Encodable, Equatable {
+    let id: String
+    /// Where it first shows on the timeline; nil when its footage is trimmed out.
+    let start: Double?
+    let end: Double?
+    let text: String
+  }
+
+  struct Captions: Encodable, Equatable {
+    let showOnVideo: Bool
+    let position: String
+    let textSize: Double
+    let bold: Bool
+    let textColor: String
+    let backgroundOpacity: Double
+    let hideWhenFast: Bool
+    /// Spoken language the captions were made from, when known.
+    let language: String?
+    let count: Int
+    /// The first captions only; `count` tells how many there are.
+    let items: [Caption]
+  }
+
   /// Timeline length, trimmed footage included.
   let duration: Double
   /// What plays, before speed changes.
@@ -82,4 +136,10 @@ nonisolated struct VideoEditorAgentScene: Encodable, Equatable {
   let audio: Audio
   let selection: Selection
   let hasMouseData: Bool
+  /// Studio recording: cursor and/or camera were recorded apart and can be edited.
+  var studio = false
+  var cursor: Cursor?
+  var camera: Camera?
+  /// nil before captions are generated.
+  var captions: Captions?
 }

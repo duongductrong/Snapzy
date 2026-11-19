@@ -176,8 +176,9 @@ nonisolated enum ZoomCalculator {
     at time: TimeInterval,
     in segments: [ZoomSegment]
   ) -> ZoomSegment? {
-    // Return last matching segment (priority to later segments)
-    segments.filter { $0.isEnabled && $0.contains(time: time) }.last
+    // Return last matching segment (priority to later segments). Called per playback
+    // tick: scan from the end without allocating a filtered copy.
+    segments.last { $0.isEnabled && $0.contains(time: time) }
   }
 
   /// Sort segments by start time

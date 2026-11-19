@@ -14,8 +14,9 @@ import SwiftUI
 /// one set of instrument chips.
 struct TimelineZoomControls: View {
   @ObservedObject var viewport: VideoEditorTimelineViewport
-  /// Time the zoom anchors on (typically the playhead).
-  let anchorTime: TimeInterval
+  /// Time the zoom anchors on (typically the playhead). Read on tap, not passed as a
+  /// value, so the playhead moving doesn't re-render this cluster.
+  let anchorTime: () -> TimeInterval
 
   private let badgeIconSize: CGFloat = 11
   private let badgeFontSize: CGFloat = 11
@@ -31,7 +32,7 @@ struct TimelineZoomControls: View {
   var body: some View {
     HStack(spacing: 2) {
       controlButton(systemName: "minus") {
-        viewport.zoomOut(anchorTime: anchorTime)
+        viewport.zoomOut(anchorTime: anchorTime())
       }
       .disabled(!viewport.canZoomOut)
       .help(L10n.VideoEditorTimeline.zoomOut)
@@ -52,7 +53,7 @@ struct TimelineZoomControls: View {
       .help(L10n.VideoEditorTimeline.fit)
 
       controlButton(systemName: "plus") {
-        viewport.zoomIn(anchorTime: anchorTime)
+        viewport.zoomIn(anchorTime: anchorTime())
       }
       .disabled(!viewport.canZoomIn)
       .help(L10n.VideoEditorTimeline.zoomIn)

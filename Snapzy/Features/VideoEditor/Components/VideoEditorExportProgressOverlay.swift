@@ -44,6 +44,12 @@ struct ExportProgressOverlay: View {
           .lineLimit(1)
           .truncationMode(.tail)
       }
+
+      if state.progressOperation.isCaptionWork {
+        Button(L10n.Common.cancel) { state.cancelCaptionGeneration() }
+          .controlSize(.small)
+          .keyboardShortcut(.cancelAction)
+      }
     }
     .padding(28)
     .frame(width: 264)

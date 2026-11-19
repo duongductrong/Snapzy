@@ -11749,6 +11749,148 @@
         }
       }
     },
+    "preferences-capture.recording-studio-mode-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Studio-Aufnahme"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Studio Recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabación Studio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement Studio"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת סטודיו"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スタジオ録画"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스튜디오 녹화"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Студийная запись"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quay Studio"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作室录制"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作室錄製"
+          }
+        }
+      }
+    },
+    "preferences-capture.recording-studio-mode-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeiger nach der Aufnahme im Video-Editor bearbeiten. Gespeicherte Videos brauchen nach dem Stoppen einige Sekunden länger."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit the cursor after recording in the Video Editor. Saved videos take a few extra seconds to process after you stop."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edita el cursor después de grabar en el editor de vídeo. Los vídeos guardados tardan unos segundos más en procesarse al detener."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifiez le curseur après l’enregistrement dans l’éditeur vidéo. Les vidéos enregistrées prennent quelques secondes de plus après l’arrêt."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עריכת הסמן אחרי ההקלטה בעורך הווידאו. עיבוד סרטונים שנשמרו לוקח כמה שניות נוספות אחרי העצירה."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画後にビデオエディタでカーソルを編集できます。保存される動画は停止後の処理に数秒余分にかかります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹화 후 비디오 편집기에서 커서를 편집합니다. 저장된 동영상은 중지 후 처리에 몇 초가 더 걸립니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Редактируйте курсор после записи в видеоредакторе. Обработка сохранённых видео после остановки займёт на несколько секунд дольше."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chỉnh con trỏ sau khi quay trong Video Editor. Video đã lưu cần thêm vài giây xử lý sau khi dừng."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录制后可在视频编辑器中编辑光标。停止后，保存的视频需额外几秒进行处理。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錄製後可在影片編輯器中編輯游標。停止後，儲存的影片需額外幾秒進行處理。"
+          }
+        }
+      }
+    },
     "preferences-capture.recording-show-cursor-description": {
       "extractionState": "stale",
       "localizations": {

@@ -178,6 +178,8 @@ enum PreferencesKeys {
   static let recordingOutputMode = "recording.outputMode"
   static let recordingIncludeOwnApp = "recording.includeOwnApp"
   static let recordingShowCursor = "recording.showCursor"
+  /// Studio recording: cursor captured as editable data, flattened after stop. Default false.
+  static let recordingStudioMode = "recording.studioMode"
   static let recordingDimNonSelectedArea = "recording.dimNonSelectedArea"
   static let recordingHighlightClicks = "recording.highlightClicks"
   static let recordingShowKeystrokes = "recording.showKeystrokes"
@@ -187,6 +189,8 @@ enum PreferencesKeys {
   static let videoEditorZoomTransitionDuration = "videoEditor.zoom.transitionDuration"
   /// Video Editor AI assistant layout: "sidebar" (right panel, default) or "dock" (floating over the player).
   static let videoEditorAILayout = "videoEditor.ai.layout"
+  /// Speech language for new captions (BCP-47); unset = app language, then the Mac's.
+  static let videoEditorCaptionLanguage = "videoEditor.captions.language"
 
   // Mouse Highlight Customization
   static let mouseHighlightSize = "recording.mouseHighlight.size"

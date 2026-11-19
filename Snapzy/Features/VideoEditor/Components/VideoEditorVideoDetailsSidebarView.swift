@@ -10,12 +10,26 @@ import SwiftUI
 struct VideoDetailsSidebarView: View {
   @ObservedObject var state: VideoEditorState
 
-  private let dateFormatter: DateFormatter = {
+  /// Shared: a `DateFormatter` per view init is expensive, and this struct is rebuilt on
+  /// every editor state change while the popover is open.
+  private static let dateFormatter: DateFormatter = {
     let f = DateFormatter()
     f.dateStyle = .medium
     f.timeStyle = .short
     return f
   }()
+
+  private var dateFormatter: DateFormatter { Self.dateFormatter }
+
+  /// File-system reads (sandbox access + `attributesOfItem`) happen once when the details
+  /// open, not on every body evaluation.
+  private struct FileFacts: Equatable {
+    var size = "—"
+    var created: Date?
+    var modified: Date?
+  }
+
+  @State private var fileFacts = FileFacts()
 
   var body: some View {
     ScrollView(.vertical, showsIndicators: true) {
@@ -47,7 +61,7 @@ struct VideoDetailsSidebarView: View {
         SidebarSection(title: L10n.Common.file) {
           DetailRow(label: L10n.Common.name, value: state.filename)
           DetailRow(label: L10n.Common.path, value: state.sourceURL.deletingLastPathComponent().path)
-          DetailRow(label: L10n.Common.size, value: state.fileSizeString)
+          DetailRow(label: L10n.Common.size, value: fileFacts.size)
           DetailRow(label: L10n.Common.format, value: state.fileExtension.uppercased())
         }
 
@@ -60,10 +74,10 @@ struct VideoDetailsSidebarView: View {
 
         // Dates Section
         SidebarSection(title: L10n.Common.dates) {
-          if let created = state.fileCreationDate {
+          if let created = fileFacts.created {
             DetailRow(label: L10n.Common.created, value: dateFormatter.string(from: created))
           }
-          if let modified = state.fileModificationDate {
+          if let modified = fileFacts.modified {
             DetailRow(label: L10n.Common.modified, value: dateFormatter.string(from: modified))
           }
         }
@@ -100,6 +114,19 @@ struct VideoDetailsSidebarView: View {
       .padding(Spacing.md)
     }
     .frame(maxHeight: .infinity)
+    // Re-read when the file can have changed: a new source, or a save that replaced it.
+    .onAppear { refreshFileFacts() }
+    .onChange(of: state.sourceURL) { _ in refreshFileFacts() }
+    .onChange(of: state.hasUnsavedChanges) { _ in refreshFileFacts() }
+  }
+
+  private func refreshFileFacts() {
+    let facts = FileFacts(
+      size: state.fileSizeString,
+      created: state.fileCreationDate,
+      modified: state.fileModificationDate
+    )
+    if fileFacts != facts { fileFacts = facts }
   }
 }
 

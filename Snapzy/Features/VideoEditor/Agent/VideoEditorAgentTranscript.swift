@@ -165,8 +165,38 @@ enum VideoEditorAgentStepDescriber {
     case .speedUpIdle:
       return oneStep(.speedUpIdle, payload: payload, symbolName: "forward.fill")
     case .autoZoomActivity:
+      if (payload["source"] as? String) == "clicks" {
+        return oneStep(.clickZoom, payload: payload, symbolName: "cursorarrow.click.2")
+      }
       return oneStep(.autoZoom, payload: payload, symbolName: "plus.magnifyingglass")
-    case .getTimeline, .seek, .getActivity, .getFrame, .findOnScreen, .getTranscript:
+    case .setCursor:
+      return VideoEditorAgentStep(symbolName: "cursorarrow.rays", title: L10n.VideoEditorAI.stepCursor)
+    case .setCamera:
+      return VideoEditorAgentStep(symbolName: "person.crop.square", title: L10n.VideoEditorAI.stepCamera)
+    case .generateCaptions:
+      let count = number(payload["captions"]).map { Int($0) } ?? 0
+      return VideoEditorAgentStep(symbolName: "captions.bubble", title: L10n.VideoEditorAI.stepCaptions(count))
+    case .editCaption:
+      return VideoEditorAgentStep(symbolName: "captions.bubble", title: L10n.VideoEditorAI.stepEditCaption)
+    case .addCaption:
+      let start = seconds(payload["start"])
+      return VideoEditorAgentStep(
+        symbolName: "captions.bubble",
+        title: L10n.VideoEditorAI.stepAddCaption,
+        detail: range(start, seconds(payload["end"])),
+        time: start
+      )
+    case .removeCaptions:
+      let count = number(payload["removed"]).map { Int($0) } ?? 0
+      return VideoEditorAgentStep(symbolName: "captions.bubble", title: L10n.VideoEditorAI.stepRemoveCaptions(count))
+    case .replaceInCaptions:
+      let count = number(payload["changed"]).map { Int($0) } ?? 0
+      return VideoEditorAgentStep(symbolName: "text.badge.checkmark", title: L10n.VideoEditorAI.stepFixCaptions(count))
+    case .translateCaptions:
+      let identifier = (payload["language"] as? String) ?? (args["language"] as? String) ?? ""
+      let name = TranslationLanguage.language(for: identifier)?.displayName ?? identifier
+      return VideoEditorAgentStep(symbolName: "translate", title: L10n.VideoEditorAI.stepTranslateCaptions(name))
+    case .getTimeline, .seek, .getActivity, .getFrame, .findOnScreen, .getTranscript, .getCaptions:
       return nil
     }
   }

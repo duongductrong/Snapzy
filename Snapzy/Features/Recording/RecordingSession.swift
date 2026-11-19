@@ -123,6 +123,19 @@ nonisolated final class RecordingSession: @unchecked Sendable {
     }
   }
 
+  /// Recording time (seconds since the first written screen frame, pauses cut) of a
+  /// sample stamped `hostTime`; `nil` before the session starts or while paused. Lets a
+  /// sidecar writer (Studio camera) share the screen recording's timeline.
+  func recordingTime(forHostTime hostTime: CMTime) -> CMTime? {
+    lock.withLock {
+      guard _isCapturing, let first = _firstTimestamp,
+            let output = _pauseTimeline.outputTime(for: hostTime),
+            output >= first
+      else { return nil }
+      return CMTimeSubtract(output, first)
+    }
+  }
+
   /// Stop writing samples captured at or after `hostTime` (host time clock, like sample PTS).
   func pause(atHostTime hostTime: CMTime) {
     lock.withLock {

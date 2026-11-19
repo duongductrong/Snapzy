@@ -67,6 +67,10 @@ jobs:
         run: rm -rf "$HOME/Library/Caches/org.swift.swiftpm/artifacts"
 
       - name: Run tests
+        # Below the job timeout so a stuck run still fails this step and the
+        # diagnostics upload below gets to run; per-test allowances (above) kill a
+        # single hung test and name it instead of stalling the whole job.
+        timeout-minutes: 25
         env:
           # The following tests crash on GitHub Actions macOS runners (Swift concurrency /
           # headless CGS), so they are skipped in CI and run locally instead.
@@ -131,6 +135,7 @@ jobs:
             SnapzyTests/RecordingSessionHotkeyRegistrationTests
             SnapzyTests/SnapzyOnboardingStateTests/testStep2ScreenRecordingWorkflow
             SnapzyTests/VideoEditorSessionStoreTests/testEditorHostingReplay_preservesFinalZoomAndSpeedValues
+            SnapzyTests/VideoEditorSessionStoreTests/testAIPanelOpen_withLeftSidebar_keepsWindowWidth
             SnapzyTests/VideoEditorTimelineViewportTests
             SnapzyTests/VideoEditorTimelineScrollCatcherTests
             SnapzyTests/Issue690InputLockRegressionTests
@@ -161,6 +166,9 @@ jobs:
             -derivedDataPath build/DerivedData \
             -resultBundlePath build/ci-test.xcresult \
             -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 120 \
+            -maximum-test-execution-time-allowance 180 \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -176,7 +184,7 @@ jobs:
           tail -20 build/ci-test.log
 
       - name: Upload test diagnostics
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: ci-test-diagnostics

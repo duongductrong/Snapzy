@@ -279,6 +279,23 @@ final class VideoEditorAgentControllerTests: XCTestCase {
     XCTAssertEqual(received.last?.isPromptPresented, true)
   }
 
+  /// Opening the prompt writes several properties in one turn; the snapshots must be
+  /// evaluated once for all of them, not once per property.
+  func testPresentPromptSettlesSnapshotsOnce() async throws {
+    let state = try await makeState()
+    let controller = makeController(state, provider: nil)
+    var settled = 0
+    let subscription = controller.transcriptPublisher.sink { _ in settled += 1 }
+    defer { subscription.cancel() }
+
+    controller.presentPrompt()
+    controller.setPromptFieldFocused(false)
+    controller.setPromptFieldFocused(true)
+    await waitUntil { settled > 0 }
+    try? await Task.sleep(nanoseconds: 50_000_000)
+    XCTAssertEqual(settled, 1)
+  }
+
   func testUndoingAStoppedRunKeepsTheEarlierTurn() async throws {
     let state = try await makeState()
     let provider = ScriptedProvider(calls: [zoomCall])
