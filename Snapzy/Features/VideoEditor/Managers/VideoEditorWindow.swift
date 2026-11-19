@@ -22,6 +22,8 @@ class VideoEditorWindow: NSWindow {
   private var restingLevel: NSWindow.Level = .normal
   private var themeObserver: AnyCancellable?
   var onTogglePlayback: (() -> Void)?
+  /// Configurable AI prompt shortcut (default ⌘K). Returns whether the key was handled.
+  var onAIPromptShortcut: (() -> Bool)?
 
   init(contentRect: NSRect) {
     super.init(
@@ -120,6 +122,15 @@ class VideoEditorWindow: NSWindow {
   /// responders still get first refusal through `super`; this only consumes a
   /// Command-C that no responder in the editor can handle.
   override func performKeyEquivalent(with event: NSEvent) -> Bool {
+    // Matched ahead of SwiftUI so it also works while the prompt field has the caret
+    // (it toggles the prompt). Reserved editor combos are rejected by validation.
+    if let onAIPromptShortcut,
+       VideoEditorShortcutManager.shared.matches(.aiPrompt, event: event) {
+      // Holding the combo must not flip the prompt open/closed on every repeat.
+      if event.isARepeat { return true }
+      if onAIPromptShortcut() { return true }
+    }
+
     if super.performKeyEquivalent(with: event) {
       return true
     }

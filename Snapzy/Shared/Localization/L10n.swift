@@ -193,6 +193,11 @@ nonisolated enum L10n {
       defaultValue: "Cloud",
       comment: "Preferences tab title"
     )
+    static let aiTab = string(
+      "preferences.tab.ai",
+      defaultValue: "AI",
+      comment: "Preferences tab title for the Annotate AI prompt (Ask) settings"
+    )
     static let commandLineTab = string(
       "preferences.tab.command-line",
       defaultValue: "Command Line",
@@ -2490,6 +2495,18 @@ nonisolated enum L10n {
       defaultValue: "Inside annotate editor",
       comment: "Subtitle for annotate action shortcuts in overlay"
     )
+
+    static let videoEditorActions = string(
+      "shortcut-overlay.video-editor-actions",
+      defaultValue: "Video Editor Actions",
+      comment: "Shortcut overlay section title and Settings → Shortcuts card title for Video Editor action shortcuts"
+    )
+
+    static let insideVideoEditor = string(
+      "shortcut-overlay.inside-video-editor",
+      defaultValue: "Inside video editor",
+      comment: "Subtitle for Video Editor action shortcuts in overlay"
+    )
     static func applicationCapture(_ shortcut: String) -> String {
       format(
         "shortcut-overlay.application-capture",
@@ -2644,6 +2661,21 @@ nonisolated enum L10n {
         displayName
       )
     }
+
+    static func alreadyUsedByInVideoEditor(_ displayName: String) -> String {
+      format(
+        "shortcut-validation.already-used-by-video-editor",
+        defaultValue: "Already used by %@ in Video Editor.",
+        comment: "Validation error for duplicate shortcut in the video editor. %@ is the conflicting action name.",
+        displayName
+      )
+    }
+
+    static let reservedByVideoEditor = string(
+      "shortcut-validation.reserved-by-video-editor",
+      defaultValue: "The Video Editor already uses this shortcut.",
+      comment: "Validation error when a Video Editor action shortcut matches a built-in editor shortcut such as ⌘Z or ⌘S"
+    )
 
     static func matchesSystemConflict(_ displayName: String) -> String {
       format(
@@ -4586,6 +4618,18 @@ nonisolated enum L10n {
       "preferences-shortcuts.annotate-actions-page-description",
       defaultValue: "Copy, pin, upload, and redact from the editor.",
       comment: "Shortcuts overview card subtitle"
+    )
+
+    static let videoEditorActionsPageDescription = string(
+      "preferences-shortcuts.video-editor-actions-page-description",
+      defaultValue: "Open the AI prompt from the video editor.",
+      comment: "Shortcuts overview card subtitle for Video Editor actions"
+    )
+
+    static let videoEditorActionsDescription = string(
+      "preferences-shortcuts.video-editor-actions-description",
+      defaultValue: "Shortcuts that work only while a Video Editor window is focused. Built-in editor keys such as ⌘Z, ⌘S, ⌘U, and ⌘B can't be reassigned.",
+      comment: "Help text for the Video Editor action shortcuts card"
     )
     static let annotateToolsPageDescription = string(
       "preferences-shortcuts.annotate-tools-page-description",
@@ -10295,6 +10339,552 @@ extension L10n {
     }
     static var coverColor: String {
       string("annotate.translate.cover-color", defaultValue: "Cover", comment: "Color of the cover behind a translation")
+    }
+  }
+
+  /// Video Editor AI prompt. Shares button words (Send, Stop, Back…) with `AnnotateAI`.
+  nonisolated enum VideoEditorAI {
+    static var askHelp: String {
+      string("video-editor.ai.ask-help", defaultValue: "Ask AI", comment: "Tooltip and shortcut name for the Video Editor AI prompt")
+    }
+    static var shortcutDescription: String {
+      string("video-editor.ai.shortcut-description", defaultValue: "Open the AI prompt to edit the timeline by describing the change.", comment: "Settings → Shortcuts description for the Video Editor AI prompt shortcut")
+    }
+    static var placeholder: String {
+      string("video-editor.ai.placeholder", defaultValue: "Describe how to edit the video…", comment: "Placeholder of the Video Editor AI prompt field")
+    }
+    static var notConfigured: String {
+      string("video-editor.ai.not-configured", defaultValue: "Turn on Apple Intelligence, or pick an endpoint or agent CLI, to edit videos with AI", comment: "Shown when no AI provider can edit videos")
+    }
+    static var busy: String {
+      string("video-editor.ai.busy", defaultValue: "Wait until the video finishes loading or exporting", comment: "Shown when the Video Editor AI prompt is sent while the editor is busy")
+    }
+    static var statusReading: String {
+      string("video-editor.ai.status-reading", defaultValue: "Reading the timeline…", comment: "AI working status")
+    }
+    static var statusCut: String {
+      string("video-editor.ai.status-cut", defaultValue: "Cutting…", comment: "AI working status")
+    }
+    static var statusTrim: String {
+      string("video-editor.ai.status-trim", defaultValue: "Trimming a clip…", comment: "AI working status")
+    }
+    static var statusSplit: String {
+      string("video-editor.ai.status-split", defaultValue: "Splitting…", comment: "AI working status")
+    }
+    static var statusMove: String {
+      string("video-editor.ai.status-move", defaultValue: "Moving a clip…", comment: "AI working status")
+    }
+    static var statusDelete: String {
+      string("video-editor.ai.status-delete", defaultValue: "Removing a clip…", comment: "AI working status")
+    }
+    static var statusZoom: String {
+      string("video-editor.ai.status-zoom", defaultValue: "Adding a zoom…", comment: "AI working status")
+    }
+    static var statusEditZoom: String {
+      string("video-editor.ai.status-edit-zoom", defaultValue: "Adjusting zooms…", comment: "AI working status")
+    }
+    static var statusSpeed: String {
+      string("video-editor.ai.status-speed", defaultValue: "Changing speed…", comment: "AI working status")
+    }
+    static var statusBackground: String {
+      string("video-editor.ai.status-background", defaultValue: "Styling the frame…", comment: "AI working status")
+    }
+    static var statusAudio: String {
+      string("video-editor.ai.status-audio", defaultValue: "Adjusting audio…", comment: "AI working status")
+    }
+    static var statusAnalyzing: String {
+      string("video-editor.ai.status-analyzing", defaultValue: "Listening to the recording…", comment: "AI working status while the audio and cursor are analyzed")
+    }
+    static var statusSilences: String {
+      string("video-editor.ai.status-silences", defaultValue: "Cutting silences…", comment: "AI working status")
+    }
+    static var statusIdle: String {
+      string("video-editor.ai.status-idle", defaultValue: "Speeding up idle parts…", comment: "AI working status")
+    }
+    static var statusAutoZoom: String {
+      string("video-editor.ai.status-auto-zoom", defaultValue: "Zooming on activity…", comment: "AI working status")
+    }
+    static var statusLooking: String {
+      string("video-editor.ai.status-looking", defaultValue: "Looking at the video…", comment: "AI working status while it reads a video frame")
+    }
+    static var statusFinding: String {
+      string("video-editor.ai.status-finding", defaultValue: "Reading the screen…", comment: "AI working status while it searches the video for text on screen")
+    }
+    static var statusTranscribing: String {
+      string("video-editor.ai.status-transcribing", defaultValue: "Transcribing…", comment: "AI working status while speech is transcribed on this Mac")
+    }
+    static var suggestionSilences: String {
+      string("video-editor.ai.suggestion-silences", defaultValue: "Remove silences", comment: "Quick action chip above the Video Editor AI prompt")
+    }
+    static var suggestionIdle: String {
+      string("video-editor.ai.suggestion-idle", defaultValue: "Speed up idle parts", comment: "Quick action chip above the Video Editor AI prompt")
+    }
+    static var suggestionAutoZoom: String {
+      string("video-editor.ai.suggestion-auto-zoom", defaultValue: "Zoom on activity", comment: "Quick action chip above the Video Editor AI prompt")
+    }
+    static func removedSilences(_ count: Int, _ seconds: String) -> String {
+      format("video-editor.ai.removed-silences", defaultValue: "Removed %lld silences (%@ s)", comment: "Result of the Remove silences quick action. %lld = number of cuts, %@ = seconds removed", count, seconds)
+    }
+    static var noSilences: String {
+      string("video-editor.ai.no-silences", defaultValue: "No pauses long enough to cut", comment: "Result of the Remove silences quick action when nothing was cut")
+    }
+    static func spedUpIdle(_ count: Int) -> String {
+      format("video-editor.ai.sped-up-idle", defaultValue: "Sped up %lld idle parts", comment: "Result of the Speed up idle parts quick action. %lld = number of speed blocks added", count)
+    }
+    static var noIdle: String {
+      string("video-editor.ai.no-idle", defaultValue: "No idle parts found", comment: "Result of the Speed up idle parts quick action when nothing changed")
+    }
+    static func addedZooms(_ count: Int) -> String {
+      format("video-editor.ai.added-zooms", defaultValue: "Added %lld zooms on activity", comment: "Result of the Zoom on activity quick action. %lld = number of zooms added", count)
+    }
+    static var noActivity: String {
+      string("video-editor.ai.no-activity", defaultValue: "No focused activity to zoom on", comment: "Result of the Zoom on activity quick action when nothing changed")
+    }
+    static var panelTitle: String {
+      string("video-editor.ai.panel-title", defaultValue: "AI Assistant", comment: "Title of the Video Editor AI side panel")
+    }
+    static var settingsSection: String {
+      string("video-editor.ai.settings-section", defaultValue: "Video Editor", comment: "Settings › AI section title for Video Editor options")
+    }
+    static var layoutTitle: String {
+      string("video-editor.ai.layout-title", defaultValue: "Assistant layout", comment: "Settings › AI row title: where the Video Editor AI assistant shows")
+    }
+    static var layoutDescription: String {
+      string("video-editor.ai.layout-description", defaultValue: "Sidebar keeps the whole conversation and each edit beside the editor. Dock is a compact prompt floating over the player.", comment: "Settings › AI row description for the Video Editor AI layout")
+    }
+    static var layoutSidebar: String {
+      string("video-editor.ai.layout-sidebar", defaultValue: "Sidebar", comment: "Video Editor AI layout option: right side panel")
+    }
+    static var layoutDock: String {
+      string("video-editor.ai.layout-dock", defaultValue: "Floating dock", comment: "Video Editor AI layout option: floating prompt over the player")
+    }
+    static var togglePanelHelp: String {
+      string("video-editor.ai.toggle-panel-help", defaultValue: "AI Assistant", comment: "Tooltip of the toolbar button that shows or hides the Video Editor AI panel")
+    }
+    static var emptyTitle: String {
+      string("video-editor.ai.empty-title", defaultValue: "Edit by describing it", comment: "Empty state title of the Video Editor AI panel")
+    }
+    static var emptySubtitle: String {
+      string("video-editor.ai.empty-subtitle", defaultValue: "Cut, zoom, speed up or restyle the video. Every change is listed here and can be undone in one step.", comment: "Empty state subtitle of the Video Editor AI panel")
+    }
+    static var quickActionsHeader: String {
+      string("video-editor.ai.quick-actions-header", defaultValue: "One-click edits", comment: "Header above quick actions in the Video Editor AI panel")
+    }
+    static var examplesHeader: String {
+      string("video-editor.ai.examples-header", defaultValue: "Try asking", comment: "Header above example prompts in the Video Editor AI panel")
+    }
+    static var exampleCut: String {
+      string("video-editor.ai.example-cut", defaultValue: "Cut the first 5 seconds", comment: "Example prompt in the Video Editor AI panel")
+    }
+    static var exampleZoom: String {
+      string("video-editor.ai.example-zoom", defaultValue: "Zoom in on the cursor at 0:12", comment: "Example prompt in the Video Editor AI panel")
+    }
+    static var exampleSpeed: String {
+      string("video-editor.ai.example-speed", defaultValue: "Speed up 0:30 to 1:00 to 4×", comment: "Example prompt in the Video Editor AI panel")
+    }
+    static var exampleBackground: String {
+      string("video-editor.ai.example-background", defaultValue: "Add a gradient background with rounded corners", comment: "Example prompt in the Video Editor AI panel")
+    }
+    static var newConversation: String {
+      string("video-editor.ai.new-conversation", defaultValue: "New conversation", comment: "Video Editor AI panel button that clears the conversation")
+    }
+    static var you: String {
+      string("video-editor.ai.you", defaultValue: "You", comment: "Accessibility label of the user's message in the Video Editor AI panel")
+    }
+    static var undone: String {
+      string("video-editor.ai.undone", defaultValue: "Undone", comment: "Label on an AI reply whose changes were undone")
+    }
+    static var jumpHelp: String {
+      string("video-editor.ai.jump-help", defaultValue: "Move the playhead here", comment: "Tooltip of an edit step in the Video Editor AI panel")
+    }
+    static var stepAll: String {
+      string("video-editor.ai.step-all", defaultValue: "all", comment: "Used in AI edit steps for every zoom or speed block, e.g. 'Removed zooms all'")
+    }
+    static func stepCut(_ start: String, _ end: String) -> String {
+      format("video-editor.ai.step-cut", defaultValue: "Cut %@ – %@", comment: "AI edit step. %@ = start and end time", start, end)
+    }
+    static func stepTrim(_ clip: String) -> String {
+      format("video-editor.ai.step-trim", defaultValue: "Trimmed clip %@", comment: "AI edit step. %@ = clip id like C1", clip)
+    }
+    static func stepSplit(_ time: String) -> String {
+      format("video-editor.ai.step-split", defaultValue: "Split at %@", comment: "AI edit step. %@ = time", time)
+    }
+    static func stepMove(_ clip: String, _ position: Int) -> String {
+      format("video-editor.ai.step-move", defaultValue: "Moved clip %@ to position %lld", comment: "AI edit step. %@ = clip id, %lld = new position", clip, position)
+    }
+    static func stepDeleteClip(_ clip: String) -> String {
+      format("video-editor.ai.step-delete-clip", defaultValue: "Removed clip %@", comment: "AI edit step. %@ = clip id", clip)
+    }
+    static func stepZoom(_ level: String, _ time: String) -> String {
+      format("video-editor.ai.step-zoom", defaultValue: "Zoom %@× at %@", comment: "AI edit step. First %@ = zoom factor, second = time", level, time)
+    }
+    static func stepEditZoom(_ id: String) -> String {
+      format("video-editor.ai.step-edit-zoom", defaultValue: "Adjusted zoom %@", comment: "AI edit step. %@ = zoom id like Z1", id)
+    }
+    static func stepRemoveZoom(_ ids: String) -> String {
+      format("video-editor.ai.step-remove-zoom", defaultValue: "Removed zoom %@", comment: "AI edit step. %@ = zoom ids", ids)
+    }
+    static func stepSpeed(_ rate: String) -> String {
+      format("video-editor.ai.step-speed", defaultValue: "Speed %@×", comment: "AI edit step. %@ = playback rate", rate)
+    }
+    static func stepEditSpeed(_ id: String) -> String {
+      format("video-editor.ai.step-edit-speed", defaultValue: "Adjusted speed %@", comment: "AI edit step. %@ = speed block id like S1", id)
+    }
+    static func stepRemoveSpeed(_ ids: String) -> String {
+      format("video-editor.ai.step-remove-speed", defaultValue: "Removed speed %@", comment: "AI edit step. %@ = speed block ids", ids)
+    }
+    static var stepBackground: String {
+      string("video-editor.ai.step-background", defaultValue: "Changed the background", comment: "AI edit step")
+    }
+    static var stepMuted: String {
+      string("video-editor.ai.step-muted", defaultValue: "Muted the audio", comment: "AI edit step")
+    }
+    static var stepAudio: String {
+      string("video-editor.ai.step-audio", defaultValue: "Changed the volume", comment: "AI edit step")
+    }
+    static func consentTitle(_ name: String) -> String {
+      format("video-editor.ai.consent-title", defaultValue: "Send this video’s timeline to %@?", comment: "Alert title before the first Video Editor AI prompt goes to an off-device provider. %@ is the provider name", name)
+    }
+    static func consentMessage(_ host: String) -> String {
+      format("video-editor.ai.consent-message", defaultValue: "To answer, the video’s timeline (clips, zooms, speeds, frame and audio settings), text read off the screen, what is said (transcribed on this Mac) and, when sending images is on, video frames are sent to %@. Snapzy asks once for each provider.", comment: "Alert message before the first Video Editor AI prompt goes to an off-device provider. %@ is the server host", host)
+    }
+    static func consentMessageCLI(_ name: String) -> String {
+      format("video-editor.ai.consent-message-cli", defaultValue: "%@ gets the video’s timeline (clips, zooms, speeds, frame and audio settings), text read off the screen, what is said (transcribed on this Mac) and, when sending images is on, video frames, and sends them to its model provider. It may also load your own MCP servers, hooks and instructions. Snapzy asks once for each provider.", comment: "Alert message before the first Video Editor AI prompt goes to an agent CLI. %@ is the CLI name", name)
+    }
+  }
+
+  nonisolated enum AnnotateAI {
+    static var ask: String {
+      string("annotate.ai.ask", defaultValue: "Ask", comment: "Annotate AI dock: button that opens the natural-language prompt")
+    }
+    static var askHelp: String {
+      string("annotate.ai.ask-help", defaultValue: "Ask AI", comment: "Tooltip and shortcut name for the Annotate AI prompt")
+    }
+    static var shortcutDescription: String {
+      string("annotate.ai.shortcut-description", defaultValue: "Describe what to annotate and let AI add it", comment: "Shortcut settings description for the Annotate AI prompt")
+    }
+    static var placeholder: String {
+      string("annotate.ai.placeholder", defaultValue: "Describe what to annotate…", comment: "Placeholder of the Annotate AI prompt field")
+    }
+    static var followUpPlaceholder: String {
+      string("annotate.ai.follow-up-placeholder", defaultValue: "Ask a follow-up…", comment: "Placeholder of the AI prompt field after a first request")
+    }
+    static var back: String {
+      string("annotate.ai.back", defaultValue: "Back", comment: "Button that leaves the AI prompt and returns to the AI tools")
+    }
+    static var send: String {
+      string("annotate.ai.send", defaultValue: "Send", comment: "Button that sends the AI prompt")
+    }
+    static var stop: String {
+      string("annotate.ai.stop", defaultValue: "Stop", comment: "Button that stops the running AI request")
+    }
+    static var newConversation: String {
+      string("annotate.ai.new-conversation", defaultValue: "New Conversation", comment: "Menu item that forgets earlier AI prompts in this window")
+    }
+    static var settings: String {
+      string("annotate.ai.settings", defaultValue: "AI Settings…", comment: "Menu item that opens AI settings")
+    }
+    static var notConfigured: String {
+      string("annotate.ai.not-configured", defaultValue: "AI isn’t set up yet", comment: "Shown when no AI provider is available for the Annotate prompt")
+    }
+    static var failed: String {
+      string("annotate.ai.failed", defaultValue: "The AI request didn’t finish", comment: "Generic error when an AI request fails")
+    }
+    static var appleRefused: String {
+      string("annotate.ai.apple-refused", defaultValue: "Apple Intelligence can’t help with this request", comment: "Apple Intelligence declined to answer for safety reasons")
+    }
+    static var appleUnsupportedLanguage: String {
+      string("annotate.ai.apple-unsupported-language", defaultValue: "Apple Intelligence doesn’t support this language yet", comment: "Apple Intelligence does not support the prompt's language")
+    }
+    static var appleUnavailable: String {
+      string("annotate.ai.apple-unavailable", defaultValue: "Apple Intelligence isn’t ready yet. Check System Settings › Apple Intelligence & Siri", comment: "Apple Intelligence model is not ready (downloading or disabled)")
+    }
+    static var appleBusy: String {
+      string("annotate.ai.apple-busy", defaultValue: "Apple Intelligence is busy. Try again in a moment", comment: "Apple Intelligence is rate limited or busy")
+    }
+    static var appleTooLong: String {
+      string("annotate.ai.apple-too-long", defaultValue: "Too much to handle on-device. Try a shorter request", comment: "The prompt plus screenshot did not fit the on-device model's context")
+    }
+    static var stopped: String {
+      string("annotate.ai.stopped", defaultValue: "Stopped", comment: "Result after the user stopped an AI request")
+    }
+    static var noChanges: String {
+      string("annotate.ai.no-changes", defaultValue: "No changes", comment: "AI request finished without changing anything")
+    }
+    static func changes(_ count: Int) -> String {
+      format("annotate.ai.changes", defaultValue: "Changes: %lld", comment: "Number of changes an AI request made", count)
+    }
+    static func selected(_ count: Int) -> String {
+      format("annotate.ai.selected", defaultValue: "Selected: %lld", comment: "Chip in the AI prompt: number of selected annotations the prompt applies to", count)
+    }
+    static var clearSelection: String {
+      string("annotate.ai.clear-selection", defaultValue: "Clear Selection", comment: "Removes the selection chip from the AI prompt")
+    }
+    static var statusReading: String {
+      string("annotate.ai.status-reading", defaultValue: "Reading the screenshot…", comment: "AI working status")
+    }
+    static var statusThinking: String {
+      string("annotate.ai.status-thinking", defaultValue: "Thinking…", comment: "AI working status")
+    }
+    static var statusFindingText: String {
+      string("annotate.ai.status-finding-text", defaultValue: "Looking for text…", comment: "AI working status")
+    }
+    static var statusBox: String {
+      string("annotate.ai.status-box", defaultValue: "Drawing a box…", comment: "AI working status")
+    }
+    static var statusOval: String {
+      string("annotate.ai.status-oval", defaultValue: "Circling…", comment: "AI working status")
+    }
+    static var statusArrow: String {
+      string("annotate.ai.status-arrow", defaultValue: "Adding an arrow…", comment: "AI working status")
+    }
+    static var statusLine: String {
+      string("annotate.ai.status-line", defaultValue: "Drawing a line…", comment: "AI working status")
+    }
+    static var statusText: String {
+      string("annotate.ai.status-text", defaultValue: "Writing a note…", comment: "AI working status")
+    }
+    static var statusHighlight: String {
+      string("annotate.ai.status-highlight", defaultValue: "Highlighting…", comment: "AI working status")
+    }
+    static var statusBlur: String {
+      string("annotate.ai.status-blur", defaultValue: "Blurring…", comment: "AI working status")
+    }
+    static var statusSpotlight: String {
+      string("annotate.ai.status-spotlight", defaultValue: "Adding a spotlight…", comment: "AI working status")
+    }
+    static var statusCounter: String {
+      string("annotate.ai.status-counter", defaultValue: "Numbering steps…", comment: "AI working status")
+    }
+    static var statusWatermark: String {
+      string("annotate.ai.status-watermark", defaultValue: "Adding a watermark…", comment: "AI working status")
+    }
+    static var statusEdit: String {
+      string("annotate.ai.status-edit", defaultValue: "Editing annotations…", comment: "AI working status")
+    }
+    static var statusDelete: String {
+      string("annotate.ai.status-delete", defaultValue: "Removing annotations…", comment: "AI working status")
+    }
+    static var statusArrange: String {
+      string("annotate.ai.status-arrange", defaultValue: "Arranging layers…", comment: "AI working status")
+    }
+    static var statusCanvas: String {
+      string("annotate.ai.status-canvas", defaultValue: "Styling the canvas…", comment: "AI working status")
+    }
+    static func statusStarting(_ name: String) -> String {
+      format("annotate.ai.status-starting", defaultValue: "Starting %@…", comment: "AI working status while an agent CLI starts. %@ is the CLI name (Claude Code, Codex, OpenCode)", name)
+    }
+    static func cliNotInstalled(_ name: String) -> String {
+      format("annotate.ai.cli-not-installed", defaultValue: "%@ isn’t installed. Install it or pick another provider", comment: "Agent CLI not found on this Mac. %@ is the CLI name", name)
+    }
+    static var cliHelperMissing: String {
+      string("annotate.ai.cli-helper-missing", defaultValue: "Snapzy’s command line helper is missing. Reinstall Snapzy", comment: "Snapzy's embedded snapzy command line helper is missing from the app bundle")
+    }
+    static func cliConnectionFailed(_ name: String) -> String {
+      format("annotate.ai.cli-connection-failed", defaultValue: "Couldn’t open the connection %@ needs", comment: "Snapzy could not open the local connection the agent CLI needs. %@ is the CLI name", name)
+    }
+    static func cliFailed(_ name: String, _ detail: String) -> String {
+      format("annotate.ai.cli-failed", defaultValue: "%1$@: %2$@", comment: "Agent CLI failed. %1$@ is the CLI name, %2$@ is its error message", name, detail)
+    }
+    static func cliTimedOut(_ name: String) -> String {
+      format("annotate.ai.cli-timed-out", defaultValue: "%@ took too long and was stopped", comment: "Agent CLI did not finish in time. %@ is the CLI name", name)
+    }
+    static func statusContacting(_ name: String) -> String {
+      format("annotate.ai.status-contacting", defaultValue: "Asking %@…", comment: "AI working status while waiting for a custom endpoint. %@ is the endpoint name", name)
+    }
+    static var invalidReply: String {
+      string("annotate.ai.invalid-reply", defaultValue: "The model’s answer couldn’t be read. Try again or choose another model", comment: "A custom AI endpoint answered with something Snapzy can't use")
+    }
+    static var automatic: String {
+      string("annotate.ai.automatic", defaultValue: "Automatic", comment: "AI provider menu: let Snapzy pick the on-device provider")
+    }
+    static func consentTitle(_ name: String) -> String {
+      format("annotate.ai.consent-title", defaultValue: "Send this screenshot to %@?", comment: "Alert title before the first AI prompt goes to an off-device provider. %@ is the provider name", name)
+    }
+    static func consentMessage(_ host: String) -> String {
+      format("annotate.ai.consent-message", defaultValue: "To answer, the screenshot and the text recognized in it are sent to %@. Snapzy asks once for each provider.", comment: "Alert message before the first AI prompt goes to an off-device provider. %@ is the server host", host)
+    }
+    static var consentSend: String {
+      string("annotate.ai.consent-send", defaultValue: "Send", comment: "Alert button that allows sending the screenshot to an AI provider")
+    }
+    static func consentMessageCLI(_ name: String) -> String {
+      format("annotate.ai.consent-message-cli", defaultValue: "%@ gets the screenshot and the text recognized in it, and sends them to its model provider. It may also load your own MCP servers, hooks and instructions. Snapzy asks once for each provider.", comment: "Alert message before the first AI prompt goes to an agent CLI. %@ is the CLI name (Claude Code, Codex, OpenCode)", name)
+    }
+    static var settingsHeroSubtitle: String {
+      string("annotate.ai.settings-hero-subtitle", defaultValue: "Choose who answers Ask in Annotate: Apple Intelligence on this Mac, your own endpoint, or an agent CLI.", comment: "Settings › AI page subtitle")
+    }
+    static var settingsProviderSection: String {
+      string("annotate.ai.settings-provider-section", defaultValue: "Provider", comment: "Settings › AI section title")
+    }
+    static var settingsProviderTitle: String {
+      string("annotate.ai.settings-provider-title", defaultValue: "Ask AI with", comment: "Settings › AI row title: which provider answers the Annotate AI prompt")
+    }
+    static var settingsProviderDescription: String {
+      string("annotate.ai.settings-provider-description", defaultValue: "Automatic uses Apple Intelligence when it’s ready. Endpoints and agent CLIs are never picked for you, since they send the screenshot off this Mac.", comment: "Settings › AI provider row description")
+    }
+    static var settingsAppleSection: String {
+      string("annotate.ai.settings-apple-section", defaultValue: "Apple Intelligence", comment: "Settings › AI section title (product name)")
+    }
+    static var settingsAppleStatusTitle: String {
+      string("annotate.ai.settings-apple-status-title", defaultValue: "On-device model", comment: "Settings › AI row title: status of the Apple Intelligence model")
+    }
+    static var settingsAppleAvailable: String {
+      string("annotate.ai.settings-apple-available", defaultValue: "Ready on this Mac", comment: "Apple Intelligence status in Settings")
+    }
+    static var settingsAppleUnsupportedOS: String {
+      string("annotate.ai.settings-apple-unsupported-os", defaultValue: "Requires macOS 26 or later", comment: "Apple Intelligence status in Settings")
+    }
+    static var settingsAppleNotEligible: String {
+      string("annotate.ai.settings-apple-not-eligible", defaultValue: "This Mac doesn’t support Apple Intelligence", comment: "Apple Intelligence status in Settings")
+    }
+    static var settingsAppleNotEnabled: String {
+      string("annotate.ai.settings-apple-not-enabled", defaultValue: "Turned off in System Settings", comment: "Apple Intelligence status in Settings")
+    }
+    static var settingsAppleNotReady: String {
+      string("annotate.ai.settings-apple-not-ready", defaultValue: "Still downloading or not ready yet", comment: "Apple Intelligence status in Settings")
+    }
+    static var settingsOpenSystemSettings: String {
+      string("annotate.ai.settings-open-system-settings", defaultValue: "Open System Settings…", comment: "Button that opens System Settings › Apple Intelligence & Siri")
+    }
+    static var settingsEndpointsSection: String {
+      string("annotate.ai.settings-endpoints-section", defaultValue: "Custom Endpoints", comment: "Settings › AI section title: OpenAI-compatible endpoints")
+    }
+    static var settingsEndpointsFooter: String {
+      string("annotate.ai.settings-endpoints-footer", defaultValue: "OpenAI-compatible endpoints, shared with OCR and Translate. Test checks whether the model can call tools and read images; Snapzy also learns this while you use it.", comment: "Settings › AI endpoints section footer")
+    }
+    static var settingsEndpointsEmpty: String {
+      string("annotate.ai.settings-endpoints-empty", defaultValue: "No custom endpoints yet", comment: "Settings › AI: the endpoint list is empty")
+    }
+    static var settingsManageEndpoints: String {
+      string("annotate.ai.settings-manage-endpoints", defaultValue: "Manage Endpoints…", comment: "Button that opens the shared custom endpoint list (Capture › OCR)")
+    }
+    static var settingsTest: String {
+      string("annotate.ai.settings-test", defaultValue: "Test", comment: "Button that checks what a custom AI endpoint supports")
+    }
+    static var settingsTesting: String {
+      string("annotate.ai.settings-testing", defaultValue: "Testing…", comment: "Shown while a custom AI endpoint is being tested")
+    }
+    static var settingsCapabilityTools: String {
+      string("annotate.ai.settings-capability-tools", defaultValue: "Tools", comment: "Badge: the endpoint's model can call tools (function calling)")
+    }
+    static var settingsCapabilityVision: String {
+      string("annotate.ai.settings-capability-vision", defaultValue: "Vision", comment: "Badge: the endpoint's model accepts images")
+    }
+    static var settingsCapabilitySupported: String {
+      string("annotate.ai.settings-capability-supported", defaultValue: "Supported", comment: "Tooltip of a capability badge")
+    }
+    static var settingsCapabilityUnsupported: String {
+      string("annotate.ai.settings-capability-unsupported", defaultValue: "Not supported", comment: "Tooltip of a capability badge")
+    }
+    static var settingsCapabilityUnknown: String {
+      string("annotate.ai.settings-capability-unknown", defaultValue: "Not checked yet", comment: "Tooltip of a capability badge")
+    }
+    static var settingsCLISection: String {
+      string("annotate.ai.settings-cli-section", defaultValue: "Agent CLIs", comment: "Settings › AI section title: Claude Code, Codex, OpenCode on this Mac")
+    }
+    static var settingsCLIFooter: String {
+      string("annotate.ai.settings-cli-footer", defaultValue: "Snapzy runs the CLI in the background and gives it only Snapzy’s annotation tools. Sign-in, model and usage belong to the CLI.", comment: "Settings › AI agent CLI section footer")
+    }
+    static var settingsCLIWarning: String {
+      string("annotate.ai.settings-cli-warning", defaultValue: "Agent CLIs may still load your own MCP servers, hooks and instructions. Text in a screenshot could steer the model toward them, so only use a CLI you trust with your screenshots.", comment: "Settings › AI warning about agent CLIs")
+    }
+    static var settingsRefresh: String {
+      string("annotate.ai.settings-refresh", defaultValue: "Refresh", comment: "Button that looks for agent CLIs again")
+    }
+    static var settingsCLINotFound: String {
+      string("annotate.ai.settings-cli-not-found", defaultValue: "Not found", comment: "Agent CLI status: not installed")
+    }
+    static var settingsCLIModelTitle: String {
+      string("annotate.ai.settings-cli-model-title", defaultValue: "Model", comment: "Settings › AI agent CLI row: model override")
+    }
+    static var settingsCLIModelDescription: String {
+      string("annotate.ai.settings-cli-model-description", defaultValue: "Pick a model the CLI offers, or keep the CLI’s own default.", comment: "Settings › AI agent CLI model override description")
+    }
+    static var settingsCLIModelPlaceholder: String {
+      string("annotate.ai.settings-cli-model-placeholder", defaultValue: "Default", comment: "Placeholder of the agent CLI model field")
+    }
+    static var settingsCLIModelPickerDescription: String {
+      string("annotate.ai.settings-cli-model-picker-description", defaultValue: "Models this CLI can use. CLI default follows its own settings.", comment: "Settings › AI agent CLI model picker description")
+    }
+    static var settingsCLILocationDescription: String {
+      string("annotate.ai.settings-cli-location-description", defaultValue: "Found in your shell’s PATH unless you choose a file.", comment: "Settings › AI agent CLI location row description")
+    }
+    static var settingsCLIModelDefault: String {
+      string("annotate.ai.settings-cli-model-default", defaultValue: "CLI default", comment: "Agent CLI model picker: use the CLI's own model")
+    }
+    static var settingsCLIModelCustom: String {
+      string("annotate.ai.settings-cli-model-custom", defaultValue: "Custom…", comment: "Agent CLI model picker: type a model id")
+    }
+    static var settingsCLIModelLoading: String {
+      string("annotate.ai.settings-cli-model-loading", defaultValue: "Loading models…", comment: "Agent CLI model picker while the list loads")
+    }
+    static var settingsCLIModelNone: String {
+      string("annotate.ai.settings-cli-model-none", defaultValue: "No models found", comment: "Agent CLI model picker: the CLI listed no models")
+    }
+    static var settingsCLIModelCustomPlaceholder: String {
+      string("annotate.ai.settings-cli-model-custom-placeholder", defaultValue: "Model id, e.g. provider/model", comment: "Placeholder of the custom agent CLI model field")
+    }
+    static var settingsCLIEffortTitle: String {
+      string("annotate.ai.settings-cli-effort-title", defaultValue: "Reasoning effort", comment: "Settings › AI agent CLI row: reasoning effort")
+    }
+    static var settingsCLIEffortDescription: String {
+      string("annotate.ai.settings-cli-effort-description", defaultValue: "Higher effort handles complex edits better, but replies slower.", comment: "Settings › AI agent CLI reasoning effort description")
+    }
+    static var settingsCLIEffortNeedsModel: String {
+      string("annotate.ai.settings-cli-effort-needs-model", defaultValue: "Pick a model to set its effort.", comment: "OpenCode effort needs an explicit model")
+    }
+    static func settingsCLIEffortLevel(_ level: String) -> String {
+      switch level {
+      case "minimal": string("annotate.ai.settings-cli-effort-minimal", defaultValue: "Minimal", comment: "Reasoning effort level")
+      case "low": string("annotate.ai.settings-cli-effort-low", defaultValue: "Low", comment: "Reasoning effort level")
+      case "medium": string("annotate.ai.settings-cli-effort-medium", defaultValue: "Medium", comment: "Reasoning effort level")
+      case "high": string("annotate.ai.settings-cli-effort-high", defaultValue: "High", comment: "Reasoning effort level")
+      case "xhigh": string("annotate.ai.settings-cli-effort-xhigh", defaultValue: "Extra high", comment: "Reasoning effort level")
+      case "max": string("annotate.ai.settings-cli-effort-max", defaultValue: "Max", comment: "Reasoning effort level")
+      default: level.prefix(1).uppercased() + level.dropFirst()
+      }
+    }
+    static var settingsCLIPathTitle: String {
+      string("annotate.ai.settings-cli-path-title", defaultValue: "Location", comment: "Settings › AI agent CLI row: path to the executable")
+    }
+    static var settingsCLIPathDescription: String {
+      string("annotate.ai.settings-cli-path-description", defaultValue: "Leave empty to find it in your shell’s PATH.", comment: "Settings › AI agent CLI path description")
+    }
+    static var settingsCLIPathPlaceholder: String {
+      string("annotate.ai.settings-cli-path-placeholder", defaultValue: "Automatic", comment: "Placeholder of the agent CLI path field")
+    }
+    static var settingsCLIPathInvalid: String {
+      string("annotate.ai.settings-cli-path-invalid", defaultValue: "No runnable file at this location", comment: "Agent CLI path points to nothing runnable")
+    }
+    static var settingsChoose: String {
+      string("annotate.ai.settings-choose", defaultValue: "Choose…", comment: "Button that opens a file picker")
+    }
+    static var settingsPrivacySection: String {
+      string("annotate.ai.settings-privacy-section", defaultValue: "Privacy", comment: "Settings › AI section title")
+    }
+    static var settingsSendImageTitle: String {
+      string("annotate.ai.settings-send-image-title", defaultValue: "Send screenshot image", comment: "Settings › AI toggle title")
+    }
+    static var settingsSendImageDescription: String {
+      string("annotate.ai.settings-send-image-description", defaultValue: "Endpoints and agent CLIs get the screenshot along with the recognized text. When off, only the text and its layout are sent.", comment: "Settings › AI send image description")
+    }
+    static var settingsTimeoutTitle: String {
+      string("annotate.ai.settings-timeout-title", defaultValue: "Agent CLI time limit", comment: "Settings › AI row title")
+    }
+    static var settingsTimeoutDescription: String {
+      string("annotate.ai.settings-timeout-description", defaultValue: "Stop an agent CLI that takes longer than this to answer.", comment: "Settings › AI time limit description")
+    }
+    static var settingsConsentTitle: String {
+      string("annotate.ai.settings-consent-title", defaultValue: "Sending permissions", comment: "Settings › AI row title: providers allowed to receive screenshots")
+    }
+    static var settingsConsentDescription: String {
+      string("annotate.ai.settings-consent-description", defaultValue: "Snapzy asks once before the first screenshot goes to each endpoint or agent CLI. Reset to be asked again.", comment: "Settings › AI sending permissions description")
+    }
+    static var settingsConsentReset: String {
+      string("annotate.ai.settings-consent-reset", defaultValue: "Reset", comment: "Button that forgets which AI providers may receive screenshots")
+    }
+    static func settingsConsentCount(_ count: String) -> String {
+      format("annotate.ai.settings-consent-count", defaultValue: "Allowed: %@", comment: "Number of AI providers allowed to receive screenshots. %@ is a number", count)
     }
   }
 }

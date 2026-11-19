@@ -681,6 +681,8 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
 
   private func forceClose(perfInterval: Any? = nil) {
+    // A provider (process, network) must not outlive its window.
+    state.agent.stop()
     state.hasUnsavedChanges = false
     guard let window = self.window else {
       PerfSignpost.endInterval(perfInterval)
@@ -787,6 +789,23 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     ) { [weak self] _ in
       MainActor.assumeIsolated {
         self?.state.toggleAutoTranslate()
+      }
+    }
+
+    NotificationCenter.default.addObserver(
+      forName: .annotateAIPrompt,
+      object: window,
+      queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        guard let self else { return }
+        let agent = self.state.agent
+        // ⌘K on an open prompt that lost the caret brings the caret back instead of closing it.
+        if agent.isPromptPresented, !agent.isRunning, !PromptTextField.isEditing(in: self.window) {
+          agent.focusPrompt()
+        } else {
+          agent.togglePrompt()
+        }
       }
     }
 

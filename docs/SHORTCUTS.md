@@ -129,14 +129,28 @@ Hover a Quick Access card, press the key, the card runs that action. All seven `
   | `autoRedactSensitiveData` | unbound | `annotate.action.autoRedactSensitiveData` |
   | `autoTranslate` | ⌘⇧T | `annotate.action.autoTranslate` |
   | `translateArea` | ⌥⌘T | `annotate.action.translateArea` |
+  | `aiPrompt` | ⌘K | `annotate.action.aiPrompt` (Ask AI; hidden when no AI provider can run — see [AI.md](AI.md)) |
 
 - Action disable set: `shortcuts.disabledAnnotateActionShortcuts`.
+
+## Video Editor shortcuts
+
+`VideoEditorShortcutManager` (`Snapzy/Features/VideoEditor/Services/VideoEditorShortcutManager.swift`):
+
+| Kind | Default | Key |
+| --- | --- | --- |
+| `aiPrompt` | ⌘K | `videoEditor.action.aiPrompt` (Ask AI — see [AI.md](AI.md#video-editor)) |
+
+- Disable set: `shortcuts.disabledVideoEditorActionShortcuts`. A cleared binding persists the `"null"` sentinel.
+- Matched in `VideoEditorWindow.performKeyEquivalent` (exact key + modifiers via `ShortcutConfig.matches(event:)`) ahead of SwiftUI, so it also toggles the prompt while its field has the caret.
+- Validation (`validateVideoEditorActionShortcut`): rejects the editor's fixed combos (`VideoEditorShortcutManager.reservedShortcuts`: ⌘Z, ⇧⌘Z, ⌘S, ⌘U, ⌘B, ⌘=, ⌘-, ⌘0, ⌘C/V/X/A, ⌘W/Q/M/H, ⌘,) and enabled global shortcuts (swap offered). Annotate keys may be reused: the two windows are never key at once. Setting a global shortcut to the Video Editor binding is rejected the other way round ("Already used by … in Video Editor").
+- Fixed editor keys (not remappable) are listed in [VIDEO_EDITOR.md](VIDEO_EDITOR.md#editor-shortcuts-video-only).
 
 ## Conflict detection
 
 `ShortcutValidationService` (`Snapzy/Services/Shortcuts/ShortcutValidationService.swift`):
 
-- Cross-namespace duplicate checks (global ↔ annotate action ↔ independent overlay ↔ annotate tool): duplicate → `.reject` with `.error` severity, blocks assignment.
+- Cross-namespace duplicate checks (global ↔ annotate action ↔ video editor action ↔ independent overlay ↔ annotate tool): duplicate → `.reject` with `.error` severity, blocks assignment.
 - System screenshot conflicts: `SystemScreenshotShortcutManager` reads `com.apple.symbolichotkeys` via `UserDefaults(suiteName:)` (requires the shared-preference entitlement — see [APP_LIFECYCLE.md](APP_LIFECYCLE.md)). Symbolic hotkey IDs: 28 (save area), 29 (copy area), 30 (save screen), 31 (copy screen), 184 (screenshot options).
 - Only `fullscreen`, `area`, `repeatArea`, `recording` are `isSystemConflictRelevant`; conflicts surface as `.warning` (accepted, non-blocking). `repeatArea` ships as ⌃⌘⇧4, which collides with macOS symbolic hotkey 29 (copy area to clipboard) on default systems — the warning UI covers it.
 - Prompt-once flow: `systemShortcutsDisablePromptSeen` UserDefaults flag gates the "disable macOS shortcuts" prompt; unreadable plist → assume no conflict (no nag).
@@ -192,7 +206,7 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
   open 'snapzy://open/combine?file=/tmp/first.png&file=/tmp/second.png'
   ```
 
-- Settings tabs: `general`, `capture`, `annotate`, `quick-access`, `history`, `shortcuts`, `permissions`, `command-line` (`cli`), `cloud`, `advanced`, `about`. Also accepted as path form (`snapzy://settings/capture`).
+- Settings tabs: `general`, `capture`, `annotate`, `ai` (`ask`), `quick-access`, `history`, `shortcuts`, `permissions`, `command-line` (`cli`), `cloud`, `advanced`, `about`. Also accepted as path form (`snapzy://settings/capture`).
 - Aliases exist for most routes — e.g. `capture/focused-window`, `capture/window`, `record/window`, `screenshot/area`, `ocr`, `annotate`, `combine`, `uploads`, `history`, `shortcuts`, `preferences`, plus tab aliases (`screenshots`, `privacy`, `config`, `toml`, …). Full alias list: `SnapzyDeepLinkAction.init?(url:)` in `Snapzy/App/SnapzyDeepLinkHandler.swift`.
 
 ## Related docs
@@ -202,4 +216,5 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 - [CAPTURE.md](CAPTURE.md) — capture flows triggered by shortcuts
 - [RECORDING.md](RECORDING.md) — recording start/stop/pause behavior
 - [ANNOTATE.md](ANNOTATE.md) — editor tools and actions
+- [VIDEO_EDITOR.md](VIDEO_EDITOR.md) — video editor keys
 - [CONFIGURATION.md](CONFIGURATION.md) — TOML control of shortcut prefs

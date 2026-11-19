@@ -157,12 +157,20 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       guard state?.isExporting != true else { return }
       state?.togglePlayback()
     }
+    (window as? VideoEditorWindow)?.onAIPromptShortcut = { [weak state, weak window] in
+      guard let state, !state.isExporting else { return false }
+      let agent = state.agent
+      guard agent.isAvailable else { return false }
+      agent.handleShortcut(isFieldEditing: PromptTextField.isEditing(in: window))
+      return true
+    }
     window?.contentView = NSHostingView(rootView: mainView)
   }
 
   private func setupEmptyContent() {
     bindDocumentEditedState(to: nil)
     (window as? VideoEditorWindow)?.onTogglePlayback = nil
+    (window as? VideoEditorWindow)?.onAIPromptShortcut = nil
     let emptyView = VideoEditorEmptyStateView { [weak self] url, originalURL in
       self?.onVideoLoaded?(url, originalURL)
     }
@@ -224,6 +232,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     // Empty state can always close
     guard let state else { return true }
 
+    // An AI run keeps what it changed so far; the unsaved-changes question covers it.
+    state.agentIfLoaded?.stop()
+
     guard state.hasUnsavedChanges else {
       state.pause()
       return true
@@ -234,6 +245,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   func windowWillClose(_: Notification) {
+    state?.agentIfLoaded?.stop()
     state?.cancelPendingPerformanceWork()
     window?.alphaValue = 0
     if let itemId = quickAccessItemID {

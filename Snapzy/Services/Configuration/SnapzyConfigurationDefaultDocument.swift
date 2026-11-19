@@ -194,6 +194,15 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("highlighter_text_snapping", true)
     writer.value("measure_unit", MeasureUnit.points.rawValue)
     writer.value("measure_axis", MeasureAxis.both.rawValue)
+
+    writer.section("annotate.ai")
+    writer.value("provider", AgentProviderSelection.automatic.persistedValue)
+    writer.value("send_image", true)
+    writer.value("cli_timeout", AnnotateAgentAISettings.defaultCLITimeout)
+    for kind in AnnotateAgentCLIKind.allCases {
+      writer.value("\(kind.rawValue)_model", "")
+      writer.value("\(kind.rawValue)_effort", "")
+    }
   }
 
   private static func writeShortcuts(_ writer: inout SimpleTOMLWriter) {
@@ -247,6 +256,12 @@ enum SnapzyConfigurationDefaultDocument {
       writer.section("shortcuts.annotate_actions.\(kind.configKey)")
       writer.value("enabled", true)
       writeShortcutValues(&writer, shortcut: annotateActionShortcut(for: kind))
+    }
+
+    for kind in VideoEditorActionShortcutKind.allCases {
+      writer.section("shortcuts.video_editor.\(kind.configKey)")
+      writer.value("enabled", true)
+      writeShortcutValues(&writer, shortcut: VideoEditorShortcutManager.defaultShortcut(for: kind))
     }
   }
 
@@ -324,6 +339,7 @@ enum SnapzyConfigurationDefaultDocument {
     case .autoRedactSensitiveData: return AnnotateShortcutManager.defaultAutoRedactSensitiveData
     case .autoTranslate: return AnnotateShortcutManager.defaultAutoTranslate
     case .translateArea: return AnnotateShortcutManager.defaultTranslateArea
+    case .aiPrompt: return AnnotateShortcutManager.defaultAIPrompt
     }
   }
 }

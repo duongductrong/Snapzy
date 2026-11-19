@@ -13,6 +13,7 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
   case menuBar
   case capture
   case annotate
+  case ai
   case quickAccess
   case history
   case shortcuts
@@ -44,6 +45,8 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
       return L10n.Preferences.captureTab
     case .annotate:
       return L10n.Preferences.annotateTab
+    case .ai:
+      return L10n.Preferences.aiTab
     case .quickAccess:
       return L10n.Preferences.quickAccessTab
     case .history:
@@ -75,6 +78,8 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
       return "camera.viewfinder"
     case .annotate:
       return "pencil.and.scribble"
+    case .ai:
+      return "sparkles"
     case .quickAccess:
       return "square.stack.3d.up.fill"
     case .history:
@@ -112,6 +117,8 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
       return ["screenshot", "recording", "video", "gif", "ocr", "format", "magnifier", "audio", "microphone"]
     case .annotate:
       return ["editor", "crop", "highlighter", "drag"]
+    case .ai:
+      return ["ask", "prompt", "apple intelligence", "llm", "endpoint", "claude", "codex", "opencode", "agent"]
     case .quickAccess:
       return ["floating", "overlay", "card", "swipe", "pin"]
     case .history:
@@ -135,7 +142,7 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
   /// The profile header at the top of the sidebar also opens About.
   static let groups: [[PreferencesTab]] = [
     [.general, .capture, .quickAccess, .shortcuts],
-    [.annotate, .history, .menuBar, .cloud],
+    [.annotate, .ai, .history, .menuBar, .cloud],
     [.permissions, .commandLine, .advanced],
     [.about],
   ]

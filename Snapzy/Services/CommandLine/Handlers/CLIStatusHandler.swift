@@ -21,7 +21,7 @@ nonisolated struct CLIStatusHandler: CLIRequestHandling {
 
     return CLIStatus(
       appVersion: CLIServer.appVersion,
-      cliEnabled: CLIServer.shared.isRunning,
+      cliEnabled: CLIServer.shared.isRunning && !CLIServer.shared.isAgentOnly,
       onboardingCompleted: OnboardingFlowView.hasCompletedOnboarding,
       screenRecordingPermission: permission(
         for: captureManager.permissionStatus,

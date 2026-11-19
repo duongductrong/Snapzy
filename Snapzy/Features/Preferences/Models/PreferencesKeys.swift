@@ -62,6 +62,7 @@ enum PreferencesKeys {
   static let clearedGlobalShortcuts = "shortcuts.clearedGlobalActions"
   static let disabledAnnotateActionShortcuts = "shortcuts.disabledAnnotateActionShortcuts"
   static let disabledAnnotateToolShortcuts = "shortcuts.disabledAnnotateToolShortcuts"
+  static let disabledVideoEditorActionShortcuts = "shortcuts.disabledVideoEditorActionShortcuts"
 
   // Screenshot
   static let screenshotFormat = "screenshot.format"
@@ -107,6 +108,14 @@ enum PreferencesKeys {
   static let annotateBringForwardAfterDrag = "annotate.bringForwardAfterDrag"
   static let annotatePrimaryColor = "annotate.primaryColor.v1"
   static let annotateParameterDefaults = "annotate.parameterDefaults.v1"
+  /// Annotate AI prompt provider: "automatic", "apple", "endpoint:<uuid>" or "cli:<kind>".
+  static let annotateAgentProvider = "annotateAgent.provider"
+  /// Provider ids ("endpoint:<uuid>@<origin>", "cli:<kind>") the user allowed to receive screenshots.
+  static let annotateAgentConsentedProviders = "annotateAgent.consentedProviders"
+  /// Send the screenshot image to endpoints and agent CLIs (scene text always goes). Default on.
+  static let annotateAgentSendImage = "annotateAgent.sendImage"
+  /// Seconds before an agent CLI run is stopped (default 180).
+  static let annotateAgentCLITimeout = "annotateAgent.cliTimeout"
   static let annotateToolParameterDefaults = "annotate.toolParameterDefaults.v1"
   static let annotateQuickPropertiesSyncEnabled = "annotate.quickPropertiesSyncEnabled"
   static let annotateCropSnapToEdgesEnabled = "annotate.cropSnapToEdgesEnabled"
@@ -176,6 +185,8 @@ enum PreferencesKeys {
   static let recordingShowTimeOnMenuBar = "recording.showTimeOnMenuBar"
   static let recordingHoverBarFrameOrigin = "recording.hoverBarFrameOrigin"
   static let videoEditorZoomTransitionDuration = "videoEditor.zoom.transitionDuration"
+  /// Video Editor AI assistant layout: "sidebar" (right panel, default) or "dock" (floating over the player).
+  static let videoEditorAILayout = "videoEditor.ai.layout"
 
   // Mouse Highlight Customization
   static let mouseHighlightSize = "recording.mouseHighlight.size"

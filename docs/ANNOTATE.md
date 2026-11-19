@@ -149,7 +149,7 @@ Toolbar `scissors` button or `x` (`Services/AnnotateCutOutTransform.swift`, pure
 
 ## Auto Translate
 
-- Entry: AI dock (`AnnotateAIDockView`) floating at the canvas bottom center, under the status pill. At rest a Liquid Glass orb with the multi-hue AI glyph (`TranslationCardMotion.rimHues`; hues turn and glow while a run is in flight). Click expands the glass horizontally into a toolbar: Translate (whole image, `.autoTranslate`, default ⌘⇧T), Area (`.translateArea`, default ⌥⌘T), target language menu, ⋯ options (current engine, Translation Settings…, Include Translations in Export, Remove Translations; Cancel while running). Each AI feature is its own section after the orb, so future tools (prompt pen) slot in as another section. Both shortcuts are dispatched by `AnnotateWindow.performKeyEquivalent`. Esc cancels a run or leaves Translate Area. Annotate mode only (not Combine/Mockup/Preview, not while cropping or cutting out).
+- Entry: AI dock (`AnnotateAIDockView`) floating at the canvas bottom center, under the status pill. At rest a Liquid Glass orb with the multi-hue AI glyph (`TranslationCardMotion.rimHues`; hues turn and glow while a run is in flight). Click expands the glass horizontally into a toolbar: Translate (whole image, `.autoTranslate`, default ⌘⇧T), Area (`.translateArea`, default ⌥⌘T), target language menu, ⋯ options (current engine, Translation Settings…, Include Translations in Export, Remove Translations; Cancel while running). Each AI feature is its own section after the orb; the first is **Ask** (natural-language prompt, ⌘K) — see [AI.md](AI.md). Both shortcuts are dispatched by `AnnotateWindow.performKeyEquivalent`. Esc cancels a run or leaves Translate Area. Annotate mode only (not Combine/Mockup/Preview, not while cropping or cutting out).
 - Translate Area: `beginTranslateAreaSelection()` makes the next canvas drag pick the area (`AnnotateCanvasDrawingView` hands press/drag/release to `updateTranslateAreaDrag` / `finishTranslateAreaDrag` before any tool routing; crosshair cursor). `AnnotateTranslateAreaSelectionView` dims the image with the area cut out, rim light and size badge; the pill says what to do and offers Whole Image / Cancel. A click (area under 8 pt) keeps waiting; choosing a tool or Esc leaves the mode. The run OCRs only the selected pixels (`AnnotateAutoTranslateLayout.regionCrop`), maps boxes back with the area's origin and samples styles from the full image. The loading overlay focuses the area (darker outside, sweep and rim inside). An area run replaces only translations that overlap the area; "Translate with <endpoint>" retries the same area.
 - Settings are Snip to Translate's (`TranslationEngineResolver`, `translate.targetLanguage`; when no target is stored the app language is used, else English). Same privacy rule: no automatic Apple → endpoint fallback; a failed Apple run offers "Translate with <endpoint>" for that run only.
 - Detection always runs Vision: custom OCR endpoints return no geometry. `OCRService.recognizeLayout` inherits the OCR language, profiles and contrast recovery, and skips the vertical-CJK pass (its normalized image has different geometry). `OCRTextLayoutFormatter.blocks(_:)` groups lines into positioned blocks without joining across columns or far-apart labels on one row; `format(_:)` is unchanged.
@@ -231,7 +231,7 @@ flowchart TD
     A["⇧⌘7 / menu / snapzy://capture/area-annotate"] --> B["FrozenAreaCaptureSession.prepare(all displays)"]
     B --> C["InlineAreaAnnotateCoordinator.start -> InlineAreaAnnotatePanel per display (.screenSaver)"]
     C --> D["Phase selecting: drag rect"]
-    D --> E["Phase annotating: canvas + toolbar + quick properties + action rail"]
+    D --> E["Phase annotating: canvas + toolbar + quick properties + action rail + AI dock"]
     E --> F["Space-drag move / resize handles / curved-arrow control handle (annotations preserved via offset)"]
     E --> G["Pin: save + open pinned window"]
     E --> H{"Finish"}
@@ -251,11 +251,18 @@ flowchart TD
 | `Space` (hold) | Move selection | `W` | Watermark |
 | `V`/`R`/`F`/`O` | Selection / Rect / Filled / Oval | `P` | Pencil |
 | `A`/`L`/`T`/`H` | Arrow / Line / Text / Highlighter | | |
+| `⌘K` | Ask AI (prompt) | `⇧⌘T` / `⌥⌘T` | Auto Translate / Translate Area |
+| `⌥` (hold) | Peek at text under translations | | |
+
+`⌘K`, `⇧⌘T`, `⌥⌘T` are the Annotate action shortcuts (Settings → Shortcuts), so a rebinding applies here too. `Esc` unwinds one layer at a time: AI run → translation → area pick → prompt → dock tools → cancel the capture. `Enter`/`⌘S` do nothing while a run or translation works.
 
 - `InlineAreaAnnotateSession` owns the selecting→annotating state machine; panels at `.screenSaver` level with `canJoinAllSpaces` work across Spaces.
 - Move/resize refreshes the cropped source via `replaceSourceImagePreservingAnnotations(_:annotationOffset:)`; cross-display crops use `FrozenAreaCaptureSession.cropCompositeImage`.
-- Action rail: Pin-to-Screen / Cancel / Done (prominent) / Copy. Pin runs the normal post-capture pipeline once, then opens the saved image in a pin window.
-- No crop, no mockup, no canvas-preset auto-apply.
+- Chrome (`InlineAreaPanelChrome`): capsule panels on an in-window HUD blur with a specular hairline — a backdrop, not Liquid Glass, like the Annotate window's toolbar backdrop. The glass is on the controls: tools, undo/redo and the rail use the shared `ToolbarButton` (bare at rest, neutral glass on hover and on the selected tool; Done is accent-tinted glass), property pickers use `liquidGlassControl(activeGlassTint: nil)`, each row in a `liquidGlassGroup`. Do not put `.glassEffect` on the panels: glass on glass renders as a flat dark slab and drops the tint. Toolbar width is derived from its items (`InlineAreaLayout.toolbarPreferredWidth`).
+- Action rail: Done (accent) / Copy / Pin-to-Screen / hairline / Cancel. Pin runs the normal post-capture pipeline once, then opens the saved image in a pin window.
+- AI dock: the Annotate window's `AnnotateAIDockView` (Ask, Translate, Translate Area, language, options) with its result pills, plus the agent / Auto Translate / Translate Area overlays on the canvas. `InlineAreaControlGeometry` puts it on the side of the selection the toolbar does not use, or inside the selection (12 pt from the edge away from the toolbar) when there is no room outside. See [AI.md](AI.md).
+- Apple's translation task is hosted on one panel only (`InlineAreaTranslationHost`, first display of the session).
+- No crop, no mockup, no canvas-preset auto-apply, no canvas styling from the AI prompt.
 
 ## Related docs
 

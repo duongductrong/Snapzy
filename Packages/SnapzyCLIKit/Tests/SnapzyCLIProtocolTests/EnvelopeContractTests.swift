@@ -171,7 +171,7 @@ final class EnvelopeContractTests: XCTestCase {
       CLIMethod.allCases.map(\.rawValue),
       [
         "hello", "system.status", "list.displays", "list.windows", "list.apps",
-        "capture.screen", "capture.window", "capture.area",
+        "capture.screen", "capture.window", "capture.area", "agent.tools", "agent.call",
       ]
     )
   }

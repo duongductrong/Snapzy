@@ -104,6 +104,8 @@ struct PreferencesView: View {
         LazyView(CaptureSettingsView())
       case .annotate:
         LazyView(AnnotateSettingsView())
+      case .ai:
+        LazyView(AISettingsView())
       case .quickAccess:
         LazyView(QuickAccessSettingsView())
       case .history:

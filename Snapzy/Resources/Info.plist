@@ -41,6 +41,8 @@
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Snapzy needs microphone access to record audio with your screen recordings.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Snapzy transcribes your recordings on this Mac when you ask the Video Editor AI about what is said.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Snapzy needs camera access to add a camera overlay to your screen recordings.</string>
 	<key>NSCameraUseContinuityCameraDeviceType</key>

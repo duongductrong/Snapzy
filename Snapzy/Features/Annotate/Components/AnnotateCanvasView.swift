@@ -384,12 +384,24 @@ struct AnnotateCanvasView: View {
           .transition(.opacity.animation(.easeOut(duration: 0.15)))
         }
 
+        // AI prompt: reading veil, target marks and the agent cursor.
+        AnnotateAgentOverlayView(
+          agent: state.agent,
+          scale: scale,
+          canvasBounds: foregroundBounds,
+          cornerRadius: state.effectiveCornerRadius
+        )
+        .frame(width: foregroundWidth, height: foregroundHeight)
+        .clipped()
+        .offset(x: offset.x, y: offset.y)
+
         // Auto Translate loading overlay (reading → translating → resolving).
         if state.isAutoTranslateRunning {
           AnnotateAutoTranslateOverlayView(
             state: state,
             scale: scale,
-            canvasBounds: foregroundBounds
+            canvasBounds: foregroundBounds,
+            cornerRadius: state.effectiveCornerRadius
           )
           .frame(width: foregroundWidth, height: foregroundHeight)
           .clipped()
@@ -427,8 +439,9 @@ struct AnnotateCanvasView: View {
     .overlay(alignment: .bottom) {
       // Status pill floats above the AI dock; both stay outside the zoom/pan transform.
       VStack(spacing: 10) {
+        AnnotateAgentNoticePill(agent: state.agent, state: state)
         AnnotateAutoTranslatePill(state: state)
-        AnnotateAIDockView(state: state)
+        AnnotateAIDockView(state: state, maxWidth: containerSize.width - 32)
       }
       .padding(.bottom, 16)
     }

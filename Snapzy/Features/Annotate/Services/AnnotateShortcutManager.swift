@@ -19,6 +19,7 @@ enum AnnotateActionShortcutKind: String, CaseIterable, Codable {
   case autoRedactSensitiveData
   case autoTranslate
   case translateArea
+  case aiPrompt
 }
 
 /// Manager for annotation tool keyboard shortcuts
@@ -39,6 +40,7 @@ final class AnnotateShortcutManager: ObservableObject {
   @Published private(set) var autoRedactSensitiveDataShortcut: ShortcutConfig?
   @Published private(set) var autoTranslateShortcut: ShortcutConfig?
   @Published private(set) var translateAreaShortcut: ShortcutConfig?
+  @Published private(set) var aiPromptShortcut: ShortcutConfig?
   @Published private(set) var disabledActionShortcuts: Set<AnnotateActionShortcutKind> = []
 
   /// UserDefaults key prefix
@@ -50,6 +52,7 @@ final class AnnotateShortcutManager: ObservableObject {
   private let autoRedactSensitiveDataKey = "annotate.action.autoRedactSensitiveData"
   private let autoTranslateKey = "annotate.action.autoTranslate"
   private let translateAreaKey = "annotate.action.translateArea"
+  private let aiPromptKey = "annotate.action.aiPrompt"
   private let disabledToolShortcutsKey = PreferencesKeys.disabledAnnotateToolShortcuts
   private let disabledActionShortcutsKey = PreferencesKeys.disabledAnnotateActionShortcuts
   private let explicitEmptyActionShortcutData = Data("null".utf8)
@@ -99,6 +102,12 @@ final class AnnotateShortcutManager: ObservableObject {
     modifiers: UInt32(cmdKey | shiftKey)
   )
 
+  /// Default: ⌘K (Annotate-local AI prompt; nothing else in Annotate uses K with ⌘).
+  static let defaultAIPrompt = ShortcutConfig(
+    keyCode: UInt32(kVK_ANSI_K),
+    modifiers: UInt32(cmdKey)
+  )
+
   private init() {
     copyAndCloseShortcut = Self.defaultCopyAndClose
     toggleSidebarShortcut = Self.defaultToggleSidebar
@@ -107,6 +116,7 @@ final class AnnotateShortcutManager: ObservableObject {
     autoRedactSensitiveDataShortcut = Self.defaultAutoRedactSensitiveData
     autoTranslateShortcut = Self.defaultAutoTranslate
     translateAreaShortcut = Self.defaultTranslateArea
+    aiPromptShortcut = Self.defaultAIPrompt
     loadShortcuts()
     loadDisabledToolShortcuts()
     loadActionShortcuts()
@@ -211,6 +221,11 @@ final class AnnotateShortcutManager: ObservableObject {
     saveActionShortcut(config, forKey: translateAreaKey)
   }
 
+  func setAIPromptShortcut(_ config: ShortcutConfig?) {
+    aiPromptShortcut = config
+    saveActionShortcut(config, forKey: aiPromptKey)
+  }
+
   func isActionShortcutEnabled(for kind: AnnotateActionShortcutKind) -> Bool {
     !disabledActionShortcuts.contains(kind)
   }
@@ -231,6 +246,8 @@ final class AnnotateShortcutManager: ObservableObject {
       return autoTranslateShortcut
     case .translateArea:
       return translateAreaShortcut
+    case .aiPrompt:
+      return aiPromptShortcut
     }
   }
 
@@ -286,6 +303,13 @@ final class AnnotateShortcutManager: ObservableObject {
     guard isActionShortcutEnabled(for: .autoTranslate) else { return false }
     guard let autoTranslateShortcut else { return false }
     return matchesShortcut(autoTranslateShortcut, event: event)
+  }
+
+  /// Check if an NSEvent matches the AI prompt shortcut.
+  func matchesAIPrompt(_ event: NSEvent) -> Bool {
+    guard isActionShortcutEnabled(for: .aiPrompt) else { return false }
+    guard let aiPromptShortcut else { return false }
+    return matchesShortcut(aiPromptShortcut, event: event)
   }
 
   /// Check if an NSEvent matches the Translate Area shortcut.
@@ -357,6 +381,7 @@ final class AnnotateShortcutManager: ObservableObject {
     )
     autoTranslateShortcut = loadActionShortcut(forKey: autoTranslateKey, defaultValue: Self.defaultAutoTranslate)
     translateAreaShortcut = loadActionShortcut(forKey: translateAreaKey, defaultValue: Self.defaultTranslateArea)
+    aiPromptShortcut = loadActionShortcut(forKey: aiPromptKey, defaultValue: Self.defaultAIPrompt)
   }
 
   private func loadDisabledActionShortcuts() {

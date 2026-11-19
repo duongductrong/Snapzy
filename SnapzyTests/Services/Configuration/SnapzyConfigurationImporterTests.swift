@@ -430,6 +430,53 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertTrue(manager.isActionShortcutEnabled(for: .autoRedactSensitiveData))
   }
 
+  func testImportAppliesVideoEditorAIPromptShortcut() {
+    let defaults = UserDefaultsFactory.make()
+    let manager = VideoEditorShortcutManager.shared
+    manager.resetToDefaults()
+    defer { manager.resetToDefaults() }
+
+    let source = """
+    schema_version = 1
+
+    [shortcuts.video_editor.ai_prompt]
+    enabled = false
+    key = "j"
+    modifiers = ["command", "option"]
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(manager.shortcut(for: .aiPrompt)?.displayString, "⌘ ⌥ J")
+    XCTAssertFalse(manager.isActionShortcutEnabled(for: .aiPrompt))
+  }
+
+  func testImportRejectsReservedVideoEditorShortcut() {
+    let defaults = UserDefaultsFactory.make()
+    let manager = VideoEditorShortcutManager.shared
+    manager.resetToDefaults()
+    defer { manager.resetToDefaults() }
+
+    let source = """
+    schema_version = 1
+
+    [shortcuts.video_editor.ai_prompt]
+    key = "z"
+    modifiers = ["command"]
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertEqual(manager.shortcut(for: .aiPrompt), VideoEditorShortcutManager.defaultAIPrompt)
+  }
+
+  func testDefaultDocumentIncludesVideoEditorAIPromptShortcut() {
+    let source = SnapzyConfigurationDefaultDocument.toml()
+    XCTAssertTrue(source.contains("[shortcuts.video_editor.ai_prompt]"))
+  }
+
   func testImportAppliesNewConfigurationFields() {
     let defaults = UserDefaultsFactory.make()
     let manager = QuickAccessManager.shared

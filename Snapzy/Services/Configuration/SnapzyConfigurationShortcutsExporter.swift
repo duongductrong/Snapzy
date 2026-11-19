@@ -33,6 +33,22 @@ extension SnapzyConfigurationExporter {
     writeQuickAccessCardActionShortcuts(&writer)
     writeAnnotateToolShortcuts(&writer)
     writeAnnotateActionShortcuts(&writer)
+    writeVideoEditorActionShortcuts(&writer)
+  }
+
+  private static func writeVideoEditorActionShortcuts(_ writer: inout SimpleTOMLWriter) {
+    let manager = VideoEditorShortcutManager.shared
+    for kind in VideoEditorActionShortcutKind.allCases {
+      writer.section("shortcuts.video_editor.\(kind.configKey)")
+      writer.value("enabled", manager.isActionShortcutEnabled(for: kind))
+      guard let shortcut = manager.shortcut(for: kind) else {
+        writer.value("key", "")
+        writer.stringArray("modifiers", [])
+        continue
+      }
+      writer.value("key", SnapzyConfigurationShortcutCodec.exportKey(shortcut))
+      writer.stringArray("modifiers", SnapzyConfigurationShortcutCodec.exportModifiers(shortcut))
+    }
   }
 
   private static func writeQuickAccessCardActionShortcuts(_ writer: inout SimpleTOMLWriter) {
@@ -198,6 +214,15 @@ extension AnnotateActionShortcutKind {
     case .autoRedactSensitiveData: return "auto_redact_sensitive_data"
     case .autoTranslate: return "auto_translate"
     case .translateArea: return "translate_area"
+    case .aiPrompt: return "ai_prompt"
+    }
+  }
+}
+
+extension VideoEditorActionShortcutKind {
+  var configKey: String {
+    switch self {
+    case .aiPrompt: return "ai_prompt"
     }
   }
 }

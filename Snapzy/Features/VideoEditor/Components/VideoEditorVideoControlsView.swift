@@ -161,6 +161,8 @@ private extension View {
 struct VideoControlsView: View {
   @ObservedObject var state: VideoEditorState
   @ObservedObject private var playbackState: VideoEditorPlaybackState
+  /// While the AI runs, the clip tools lock (play and stepping stay live).
+  @ObservedObject private var agent: VideoEditorAgentController
   private let stepIntervalSeconds: Double = 1.0
   @State private var leftSectionWidth: CGFloat = 0
   @State private var rightSectionWidth: CGFloat = 0
@@ -169,11 +171,13 @@ struct VideoControlsView: View {
   init(state: VideoEditorState) {
     _state = ObservedObject(wrappedValue: state)
     _playbackState = ObservedObject(wrappedValue: state.playbackState)
+    _agent = ObservedObject(wrappedValue: state.agent)
   }
 
   var body: some View {
     HStack(spacing: controlsLayout.outerSpacing) {
       leftActions
+        .disabled(agent.isRunning)
         .fixedSize(horizontal: true, vertical: false)
         .measureVideoControlsWidth(for: .left)
         .frame(width: reservedSideWidth, alignment: .leading)
@@ -222,13 +226,13 @@ struct VideoControlsView: View {
       cutButton(icon: "scissors", isDisabled: !state.canSplitAtPlayhead) {
         state.splitAtPlayhead()
       }
-      .keyboardShortcut("s", modifiers: [])
+      .keyboardShortcut(agent.allowsPlainKeyShortcuts ? KeyboardShortcut("s", modifiers: []) : nil)
       .help(L10n.VideoEditor.splitAtPlayheadHint)
 
       cutButton(icon: "trash", isDisabled: !state.canDeleteSelectedClip) {
         state.deleteSelectedClip()
       }
-      .keyboardShortcut(.delete, modifiers: [])
+      .keyboardShortcut(agent.allowsPlainKeyShortcuts ? KeyboardShortcut(.delete, modifiers: []) : nil)
       .help(L10n.VideoEditor.deleteClipHint)
 
       cutButton(icon: "plus.viewfinder", isDisabled: false) {

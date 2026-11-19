@@ -80,6 +80,10 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
   - Close After Drag (`annotate.closeAfterDrag`, default on).
   - Bring Forward After Drag (`annotate.bringForwardAfterDrag`, default off; disabled when Close After Drag is on).
 
+### AI (`PreferencesAISettingsView.swift`)
+
+Sidebar tab after Annotate (deep link `snapzy://settings/ai`, aliases `ask`, `ask-ai`). Settings for Annotate's AI prompt (Ask): provider picker (`annotateAgent.provider`: Automatic / Apple Intelligence / custom endpoints / Claude Code, Codex, OpenCode) with a warning when the pick can't run; Apple Intelligence status + Open System Settings; custom endpoints (shared OCR/Translate list) with Tools/Vision badges and **Test** (`AnnotateAgentEndpointProbe`), Manage Endpoints… → Capture › OCR; agent CLIs with version/path, **Refresh**, per-CLI model (`annotateAgent.cli.<kind>.model`) and location (`annotateAgent.cli.<kind>.path`); Privacy: Send screenshot image (`annotateAgent.sendImage`, default on), Agent CLI time limit (`annotateAgent.cliTimeout`, default 180 s), Sending permissions (`annotateAgent.consentedProviders`) Reset. See [AI.md](AI.md).
+
 ### Quick Access (`PreferencesQuickAccessSettingsView.swift`)
 
 - **Actions**: `QuickAccessActionCustomizationView` — action enable/order/slot assignment with live preview card (`PreferencesQuickAccessPreviewCard`); keys `quickAccess.actions.*`, `quickAccess.swipe.action.*`.
@@ -100,7 +104,7 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
 ### Shortcuts (`PreferencesShortcutsSettingsView.swift`)
 
 - Master toggle (`shortcutsEnabled`).
-- Grouped recorders with per-shortcut enable toggles and per-section Reset: Capture, Recording, Tools, History, Quick Access, Quick Access Card Actions, Annotate Actions, Annotate Tool Keys; Reset to Defaults (all).
+- Grouped recorders with per-shortcut enable toggles and per-section Reset: Capture, Recording, Tools, History, Quick Access, Quick Access Card Actions, Annotate Actions, Annotate Tool Keys, Annotate Reference (read-only), Video Editor Actions (Ask AI, ⌘K); Reset to Defaults (all).
 - Quick Access Card Actions (`PreferencesQuickAccessActionShortcutsSection.swift`): master toggle plus one recorder per card action, active only while a card is hovered.
 - System-conflict guidance via `SystemScreenshotShortcutManager`.
 - Full mechanics and default bindings: [SHORTCUTS.md](SHORTCUTS.md).

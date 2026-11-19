@@ -14,6 +14,8 @@
 //  | capture.screen   | CaptureScreenParams | CLICaptureResult  |
 //  | capture.window   | CaptureWindowParams | CLICaptureResult  |
 //  | capture.area     | CaptureAreaParams   | CLICaptureResult  |
+//  | agent.tools      | AgentToolsParams    | AgentToolList     |
+//  | agent.call       | AgentCallParams     | AgentCallResult   |
 //
 
 import Foundation
@@ -27,6 +29,9 @@ public enum CLIMethod: String, Codable, Sendable, CaseIterable {
   case captureScreen = "capture.screen"
   case captureWindow = "capture.window"
   case captureArea = "capture.area"
+  /// Annotate AI tools for `snapzy mcp`; authorized by a session token (CLIAgentModels).
+  case agentTools = "agent.tools"
+  case agentCall = "agent.call"
 }
 
 public struct ListWindowsParams: Codable, Sendable, Equatable {

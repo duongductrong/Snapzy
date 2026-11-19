@@ -87,6 +87,7 @@ extension AnnotateState {
       && !isCombineMode
       && !isCropInteractionActive
       && !isCutOutInteractionActive
+      && !agent.isRunning
   }
 
   var translationAnnotationCount: Int {

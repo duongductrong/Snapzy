@@ -55,7 +55,7 @@ The TOML file covers portable app preferences:
 - History: retention, maximum count, floating panel layout and filter.
 - Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, share link style (`[cloud] share_link_style`: `"descriptive"` or `"short"`, default `"descriptive"`, S3 and R2 only), and upload window position.
 - Annotate preferences.
-- Global, overlay, Annotate tool, and Annotate action shortcuts.
+- Global, overlay, Annotate tool, Annotate action, and Video Editor action shortcuts.
 
 The export intentionally excludes secrets and machine-private state:
 
@@ -109,6 +109,16 @@ provider is stored in `capture.ocr.selected_model` as `builtin` or
 Configurations created by older Snapzy versions may still contain a
 `dl:<id>` selection or `catalog_models` field. The removed downloadable
 provider is ignored and the selection is canonicalized to `builtin`.
+
+## Annotate AI configuration
+
+`[annotate.ai]` holds Annotate's AI prompt options ([AI.md](AI.md)):
+`provider` (`automatic`, `apple`, `endpoint:<uuid>`, `cli:claude`,
+`cli:codex`, `cli:opencode`; anything else imports as `automatic`),
+`send_image`, `cli_timeout` (seconds, 30...1800) and a model override per
+agent CLI (`claude_model`, `codex_model`, `opencode_model`; empty = the CLI's
+default). CLI paths, sending permissions and learned endpoint capabilities are
+per-Mac and never exported.
 
 ## Example
 
@@ -220,6 +230,14 @@ highlighter_text_snapping = true
 measure_unit = "points"
 measure_axis = "both"
 
+[annotate.ai]
+provider = "automatic"
+send_image = true
+cli_timeout = 180
+claude_model = ""
+codex_model = ""
+opencode_model = ""
+
 [shortcuts.global.fullscreen]
 key = "3"
 modifiers = ["command", "shift"]
@@ -245,6 +263,16 @@ enabled = true
 key = "t"
 modifiers = ["command", "option"]
 
+[shortcuts.annotate_actions.ai_prompt]
+enabled = true
+key = "k"
+modifiers = ["command"]
+
+[shortcuts.video_editor.ai_prompt]
+enabled = true
+key = "k"
+modifiers = ["command"]
+
 [shortcuts.quick_access.edit_latest_capture]
 enabled = false
 key = "return"
@@ -269,6 +297,13 @@ modifiers = ["command"]
 `⌘`, `⌥`, or `⌃` in `modifiers` — bare and shift-only combos are rejected on import,
 as is `fn`. `key = ""` clears a binding. Named keys accept either the exported symbol
 or a readable word (`"delete"`/`"⌫"`, `"return"`/`"↩"`, `"esc"`/`"⎋"`, `"tab"`, arrows).
+
+`shortcuts.video_editor.ai_prompt` is the Video Editor's Ask AI shortcut. It needs a
+modifier, and the editor's built-in combos (`⌘Z`, `⇧⌘Z`, `⌘S`, `⌘U`, `⌘B`, `⌘=`, `⌘-`,
+`⌘0`, `⌘C`/`⌘V`/`⌘X`/`⌘A`, `⌘W`/`⌘Q`/`⌘M`/`⌘H`/`⌘,`) are rejected on import. `key = ""`
+clears it; `enabled = false` turns it off without losing the binding. Import does not
+check global hotkeys (same as Annotate actions): an enabled global shortcut with the same
+combo wins, and Settings → Shortcuts flags the clash the next time the row is edited.
 
 ## Manual Testing
 

@@ -7,6 +7,7 @@
 
 import AppKit
 import Combine
+import SwiftUI
 
 // MARK: - Notifications
 
@@ -18,6 +19,7 @@ extension Notification.Name {
   static let annotateAutoRedactSensitiveData = Notification.Name("annotateAutoRedactSensitiveData")
   static let annotateAutoTranslate = Notification.Name("annotateAutoTranslate")
   static let annotateTranslateArea = Notification.Name("annotateTranslateArea")
+  static let annotateAIPrompt = Notification.Name("annotateAIPrompt")
   static let annotatePasteImage = Notification.Name("annotatePasteImage")
   static let annotateAddImage = Notification.Name("annotateAddImage")
   static let annotateTogglePin = Notification.Name("annotateTogglePin")
@@ -282,6 +284,17 @@ class AnnotateWindow: NSWindow {
       return true
     }
 
+    // AI prompt — configurable (default: ⌘K). Also works from inside the prompt field
+    // (it toggles the prompt), but not while editing an annotation's text.
+    if AnnotateAgentProviderResolver.isFeatureAvailable,
+       AnnotateShortcutManager.shared.matchesAIPrompt(event),
+       interactionState?.editingTextAnnotationId == nil,
+       let agent = interactionState?.agent,
+       agent.isAvailable || agent.isPromptPresented {
+      NotificationCenter.default.post(name: .annotateAIPrompt, object: self)
+      return true
+    }
+
     // Arrange: ⌘] / ⌘[ step forward/backward, ⌥⌘] / ⌥⌘[ to front/back.
     if let arrangeAction = Self.arrangeAction(for: event, isTextInputActive: textInputActive),
        interactionState?.arrangeSelectedAnnotations(arrangeAction) == true {
@@ -443,6 +456,12 @@ class AnnotateWindow: NSWindow {
 
     switch event.type {
     case .keyDown where event.keyCode == 53:
+      // Editing an annotation's text: Esc belongs to that edit.
+      if interactionState?.editingTextAnnotationId != nil { break }
+      if interactionState?.agent.isRunning == true {
+        interactionState?.agent.stop()
+        return
+      }
       if isTextInputActive { break }
       if interactionState?.isAutoTranslateRunning == true {
         interactionState?.cancelAutoTranslate()
@@ -452,12 +471,23 @@ class AnnotateWindow: NSWindow {
         interactionState?.endTranslateAreaSelection()
         return
       }
+      if interactionState?.agent.isPromptPresented == true {
+        interactionState?.agent.dismissPrompt()
+        return
+      }
       if interactionState?.isCutOutInteractionActive == true {
         interactionState?.cancelCutOutInteraction()
         return
       }
       if interactionState?.isCropInteractionActive == true {
         interactionState?.cancelCrop()
+        return
+      }
+      // AI dock tools open: fold them into the orb instead of closing the window.
+      if interactionState?.agent.isDockExpanded == true {
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+          interactionState?.agent.collapseDock()
+        }
         return
       }
       if onEscape?() == true { return }

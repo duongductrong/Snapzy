@@ -225,6 +225,7 @@ private struct InlineAreaAnnotateRootView: View {
   @State private var activeResizeHandle: InlineAreaResizeHandle?
   @State private var cursorIndicatorPoint: CGPoint?
   @State private var propertiesContentWidth: CGFloat = 0
+  @State private var intelligenceDockWidth: CGFloat = 0
   /// Viewport point where a gesture began on a hovered window, while it's still ambiguous
   /// whether this will resolve as a click (select the window) or a drag (manual region
   /// selection) — mirrors plain area screenshot's `pendingWindowDetectionStartPoint`.
@@ -269,10 +270,12 @@ private struct InlineAreaAnnotateRootView: View {
         if let desktopRect, let viewportRect {
           if session.phase == .annotating {
             annotateSurface(rect: viewportRect, usesBackdropPreview: isSelectionPreviewing)
-            if session.isMoveModifierActive {
+            if session.isMoveModifierActive, !session.isIntelligenceBusy {
               spaceMoveHitArea(rect: viewportRect, desktopRect: desktopRect)
             }
-            resizeHandles(rect: viewportRect, desktopRect: desktopRect)
+            if !session.isIntelligenceBusy {
+              resizeHandles(rect: viewportRect, desktopRect: desktopRect)
+            }
             if session.controlDisplayID(for: desktopRect) == display.displayID {
               controls(rect: viewportRect, desktopRect: desktopRect, containerSize: geometry.size)
             }
@@ -334,6 +337,11 @@ private struct InlineAreaAnnotateRootView: View {
       .inlineAreaSelectionGesture(selectionGesture, isEnabled: session.phase == .selecting)
     }
     .ignoresSafeArea()
+    // One host per session: Apple's translation task must not run once per display.
+    .modifier(InlineAreaTranslationHost(
+      state: session.state,
+      isEnabled: session.displays.first?.displayID == display.displayID
+    ))
     .onAppear {
       guard session.phase == .selecting, cursorIndicatorPoint == nil else { return }
       // `onContinuousHover` only reports a position once AppKit delivers an actual hover
@@ -492,6 +500,39 @@ private struct InlineAreaAnnotateRootView: View {
         .frame(width: rect.width, height: rect.height)
         .clipped()
       }
+
+      // Translate Area marquee while picking the area to translate.
+      if session.state.isTranslateAreaSelecting {
+        AnnotateTranslateAreaSelectionView(
+          state: session.state,
+          scale: displayScale,
+          canvasBounds: CGRect(origin: .zero, size: imageSize)
+        )
+        .frame(width: rect.width, height: rect.height)
+        .clipped()
+        .transition(.opacity.animation(.easeOut(duration: 0.15)))
+      }
+
+      // AI prompt: reading veil, target marks and the agent cursor.
+      AnnotateAgentOverlayView(
+        agent: session.state.agent,
+        scale: displayScale,
+        canvasBounds: CGRect(origin: .zero, size: imageSize)
+      )
+      .frame(width: rect.width, height: rect.height)
+      .clipped()
+
+      // Auto Translate loading overlay (reading → translating → resolving).
+      if session.state.isAutoTranslateRunning {
+        AnnotateAutoTranslateOverlayView(
+          state: session.state,
+          scale: displayScale,
+          canvasBounds: CGRect(origin: .zero, size: imageSize)
+        )
+        .frame(width: rect.width, height: rect.height)
+        .clipped()
+        .transition(.opacity.animation(.easeOut(duration: 0.18)))
+      }
     }
     .frame(width: rect.width, height: rect.height)
     .overlay(
@@ -561,12 +602,53 @@ private struct InlineAreaAnnotateRootView: View {
       .transaction { transaction in
         transaction.animation = nil
       }
+
+    intelligenceDock(placement: placement, containerSize: containerSize)
+  }
+
+  /// AI dock (Ask, Translate, Translate Area) with its result pills. It hangs off a
+  /// zero-size anchor so only the glass itself takes clicks, and grows away from the
+  /// selection edge it sits on.
+  private func intelligenceDock(placement: InlineAreaControlPlacement, containerSize: CGSize) -> some View {
+    let insets = display.controlInsets
+    let availableWidth = max(
+      0,
+      containerSize.width - insets.controlLeadingPadding - insets.controlTrailingPadding
+    )
+    let halfWidth = min(intelligenceDockWidth, availableWidth) / 2
+    let centerX = clamped(
+      placement.intelligenceDockAnchor.x,
+      min: insets.controlLeadingPadding + halfWidth,
+      max: containerSize.width - insets.controlTrailingPadding - halfWidth
+    )
+
+    return Color.clear
+      .frame(width: 0, height: 0)
+      .overlay(alignment: placement.intelligenceDockGrowsDown ? .top : .bottom) {
+        InlineAreaIntelligenceDock(
+          state: session.state,
+          growsDown: placement.intelligenceDockGrowsDown,
+          maxWidth: min(InlineAreaLayout.intelligenceDockMaxWidth, availableWidth)
+        )
+        .fixedSize()
+        .background(
+          GeometryReader { proxy in
+            Color.clear.preference(key: InlineAreaIntelligenceDockWidthKey.self, value: proxy.size.width)
+          }
+        )
+      }
+      .position(x: centerX, y: placement.intelligenceDockAnchor.y)
+      .onPreferenceChange(InlineAreaIntelligenceDockWidthKey.self) { width in
+        let roundedWidth = ceil(width)
+        guard abs(intelligenceDockWidth - roundedWidth) > 0.5 else { return }
+        intelligenceDockWidth = roundedWidth
+      }
   }
 
   private func moveGesture(for desktopRect: CGRect) -> some Gesture {
     DragGesture(minimumDistance: 2, coordinateSpace: .named(InlineAreaCoordinateSpace.root))
       .onChanged { value in
-        guard activeResizeHandle == nil else { return }
+        guard activeResizeHandle == nil, !session.isIntelligenceBusy else { return }
         if movingStartRect == nil {
           movingStartRect = desktopRect
         }
@@ -583,6 +665,7 @@ private struct InlineAreaAnnotateRootView: View {
         updateNativeCursorForIndicator(true)
       }
       .onEnded { value in
+        guard movingStartRect != nil else { return }
         let start = movingStartRect ?? desktopRect
         let finalRect = session.clampedSelectionPreview(
           for: start.offsetBy(dx: value.translation.width, dy: value.translation.height)
@@ -692,8 +775,8 @@ private struct InlineAreaAnnotateRootView: View {
 
   private func selectionBorder(rect: CGRect) -> some View {
     Rectangle()
-      .strokeBorder(Color.white, lineWidth: InlineAreaResizeHandleChrome.borderWidth)
-      .shadow(color: .black.opacity(0.45), radius: 2)
+      .strokeBorder(Color.white.opacity(0.95), lineWidth: InlineAreaResizeHandleChrome.borderWidth)
+      .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
       .frame(width: rect.width, height: rect.height)
       .position(x: rect.midX, y: rect.midY)
   }
@@ -1024,11 +1107,11 @@ private enum InlineAreaResizeHandle: CaseIterable, Identifiable {
 }
 
 private enum InlineAreaResizeHandleChrome {
-  static let borderWidth: CGFloat = 1.5
+  static let borderWidth: CGFloat = 1
   static let hitSize: CGFloat = 24
-  static let cornerLength: CGFloat = 20
-  static let edgeLength: CGFloat = 24
-  static let thickness: CGFloat = 3
+  static let cornerLength: CGFloat = 18
+  static let edgeLength: CGFloat = 22
+  static let thickness: CGFloat = 3.5
 }
 
 private struct InlineAreaResizeHandlesOverlay: View {
@@ -1150,12 +1233,13 @@ private struct InlineAreaResizeHandlesOverlay: View {
     }
   }
 
+  /// Rounded bars with a soft drop, so the grips read as physical handles on any backdrop.
   private func drawHandleBar(_ rect: CGRect, context: inout GraphicsContext) {
-    context.fill(
-      Path(rect.offsetBy(dx: 0, dy: 1)),
-      with: .color(.black.opacity(0.5))
-    )
-    context.fill(Path(rect), with: .color(.white))
+    let radius = min(rect.width, rect.height) / 2
+    let bar = Path(roundedRect: rect, cornerRadius: radius, style: .continuous)
+    var shadowed = context
+    shadowed.addFilter(.shadow(color: .black.opacity(0.4), radius: 2, x: 0, y: 1))
+    shadowed.fill(bar, with: .color(.white))
   }
 }
 
@@ -1183,6 +1267,10 @@ struct InlineAreaControlPlacement {
   let propertiesCenter: CGPoint
   let propertiesPopoverEdge: Edge
   let actionRailCenter: CGPoint
+  /// Point on the AI dock's near edge (centered horizontally on the selection).
+  let intelligenceDockAnchor: CGPoint
+  /// The dock hangs below its anchor (true) or sits on top of it (false).
+  let intelligenceDockGrowsDown: Bool
 }
 
 private enum InlineAreaToolbarMetrics {
@@ -1193,8 +1281,10 @@ private enum InlineAreaToolbarMetrics {
   static let dividerHeight: CGFloat = ToolbarConstants.dividerHeight
   static let itemSpacing: CGFloat = ToolbarConstants.itemSpacing
   static let groupSpacing: CGFloat = ToolbarConstants.groupSpacing
-  static let horizontalPadding: CGFloat = ToolbarConstants.horizontalPadding
+  /// Equal to the vertical padding, so the round end buttons sit concentric in the capsule.
+  static let horizontalPadding: CGFloat = ToolbarConstants.verticalPadding
   static let verticalPadding: CGFloat = ToolbarConstants.verticalPadding
+  static let dividerWidth: CGFloat = 9
   static let actionRailSpacing: CGFloat = ToolbarConstants.itemSpacing
   static let actionRailPadding: CGFloat = ToolbarConstants.verticalPadding
   static let actionRailDividerWidth: CGFloat = 24
@@ -1206,10 +1296,34 @@ private enum InlineAreaToolbarMetrics {
 enum InlineAreaLayout {
   static let toolbarHeight: CGFloat = InlineAreaToolbarMetrics.iconButtonSize + InlineAreaToolbarMetrics.verticalPadding * 2
   static let propertiesHeight: CGFloat = 38
-  static let controlStackSpacing: CGFloat = 6
+  static let controlStackSpacing: CGFloat = 8
   static let selectionGap: CGFloat = 12
   static let screenPadding: CGFloat = 16
-  static let controlPanelOuterHorizontalInset: CGFloat = 12
+  static let controlPanelOuterHorizontalInset: CGFloat = 24
+  /// Resting height of the AI dock (one-line prompt).
+  static let intelligenceDockHeight: CGFloat = 40
+  static let intelligenceDockMaxWidth: CGFloat = 640
+  /// Distance from the selection edge when the dock has to sit inside it.
+  static let intelligenceDockInnerInset: CGFloat = 12
+
+  /// Width that fits every toolbar item exactly: move grip, tool groups, undo and redo.
+  static let toolbarPreferredWidth: CGFloat = {
+    let groups = AnnotationToolType.inlineToolGroups
+    let button = InlineAreaToolbarMetrics.iconButtonSize
+    let toolCount = groups.reduce(0) { $0 + $1.count }
+    let groupSpacing = groups.reduce(CGFloat(0)) {
+      $0 + CGFloat(max($1.count - 1, 0)) * InlineAreaToolbarMetrics.groupSpacing
+    }
+    let dividerCount = groups.count + 1
+    // Move grip + undo + redo, next to the tools.
+    let buttonCount = toolCount + 3
+    let itemCount = 1 + dividerCount + groups.count + 2
+    return CGFloat(buttonCount) * button
+      + groupSpacing
+      + CGFloat(dividerCount) * InlineAreaToolbarMetrics.dividerWidth
+      + CGFloat(itemCount - 1) * InlineAreaToolbarMetrics.itemSpacing
+      + InlineAreaToolbarMetrics.horizontalPadding * 2
+  }()
   static let minimumSelectionSize: CGFloat = 24
   static let actionRailWidth: CGFloat = InlineAreaToolbarMetrics.iconButtonSize + InlineAreaToolbarMetrics.actionRailPadding * 2
   static let actionRailHeight: CGFloat = InlineAreaToolbarMetrics.iconButtonSize * 4
@@ -1296,6 +1410,13 @@ enum InlineAreaControlGeometry {
         controlInsets: controlInsets
       )
     let propertiesSide = splitSides?.properties ?? verticalSide
+    let dock = intelligenceDockPlacement(
+      for: rect,
+      occupiedSides: [splitSides?.toolbar ?? verticalSide, propertiesSide],
+      controlsCenterY: showsProperties ? (toolbarCenterY + propertiesCenterY) / 2 : toolbarCenterY,
+      containerSize: containerSize,
+      controlInsets: controlInsets
+    )
 
     return InlineAreaControlPlacement(
       toolbarWidth: toolbarWidth,
@@ -1307,15 +1428,50 @@ enum InlineAreaControlGeometry {
         for: rect,
         containerSize: containerSize,
         controlInsets: controlInsets
-      )
+      ),
+      intelligenceDockAnchor: dock.anchor,
+      intelligenceDockGrowsDown: dock.growsDown
     )
+  }
+
+  /// The AI dock takes the free side of the selection, opposite the toolbar. With no room
+  /// outside it moves inside, on the edge away from wherever the toolbar ended up.
+  private static func intelligenceDockPlacement(
+    for rect: CGRect,
+    occupiedSides: [InlineAreaVerticalSide],
+    controlsCenterY: CGFloat,
+    containerSize: CGSize,
+    controlInsets: InlineAreaControlInsets
+  ) -> (anchor: CGPoint, growsDown: Bool) {
+    let height = InlineAreaLayout.intelligenceDockHeight
+    let gap = InlineAreaLayout.selectionGap
+    let inset = InlineAreaLayout.intelligenceDockInnerInset
+
+    if !occupiedSides.contains(.below),
+       spaceBelow(rect, containerSize: containerSize, controlInsets: controlInsets) >= height {
+      return (CGPoint(x: rect.midX, y: rect.maxY + gap), true)
+    }
+    if !occupiedSides.contains(.above),
+       spaceAbove(rect, controlInsets: controlInsets) >= height {
+      return (CGPoint(x: rect.midX, y: rect.minY - gap), false)
+    }
+
+    let visibleTop = max(rect.minY, controlInsets.controlTopPadding - inset)
+    let visibleBottom = min(rect.maxY, containerSize.height - controlInsets.controlBottomPadding + inset)
+    if controlsCenterY > rect.midY {
+      return (CGPoint(x: rect.midX, y: visibleTop + inset), true)
+    }
+    return (CGPoint(x: rect.midX, y: visibleBottom - inset), false)
   }
 
   private static func controlDeckWidth(
     for containerSize: CGSize,
     controlInsets: InlineAreaControlInsets
   ) -> CGFloat {
-    min(664, availableControlWidth(for: containerSize, controlInsets: controlInsets))
+    min(
+      InlineAreaLayout.toolbarPreferredWidth,
+      availableControlWidth(for: containerSize, controlInsets: controlInsets)
+    )
   }
 
   private static func propertiesBarWidth(
@@ -1531,16 +1687,10 @@ enum InlineAreaControlGeometry {
 }
 
 private enum InlineAreaChrome {
-  static let cornerRadius: CGFloat = InlineAreaToolbarMetrics.toolbarCornerRadius
   static let controlCornerRadius: CGFloat = InlineAreaToolbarMetrics.buttonCornerRadius
   static let controlSize: CGFloat = InlineAreaToolbarMetrics.iconButtonSize
-  static let moveControlWidth: CGFloat = 72
   static let propertyControlHeight: CGFloat = 24
   static let itemBackground = Color.primary.opacity(0.06)
-  static let itemSelectedBackground = Color.primary.opacity(0.12)
-  static let itemSelectedForeground = Color.primary
-  static let itemSelectedBorder = Color.clear
-  static let itemBorder = Color.clear
   static let divider = Color.primary.opacity(0.15)
   static let primaryText = Color.primary.opacity(0.86)
   static let secondaryText = Color.secondary.opacity(0.88)
@@ -1548,18 +1698,6 @@ private enum InlineAreaChrome {
   static let toolbarIconSelectedForeground = Color.primary
   static let toolbarIconInactiveToggleForeground = Color.primary.opacity(0.5)
   static let toolbarHoverBackground = Color.primary.opacity(0.10)
-}
-
-private struct InlineAreaPanelBorder: View {
-  @Environment(\.colorScheme) var colorScheme
-
-  var body: some View {
-    RoundedRectangle(cornerRadius: InlineAreaChrome.cornerRadius, style: .continuous)
-      .strokeBorder(
-        colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.12),
-        lineWidth: 1.0
-      )
-  }
 }
 
 private struct InlineAreaPanelBackgroundTint: View {
@@ -1574,14 +1712,43 @@ private struct InlineAreaPanelBackgroundTint: View {
   }
 }
 
+/// Backdrop for the capture controls, the overlay's counterpart of the Annotate window's
+/// toolbar backdrop: an in-window blur, deliberately not Liquid Glass. The glass belongs to the
+/// controls on top (hovered and selected tools, Done) — glass laid on a glass panel has nothing
+/// to refract and renders as a flat dark slab with no tint. The blur is in-window because the
+/// overlay's backdrop is a frozen image inside this window.
+private struct InlineAreaPanelChrome: ViewModifier {
+  let cornerRadius: CGFloat
+
+  private var shape: RoundedRectangle {
+    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+  }
+
+  func body(content: Content) -> some View {
+    content
+      .background(InlineAreaPanelBackgroundTint())
+      .background(InlineAreaHudMaterialBackground(cornerRadius: cornerRadius))
+      .clipShape(shape)
+      .overlay(
+        shape.strokeBorder(
+          LinearGradient(
+            colors: [LiquidGlassTokens.specularTopColor, LiquidGlassTokens.specularBottomColor],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          ),
+          lineWidth: 1
+        )
+        .allowsHitTesting(false)
+      )
+      .shadow(color: Color.black.opacity(0.22), radius: 16, x: 0, y: 8)
+      .shadow(color: Color.black.opacity(0.12), radius: 2, x: 0, y: 1)
+  }
+}
+
 private extension View {
-  func inlineAreaPanelChrome() -> some View {
-    background(InlineAreaPanelBackgroundTint())
-      .background(InlineAreaHudMaterialBackground(cornerRadius: InlineAreaChrome.cornerRadius))
-      .clipShape(RoundedRectangle(cornerRadius: InlineAreaChrome.cornerRadius, style: .continuous))
-      .overlay(InlineAreaPanelBorder())
-      .shadow(color: Color.black.opacity(0.35), radius: 18, x: 0, y: 8)
-      .shadow(color: Color.black.opacity(0.18), radius: 3, x: 0, y: 1)
+  /// `cornerRadius` is half the panel's short side, so every control panel is a capsule.
+  func inlineAreaPanelChrome(cornerRadius: CGFloat) -> some View {
+    modifier(InlineAreaPanelChrome(cornerRadius: cornerRadius))
   }
 }
 
@@ -1680,7 +1847,7 @@ private struct InlineAreaControlDeck<MoveGesture: Gesture>: View {
         InlineAreaIconButton(
           icon: "arrow.uturn.backward",
           tooltip: L10n.Common.undo,
-          isEnabled: session.state.canUndo
+          isEnabled: session.state.canUndo && !session.state.agent.isRunning
         ) {
           session.state.undo()
         }
@@ -1688,18 +1855,18 @@ private struct InlineAreaControlDeck<MoveGesture: Gesture>: View {
         InlineAreaIconButton(
           icon: "arrow.uturn.forward",
           tooltip: L10n.Common.redo,
-          isEnabled: session.state.canRedo
+          isEnabled: session.state.canRedo && !session.state.agent.isRunning
         ) {
           session.state.redo()
         }
       }
       .fixedSize(horizontal: true, vertical: false)
+      .liquidGlassGroup(spacing: Spacing.xs)
     }
     .frame(maxWidth: max(0, maxWidth - InlineAreaToolbarMetrics.horizontalPadding * 2))
     .padding(.horizontal, InlineAreaToolbarMetrics.horizontalPadding)
     .padding(.vertical, InlineAreaToolbarMetrics.verticalPadding)
-    .inlineAreaPanelChrome()
-    .animation(.easeOut(duration: 0.16), value: session.state.selectedTool)
+    .inlineAreaPanelChrome(cornerRadius: InlineAreaLayout.toolbarHeight / 2)
   }
 }
 
@@ -1719,61 +1886,51 @@ private struct InlineAreaToolGroup: View {
   }
 }
 
+/// The Annotate window's toolbar button: bare at rest, neutral Liquid Glass under the pointer
+/// and on the selected tool. No tint — the lit glass is the state.
 private struct InlineAreaToolButton: View {
   let tool: AnnotationToolType
   let selectedTool: AnnotationToolType
   let action: () -> Void
 
-  @State private var isHovering = false
-
   var body: some View {
-    Button(action: action) {
-      Image(systemName: tool.icon)
-        .font(.system(size: InlineAreaToolbarMetrics.iconSize, weight: .medium))
-        .foregroundColor(.primary.opacity(isSelected || isHovering ? 1.0 : 0.85))
-        .frame(width: InlineAreaChrome.controlSize, height: InlineAreaChrome.controlSize)
-        .background(buttonBackground)
-        .contentShape(RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous))
-    }
-    .buttonStyle(.plain)
+    ToolbarButton(
+      icon: tool.icon,
+      isSelected: selectedTool == tool,
+      activeGlassTint: nil,
+      action: action
+    )
+    .frame(width: InlineAreaChrome.controlSize, height: InlineAreaChrome.controlSize)
     .help(tool.displayName)
-    .onHover { isHovering = $0 }
-    .animation(InlineAreaToolbarMetrics.hoverAnimation, value: isHovering)
-    .accessibilityAddTraits(isSelected ? .isSelected : [])
-  }
-
-  private var isSelected: Bool {
-    selectedTool == tool
-  }
-
-  private var buttonBackground: some View {
-    RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
-      .fill(isSelected ? Color.primary.opacity(0.12) : (isHovering ? Color.primary.opacity(0.10) : Color.clear))
+    .accessibilityLabel(tool.displayName)
+    .accessibilityAddTraits(selectedTool == tool ? .isSelected : [])
   }
 }
 
+/// Drag grip for the whole selection (Space-drag does the same from the canvas).
 private struct InlineAreaMoveHandle: View {
   @State private var isHovering = false
 
   var body: some View {
-    HStack(spacing: 6) {
-      Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
-        .font(.system(size: 12, weight: .medium))
-
-      Text("Space")
-        .font(.system(size: 11, weight: .semibold))
-        .lineLimit(1)
-    }
-    .foregroundColor(.primary.opacity(isHovering ? 1.0 : 0.85))
-    .frame(width: InlineAreaChrome.moveControlWidth, height: InlineAreaChrome.controlSize)
-    .background(
-      RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
-        .fill(isHovering ? Color.primary.opacity(0.10) : Color.clear)
-    )
-    .contentShape(RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous))
-    .help(L10n.AnnotateUI.moveSelection)
-    .onHover { isHovering = $0 }
-    .animation(InlineAreaToolbarMetrics.hoverAnimation, value: isHovering)
+    Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
+      .font(.system(size: 13, weight: .medium))
+      .foregroundStyle(Color.primary)
+      .frame(width: ControlMetrics.toolbarButton, height: ControlMetrics.toolbarButton)
+      .liquidGlassChrome(
+        shape: Radius.controlRect(forHeight: ControlMetrics.toolbarButton),
+        isVisible: isHovering
+      )
+      .frame(width: InlineAreaChrome.controlSize, height: InlineAreaChrome.controlSize)
+      .help(L10n.Common.withShortcut(L10n.AnnotateUI.moveSelection, "Space"))
+      .accessibilityLabel(L10n.AnnotateUI.moveSelection)
+      .onHover { hovering in
+        withAnimation(LiquidGlassTokens.hoverSpring) { isHovering = hovering }
+        if hovering {
+          NSCursor.openHand.set()
+        } else {
+          NSCursor.arrow.set()
+        }
+      }
   }
 }
 
@@ -1781,35 +1938,22 @@ private struct InlineAreaIconButton: View {
   let icon: String
   let tooltip: String
   var isEnabled: Bool = true
+  /// The capture's primary action: accent-tinted glass, the same emphasis as the Annotate
+  /// window's Done.
   var isProminent: Bool = false
   let action: () -> Void
 
-  @State private var isHovering = false
-
   var body: some View {
-    Button(action: action) {
-      Image(systemName: icon)
-        .font(.system(size: InlineAreaToolbarMetrics.iconSize, weight: .medium))
-        .foregroundColor(foregroundColor)
-        .frame(width: InlineAreaChrome.controlSize, height: InlineAreaChrome.controlSize)
-        .background(background)
-        .contentShape(RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous))
-    }
-    .buttonStyle(.plain)
+    ToolbarButton(
+      icon: icon,
+      isSelected: isProminent,
+      activeGlassTint: isProminent ? .accentColor : nil,
+      action: action
+    )
     .disabled(!isEnabled)
-    .opacity(isEnabled ? 1 : 0.42)
+    .frame(width: InlineAreaChrome.controlSize, height: InlineAreaChrome.controlSize)
     .help(tooltip)
-    .onHover { isHovering = $0 }
-    .animation(InlineAreaToolbarMetrics.hoverAnimation, value: isHovering)
-  }
-
-  private var foregroundColor: Color {
-    .primary.opacity(isHovering || isProminent ? 1.0 : 0.85)
-  }
-
-  private var background: some View {
-    RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
-      .fill(isHovering ? Color.primary.opacity(0.10) : Color.clear)
+    .accessibilityLabel(tooltip)
   }
 }
 
@@ -2009,7 +2153,8 @@ private struct InlineAreaPropertiesBar: View {
           }
         }
         .fixedSize(horizontal: true, vertical: false)
-        .padding(.horizontal, 6)
+        .liquidGlassGroup(spacing: Spacing.xs)
+        .padding(.horizontal, InlineAreaLayout.controlPanelOuterHorizontalInset / 2)
         .padding(.vertical, 5)
         .background(
           GeometryReader { proxy in
@@ -2023,7 +2168,7 @@ private struct InlineAreaPropertiesBar: View {
       .frame(maxWidth: max(0, maxWidth - InlineAreaLayout.controlPanelOuterHorizontalInset))
     }
     .frame(width: maxWidth, height: InlineAreaLayout.propertiesHeight, alignment: .leading)
-    .inlineAreaPanelChrome()
+    .inlineAreaPanelChrome(cornerRadius: InlineAreaLayout.propertiesHeight / 2)
     .onPreferenceChange(InlineAreaPropertiesContentWidthKey.self) { width in
       onContentWidthChange(max(0, width))
     }
@@ -2752,16 +2897,9 @@ private struct InlineAreaSegmentedPicker<Item: Identifiable & Equatable>: View {
             Image(systemName: icon(item))
               .font(.system(size: 12, weight: .medium))
               .scaleEffect(x: 1, y: isFlipped?(item) == true ? -1 : 1)
-              .foregroundColor(selection == item ? InlineAreaChrome.itemSelectedForeground : InlineAreaChrome.secondaryText)
+              .foregroundColor(selection == item ? Color.primary : InlineAreaChrome.secondaryText)
               .frame(width: 25, height: InlineAreaChrome.propertyControlHeight)
-              .background(
-                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
-                  .fill(selection == item ? InlineAreaChrome.itemSelectedBackground : InlineAreaChrome.itemBackground)
-              )
-              .overlay(
-                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
-                  .stroke(selection == item ? InlineAreaChrome.itemSelectedBorder : InlineAreaChrome.itemBorder, lineWidth: 1)
-              )
+              .liquidGlassControl(isActive: selection == item, activeGlassTint: nil)
           }
           .buttonStyle(.plain)
           .help(item[keyPath: tooltip])
@@ -2782,16 +2920,9 @@ private struct InlineAreaArrowBendControl: View {
       } label: {
         Image(systemName: bendDirection.icon)
           .font(.system(size: 12, weight: .medium))
-          .foregroundColor(bendDirection == .alternate ? InlineAreaChrome.itemSelectedForeground : InlineAreaChrome.secondaryText)
+          .foregroundColor(bendDirection == .alternate ? Color.primary : InlineAreaChrome.secondaryText)
           .frame(width: 25, height: InlineAreaChrome.propertyControlHeight)
-          .background(
-            RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
-              .fill(bendDirection == .alternate ? InlineAreaChrome.itemSelectedBackground : InlineAreaChrome.itemBackground)
-          )
-          .overlay(
-            RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
-              .stroke(bendDirection == .alternate ? InlineAreaChrome.itemSelectedBorder : InlineAreaChrome.itemBorder, lineWidth: 1)
-          )
+          .liquidGlassControl(isActive: bendDirection == .alternate, activeGlassTint: nil)
       }
       .buttonStyle(.plain)
       .help("\(L10n.AnnotateUI.flipArrowBend): \(bendDirection.displayName)")
@@ -2811,16 +2942,9 @@ private struct InlineAreaLineStylePicker: View {
             selection = style
           } label: {
             LineStyleIcon(style: style)
-              .foregroundColor(selection == style ? InlineAreaChrome.itemSelectedForeground : InlineAreaChrome.secondaryText)
+              .foregroundColor(selection == style ? Color.primary : InlineAreaChrome.secondaryText)
               .frame(width: 25, height: InlineAreaChrome.propertyControlHeight)
-              .background(
-                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
-                  .fill(selection == style ? InlineAreaChrome.itemSelectedBackground : InlineAreaChrome.itemBackground)
-              )
-              .overlay(
-                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
-                  .stroke(selection == style ? InlineAreaChrome.itemSelectedBorder : InlineAreaChrome.itemBorder, lineWidth: 1)
-              )
+              .liquidGlassControl(isActive: selection == style, activeGlassTint: nil)
           }
           .buttonStyle(.plain)
           .help(style.displayName)
@@ -2904,19 +3028,13 @@ private struct InlineAreaPropertyGroup<Content: View>: View {
   }
 }
 
+/// Done first (the one accent control), then the two ways out with the image, and Cancel
+/// set apart below the hairline.
 private struct InlineAreaActionRail: View {
   @ObservedObject var session: InlineAreaAnnotateSession
 
   var body: some View {
     VStack(spacing: InlineAreaToolbarMetrics.actionRailSpacing) {
-      InlineAreaIconButton(icon: "pin", tooltip: L10n.PreferencesQuickAccess.pinToScreenAction) {
-        Task { await session.finishAndPin() }
-      }
-
-      InlineAreaIconButton(icon: "xmark", tooltip: L10n.Common.cancel) {
-        session.cancel()
-      }
-
       InlineAreaIconButton(
         icon: "checkmark",
         tooltip: L10n.Common.withShortcut(L10n.Common.done, "⌘S"),
@@ -2925,18 +3043,70 @@ private struct InlineAreaActionRail: View {
         Task { await session.finish() }
       }
 
-      InlineAreaRailDivider()
-        .padding(.vertical, InlineAreaToolbarMetrics.actionRailDividerVerticalPadding)
-
       InlineAreaIconButton(
         icon: "doc.on.doc",
         tooltip: L10n.Common.withShortcut(L10n.AnnotateUI.copyToClipboard, "⌘C")
       ) {
         session.copyCurrentImage()
       }
+
+      InlineAreaIconButton(icon: "pin", tooltip: L10n.PreferencesQuickAccess.pinToScreenAction) {
+        Task { await session.finishAndPin() }
+      }
+
+      InlineAreaRailDivider()
+        .padding(.vertical, InlineAreaToolbarMetrics.actionRailDividerVerticalPadding)
+
+      InlineAreaIconButton(icon: "xmark", tooltip: L10n.Common.withShortcut(L10n.Common.cancel, "esc")) {
+        session.cancel()
+      }
     }
+    .liquidGlassGroup(spacing: Spacing.xs)
     .padding(InlineAreaToolbarMetrics.actionRailPadding)
-    .inlineAreaPanelChrome()
+    .inlineAreaPanelChrome(cornerRadius: InlineAreaLayout.actionRailWidth / 2)
+  }
+}
+
+/// The AI dock with its result pills, stacked away from the selection edge it sits on.
+private struct InlineAreaIntelligenceDock: View {
+  @ObservedObject var state: AnnotateState
+  let growsDown: Bool
+  let maxWidth: CGFloat
+
+  var body: some View {
+    VStack(spacing: 10) {
+      if growsDown {
+        AnnotateAIDockView(state: state, maxWidth: maxWidth)
+        AnnotateAutoTranslatePill(state: state)
+        AnnotateAgentNoticePill(agent: state.agent, state: state)
+      } else {
+        AnnotateAgentNoticePill(agent: state.agent, state: state)
+        AnnotateAutoTranslatePill(state: state)
+        AnnotateAIDockView(state: state, maxWidth: maxWidth)
+      }
+    }
+  }
+}
+
+private struct InlineAreaIntelligenceDockWidthKey: PreferenceKey {
+  static var defaultValue: CGFloat = 0
+
+  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+    value = max(value, nextValue())
+  }
+}
+
+/// Hosts Apple's translation task for Auto Translate on exactly one of the session's panels.
+private struct InlineAreaTranslationHost: ViewModifier {
+  let state: AnnotateState
+  let isEnabled: Bool
+
+  func body(content: Content) -> some View {
+    if isEnabled {
+      content.modifier(AnnotateAppleTranslationHost(state: state))
+    } else {
+      content
+    }
   }
 }
 

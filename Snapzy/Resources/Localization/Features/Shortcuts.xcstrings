@@ -8958,6 +8958,438 @@
           }
         }
       }
+    },
+    "shortcut-overlay.video-editor-actions": {
+      "comment": "Shortcut overlay section title and Settings → Shortcuts card title for Video Editor action shortcuts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video Editor Actions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video-Editor-Aktionen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acciones del editor de vídeo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actions de l’éditeur vidéo"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פעולות עורך הווידאו"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビデオエディタのアクション"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비디오 편집기 동작"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Действия видеоредактора"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thao tác trình sửa video"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频编辑器操作"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片編輯器動作"
+          }
+        }
+      }
+    },
+    "shortcut-overlay.inside-video-editor": {
+      "comment": "Subtitle for Video Editor action shortcuts in overlay",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inside video editor"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Video-Editor"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dentro del editor de vídeo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans l’éditeur vidéo"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בתוך עורך הווידאו"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビデオエディタ内"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비디오 편집기 안에서"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В видеоредакторе"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trong trình sửa video"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在视频编辑器中"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在影片編輯器中"
+          }
+        }
+      }
+    },
+    "shortcut-validation.already-used-by-video-editor": {
+      "comment": "Validation error for duplicate shortcut in the video editor. %@ is the conflicting action name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already used by %@ in Video Editor."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereits von %@ im Video-Editor verwendet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ya lo usa %@ en el editor de vídeo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déjà utilisé par %@ dans l’éditeur vidéo."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כבר בשימוש על ידי %@ בעורך הווידאו."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビデオエディタの%@で使用中です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비디오 편집기의 %@에서 이미 사용 중입니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уже используется: %@ в видеоредакторе."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã được dùng cho %@ trong trình sửa video."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已被视频编辑器中的“%@”使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已被影片編輯器中的「%@」使用。"
+          }
+        }
+      }
+    },
+    "shortcut-validation.reserved-by-video-editor": {
+      "comment": "Validation error when a Video Editor action shortcut matches a built-in editor shortcut such as ⌘Z or ⌘S",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Video Editor already uses this shortcut."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Video-Editor verwendet dieses Kürzel bereits."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El editor de vídeo ya usa este atajo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’éditeur vidéo utilise déjà ce raccourci."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עורך הווידאו כבר משתמש בקיצור הזה."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このショートカットはビデオエディタで使用されています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비디오 편집기에서 이미 사용하는 단축키입니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это сочетание уже занято видеоредактором."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trình sửa video đã dùng phím tắt này."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频编辑器已在使用此快捷键。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片編輯器已在使用此快速鍵。"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.video-editor-actions-page-description": {
+      "comment": "Shortcuts overview card subtitle for Video Editor actions",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the AI prompt from the video editor."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die KI-Eingabe im Video-Editor öffnen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre el aviso de IA desde el editor de vídeo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir l’invite IA depuis l’éditeur vidéo."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת שורת ה-AI מעורך הווידאו."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビデオエディタでAIプロンプトを開きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비디오 편집기에서 AI 프롬프트를 엽니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть поле ИИ в видеоредакторе."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mở ô nhập AI trong trình sửa video."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在视频编辑器中打开 AI 输入框。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在影片編輯器中開啟 AI 輸入框。"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.video-editor-actions-description": {
+      "comment": "Help text for the Video Editor action shortcuts card",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortcuts that work only while a Video Editor window is focused. Built-in editor keys such as ⌘Z, ⌘S, ⌘U, and ⌘B can't be reassigned."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kürzel, die nur im aktiven Video-Editor-Fenster gelten. Eingebaute Editor-Tasten wie ⌘Z, ⌘S, ⌘U und ⌘B lassen sich nicht neu zuweisen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atajos que solo funcionan con una ventana del editor de vídeo activa. Las teclas integradas del editor, como ⌘Z, ⌘S, ⌘U y ⌘B, no se pueden reasignar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raccourcis actifs uniquement quand une fenêtre de l’éditeur vidéo est au premier plan. Les touches intégrées comme ⌘Z, ⌘S, ⌘U et ⌘B ne peuvent pas être réattribuées."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורים שפועלים רק כשחלון של עורך הווידאו פעיל. אי אפשר להקצות מחדש מקשים מובנים של העורך כמו ⌘Z, ‏⌘S, ‏⌘U ו-⌘B."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビデオエディタのウインドウが前面にあるときだけ使えるショートカットです。⌘Z、⌘S、⌘U、⌘B などエディタ組み込みのキーは割り当てられません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비디오 편집기 창이 활성화되어 있을 때만 작동하는 단축키입니다. ⌘Z, ⌘S, ⌘U, ⌘B 같은 편집기 기본 키는 다시 지정할 수 없습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сочетания работают, только когда активно окно видеоредактора. Встроенные клавиши редактора, такие как ⌘Z, ⌘S, ⌘U и ⌘B, переназначить нельзя."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phím tắt chỉ hoạt động khi cửa sổ trình sửa video đang được chọn. Không thể gán lại các phím có sẵn của trình sửa như ⌘Z, ⌘S, ⌘U và ⌘B."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅在视频编辑器窗口处于活跃状态时生效的快捷键。⌘Z、⌘S、⌘U、⌘B 等编辑器内置按键无法重新分配。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅在影片編輯器視窗處於使用中時生效的快速鍵。⌘Z、⌘S、⌘U、⌘B 等編輯器內建按鍵無法重新指定。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
