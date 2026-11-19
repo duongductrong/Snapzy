@@ -13,6 +13,8 @@ import XCTest
 
 final class HistoryThumbnailGeneratorTests: XCTestCase {
 
+  deinit {}
+
   private var testDirectory: URL!
   private var generator: HistoryThumbnailGenerator!
 

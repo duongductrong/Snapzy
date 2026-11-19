@@ -6,6 +6,29 @@ import XCTest
 
 @MainActor
 final class HistoryHangingTests: XCTestCase {
+  deinit {}
+
+  override func tearDown() {
+    let hangingManager = HistoryHangingManager.shared
+    hangingManager.stop()
+    HistoryFloatingManager.shared.hide()
+
+    let hangingWindowIdentifiers: Set<String> = [
+      "SnapzyHistoryHanging",
+      "SnapzyHistoryCable",
+      "SnapzyHistoryPreview",
+    ]
+    for window in NSApp.windows where hangingWindowIdentifiers.contains(window.identifier?.rawValue ?? "") {
+      CaptureChromeWindowRegistry.shared.unregister(window)
+      window.orderOut(nil)
+      window.contentView = nil
+      window.close()
+    }
+
+    RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+    super.tearDown()
+  }
+
   func testTraditionalIsDefaultAndUnknownStyleFallsBack() throws {
     let name = "HistoryHanging-\(UUID())"
     let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
@@ -539,6 +562,8 @@ final class HistoryHangingTests: XCTestCase {
   }
 
   private final class EscapeProbeView: NSView {
+    deinit {}
+
     var escapeCount = 0
     override var acceptsFirstResponder: Bool {
       true

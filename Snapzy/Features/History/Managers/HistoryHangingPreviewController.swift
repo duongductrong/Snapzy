@@ -133,6 +133,8 @@ final class HistoryHangingPreviewController {
 }
 
 private final class HistoryHangingPreviewPanel: NSPanel {
+  deinit {}
+
   override var canBecomeKey: Bool {
     false
   }

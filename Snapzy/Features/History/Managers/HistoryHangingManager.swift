@@ -31,6 +31,8 @@ final class HistoryHangingManager: ObservableObject {
   private let previewController = HistoryHangingPreviewController()
   private var hoveredRecordID: UUID?
 
+  deinit {}
+
   func start() {
     guard !isStarted else { return }
     isStarted = true
@@ -404,6 +406,8 @@ private final class HistoryHangingPanel: NSPanel {
   var onEscape: (() -> Void)?
   private let isCable: Bool
 
+  deinit {}
+
   override var canBecomeKey: Bool {
     !isCable
   }
@@ -447,6 +451,8 @@ private final class HistoryHangingPanel: NSPanel {
 
 @MainActor
 private final class HistoryHangingHostingView<Content: View>: NSHostingView<Content> {
+  deinit {}
+
   override func acceptsFirstMouse(for _: NSEvent?) -> Bool {
     true
   }

@@ -81,15 +81,20 @@ final class HistoryThumbnailGenerator {
     let isVideo = record.captureType == .video
     let duration = record.duration ?? 0
     let posterTime = duration.isFinite && duration > 0 ? min(duration / 2, 1) : 0
-    let image: NSImage? = await withTaskCancellationHandler {
+    let decodedImage: HistoryPreviewImage? = await withTaskCancellationHandler {
       await withCheckedContinuation { continuation in
         previewQueue.async {
-          let image: NSImage? = autoreleasepool {
+          let decodedImage: HistoryPreviewImage? = autoreleasepool {
             guard !request.isCancelled,
               let sourceKey = Self.previewSourceKey(at: url)
             else { return nil }
             let key = NSString(string: "\(sourceKey)|\(isVideo)|\(posterTime)")
-            if let cached = cache.images.object(forKey: key) { return cached }
+            if let cached = cache.images.object(forKey: key) {
+              return HistoryPreviewImage(
+                cgImage: cached,
+                size: NSSize(width: cached.width, height: cached.height)
+              )
+            }
 
             let cgImage: CGImage?
             if isVideo {
@@ -102,20 +107,22 @@ final class HistoryThumbnailGenerator {
               Self.previewSourceKey(at: url) == sourceKey
             else { return nil }
 
-            let image = NSImage(
-              cgImage: cgImage,
-              size: NSSize(width: cgImage.width, height: cgImage.height)
+            let size = NSSize(width: cgImage.width, height: cgImage.height)
+            cache.images.setObject(
+              cgImage,
+              forKey: key,
+              cost: cgImage.bytesPerRow * cgImage.height
             )
-            cache.images.setObject(image, forKey: key, cost: cgImage.bytesPerRow * cgImage.height)
-            return image
+            return HistoryPreviewImage(cgImage: cgImage, size: size)
           }
-          continuation.resume(returning: image)
+          continuation.resume(returning: decodedImage)
         }
       }
     } onCancel: {
       request.cancel()
     }
-    return Task.isCancelled ? nil : image
+    guard !Task.isCancelled, let decodedImage else { return nil }
+    return NSImage(cgImage: decodedImage.cgImage, size: decodedImage.size)
   }
 
   func loadThumbnailImage(for record: CaptureHistoryRecord) async -> NSImage? {
@@ -559,7 +566,7 @@ final class HistoryThumbnailGenerator {
 
 // NSCache synchronizes access internally; stored preview images are immutable.
 private nonisolated final class HistoryPreviewMemoryCache: @unchecked Sendable {
-  let images = NSCache<NSString, NSImage>()
+  let images = NSCache<NSString, CGImage>()
 
   init() {
     images.countLimit = 6
@@ -583,6 +590,11 @@ private struct ThumbnailCacheIdentity {
   let recordId: UUID
   let cacheKey: String
   let thumbnailURL: URL
+}
+
+private struct HistoryPreviewImage: Sendable {
+  let cgImage: CGImage
+  let size: NSSize
 }
 
 private struct GeneratedThumbnail {
