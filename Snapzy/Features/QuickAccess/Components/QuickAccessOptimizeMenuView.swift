@@ -94,7 +94,7 @@ struct QuickAccessOptimizeMenuView: View {
   // the current row right over the Optimize button.
   static let shadowPadding: CGFloat = 14
   static let inset: CGFloat = 4
-  static let rowHeight: CGFloat = 21
+  static let rowHeight: CGFloat = 19
   static let rowSpacing: CGFloat = 1
 
   /// Distance from the hosting view's top edge to the centre of row `index`.
@@ -102,8 +102,13 @@ struct QuickAccessOptimizeMenuView: View {
     shadowPadding + inset + CGFloat(index) * (rowHeight + rowSpacing) + rowHeight / 2
   }
 
+  /// On native glass the menu is concentric with its capsule rows (row radius +
+  /// inset), so the ends read fully rounded; the classic menu keeps its 11pt corners.
   private var shape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: usesNativeGlass ? 13 : 11, style: .continuous)
+    RoundedRectangle(
+      cornerRadius: usesNativeGlass ? Self.rowHeight / 2 + Self.inset : 11,
+      style: .continuous
+    )
   }
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -134,6 +139,7 @@ struct QuickAccessOptimizeMenuView: View {
           isHighlighted: row.level.fraction == model.highlightedFraction,
           isCurrent: row.level.fraction == model.currentFraction,
           originalByteCount: model.originalByteCount,
+          usesNativeGlass: usesNativeGlass,
           onHover: { hovering in
             if hovering { model.highlightedFraction = row.level.fraction }
           },
@@ -182,19 +188,25 @@ private struct QuickAccessOptimizeRowView: View {
   let isHighlighted: Bool
   let isCurrent: Bool
   let originalByteCount: Int?
+  let usesNativeGlass: Bool
   let onHover: (Bool) -> Void
   let onChoose: () -> Void
 
-  private let shape = RoundedRectangle(cornerRadius: 7, style: .continuous)
+  private var shape: RoundedRectangle {
+    RoundedRectangle(
+      cornerRadius: usesNativeGlass ? QuickAccessOptimizeMenuView.rowHeight / 2 : 6,
+      style: .continuous
+    )
+  }
 
   var body: some View {
     Button(action: onChoose) {
       Text(row.level.scaleLabel)
-        .font(.system(size: 12, weight: .medium).monospacedDigit())
+        .font(.system(size: 11, weight: .medium).monospacedDigit())
         .foregroundColor(.white.opacity(isHighlighted ? 1 : 0.9))
         .lineLimit(1)
         .fixedSize()
-        .padding(.horizontal, 9)
+        .padding(.horizontal, 8)
         .frame(
           maxWidth: .infinity,
           minHeight: QuickAccessOptimizeMenuView.rowHeight,
