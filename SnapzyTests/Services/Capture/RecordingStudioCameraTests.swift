@@ -52,8 +52,11 @@ final class RecordingStudioCameraTests: XCTestCase {
     // The real-time encoder may skip a frame that arrives while it is busy.
     XCTAssertGreaterThanOrEqual(result.gaps[0].start, 0.5)
     XCTAssertLessThanOrEqual(result.gaps[0].start, 0.9)
-    XCTAssertEqual(result.gaps[0].end, 2.0, accuracy: 1e-6)
-    XCTAssertGreaterThanOrEqual(result.gaps[1].start, 2.0)
+    // The gap ends at the first frame actually written after the dropout, which is 2.1 s or
+    // later when the encoder skips the 2.0 s frame (seen on the slower CI runner).
+    XCTAssertGreaterThanOrEqual(result.gaps[0].end, 2.0 - 1e-6)
+    XCTAssertLessThanOrEqual(result.gaps[0].end, 2.4 + 1e-6)
+    XCTAssertGreaterThanOrEqual(result.gaps[1].start, result.gaps[0].end)
     XCTAssertLessThanOrEqual(result.gaps[1].start, 2.4)
     XCTAssertEqual(result.gaps[1].end, 3, accuracy: 1e-6)
     let duration = try await AVURLAsset(url: result.url).load(.duration).seconds
