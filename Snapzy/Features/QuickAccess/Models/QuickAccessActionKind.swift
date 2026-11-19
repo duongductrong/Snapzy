@@ -173,7 +173,7 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
     case .pinToScreen:
       return "pin"
     case .optimize:
-      return "arrow.down.right.and.arrow.up.left"
+      return "wand.and.stars"
     }
   }
 }

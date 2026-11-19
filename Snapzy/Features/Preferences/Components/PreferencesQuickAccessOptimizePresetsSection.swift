@@ -28,7 +28,7 @@ struct QuickAccessOptimizePresetsSection: View {
 
       ForEach(store.presets) { preset in
         HStack(spacing: 12) {
-          Image(systemName: "wand.and.stars")
+          Image(systemName: "slider.horizontal.3")
             .foregroundColor(.secondary)
             .frame(width: 20)
 
