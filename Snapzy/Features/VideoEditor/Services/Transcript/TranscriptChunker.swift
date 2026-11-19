@@ -26,10 +26,16 @@ nonisolated enum TranscriptChunker {
         chunks.append(start ... duration)
         break
       }
-      let cut = silences
-        .map { ($0.lowerBound + $0.upperBound) / 2 }
-        .filter { $0 > start + maxLength / 2 && $0 <= limit }
-        .max() ?? limit
+      let minCut: TimeInterval = start + maxLength / 2
+      var cut: TimeInterval = limit
+      var bestMid: TimeInterval?
+      for silence in silences {
+        let mid: TimeInterval = (silence.lowerBound + silence.upperBound) / 2
+        guard mid > minCut, mid <= limit else { continue }
+        if let best = bestMid, best >= mid { continue }
+        bestMid = mid
+      }
+      if let bestMid { cut = bestMid }
       chunks.append(start ... cut)
       start = cut
     }
