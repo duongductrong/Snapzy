@@ -27,6 +27,7 @@ final class HistoryFloatingPanelController {
     let size: CGSize
     let position: HistoryPanelPosition
     let cornerRadius: CGFloat
+    let becomesKey: Bool
   }
 
   private var panel: HistoryFloatingPanel?
@@ -45,14 +46,16 @@ final class HistoryFloatingPanelController {
     _ content: Content,
     size: CGSize,
     position: HistoryPanelPosition,
-    cornerRadius: CGFloat
+    cornerRadius: CGFloat,
+    becomesKey: Bool = true
   ) {
     requestShow(
       Presentation(
         content: AnyView(content),
         size: size,
         position: position,
-        cornerRadius: cornerRadius
+        cornerRadius: cornerRadius,
+        becomesKey: becomesKey
       )
     )
   }
@@ -80,6 +83,10 @@ final class HistoryFloatingPanelController {
   /// Check if panel is onscreen or transitioning.
   var isVisible: Bool {
     state != .hidden
+  }
+
+  var panelFrame: CGRect? {
+    panel?.frame
   }
 
   /// Check if panel is intended to stay open.
@@ -136,7 +143,7 @@ final class HistoryFloatingPanelController {
       panel.alphaValue = 0
       panel.setFrame(targetFrame, display: false)
       panel.installLocalArrowEventMonitor()
-      panel.makeKeyAndOrderFront(nil)
+      orderFront(panel, becomesKey: presentation.becomesKey)
       NSAnimationContext.runAnimationGroup({ context in
         context.duration = 0.18
         context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -152,7 +159,7 @@ final class HistoryFloatingPanelController {
     panel.alphaValue = 0
     panel.setFrame(transitionFrame(for: targetFrame, isShowing: true), display: false)
     panel.installLocalArrowEventMonitor()
-    panel.makeKeyAndOrderFront(nil)
+    orderFront(panel, becomesKey: presentation.becomesKey)
 
     NSAnimationContext.runAnimationGroup({ context in
       context.duration = 0.22
@@ -166,6 +173,14 @@ final class HistoryFloatingPanelController {
         self?.finishShow()
       }
     })
+  }
+
+  private func orderFront(_ panel: HistoryFloatingPanel, becomesKey: Bool) {
+    if becomesKey {
+      panel.makeKeyAndOrderFront(nil)
+    } else {
+      panel.orderFrontRegardless()
+    }
   }
 
   private func finishShow() {

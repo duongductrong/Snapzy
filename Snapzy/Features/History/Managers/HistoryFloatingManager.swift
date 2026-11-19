@@ -30,6 +30,7 @@ final class HistoryFloatingManager: ObservableObject {
       UserDefaults.standard.set(displayStyle.rawValue, forKey: PreferencesKeys.historyDisplayStyle)
       hide()
       HistoryHangingManager.shared.updateConfiguration()
+      edgeRevealController.updateConfiguration()
     }
   }
 
@@ -47,6 +48,14 @@ final class HistoryFloatingManager: ObservableObject {
       if !isEnabled {
         hide()
       }
+      edgeRevealController.updateConfiguration()
+    }
+  }
+
+  @Published var isEdgeRevealEnabled: Bool = false {
+    didSet {
+      UserDefaults.standard.set(isEdgeRevealEnabled, forKey: Keys.edgeRevealEnabled)
+      edgeRevealController.updateConfiguration()
     }
   }
 
@@ -111,18 +120,20 @@ final class HistoryFloatingManager: ObservableObject {
   // MARK: - Private
 
   private let panelController = HistoryFloatingPanelController()
+  private let edgeRevealController = HistoryTraditionalEdgeRevealController()
   private lazy var panelContentView = HistoryFloatingContentView(manager: self)
   private var localEscapeMonitor: Any?
   private var globalEscapeMonitor: Any?
   private var cloudUploadTasks: [UUID: Task<Void, Never>] = [:]
   private var cloudUploadClearTasks: [UUID: Task<Void, Never>] = [:]
   private var modalInteractionSuppressionCount = 0
-  private var isModalInteractionActive: Bool {
+  var isModalInteractionActive: Bool {
     modalInteractionSuppressionCount > 0
   }
 
   private enum Keys {
     static let enabled = "history.floating.enabled"
+    static let edgeRevealEnabled = "history.floating.edgeRevealEnabled"
     static let position = "history.floating.position"
     static let defaultFilter = "history.floating.defaultFilter"
     static let maxDisplayedItems = "history.floating.maxDisplayedItems"
@@ -138,10 +149,13 @@ final class HistoryFloatingManager: ObservableObject {
       self?.handlePanelDidResignKey()
     }
     loadSettings()
+    edgeRevealController.manager = self
+    edgeRevealController.start()
   }
 
   private func loadSettings() {
     isEnabled = UserDefaults.standard.object(forKey: Keys.enabled) as? Bool ?? true
+    isEdgeRevealEnabled = UserDefaults.standard.object(forKey: Keys.edgeRevealEnabled) as? Bool ?? false
 
     if let positionRaw = UserDefaults.standard.string(forKey: Keys.position),
       let savedPosition = HistoryPanelPosition(rawValue: positionRaw)
@@ -259,10 +273,11 @@ final class HistoryFloatingManager: ObservableObject {
     panelController.updatePinnedState(false)
     removeEscapeMonitors()
     panelController.hide()
+    edgeRevealController.panelDidHide()
     DiagnosticLogger.shared.log(.debug, .history, "Floating history hidden")
   }
 
-  func showCompact() {
+  func showCompact(becomesKey: Bool = true) {
     if displayStyle == .hanging {
       hide()
       HistoryHangingManager.shared.show()
@@ -273,7 +288,7 @@ final class HistoryFloatingManager: ObservableObject {
       return
     }
     presentationMode = .compact
-    presentCurrentMode()
+    presentCurrentMode(becomesKey: becomesKey)
   }
 
   func showExpanded(initialFilter: CaptureHistoryType? = nil) {
@@ -333,6 +348,14 @@ final class HistoryFloatingManager: ObservableObject {
 
   var isTraditionalPanelVisible: Bool {
     panelController.isVisible
+  }
+
+  var traditionalPanelFrame: CGRect? {
+    panelController.panelFrame
+  }
+
+  var isEdgeRevealMonitoring: Bool {
+    edgeRevealController.isMonitoring
   }
 
   func focusPanel() {
@@ -488,12 +511,13 @@ final class HistoryFloatingManager: ObservableObject {
     )
   }
 
-  private func presentCurrentMode() {
+  private func presentCurrentMode(becomesKey: Bool = true) {
     panelController.show(
       panelContentView,
       size: preferredPanelSize,
       position: preferredPosition,
-      cornerRadius: preferredCornerRadius
+      cornerRadius: preferredCornerRadius,
+      becomesKey: becomesKey
     )
     setupEscapeMonitors()
     DiagnosticLogger.shared.log(
