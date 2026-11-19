@@ -89,7 +89,7 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
     return ZStack(alignment: .leading) {
       TimelineSegmentChrome(
         height: blockHeight,
-        baseColor: Color.teal.opacity(0.75),
+        baseColor: Color(red: 0.447, green: 0.357, blue: 0.953),
         isSelected: isSelected,
         isDragging: drag?.id == piece.segment.id,
         borderColor: isSelected ? .white : .clear,
