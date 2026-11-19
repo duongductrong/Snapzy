@@ -17,6 +17,9 @@ final class HistoryScrollController: ObservableObject {
   @Published var contentHeight: CGFloat = 0
   @Published var visibleHeight: CGFloat = 0
 
+  // SwiftUI can release this outside a task on macOS 13–15; avoid isolated deinit back-deployment.
+  deinit {}
+
   var maxOffset: CGFloat {
     max(0, contentHeight - visibleHeight)
   }
