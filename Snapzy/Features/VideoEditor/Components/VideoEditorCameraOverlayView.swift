@@ -102,23 +102,60 @@ private struct VideoEditorCameraPlayerLayerView: NSViewRepresentable {
   let cornerRadius: CGFloat
   let isMirrored: Bool
 
-  func makeNSView(context: Context) -> NSView {
-    let view = NSView()
-    view.wantsLayer = true
-    let layer = AVPlayerLayer(player: player)
-    layer.videoGravity = .resizeAspectFill
-    view.layer = layer
-    return view
+  func makeNSView(context: Context) -> VideoEditorCameraPlayerHostView {
+    VideoEditorCameraPlayerHostView(player: player)
   }
 
-  func updateNSView(_ view: NSView, context: Context) {
-    guard let layer = view.layer as? AVPlayerLayer else { return }
-    if layer.player !== player { layer.player = player }
+  func updateNSView(_ view: VideoEditorCameraPlayerHostView, context: Context) {
+    view.update(player: player, cornerRadius: cornerRadius, isMirrored: isMirrored)
+  }
+}
+
+/// Keeps the AVPlayerLayer as a sublayer anchored at its center. AppKit pins a
+/// layer-backed view's own layer to anchorPoint (0, 0), so flipping that layer would
+/// mirror it around the left edge and shift the camera by its width; flipping a
+/// centered sublayer mirrors the picture in place.
+private final class VideoEditorCameraPlayerHostView: NSView {
+  private let playerLayer = AVPlayerLayer()
+  private var isMirrored = false
+
+  init(player: AVPlayer) {
+    super.init(frame: .zero)
+    wantsLayer = true
+    layer?.masksToBounds = true
+    playerLayer.player = player
+    playerLayer.videoGravity = .resizeAspectFill
+    playerLayer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+    layer?.addSublayer(playerLayer)
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+  func update(player: AVPlayer, cornerRadius: CGFloat, isMirrored: Bool) {
+    if playerLayer.player !== player { playerLayer.player = player }
+    self.isMirrored = isMirrored
     CATransaction.begin()
     CATransaction.setDisableActions(true)
-    layer.cornerRadius = cornerRadius
-    layer.masksToBounds = true
-    layer.setAffineTransform(isMirrored ? CGAffineTransform(scaleX: -1, y: 1) : .identity)
+    layer?.cornerRadius = cornerRadius
+    layer?.masksToBounds = true
+    layoutPlayerLayer()
     CATransaction.commit()
+  }
+
+  override func layout() {
+    super.layout()
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    layoutPlayerLayer()
+    CATransaction.commit()
+  }
+
+  private func layoutPlayerLayer() {
+    // Set bounds/position (not frame) so the transform never feeds back into geometry.
+    playerLayer.setAffineTransform(.identity)
+    playerLayer.bounds = CGRect(origin: .zero, size: bounds.size)
+    playerLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+    playerLayer.setAffineTransform(isMirrored ? CGAffineTransform(scaleX: -1, y: 1) : .identity)
   }
 }
