@@ -22,7 +22,8 @@ final class QuickAccessActionConfigurationStore: ObservableObject {
     self.defaults = defaults
     actionOrder = Self.normalizedOrder(from: defaults.stringArray(forKey: PreferencesKeys.quickAccessActionOrder))
     enabledActions = Self.normalizedEnabledActions(
-      from: defaults.stringArray(forKey: PreferencesKeys.quickAccessEnabledActions)
+      from: defaults.stringArray(forKey: PreferencesKeys.quickAccessEnabledActions),
+      known: defaults.stringArray(forKey: PreferencesKeys.quickAccessKnownActions)
     )
     slotAssignments = Self.normalizedSlotAssignments(
       from: defaults.dictionary(forKey: PreferencesKeys.quickAccessActionSlotAssignments) as? [String: String]
@@ -124,6 +125,7 @@ final class QuickAccessActionConfigurationStore: ObservableObject {
       forKey: PreferencesKeys.quickAccessEnabledActions
     )
     defaults.set(rawSlotAssignments(from: slotAssignments), forKey: PreferencesKeys.quickAccessActionSlotAssignments)
+    defaults.set(QuickAccessActionKind.allCases.map(\.rawValue), forKey: PreferencesKeys.quickAccessKnownActions)
   }
 
   private static func normalizedOrder(from rawIDs: [String]?) -> [QuickAccessActionKind] {
@@ -143,12 +145,22 @@ final class QuickAccessActionConfigurationStore: ObservableObject {
     return ordered
   }
 
-  private static func normalizedEnabledActions(from rawIDs: [String]?) -> Set<QuickAccessActionKind> {
+  /// `known` is the action list the enabled list was saved against. Actions added
+  /// since then were never offered to the user, so they start enabled when they
+  /// are enabled by default; an explicit disable of a known action is kept.
+  static func normalizedEnabledActions(
+    from rawIDs: [String]?,
+    known rawKnownIDs: [String]?
+  ) -> Set<QuickAccessActionKind> {
     guard let rawIDs else {
       return QuickAccessActionKind.defaultEnabledActions
     }
 
-    return Set(rawIDs.compactMap(QuickAccessActionKind.init(rawValue:)))
+    let saved = Set(rawIDs.compactMap(QuickAccessActionKind.init(rawValue:)))
+    let known = rawKnownIDs.map { Set($0.compactMap(QuickAccessActionKind.init(rawValue:))) }
+      ?? QuickAccessActionKind.legacyKnownActions
+    let introduced = QuickAccessActionKind.defaultEnabledActions.subtracting(known)
+    return saved.union(introduced)
   }
 
   private static func normalizedSlotAssignments(

@@ -150,6 +150,7 @@ enum PreferencesKeys {
   static let quickAccessPinZoomMode = "quickAccess.pin.zoom.mode"
   static let quickAccessActionOrder = "quickAccess.actions.order.v1"
   static let quickAccessEnabledActions = "quickAccess.actions.enabled.v1"
+  static let quickAccessKnownActions = "quickAccess.actions.known.v1"
   static let quickAccessActionSlotAssignments = "quickAccess.actions.slots.v1"
   static let quickAccessSwipeLeftAction = "quickAccess.swipe.action.left"
   static let quickAccessSwipeRightAction = "quickAccess.swipe.action.right"
@@ -157,6 +158,8 @@ enum PreferencesKeys {
   static let quickAccessAnimationStyle = "quickAccess.animationStyle"
   static let quickAccessPlaySounds = "quickAccess.playSounds"
   static let quickAccessOpenInFinderAfterSave = "quickAccess.openInFinderAfterSave"
+  static let quickAccessOptimizePresets = "quickAccess.optimize.presets.v1"
+  static let quickAccessOptimizeLastCustom = "quickAccess.optimize.lastCustom.v1"
 
   // Recording
   static let recordingFormat = "recording.format"

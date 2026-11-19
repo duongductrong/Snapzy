@@ -29,6 +29,8 @@ struct QuickAccessSettingsView: View {
     Form {
       QuickAccessActionCustomizationView(manager: manager)
 
+      QuickAccessOptimizePresetsSection()
+
       Section(L10n.PreferencesQuickAccess.pinZoomSection) {
         PinZoomModeComparisonPreview(
           selectedMode: pinZoomModeStore.mode,
