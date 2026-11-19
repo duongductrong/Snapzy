@@ -13,11 +13,13 @@ import Speech
 
 nonisolated final class SFSpeechChunkedEngine: TranscriptEngine {
   /// Words of one chunk, relative to the chunk's start.
-  typealias ChunkRecognizer = @Sendable (
+  /// `@concurrent`: a nonsending async closure type stored as a value pulls in
+  /// swift_getExtendedFunctionTypeMetadata (macOS 15+ only), which crashes Release builds on 13/14 (#725).
+  typealias ChunkRecognizer = @concurrent @Sendable (
     _ asset: AVAsset, _ tracks: [AVAssetTrack], _ range: ClosedRange<TimeInterval>,
     _ locale: Locale, _ contextualStrings: [String]
   ) async throws -> [VideoEditorTranscriptWord]
-  typealias SilenceProvider = @Sendable (AVAsset, [AVAssetTrack]) async throws -> [ClosedRange<TimeInterval>]
+  typealias SilenceProvider = @concurrent @Sendable (AVAsset, [AVAssetTrack]) async throws -> [ClosedRange<TimeInterval>]
 
   static let maximumChunkLength: TimeInterval = 50
 
