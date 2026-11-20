@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.2] - 2026-11-20
+
+### Features
+- Added auto-expanding canvas to the Annotate editor (#492) (#766) (3f52d5a2)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.3.0-beta.1] - 2026-11-20
 
 ### Features
