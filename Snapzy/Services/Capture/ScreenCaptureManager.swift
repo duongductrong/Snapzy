@@ -119,7 +119,7 @@ enum CaptureError: Error, LocalizedError {
   }
 }
 
-enum ScreenRecordingPermissionStatus: Equatable {
+nonisolated enum ScreenRecordingPermissionStatus: Equatable {
   case notGranted
   case granted
   case grantedButUnavailableDueToAppIdentity(String)
@@ -246,7 +246,7 @@ final class ScreenCaptureManager: ObservableObject {
   ///    `CGRequestScreenCaptureAccess()` which opens System Settings on
   ///    macOS 15+ so the user can manually toggle the app on.
   func requestPermission() async -> Bool {
-    AppIdentityManager.shared.refresh()
+    AppIdentityManager.shared.refresh(force: true)
 
     // Fast path: already granted by the system.
     if CGPreflightScreenCaptureAccess() {
@@ -2702,6 +2702,16 @@ final class ScreenCaptureManager: ObservableObject {
   }
 
   private func ensureCaptureAvailability(promptsForPermission: Bool = true) async -> CaptureError? {
+    // The full permission check re-reads app identity — strict bundle signature
+    // validation, hundreds of milliseconds on the main actor whenever the bundle
+    // changed — and churns published state, so it used to freeze the UI in front
+    // of every capture (issue #509). A cached grant the system still confirms is
+    // enough to keep going; anything else takes the full path, so revoked access
+    // and identity changes are still detected and surfaced.
+    if Self.canTrustGrantedStatus(permissionStatus, systemGranted: CGPreflightScreenCaptureAccess()) {
+      return nil
+    }
+
     await checkPermission()
 
     switch permissionStatus {
@@ -2717,6 +2727,15 @@ final class ScreenCaptureManager: ObservableObject {
     case .grantedButUnavailableDueToAppIdentity(let reason):
       return .unavailable(reason)
     }
+  }
+
+  /// Only a cached grant that the system still confirms is worth skipping a full
+  /// check for; the other statuses need the real permission flow.
+  nonisolated static func canTrustGrantedStatus(
+    _ status: ScreenRecordingPermissionStatus,
+    systemGranted: Bool
+  ) -> Bool {
+    status == .granted && systemGranted
   }
 
   private func updatePermissionStatus(systemGranted: Bool) {
