@@ -4,6 +4,23 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.1] - 2026-11-20
+
+### Features
+- Added Quick Access Optimize action to shrink screenshots (#763) (49ddfbdc)
+- Added Video Editor Studio recording, editable layers, captions and Studio-aware agent (#760) (ad07e833)
+- Added AI agent for Annotate and Video Editor (#755) (837947f4)
+
+### Bug Fixes
+- Stop the video fixture from hanging CI and collect test-host crash reports (#764) (22ea076c)
+
+### Chore
+- ci: split CI into parallel checks, test and release-build jobs (#759) (4a61039c)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.2.0] - 2026-11-18
 
 ### Features
