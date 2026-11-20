@@ -78,6 +78,9 @@ struct AnnotationSessionData {
   var sourceLogicalSize: CGSize? = nil
   /// Auto Translate overlays are left out of exported images.
   var excludesTranslationsFromExport: Bool = false
+  /// Annotation footprints at the last applied crop (see `AnnotateState.cropBaselineFootprints`).
+  /// nil for sessions cached before the canvas could auto-expand.
+  var cropBaselineFootprints: [UUID: CGRect]? = nil
 }
 
 /// Manages annotation window instances
@@ -370,7 +373,8 @@ extension AnnotationSessionData {
       embeddedImageAssetsData: state.embeddedImageAssetsSnapshotData(),
       combineSession: state.combineSessionSnapshot(),
       sourceLogicalSize: state.sourceImage?.size,
-      excludesTranslationsFromExport: !state.includesTranslationsInExport
+      excludesTranslationsFromExport: !state.includesTranslationsInExport,
+      cropBaselineFootprints: state.cropBaselineFootprints
     )
   }
 }

@@ -2138,6 +2138,148 @@
         }
       }
     },
+    "annotate.auto-expand-canvas": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arbeitsfläche automatisch erweitern"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expand Canvas Automatically"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ampliar el lienzo automáticamente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agrandir le canevas automatiquement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הרחבת הקנבס אוטומטית"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンバスを自動で拡張"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캔버스 자동 확장"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматически расширять холст"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tự động mở rộng khung vẽ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动扩展画布"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動擴展畫布"
+          }
+        }
+      }
+    },
+    "annotate.auto-expand-canvas-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vergrößert die Arbeitsfläche, wenn du eine Anmerkung über den Bildrand hinaus zeichnest, verschiebst oder skalierst. Der neue Bereich ist transparent und wird beim Sichern oder Kopieren übernommen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grow the canvas when you draw, move or resize an annotation past the image edge. The new area is transparent and is included when you save or copy."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amplía el lienzo al dibujar, mover o cambiar el tamaño de una anotación más allá del borde de la imagen. La nueva zona es transparente y se incluye al guardar o copiar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agrandit le canevas lorsque vous dessinez, déplacez ou redimensionnez une annotation au-delà du bord de l’image. La nouvelle zone est transparente et incluse à l’enregistrement ou à la copie."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדלת הקנבס כשמציירים, מזיזים או משנים גודל של הערה מעבר לקצה התמונה. האזור החדש שקוף ונכלל בשמירה או בהעתקה."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注釈を画像の端より外に描画・移動・サイズ変更すると、キャンバスが広がります。新しい領域は透明で、保存やコピーに含まれます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주석을 이미지 가장자리 밖으로 그리거나 이동하거나 크기를 조절하면 캔버스가 커집니다. 새 영역은 투명하며 저장하거나 복사할 때 포함됩니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Увеличивать холст, когда аннотация рисуется, перемещается или растягивается за край изображения. Новая область прозрачна и включается при сохранении или копировании."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mở rộng khung vẽ khi bạn vẽ, di chuyển hoặc đổi kích thước chú thích ra ngoài mép ảnh. Vùng mới trong suốt và được giữ lại khi lưu hoặc sao chép."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在图片边缘之外绘制、移动或调整标注大小时扩展画布。新增区域为透明，保存或复制时会包含在内。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在圖片邊緣之外繪製、移動或調整標註大小時擴展畫布。新增區域為透明，儲存或拷貝時會包含在內。"
+          }
+        }
+      }
+    },
     "annotate.auto-redact": {
       "extractionState": "stale",
       "localizations": {

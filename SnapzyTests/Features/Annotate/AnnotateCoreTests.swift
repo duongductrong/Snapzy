@@ -2841,6 +2841,8 @@ final class AnnotateCoreTests: XCTestCase {
   @MainActor
   func testCanvasCurvedArrowControlHandleClampsToActiveCanvasBounds() throws {
     let state = makeAnnotateState()
+    // Clamping applies only when the canvas does not auto-expand (#492).
+    state.allowsCanvasAutoExpand = false
     state.loadImage(NSImage(size: CGSize(width: 400, height: 300)))
     let geometry = ArrowGeometry(
       start: CGPoint(x: 80, y: 100),

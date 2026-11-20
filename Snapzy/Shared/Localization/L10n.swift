@@ -6461,6 +6461,16 @@ nonisolated enum L10n {
       defaultValue: "Snap crop edges to content borders while dragging. Hold ⌘ to temporarily disable.",
       comment: "Settings description for snapping crop edges to content borders"
     )
+    static let autoExpandCanvas = string(
+      "annotate.auto-expand-canvas",
+      defaultValue: "Expand Canvas Automatically",
+      comment: "Settings title for growing the Annotate canvas when an annotation goes past the image edge"
+    )
+    static let autoExpandCanvasDescription = string(
+      "annotate.auto-expand-canvas-description",
+      defaultValue: "Grow the canvas when you draw, move or resize an annotation past the image edge. The new area is transparent and is included when you save or copy.",
+      comment: "Settings description for growing the Annotate canvas when an annotation goes past the image edge"
+    )
     static let highlighterTextSnapping = string(
       "annotate.highlighter-text-snapping",
       defaultValue: "Snap Highlight to Text",

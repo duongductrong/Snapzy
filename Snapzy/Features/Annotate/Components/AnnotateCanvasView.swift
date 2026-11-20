@@ -244,13 +244,12 @@ struct AnnotateCanvasView: View {
     let cropBounds = state.cropRect?.standardized
 
     let fitBounds: CGRect
-    if state.isCombineMode {
-      // Fixed during a gesture even while the canvas grows (see liveCombineCanvasBounds).
-      fitBounds = state.combineFitBounds
-    } else if let cropBounds, !state.isCropActive {
-      fitBounds = cropBounds
-    } else {
+    if state.isCropActive && !state.isCombineMode {
       fitBounds = imageBounds
+    } else {
+      // Applied crop and/or auto-expanded canvas. Fixed during a gesture even while
+      // the canvas grows (see liveCanvasBounds).
+      fitBounds = state.canvasFitBounds
     }
 
     // Scale is tied to the currently fitted image/crop, not to the live crop rect.
@@ -270,18 +269,14 @@ struct AnnotateCanvasView: View {
     let foregroundBounds: CGRect
     if state.isCombineMode {
       foregroundBounds = combineBounds
-    } else if let cropBounds {
-      if state.isCropActive {
-        foregroundBounds = cropWorkspaceBounds(
-          for: imageBounds,
-          availableSize: CGSize(width: availableWidth, height: availableHeight),
-          scale: scale
-        )
-      } else {
-        foregroundBounds = cropBounds
-      }
+    } else if cropBounds != nil, state.isCropActive {
+      foregroundBounds = cropWorkspaceBounds(
+        for: imageBounds,
+        availableSize: CGSize(width: availableWidth, height: availableHeight),
+        scale: scale
+      )
     } else {
-      foregroundBounds = imageBounds
+      foregroundBounds = state.appliedCanvasRect ?? imageBounds
     }
 
     let logicalCanvasSize = state.isCombineMode
@@ -302,10 +297,6 @@ struct AnnotateCanvasView: View {
       fitScale: scale
     )
 
-    let combineGrowthAnchorOffset: CGPoint = state.isCombineMode
-      ? displayOffset(for: foregroundBounds, in: fitBounds, scale: scale)
-      : .zero
-
     let foregroundWidth = foregroundBounds.width * scale
     let foregroundHeight = foregroundBounds.height * scale
     let foregroundDisplaySize = CGSize(width: foregroundWidth, height: foregroundHeight)
@@ -314,6 +305,32 @@ struct AnnotateCanvasView: View {
       imageDisplaySize: foregroundDisplaySize,
       displayPadding: currentPadding * scale
     )
+
+    // While a gesture grows the canvas, keep the pre-gesture (fit) area where it was on
+    // screen so the canvas extends toward the pointer instead of re-centring.
+    let canvasGrowthAnchorOffset: CGPoint
+    if state.isCombineMode {
+      canvasGrowthAnchorOffset = displayOffset(for: foregroundBounds, in: fitBounds, scale: scale)
+    } else if state.liveCanvasBounds != nil, !state.isCropActive {
+      let fitBackgroundSize = state.aspectRatio.canvasSize(
+        for: fitBounds.size,
+        padding: currentPadding,
+        alignmentSpace: alignmentSpace,
+        orientation: state.aspectRatioOrientation
+      )
+      let fitOffset = state.imageOffset(
+        for: CGSize(width: fitBackgroundSize.width * scale, height: fitBackgroundSize.height * scale),
+        imageDisplaySize: CGSize(width: fitBounds.width * scale, height: fitBounds.height * scale),
+        displayPadding: currentPadding * scale
+      )
+      let grownOffset = displayOffset(for: foregroundBounds, in: fitBounds, scale: scale)
+      canvasGrowthAnchorOffset = CGPoint(
+        x: fitOffset.x - offset.x + grownOffset.x,
+        y: fitOffset.y - offset.y + grownOffset.y
+      )
+    } else {
+      canvasGrowthAnchorOffset = .zero
+    }
 
     return ZStack {
       // Scaled content group
@@ -415,7 +432,7 @@ struct AnnotateCanvasView: View {
       ))
       // While a drag grows the canvas, keep the pre-gesture area where it was on
       // screen: the canvas extends toward the pointer instead of re-centring.
-      .offset(x: combineGrowthAnchorOffset.x, y: combineGrowthAnchorOffset.y)
+      .offset(x: canvasGrowthAnchorOffset.x, y: canvasGrowthAnchorOffset.y)
       .scaleEffect(state.zoomLevel)
       .offset(x: state.panOffset.width, y: state.panOffset.height)
       // AppKit conversion exposes the layout transform, not a Core Animation

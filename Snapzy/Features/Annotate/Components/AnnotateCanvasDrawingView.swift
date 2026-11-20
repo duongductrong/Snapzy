@@ -1051,21 +1051,79 @@ final class DrawingCanvasNSView: NSView {
   private func interactionPoint(from displayPoint: CGPoint) -> CGPoint {
     let rawImagePoint = displayToImage(displayPoint)
     guard state.selectedTool != .crop else { return rawImagePoint }
-    if growsCombineCanvasDuringGesture { return rawImagePoint }
+    if growsCanvasDuringGesture || pointerLeavesAutoExpandingCanvas { return rawImagePoint }
     return clampToCanvasBounds(rawImagePoint)
   }
 
-  /// Moving or resizing layers in combine mode may leave the canvas: it grows to
-  /// follow them, like other screenshot editors' expanding canvas.
-  private var growsCombineCanvasDuringGesture: Bool {
-    state.isCombineMode && (isDraggingAnnotation || isResizingAnnotation)
+  /// With auto-expand on, drawing, moving and resizing follow the pointer past the
+  /// canvas edge (the canvas grows to fit). Cut Out, Measure (it reads source pixels)
+  /// and Translate Area keep their image-bound strips and areas.
+  private var pointerLeavesAutoExpandingCanvas: Bool {
+    state.autoExpandsCanvas
+      && !state.isCropActive
+      && state.selectedTool != .cutOut
+      && state.selectedTool != .measure
+      && !state.isTranslateAreaSelecting
   }
 
-  /// Grow the canvas live to the gesture-local layers' footprints.
-  private func updateLiveCombineCanvas() {
-    guard growsCombineCanvasDuringGesture else { return }
-    let footprints = gestureLocalItems.values.compactMap(AnnotateState.combineCanvasFootprint(of:))
-    state.updateLiveCombineCanvas(including: footprints)
+  /// Moving or resizing layers in combine mode may leave the canvas: it grows to
+  /// follow them, like other screenshot editors' expanding canvas. With auto-expand
+  /// on, drawing a new item past the edge grows it too.
+  private var growsCanvasDuringGesture: Bool {
+    guard state.growsCanvasLive else { return false }
+    if isDraggingAnnotation || isResizingAnnotation { return true }
+    return isDrawing && pointerLeavesAutoExpandingCanvas
+  }
+
+  /// Bounds that shift-constrained drawing (squares, snapped lines) stays within.
+  private var drawingConstraintBounds: CGRect {
+    guard pointerLeavesAutoExpandingCanvas else { return activeDrawingBounds }
+    // The canvas grows to the item, so only keep the math finite.
+    return activeDrawingBounds.insetBy(dx: -100_000, dy: -100_000)
+  }
+
+  /// Grow the canvas live to the gesture-local layers' footprints, or to the item
+  /// being drawn.
+  private func updateLiveCanvas() {
+    guard growsCanvasDuringGesture else { return }
+    var footprints = gestureLocalItems.values.compactMap(AnnotateState.canvasFootprint(of:))
+    if isDrawing, let preview = drawingPreviewItemForCanvasGrowth(),
+       let footprint = AnnotateState.canvasFootprint(of: preview) {
+      footprints.append(footprint)
+    }
+    state.updateLiveCanvas(including: footprints)
+  }
+
+  /// The item the current drawing would commit, for sizing the live canvas.
+  private func drawingPreviewItemForCanvasGrowth() -> AnnotationItem? {
+    guard let start = dragStart else { return nil }
+    let tool = state.selectedTool
+    let end: CGPoint
+    switch tool {
+    case .pencil, .highlighter:
+      end = currentPath.last ?? start
+    default:
+      end = currentPath.last ?? drawingRawEndPoint ?? start
+    }
+    return AnnotationFactory.createAnnotation(
+      tool: tool,
+      from: start,
+      to: end,
+      path: currentPath,
+      context: AnnotationFactory.CreationContext(
+        properties: state.annotationCreationProperties(for: tool),
+        arrowStyle: state.arrowStyle,
+        arrowType: state.arrowType,
+        arrowBendDirection: state.arrowBendDirection,
+        arrowStartHead: state.arrowStartHead,
+        arrowEndHead: state.arrowEndHead,
+        blurType: state.blurType,
+        counterValue: drawingCounterValue ?? 1,
+        watermarkText: state.watermarkText,
+        activeAnnotationBounds: state.activeAnnotationBounds,
+        counterArrowMinimumDragDistance: counterArrowMinimumDragDistance
+      )
+    )
   }
 
   // MARK: - Mouse Events
@@ -1074,7 +1132,7 @@ final class DrawingCanvasNSView: NSView {
     window?.makeFirstResponder(self)
     // Safety net: no drop or drag is in flight on a fresh press.
     state.endExternalCombineDrop()
-    state.beginCombineCanvasGesture()
+    state.beginCanvasGesture()
     let displayPoint = convert(event.locationInWindow, from: nil)
     updateCanvasMouseLocation(for: displayPoint)
     let imagePoint = interactionPoint(from: displayPoint)
@@ -1372,7 +1430,7 @@ final class DrawingCanvasNSView: NSView {
     if isResizingAnnotation, let handle = activeResizeHandle,
        let resizeId = resizingAnnotationId {
       applyGestureResize(handle: handle, resizeId: resizeId, imagePoint: imagePoint, event: event)
-      updateLiveCombineCanvas()
+      updateLiveCanvas()
       invalidateLiveLayers()
       return
     }
@@ -1509,7 +1567,7 @@ final class DrawingCanvasNSView: NSView {
               let updated = gestureLocalItems[id] else { continue }
         noteGestureMutation(original: original, updated: updated)
       }
-      updateLiveCombineCanvas()
+      updateLiveCanvas()
       invalidateLiveLayers()
       return
     }
@@ -1543,6 +1601,7 @@ final class DrawingCanvasNSView: NSView {
       drawingRawEndPoint = imagePoint
       updateConstrainedDrawingPreview(shiftHeld: event.modifierFlags.contains(.shift))
     }
+    updateLiveCanvas()
   }
 
   override func flagsChanged(with event: NSEvent) {
@@ -1573,7 +1632,7 @@ final class DrawingCanvasNSView: NSView {
       start: dragStart,
       end: drawingRawEndPoint,
       shiftHeld: shiftHeld,
-      bounds: activeDrawingBounds
+      bounds: drawingConstraintBounds
     )
     currentPath = [constrainedEndPoint]
     invalidateLiveLayers()
@@ -1662,7 +1721,7 @@ final class DrawingCanvasNSView: NSView {
         start: CGPoint(x: original.bounds.midX, y: original.bounds.midY),
         end: imagePoint,
         shiftHeld: event.modifierFlags.contains(.shift),
-        bounds: activeDrawingBounds
+        bounds: drawingConstraintBounds
       )
       item.properties.counterArrowTarget = item.normalizedCounterArrowTarget(target)
       gestureLocalItems[resizeId] = item
@@ -1715,7 +1774,7 @@ final class DrawingCanvasNSView: NSView {
     // bounds the drag used.
     let displayPoint = convert(event.locationInWindow, from: nil)
     let imagePoint = interactionPoint(from: displayPoint)
-    defer { state.endCombineCanvasGesture() }
+    defer { state.endCanvasGesture() }
     if state.finishTranslateAreaDrag(at: imagePoint) {
       return
     }
