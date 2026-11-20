@@ -3663,6 +3663,16 @@ nonisolated enum L10n {
       defaultValue: "Darken everything outside the recording region while recording so the captured area stands out. Turn off to keep other windows fully visible and usable during recording.",
       comment: "Recording preferences setting description"
     )
+    static let recordingShowAreaBorderTitle = string(
+      "preferences-capture.recording-show-area-border-title",
+      defaultValue: "Show Recording Area Border",
+      comment: "Recording preferences setting title"
+    )
+    static let recordingShowAreaBorderDescription = string(
+      "preferences-capture.recording-show-area-border-description",
+      defaultValue: "Draw a thin frame around the recording region while recording so you always know what is captured. The frame is not included in the video.",
+      comment: "Recording preferences setting description"
+    )
     static let imageFormatTitle = string(
       "preferences-capture.image-format-title",
       defaultValue: "Image Format",

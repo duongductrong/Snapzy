@@ -126,6 +126,12 @@ enum RecordingToolbarPreferences {
     defaults.object(forKey: PreferencesKeys.recordingDimNonSelectedArea) as? Bool ?? true
   }
 
+  /// Whether a thin frame marks the recording region while recording, independent of
+  /// the dim preference. Defaults to `true`.
+  static func showAreaBorder(defaults: UserDefaults = .standard) -> Bool {
+    defaults.object(forKey: PreferencesKeys.recordingShowAreaBorder) as? Bool ?? true
+  }
+
   /// Whether the floating recording controls bar is shown during recording.
   /// Defaults to `true` (visible) to preserve prior behavior when unset.
   static func hoverBarVisible(defaults: UserDefaults = .standard) -> Bool {
