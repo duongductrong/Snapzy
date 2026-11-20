@@ -91,6 +91,7 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.recordingShowCursor) private var recordingShowCursor = true
   @AppStorage(PreferencesKeys.recordingStudioMode) private var recordingStudioMode = false
   @AppStorage(PreferencesKeys.recordingDimNonSelectedArea) private var recordingDimNonSelectedArea = true
+  @AppStorage(PreferencesKeys.recordingShowAreaBorder) private var recordingShowAreaBorder = true
   @AppStorage(PreferencesKeys.recordingHoverBarVisible) private var recordingHoverBarVisible = true
   @AppStorage(PreferencesKeys.recordingShowTimeOnMenuBar) private var recordingShowTimeOnMenuBar = true
 
@@ -598,6 +599,14 @@ struct CaptureSettingsView: View {
               description: L10n.PreferencesCapture.recordingDimNonSelectedAreaDescription
             ) {
               Toggle("", isOn: $recordingDimNonSelectedArea)
+                .labelsHidden()
+            }
+
+            SettingRow(
+              title: L10n.PreferencesCapture.recordingShowAreaBorderTitle,
+              description: L10n.PreferencesCapture.recordingShowAreaBorderDescription
+            ) {
+              Toggle("", isOn: $recordingShowAreaBorder)
                 .labelsHidden()
             }
 

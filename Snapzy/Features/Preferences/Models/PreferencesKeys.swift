@@ -185,6 +185,7 @@ enum PreferencesKeys {
   /// Studio recording: cursor captured as editable data, flattened after stop. Default false.
   static let recordingStudioMode = "recording.studioMode"
   static let recordingDimNonSelectedArea = "recording.dimNonSelectedArea"
+  static let recordingShowAreaBorder = "recording.showAreaBorder"
   static let recordingHighlightClicks = "recording.highlightClicks"
   static let recordingShowKeystrokes = "recording.showKeystrokes"
   static let recordingHoverBarVisible = "recording.hoverBarVisible"

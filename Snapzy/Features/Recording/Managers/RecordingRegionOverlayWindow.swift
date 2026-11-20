@@ -132,7 +132,7 @@ final class RecordingRegionOverlayWindow: NSPanel {
     overlayView.guidance = guidance
   }
 
-  /// Hide the border when recording starts (border would appear in video)
+  /// Hide the selection border and resize handles when recording starts.
   func hideBorder() {
     overlayView.showBorder = false
     overlayView.needsDisplay = true
@@ -143,6 +143,17 @@ final class RecordingRegionOverlayWindow: NSPanel {
     overlayView.showBorder = true
     overlayView.needsDisplay = true
   }
+
+  /// Show or hide the thin frame drawn just outside the region while recording.
+  /// The overlay is a `.recordingControls` window excluded from Snapzy's own
+  /// recordings, and the frame sits outside the captured rect as a second guard.
+  func setRecordingFrameEnabled(_ enabled: Bool) {
+    guard overlayView.showRecordingFrame != enabled else { return }
+    overlayView.showRecordingFrame = enabled
+    overlayView.needsDisplay = true
+  }
+
+  var isRecordingFrameEnabled: Bool { overlayView.showRecordingFrame }
 
   /// Enable or disable the dim fill outside the recording region.
   /// Called at record-start (and on live preference changes) so non-selected
@@ -192,6 +203,8 @@ final class RecordingRegionOverlayView: NSView {
   var highlightRect: CGRect
   var showBorder: Bool = true
   var showDim: Bool = true
+  /// Thin frame marking the region during recording (independent of `showDim`).
+  var showRecordingFrame: Bool = false
   var isInteractionEnabled: Bool = false
   var guidance: RecordingRegionOverlayGuidance? {
     didSet {
@@ -230,6 +243,8 @@ final class RecordingRegionOverlayView: NSView {
   private let edgeHandleLength: CGFloat = 24.0
   private let handleThickness: CGFloat = 3.0
   private let minimumSelectionSize: CGFloat = 50.0
+  private let recordingFrameColor = NSColor.systemRed.withAlphaComponent(0.9)
+  private let recordingFrameWidth: CGFloat = 2.0
 
   init(frame: CGRect, highlightRect: CGRect) {
     self.highlightRect = highlightRect
@@ -800,9 +815,26 @@ final class RecordingRegionOverlayView: NSView {
       }
     }
 
+    if showRecordingFrame && !showBorder {
+      drawRecordingFrame(around: localRect, dirtyRect: dirtyRect)
+    }
+
     if let guidance, bounds.contains(CGPoint(x: localRect.midX, y: localRect.midY)) {
       drawGuidance(guidance, in: clampedRect)
     }
+  }
+
+  /// Strokes the frame entirely outside `rect` so it never overlaps captured pixels.
+  /// Edges that fall on the screen bounds (full-screen or edge-to-edge regions) are
+  /// clipped away by the view, which is the intended result.
+  private func drawRecordingFrame(around rect: CGRect, dirtyRect: CGRect) {
+    let outset = recordingFrameWidth / 2
+    let frameRect = rect.insetBy(dx: -outset, dy: -outset)
+    guard frameRect.insetBy(dx: -outset, dy: -outset).intersects(dirtyRect) else { return }
+    let path = NSBezierPath(rect: frameRect)
+    path.lineWidth = recordingFrameWidth
+    recordingFrameColor.setStroke()
+    path.stroke()
   }
 
   private func drawGuidance(_ guidance: RecordingRegionOverlayGuidance, in rect: CGRect) {

@@ -772,14 +772,28 @@ final class RecordingCoordinator: ObservableObject {
     }
   }
 
-  /// Re-applies the dim preference to the live region overlays when it changes.
-  /// Only acts while actively recording — the pre-record selection always keeps
-  /// its dim for selection feedback, regardless of the preference.
+  /// Re-applies the dim and area-border preferences to the live region overlays when
+  /// they change. Only acts while actively recording — the pre-record selection always
+  /// keeps its dim and handles for selection feedback, regardless of the preferences.
   @objc private func dimPreferenceDidChange() {
     guard recorder.state.isPauseResumeEligible, !regionOverlayWindows.isEmpty else { return }
     let dimNonSelectedArea = RecordingToolbarPreferences.dimNonSelectedArea()
+    let showAreaBorder = RecordingToolbarPreferences.showAreaBorder()
     for overlay in regionOverlayWindows {
       overlay.setDimEnabled(dimNonSelectedArea)
+      overlay.setRecordingFrameEnabled(showAreaBorder)
+    }
+  }
+
+  /// Switches the region overlays from selection chrome to the recording look.
+  private func applyRecordingOverlayAppearance() {
+    let dimNonSelectedArea = RecordingToolbarPreferences.dimNonSelectedArea()
+    let showAreaBorder = RecordingToolbarPreferences.showAreaBorder()
+    for overlay in regionOverlayWindows {
+      overlay.hideBorder()
+      overlay.setInteractionEnabled(false)
+      overlay.setDimEnabled(dimNonSelectedArea)
+      overlay.setRecordingFrameEnabled(showAreaBorder)
     }
   }
 
@@ -881,14 +895,9 @@ final class RecordingCoordinator: ObservableObject {
         guard isCurrentRecordingStart(generation, window: window) else { return }
         removeEscapeMonitors()
 
-        // Hide border on overlay (would appear in video), disable interaction, and
-        // apply the dim preference — off keeps non-selected windows fully visible.
-        let dimNonSelectedArea = RecordingToolbarPreferences.dimNonSelectedArea()
-        for overlay in regionOverlayWindows {
-          overlay.hideBorder()
-          overlay.setInteractionEnabled(false)
-          overlay.setDimEnabled(dimNonSelectedArea)
-        }
+        // Swap the selection chrome for the recording look: no handles, no interaction,
+        // dim and area border per preference.
+        applyRecordingOverlayAppearance()
 
         guard await completeRecordingStart(for: rect) else { return }
 
@@ -1028,12 +1037,7 @@ final class RecordingCoordinator: ObservableObject {
         guard isCurrentRecordingStart(generation, window: window) else { return }
         removeEscapeMonitors()
 
-        let dimNonSelectedArea = RecordingToolbarPreferences.dimNonSelectedArea()
-        for overlay in regionOverlayWindows {
-          overlay.hideBorder()
-          overlay.setInteractionEnabled(false)
-          overlay.setDimEnabled(dimNonSelectedArea)
-        }
+        applyRecordingOverlayAppearance()
         guard await completeRecordingStart(for: rect) else { return }
         DiagnosticLogger.shared.log(.info, .recording, "Microphone retry recording started")
       } catch let error as RecordingError {
