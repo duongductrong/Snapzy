@@ -116,6 +116,7 @@ struct AnnotateImageTransformToolbarButton: View {
       item.isEnabled = state.canRotateImage
       menu.addItem(item)
     }
+    MenuBarItemImage.enableIcons(in: menu)
 
     isMenuOpen = true
     // Drop just below the button's leading edge, like a native toolbar pull-down.

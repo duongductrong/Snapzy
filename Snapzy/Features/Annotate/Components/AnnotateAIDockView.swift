@@ -962,6 +962,7 @@ enum AnnotateAIDockProviderMenu {
     }
     settings.image = MenuBarItemImage.symbol("gearshape")
     menu.addItem(settings)
+    MenuBarItemImage.enableIcons(in: menu)
     return menu
   }
 

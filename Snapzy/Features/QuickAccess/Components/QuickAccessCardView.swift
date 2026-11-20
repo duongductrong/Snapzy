@@ -912,6 +912,7 @@ private struct QuickAccessContextMenuPresenter: NSViewRepresentable {
       menu.autoenablesItems = false
 
       populate(menu, with: entries)
+      MenuBarItemImage.enableIcons(in: menu)
       menu.update()
 
       let screenPoint = window.convertPoint(toScreen: event.locationInWindow)

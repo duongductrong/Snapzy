@@ -74,4 +74,40 @@ final class MenuBarItemImageTests: XCTestCase {
     }
     XCTAssertGreaterThan(paintedPixels, 0, "Rasterized glyph is empty")
   }
+
+  /// macOS 27 hides menu images by policy and hands apps `preferredImageVisibility` as
+  /// the opt-out. The helper must set it on the entries that carry a glyph, and leave
+  /// separators and text-only rows alone. Below macOS 27 the property does not exist,
+  /// so the call has to be a no-op that still cannot crash.
+  func testEnableIcons_marksGlyphBearingItemsVisible() {
+    let submenu = NSMenu(title: "Sub")
+    let child = NSMenuItem(title: "Child", action: nil, keyEquivalent: "")
+    child.image = MenuBarItemImage.symbol("crop")
+    submenu.addItem(child)
+
+    let parent = NSMenuItem(title: "Parent", action: nil, keyEquivalent: "")
+    parent.image = MenuBarItemImage.symbol("gear")
+    parent.submenu = submenu
+
+    let menu = NSMenu()
+    menu.addItem(parent)
+    menu.addItem(.separator())
+    let textOnly = NSMenuItem(title: "Text only", action: nil, keyEquivalent: "")
+    menu.addItem(textOnly)
+
+    MenuBarItemImage.enableIcons(in: menu)
+
+    if #available(macOS 27.0, *) {
+      XCTAssertEqual(parent.preferredImageVisibility, .visible)
+      XCTAssertEqual(child.preferredImageVisibility, .visible, "Submenu rows need the same opt-out")
+      XCTAssertEqual(textOnly.preferredImageVisibility, .automatic, "Rows without a glyph stay untouched")
+    } else {
+      XCTAssertEqual(textOnly.title, "Text only", "The pre-27 path must leave the menu as it was")
+    }
+  }
+
+  func testEnableIcons_acceptsNilAndEmptyMenus() {
+    MenuBarItemImage.enableIcons(in: nil)
+    MenuBarItemImage.enableIcons(in: NSMenu())
+  }
 }

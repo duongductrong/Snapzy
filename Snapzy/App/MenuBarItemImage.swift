@@ -7,12 +7,20 @@
 
 import AppKit
 
-/// Builds the glyph shown to the left of a menu item title.
+/// Builds the glyph shown to the left of a menu item title, and asks menus to draw it.
 ///
-/// macOS 27 no longer draws symbol-backed image reps inside `NSMenu`: the row is
-/// laid out, the glyph is skipped. Rasterizing into a template bitmap rep keeps
-/// the icon on every supported system, which is also how the menu bar status
-/// image itself is produced (`MenuBarIconRenderer`).
+/// macOS 27 stopped drawing symbol-backed image reps inside `NSMenu`: the row is laid
+/// out, the glyph is skipped. Two mechanisms are applied, because the release notes
+/// describe them for different builds:
+///
+/// - Rasterizing into a template bitmap rep keeps the glyph on every supported system,
+///   which is also how the menu bar status image itself is produced
+///   (`MenuBarIconRenderer`).
+/// - `NSMenuItem.preferredImageVisibility = .visible` is the documented opt-out
+///   (radars 170477566 and 179374305) and the only path guaranteed to survive a tightening
+///   of the policy for apps linked on the macOS 27 SDK, where non-symbol images are
+///   supposed to be hidden too. It does not exist before macOS 27, which is why the
+///   rasterization still carries the older systems.
 @MainActor
 enum MenuBarItemImage {
   /// Returns an image safe to assign to `NSMenuItem.image`.
@@ -28,6 +36,21 @@ enum MenuBarItemImage {
       return nil
     }
     return rasterized(symbol)
+  }
+
+  /// Marks every image-bearing entry of a menu, including submenus, to stay visible.
+  ///
+  /// `NSMenu` has no menu-wide switch, so the property is set per item. Separators and
+  /// imageless entries are skipped: they render the same either way, and touching them
+  /// only adds noise to the diff of a future audit.
+  static func enableIcons(in menu: NSMenu?) {
+    guard #available(macOS 27.0, *) else { return }
+    for item in menu?.items ?? [] {
+      if !item.isSeparatorItem, item.image != nil {
+        item.preferredImageVisibility = .visible
+      }
+      enableIcons(in: item.submenu)
+    }
   }
 
   /// Draws the symbol once into an alpha bitmap at the display scale, keeping the

@@ -602,6 +602,8 @@ final class AppStatusBarController: ObservableObject {
     quitItem.image = MenuBarItemImage.symbol("power")
     quitItem.isEnabled = true
     menu?.addItem(quitItem)
+
+    MenuBarItemImage.enableIcons(in: menu)
   }
 
   // MARK: - Menu Item Factory
