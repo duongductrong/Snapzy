@@ -97,13 +97,21 @@ final class MenuBarItemImageTests: XCTestCase {
 
     MenuBarItemImage.enableIcons(in: menu)
 
-    if #available(macOS 27.0, *) {
-      XCTAssertEqual(parent.preferredImageVisibility, .visible)
-      XCTAssertEqual(child.preferredImageVisibility, .visible, "Submenu rows need the same opt-out")
-      XCTAssertEqual(textOnly.preferredImageVisibility, .automatic, "Rows without a glyph stay untouched")
+    if rawImageVisibility(of: parent) != nil {
+      XCTAssertEqual(rawImageVisibility(of: parent), 1, "Rows with a glyph need the documented opt-out")
+      XCTAssertEqual(rawImageVisibility(of: child), 1, "Submenu rows need the same opt-out")
+      XCTAssertEqual(rawImageVisibility(of: textOnly), 0, "Rows without a glyph stay untouched")
     } else {
-      XCTAssertEqual(textOnly.title, "Text only", "The pre-27 path must leave the menu as it was")
+      XCTAssertNil(rawImageVisibility(of: child), "Below macOS 27 there is no such property, so the call must leave it alone")
     }
+  }
+
+  /// Reads `preferredImageVisibility` the way the helper writes it. The property is not
+  /// in the macOS 26 SDK headers CI builds against, so naming it directly would not
+  /// compile there; 0 is `.automatic`, 1 is `.visible`.
+  private func rawImageVisibility(of item: NSMenuItem) -> Int? {
+    guard item.responds(to: Selector(("preferredImageVisibility"))) else { return nil }
+    return (item.value(forKey: "preferredImageVisibility") as? NSNumber)?.intValue
   }
 
   func testEnableIcons_acceptsNilAndEmptyMenus() {

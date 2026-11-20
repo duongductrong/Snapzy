@@ -19,8 +19,9 @@ import AppKit
 /// - `NSMenuItem.preferredImageVisibility = .visible` is the documented opt-out
 ///   (radars 170477566 and 179374305) and the only path guaranteed to survive a tightening
 ///   of the policy for apps linked on the macOS 27 SDK, where non-symbol images are
-///   supposed to be hidden too. It does not exist before macOS 27, which is why the
-///   rasterization still carries the older systems.
+///   supposed to be hidden too. It is applied through the runtime because it does not
+///   exist before macOS 27, which is also why the rasterization still carries the older
+///   systems and the older toolchains.
 @MainActor
 enum MenuBarItemImage {
   /// Returns an image safe to assign to `NSMenuItem.image`.
@@ -44,10 +45,9 @@ enum MenuBarItemImage {
   /// imageless entries are skipped: they render the same either way, and touching them
   /// only adds noise to the diff of a future audit.
   static func enableIcons(in menu: NSMenu?) {
-    guard #available(macOS 27.0, *) else { return }
     for item in menu?.items ?? [] {
       if !item.isSeparatorItem, item.image != nil {
-        item.preferredImageVisibility = .visible
+        item.preferImageVisible()
       }
       enableIcons(in: item.submenu)
     }
@@ -87,5 +87,21 @@ enum MenuBarItemImage {
     }
 
     return image
+  }
+}
+
+private extension NSMenuItem {
+  /// Asks AppKit to keep this item's image on screen.
+  ///
+  /// `preferredImageVisibility` is declared `API_AVAILABLE(macos(27.0))`, so a direct
+  /// reference only compiles against the macOS 27 SDK headers — and the project builds
+  /// with Xcode 26.2 in CI. The property is an Objective-C one over an `NSInteger` enum
+  /// (`Visible = 1`), so it is set through the runtime instead: binaries linked against
+  /// the older SDK still get the documented switch when they run on macOS 27.
+  func preferImageVisible() {
+    let getter = Selector(("preferredImageVisibility"))
+    let setter = Selector(("setPreferredImageVisibility:"))
+    guard responds(to: getter), responds(to: setter) else { return }
+    setValue(NSNumber(value: 1), forKey: "preferredImageVisibility")
   }
 }
