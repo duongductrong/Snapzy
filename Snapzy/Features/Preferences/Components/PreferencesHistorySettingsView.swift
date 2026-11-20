@@ -28,7 +28,18 @@ struct HistorySettingsView: View {
               .fixedSize(horizontal: false, vertical: true)
           }
 
-          HistoryDisplayStylePicker(selection: $manager.displayStyle)
+          HistorySettingsPreview(style: manager.displayStyle)
+
+          HStack(alignment: .top, spacing: 10) {
+            ForEach(HistoryDisplayStyle.allCases) { style in
+              HistoryDisplayStyleCard(
+                style: style,
+                isSelected: manager.displayStyle == style,
+                action: { manager.displayStyle = style }
+              )
+            }
+          }
+          .fixedSize(horizontal: false, vertical: true)
 
           Button(L10n.HistoryHanging.preview) {
             manager.show()
@@ -248,39 +259,65 @@ struct HistorySettingsView: View {
   }
 }
 
-private struct HistoryDisplayStylePicker: View {
-  @Binding var selection: HistoryDisplayStyle
+/// One style choice. The mockup lives in the preview above, so the cards stay readable: name,
+/// what the style does, and an accent ring plus a checkmark when picked.
+private struct HistoryDisplayStyleCard: View {
+  let style: HistoryDisplayStyle
+  let isSelected: Bool
+  let action: () -> Void
+
+  @State private var isHovering = false
 
   var body: some View {
-    HStack(alignment: .top, spacing: 16) {
-      ForEach(HistoryDisplayStyle.allCases) { style in
-        VStack(spacing: 8) {
-          PreferencesVisualOptionTile(
-            title: style.title,
-            isSelected: selection == style,
-            action: { selection = style }
-          ) {
-            HistoryDisplayStyleDesktopPreview(style: style)
-              .accessibilityHidden(true)
-          }
-          .scaleEffect(1.4)
-          .frame(minWidth: 112, minHeight: 112)
-          .accessibilityIdentifier("history.style.\(style.rawValue)")
-          .accessibilityLabel(style.title)
-          .accessibilityHint(description(for: style))
+    Button(action: action) {
+      VStack(alignment: .leading, spacing: 6) {
+        HStack(spacing: 6) {
+          Text(style.title)
+            .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
 
-          Text(description(for: style))
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)
+          Spacer(minLength: 8)
+
+          if isSelected {
+            Image(systemName: "checkmark.circle.fill")
+              .font(.system(size: 13, weight: .semibold))
+              .foregroundStyle(Color.accentColor)
+              .transition(.scale(scale: 0.7).combined(with: .opacity))
+          }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(12)
-        .background(Color.primary.opacity(0.03), in: Radius.rect(Radius.card))
+        .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+
+        Text(description(for: style))
+          .font(.caption)
+          .foregroundStyle(isSelected ? Color.primary.opacity(0.72) : Color.secondary)
+          .fixedSize(horizontal: false, vertical: true)
       }
+      .padding(12)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      .background(
+        Color.primary.opacity(backgroundOpacity),
+        in: Radius.rect(Radius.card)
+      )
+      .overlay(
+        Radius.rect(Radius.card)
+          .strokeBorder(
+            isSelected ? Color.accentColor : Color.primary.opacity(0.08),
+            lineWidth: isSelected ? 1.5 : 1
+          )
+      )
+      .contentShape(Radius.rect(Radius.card))
     }
-    .fixedSize(horizontal: false, vertical: true)
+    .buttonStyle(.plain)
+    .onHover { isHovering in self.isHovering = isHovering }
+    .animation(SnapzyMotionPreferences.shared.spec(.hover).animation, value: isHovering)
+    .animation(SnapzyMotionPreferences.shared.spec(.contentIn).animation, value: isSelected)
+    .accessibilityIdentifier("history.style.\(style.rawValue)")
+    .accessibilityLabel(style.title)
+    .accessibilityHint(description(for: style))
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+
+  private var backgroundOpacity: Double {
+    isSelected ? 0.07 : (isHovering ? 0.05 : 0.03)
   }
 
   private func description(for style: HistoryDisplayStyle) -> String {
@@ -288,95 +325,6 @@ private struct HistoryDisplayStylePicker: View {
     case .traditional: return L10n.HistoryHanging.traditionalDescription
     case .hanging: return L10n.HistoryHanging.hangingDescription
     }
-  }
-}
-
-private struct HistoryDisplayStyleDesktopPreview: View {
-  let style: HistoryDisplayStyle
-
-  var body: some View {
-    PreferencesMiniDesktop {
-      VStack(spacing: 0) {
-        switch style {
-        case .traditional:
-          traditionalPanel
-        case .hanging:
-          hangingPhotos
-        }
-        Spacer(minLength: 0)
-      }
-      .padding(.top, PreferencesMiniDesktop<EmptyView>.menuBarHeight + 6)
-    }
-  }
-
-  private var traditionalPanel: some View {
-    VStack(spacing: 3) {
-      HStack(spacing: 2) {
-        Capsule().fill(Color.accentColor).frame(width: 9, height: 2)
-        Capsule().fill(Color.white.opacity(0.3)).frame(width: 7, height: 2)
-        Spacer(minLength: 0)
-        Circle().fill(Color.white.opacity(0.6)).frame(width: 2, height: 2)
-      }
-      VStack(spacing: 2) {
-        ForEach(0..<2, id: \.self) { row in
-          HStack(spacing: 2) {
-            ForEach(0..<3, id: \.self) { column in
-              photo(index: row + column)
-                .frame(width: 12, height: 8)
-            }
-          }
-        }
-      }
-    }
-    .padding(4)
-    .frame(width: 48)
-    .background(Color.black.opacity(0.65), in: Radius.rect(Radius.ornament))
-    .overlay {
-      Radius.rect(Radius.ornament)
-        .strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5)
-    }
-  }
-
-  private var hangingPhotos: some View {
-    VStack(spacing: 2) {
-      Rectangle()
-        .fill(Color.white.opacity(0.8))
-        .frame(width: 60, height: 1)
-      HStack(alignment: .top, spacing: 5) {
-        ForEach(0..<3, id: \.self) { index in
-          photo(index: index)
-            .frame(width: 13, height: 16)
-            .padding(2)
-            .padding(.bottom, 3)
-            .background(Color.white, in: Radius.rect(Radius.ornament))
-            .overlay(alignment: .top) {
-              Capsule()
-                .fill(Color.gray)
-                .frame(width: 3, height: 6)
-                .offset(y: -3)
-            }
-            .rotationEffect(.degrees(index == 1 ? 6 : -6), anchor: .top)
-            .shadow(color: .black.opacity(0.3), radius: 1, y: 2)
-        }
-      }
-    }
-  }
-
-  private func photo(index: Int) -> some View {
-    Rectangle()
-      .fill(
-        LinearGradient(
-          colors: [index.isMultiple(of: 2) ? Color.cyan : Color.orange, Color.indigo],
-          startPoint: .topLeading,
-          endPoint: .bottomTrailing
-        )
-      )
-      .overlay {
-        Image(systemName: "mountain.2.fill")
-          .font(.system(size: 7))
-          .foregroundStyle(Color.white.opacity(0.8))
-      }
-      .clipped()
   }
 }
 
