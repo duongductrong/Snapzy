@@ -745,12 +745,6 @@ struct HistoryTraditionalPanelMiniature: View {
     .frame(width: s(920), height: s(316), alignment: .top)
     .background(Color.black.opacity(0.46), in: Radius.rect(s(30)))
     .environment(\.colorScheme, .dark)
-    .overlay(alignment: .top) {
-      Rectangle()
-        .fill(Color.white.opacity(0.34))
-        .frame(height: 1)
-        .padding(.horizontal, s(14))
-    }
     .overlay(
       Radius.rect(s(30))
         .strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5)
@@ -827,19 +821,23 @@ struct HistoryCarouselCardMiniature: View {
     VStack(spacing: s(10)) {
       preview
 
-      if isSelected {
-        HStack(spacing: s(4)) {
-          Image(systemName: "arrow.uturn.backward")
-            .font(.system(size: f(11), weight: .semibold))
-          Text(L10n.Common.restore)
-            .font(.system(size: f(11), weight: .semibold))
+      // Every card reserves the restore slot, so captions stay on one line instead of
+      // the picked card pushing its own caption below the rest.
+      ZStack {
+        if isSelected {
+          HStack(spacing: s(4)) {
+            Image(systemName: "arrow.uturn.backward")
+              .font(.system(size: f(11), weight: .semibold))
+            Text(L10n.Common.restore)
+              .font(.system(size: f(11), weight: .semibold))
+          }
+          .foregroundStyle(Color.white)
+          .padding(.horizontal, s(12))
+          .padding(.vertical, s(6))
+          .background(Capsule(style: .continuous).fill(Color.accentColor))
         }
-        .foregroundStyle(Color.white)
-        .padding(.horizontal, s(12))
-        .padding(.vertical, s(6))
-        .background(Capsule(style: .continuous).fill(Color.accentColor))
-        .padding(.top, s(-2))
       }
+      .frame(height: s(26))
 
       Text(verbatim: capture.relativeText)
         .font(.system(size: f(12.5), weight: isSelected ? .semibold : .medium))
