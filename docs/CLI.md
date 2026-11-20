@@ -2,7 +2,7 @@
 
 `snapzy` lets AI agents, scripts, and terminals capture a display, a window, or an area through Snapzy — no overlay, no clicks — and get back a file path, JSON metadata, and an exit code. It ships inside the app at `Snapzy.app/Contents/Helpers/snapzy`.
 
-Current as of HEAD (`v2.3.0-beta.2`, build 235, macOS 13.0+ deployment target).
+Current as of HEAD (`v2.3.0-beta.3`, build 236, macOS 13.0+ deployment target).
 
 ## How it works
 
