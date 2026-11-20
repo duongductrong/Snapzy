@@ -2,8 +2,9 @@
 //  DisplayCornerFrame.swift
 //  Snapzy
 //
-//  Artistic crop of a Mac display's top-right corner: dark bezel, rounded
-//  screen corner, and an aluminium-edge rim. Content renders as the screen.
+//  Artistic crop of a Mac display's top-right corner: dark bezel along the two
+//  physical edges, screen corners that follow the chassis, and a hairline
+//  outline. Content renders as the screen.
 //
 
 import SwiftUI
@@ -17,11 +18,9 @@ struct DisplayCornerFrame<Content: View>: View {
   @ViewBuilder var content: Content
 
   var body: some View {
-    let screenShape = CornerRoundedRectangle(topTrailing: screenCornerRadius)
-
     content
       .clipShape(screenShape)
-      // Hairlines and rim trace only the physical top and right edges; the
+      // The screen hairline traces only the physical top and right edges; the
       // left and bottom are crop lines and must stay open.
       .overlay(
         DisplayEdgeShape(startInset: 0, cornerRadius: screenCornerRadius)
@@ -39,15 +38,9 @@ struct DisplayCornerFrame<Content: View>: View {
       )
       .clipShape(chassisShape)
       .overlay(
-        DisplayEdgeShape(startInset: Radius.card, cornerRadius: chassisCornerRadius, inset: 0.5)
-          .stroke(
-            LinearGradient(
-              colors: [Color.white.opacity(0.22), Color.white.opacity(0.04)],
-              startPoint: .topTrailing,
-              endPoint: .bottomLeading
-            ),
-            lineWidth: 1
-          )
+        chassisShape
+          .inset(by: 0.5)
+          .stroke(SidebarColors.borderDefault, lineWidth: 1)
       )
   }
 
@@ -58,6 +51,21 @@ struct DisplayCornerFrame<Content: View>: View {
       bottomLeading: Radius.card,
       bottomTrailing: Radius.card
     )
+  }
+
+  /// Each screen corner rides its chassis corner on a tangent arc. A square content corner inside a
+  /// rounded chassis leaves the bezel as a wedge, which reads as a corner that doesn't round off.
+  private var screenShape: CornerRoundedRectangle {
+    CornerRoundedRectangle(
+      topLeading: concentric(Radius.card, insetX: 0, insetY: bezelWidth),
+      topTrailing: screenCornerRadius,
+      bottomLeading: concentric(Radius.card, insetX: 0, insetY: 0),
+      bottomTrailing: concentric(Radius.card, insetX: bezelWidth, insetY: 0)
+    )
+  }
+
+  private func concentric(_ radius: CGFloat, insetX: CGFloat, insetY: CGFloat) -> CGFloat {
+    max(0, radius - max(insetX, insetY))
   }
 }
 
