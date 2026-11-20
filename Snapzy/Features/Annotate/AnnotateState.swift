@@ -3632,6 +3632,14 @@ final class AnnotateState: ObservableObject {
       break
     }
 
+    // A mirror reverses the turning direction: M·R(θ) = R(−θ)·M. Watermarks keep their
+    // own user-set tilt, like they do for 90° rotation.
+    if annotation.type.supportsRotation, annotation.properties.rotationDegrees != 0 {
+      flipped.properties.rotationDegrees = annotation.type.clampedRotationDegrees(
+        -annotation.properties.rotationDegrees
+      )
+    }
+
     return flipped
   }
 
@@ -5024,7 +5032,7 @@ final class AnnotateState: ObservableObject {
       annotations[index].properties.opacity = AnnotationProperties.clampedOpacity(opacity)
     }
     if let rotationDegrees = rotationDegrees {
-      annotations[index].properties.rotationDegrees = AnnotationProperties.clampedRotationDegrees(rotationDegrees)
+      annotations[index].properties.rotationDegrees = annotations[index].type.clampedRotationDegrees(rotationDegrees)
     }
     if let watermarkStyle = watermarkStyle {
       annotations[index].properties.watermarkStyle = watermarkStyle
@@ -5125,7 +5133,7 @@ final class AnnotateState: ObservableObject {
       return true
     }
     if let rotationDegrees,
-       properties.rotationDegrees != AnnotationProperties.clampedRotationDegrees(rotationDegrees) {
+       properties.rotationDegrees != annotation.type.clampedRotationDegrees(rotationDegrees) {
       return true
     }
     if let watermarkStyle,
@@ -6520,6 +6528,46 @@ final class AnnotateState: ObservableObject {
         }
       }
     )
+  }
+
+  // MARK: - Annotation rotation
+
+  /// Whether the user may rotate this annotation. Images placed by Combine are
+  /// the canvas layout itself, so they never rotate.
+  func canUserRotate(_ annotation: AnnotationItem) -> Bool {
+    guard annotation.type.supportsRotation else { return false }
+    if isCombineMode, case .embeddedImage = annotation.type { return false }
+    return true
+  }
+
+  /// Selected items the quick bar angle field edits. Read from the raw
+  /// selection so an inserted image, which has no other quick properties,
+  /// still gets the field.
+  private var quickRotatableSelection: [AnnotationItem] {
+    quickPropertiesSelectionAnnotations.filter(canUserRotate)
+  }
+
+  var quickPropertiesSupportsAnnotationRotation: Bool {
+    !quickRotatableSelection.isEmpty
+  }
+
+  /// Whole-degree angle shared by the rotatable selection; nil when they differ.
+  var quickAnnotationRotationDegrees: CGFloat? {
+    let angles = Set(quickRotatableSelection.map {
+      AnnotationProperties.normalizedRotationDegrees($0.properties.rotationDegrees).rounded()
+    })
+    return angles.count == 1 ? angles.first : nil
+  }
+
+  /// Applies one angle to every rotatable selected item as a single undo step.
+  func setQuickAnnotationRotation(_ degrees: CGFloat) {
+    let angle = AnnotationProperties.normalizedRotationDegrees(degrees)
+    let changed = quickRotatableSelection.filter { $0.properties.rotationDegrees != angle }
+    guard !changed.isEmpty else { return }
+    saveState()
+    for annotation in changed {
+      updateAnnotationProperties(id: annotation.id, rotationDegrees: angle)
+    }
   }
 
   var quickWatermarkRotationBinding: Binding<CGFloat> {
