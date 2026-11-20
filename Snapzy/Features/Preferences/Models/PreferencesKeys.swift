@@ -119,6 +119,7 @@ enum PreferencesKeys {
   static let annotateToolParameterDefaults = "annotate.toolParameterDefaults.v1"
   static let annotateQuickPropertiesSyncEnabled = "annotate.quickPropertiesSyncEnabled"
   static let annotateCropSnapToEdgesEnabled = "annotate.cropSnapToEdgesEnabled"
+  static let annotateAutoExpandCanvasEnabled = "annotate.autoExpandCanvasEnabled"
   static let annotateHighlighterTextSnappingEnabled = "annotate.highlighterTextSnappingEnabled"
   /// Annotate Measure tool unit (`MeasureUnit` raw value, default points). Edge tolerance is
   /// shared with Screen Ruler (`screenRulerEdgeTolerance`).

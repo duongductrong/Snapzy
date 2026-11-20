@@ -229,6 +229,7 @@ enum SnapzyConfigurationExporter {
     writer.value("bring_forward_after_drag", defaults.boolValue(PreferencesKeys.annotateBringForwardAfterDrag, default: false))
     writer.value("quick_properties_sync", AnnotateQuickPropertiesSyncPreference.isEnabled(userDefaults: defaults))
     writer.value("combine_save_as_edit", CombineSaveAsEditPreference.isEnabled(userDefaults: defaults))
+    writer.value("auto_expand_canvas", defaults.boolValue(PreferencesKeys.annotateAutoExpandCanvasEnabled, default: true))
     writer.value("crop_snap_to_edges", defaults.boolValue(PreferencesKeys.annotateCropSnapToEdgesEnabled, default: true))
     writer.value(
       "highlighter_text_snapping",

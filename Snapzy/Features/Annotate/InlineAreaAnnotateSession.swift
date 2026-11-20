@@ -163,6 +163,8 @@ final class InlineAreaAnnotateSession: ObservableObject {
     )
     // Capture Markup has no canvas styling (background, padding, shadow) to preview.
     self.state.allowsAgentCanvasChanges = false
+    // The canvas is the selected screen area; annotations stay inside it.
+    self.state.allowsCanvasAutoExpand = false
     self.state.onToolActivated = { tool in
       AnnotateToolPreference.remember(tool, userDefaults: defaults)
     }

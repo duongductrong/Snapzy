@@ -40,6 +40,10 @@ nonisolated struct PersistedAnnotationSession: Codable {
   var sourceLogicalSize: CGSize?
   /// Auto Translate overlays left out of exports. Optional: older sidecars decode without it.
   var excludesTranslationsFromExport: Bool?
+  /// Annotation footprints at the last applied crop, keyed by annotation UUID string.
+  /// Items still at that footprint were cut by the crop and never grow the canvas.
+  /// Optional: older sidecars decode without it (every item then counts as cut).
+  var cropBaselineFootprints: [String: CGRect]?
 }
 
 /// Persisted combine/stitch layout flags. Enum values stored as raw strings and read back

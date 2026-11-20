@@ -74,6 +74,7 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
 - Behavior section only:
   - Sync Tool Defaults / quick-properties sync (`annotate.quickPropertiesSyncEnabled`, default on).
   - Combine Save-as-Edit (`annotate.combineSaveAsEdit`, default on).
+  - Expand Canvas Automatically (`annotate.autoExpandCanvasEnabled`, default on; config `[annotate] auto_expand_canvas`): drawing, moving or resizing an annotation past the image/crop edge grows the canvas (transparent area, exported); open editors follow the toggle live. Not used by Capture Markup.
   - Crop Snap to Edges (`annotate.cropSnapToEdgesEnabled`, default on; also togglable from the crop toolbar; ⌘ held during a drag temporarily bypasses).
   - Snap Highlight to Text (`annotate.highlighterTextSnappingEnabled`, default on; also togglable from the highlighter quick-properties bar; aligns highlighter drags to detected text lines, ⌘ held during a drag temporarily bypasses).
   - Clipboard image open behavior (`annotate.clipboardImageOpenBehavior`): `ask` (default) / `loadAutomatically` / `doNothing` (`AnnotateClipboardImageBehavior`).

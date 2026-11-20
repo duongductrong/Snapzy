@@ -23,6 +23,8 @@ struct AnnotateSettingsView: View {
   private var annotateCombineSaveAsEdit = true
   @AppStorage(PreferencesKeys.annotateCropSnapToEdgesEnabled)
   private var annotateCropSnapToEdgesEnabled = true
+  @AppStorage(PreferencesKeys.annotateAutoExpandCanvasEnabled)
+  private var annotateAutoExpandCanvasEnabled = true
   @AppStorage(PreferencesKeys.annotateHighlighterTextSnappingEnabled)
   private var annotateHighlighterTextSnappingEnabled = true
 
@@ -69,6 +71,14 @@ struct AnnotateSettingsView: View {
       }
 
       Section(L10n.PreferencesAnnotate.drawingSection) {
+        SettingRow(
+          title: L10n.AnnotateUI.autoExpandCanvas,
+          description: L10n.AnnotateUI.autoExpandCanvasDescription
+        ) {
+          Toggle("", isOn: $annotateAutoExpandCanvasEnabled)
+            .labelsHidden()
+        }
+
         SettingRow(
           title: L10n.AnnotateUI.cropSnapToEdges,
           description: L10n.AnnotateUI.cropSnapToEdgesDescription

@@ -82,6 +82,9 @@ final class CounterArrowGeometryTests: XCTestCase {
     state.backgroundStyle = .none
     state.cropRect = CGRect(x: 80, y: 0, width: 100, height: 100)
     state.annotations = [counter()]
+    // The crop was applied after the badge was drawn, so it cuts the badge instead of
+    // auto-expanding the canvas to fit it (#492).
+    state.restoreCropBaselineFootprints(nil)
     XCTAssertFalse(state.annotations[0].bounds.intersects(try XCTUnwrap(state.cropRect)))
     let rendered = try XCTUnwrap(AnnotateExporter.renderFinalImage(state: state))
     let image = try XCTUnwrap(AnnotateExporter.bestCGImage(from: rendered))
