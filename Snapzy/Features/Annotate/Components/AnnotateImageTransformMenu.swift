@@ -112,7 +112,7 @@ struct AnnotateImageTransformToolbarButton: View {
         action.perform(state)
       }
       item.keyEquivalentModifierMask = action.modifiers
-      item.image = NSImage(systemSymbolName: action.symbol, accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol(action.symbol)
       item.isEnabled = state.canRotateImage
       menu.addItem(item)
     }

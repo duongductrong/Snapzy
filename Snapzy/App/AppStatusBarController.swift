@@ -506,7 +506,7 @@ final class AppStatusBarController: ObservableObject {
         keyEquivalent: ""
       )
       stopItem.target = self
-      stopItem.image = NSImage(systemSymbolName: "stop.fill", accessibilityDescription: nil)
+      stopItem.image = MenuBarItemImage.symbol("stop.fill")
       stopItem.isEnabled = true
       menu?.addItem(stopItem)
 
@@ -516,10 +516,7 @@ final class AppStatusBarController: ObservableObject {
         keyEquivalent: ""
       )
       pauseResumeItem.target = self
-      pauseResumeItem.image = NSImage(
-        systemSymbolName: recorder.isPaused ? "play.fill" : "pause.fill",
-        accessibilityDescription: nil
-      )
+      pauseResumeItem.image = MenuBarItemImage.symbol(recorder.isPaused ? "play.fill" : "pause.fill")
       pauseResumeItem.isEnabled = recorder.state == .recording || recorder.state == .paused
       menu?.addItem(pauseResumeItem)
 
@@ -545,8 +542,7 @@ final class AppStatusBarController: ObservableObject {
         keyEquivalent: ""
       )
       permissionItem.target = self
-      permissionItem.image = NSImage(
-        systemSymbolName: "lock.shield", accessibilityDescription: nil)
+      permissionItem.image = MenuBarItemImage.symbol("lock.shield")
       permissionItem.isEnabled = true
       menu?.addItem(permissionItem)
       menu?.addItem(NSMenuItem.separator())
@@ -560,7 +556,7 @@ final class AppStatusBarController: ObservableObject {
         keyEquivalent: ""
       )
       whatsNewItem.target = self
-      whatsNewItem.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
+      whatsNewItem.image = MenuBarItemImage.symbol("sparkles")
       whatsNewItem.isEnabled = true
       menu?.addItem(whatsNewItem)
     }
@@ -578,7 +574,7 @@ final class AppStatusBarController: ObservableObject {
     )
     prefsItem.keyEquivalentModifierMask = .command
     prefsItem.target = self
-    prefsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
+    prefsItem.image = MenuBarItemImage.symbol("gear")
     prefsItem.isEnabled = true
     menu?.addItem(prefsItem)
 
@@ -589,10 +585,7 @@ final class AppStatusBarController: ObservableObject {
       keyEquivalent: ""
     )
     replayOnboardingItem.target = self
-    replayOnboardingItem.image = NSImage(
-      systemSymbolName: "arrow.counterclockwise.circle",
-      accessibilityDescription: nil
-    )
+    replayOnboardingItem.image = MenuBarItemImage.symbol("arrow.counterclockwise.circle")
     replayOnboardingItem.isEnabled = true
     menu?.addItem(replayOnboardingItem)
 
@@ -606,7 +599,7 @@ final class AppStatusBarController: ObservableObject {
     )
     quitItem.keyEquivalentModifierMask = .command
     quitItem.target = self
-    quitItem.image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
+    quitItem.image = MenuBarItemImage.symbol("power")
     quitItem.isEnabled = true
     menu?.addItem(quitItem)
   }
@@ -630,7 +623,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .area, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "crop", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("crop")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -642,7 +635,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .areaAnnotate, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "pencil.and.scribble", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("pencil.and.scribble")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -660,7 +653,7 @@ final class AppStatusBarController: ObservableObject {
         using: shortcutManager
       )
       item.target = self
-      item.image = NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("macwindow")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -672,8 +665,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .fullscreen, using: shortcutManager)
       item.target = self
-      item.image = NSImage(
-        systemSymbolName: "rectangle.dashed", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("rectangle.dashed")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -685,7 +677,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .delayedCapture, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "timer", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("timer")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -697,7 +689,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .delayedFullscreen, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "display", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("display")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -709,8 +701,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .activeWindow, using: shortcutManager)
       item.target = self
-      item.image = NSImage(
-        systemSymbolName: "macwindow.on.rectangle", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("macwindow.on.rectangle")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -722,7 +713,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .scrollingCapture, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "arrow.up.and.down", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("arrow.up.and.down")
       item.isEnabled = viewModel.hasPermission && !ScrollingCaptureCoordinator.shared.isActive
       return item
 
@@ -734,7 +725,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .ocr, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("text.viewfinder")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -746,7 +737,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .translate, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "translate", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("translate")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -758,7 +749,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .smartElement, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "dot.viewfinder", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("dot.viewfinder")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -770,7 +761,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .objectCutout, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "person.crop.rectangle", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("person.crop.rectangle")
       if #available(macOS 14.0, *) {
         item.isEnabled = viewModel.hasPermission
       } else {
@@ -786,7 +777,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .recording, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "record.circle", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("record.circle")
       item.isEnabled = viewModel.hasPermission && !recorder.isActive
       return item
 
@@ -804,7 +795,7 @@ final class AppStatusBarController: ObservableObject {
         using: shortcutManager
       )
       item.target = self
-      item.image = NSImage(systemSymbolName: "square.on.square", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("square.on.square")
       item.isEnabled = viewModel.hasPermission && !recorder.isActive
       return item
 
@@ -816,8 +807,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .annotate, using: shortcutManager)
       item.target = self
-      item.image = NSImage(
-        systemSymbolName: "pencil.and.outline", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("pencil.and.outline")
       item.isEnabled = true
       return item
 
@@ -828,8 +818,7 @@ final class AppStatusBarController: ObservableObject {
         keyEquivalent: ""
       )
       item.target = self
-      item.image = NSImage(
-        systemSymbolName: "rectangle.3.group", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("rectangle.3.group")
       item.isEnabled = true
       return item
 
@@ -841,7 +830,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .pickColor, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "eyedropper", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("eyedropper")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -853,7 +842,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .measureScreen, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "ruler", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("ruler")
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -865,7 +854,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .videoEditor, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "film", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("film")
       item.isEnabled = true
       return item
 
@@ -877,7 +866,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .cloudUploads, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "icloud.and.arrow.up", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("icloud.and.arrow.up")
       item.isEnabled = CloudManager.shared.isConfigured
       return item
 
@@ -889,7 +878,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .history, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "clock.arrow.circlepath", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("clock.arrow.circlepath")
       item.isEnabled = true
       return item
 
@@ -901,7 +890,7 @@ final class AppStatusBarController: ObservableObject {
       )
       applyConfiguredShortcut(item, for: .shortcutList, using: shortcutManager)
       item.target = self
-      item.image = NSImage(systemSymbolName: "list.bullet.rectangle", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("list.bullet.rectangle")
       item.isEnabled = true
       return item
 
@@ -912,8 +901,7 @@ final class AppStatusBarController: ObservableObject {
         keyEquivalent: ""
       )
       item.target = self
-      item.image = NSImage(
-        systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: nil)
+      item.image = MenuBarItemImage.symbol("arrow.triangle.2.circlepath")
       item.isEnabled = true
       return item
     }
