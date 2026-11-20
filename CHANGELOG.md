@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.3] - 2026-11-20
+
+### Features
+- Added recording area border shown during recording, independent of dim (#545) (#768) (494f494b)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.3.0-beta.2] - 2026-11-20
 
 ### Features
