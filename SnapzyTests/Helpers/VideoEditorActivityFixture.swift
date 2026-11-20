@@ -47,7 +47,49 @@ enum VideoEditorActivityFixture {
     t < 2 || (t >= 5 && t < 7) || t >= 10
   }
 
+  /// Encoded fixtures by `duration`/`audio`, written once per test process. The bytes never
+  /// change, and the H.264 encoder on headless CI runners is slow and can stall for good, so
+  /// every extra encode is another chance to hang a test until its time allowance runs out.
+  private static var encodedFixtures: [String: URL] = [:]
+  private static let encodeAttempts = 3
+  /// How long the writer may refuse more media before an attempt is abandoned.
+  private static let stallTimeout: TimeInterval = 15
+
+  /// A fresh copy of the fixture in `directory`, so callers may move or delete it freely.
   static func makeVideoFile(in directory: URL, duration: TimeInterval, audio: Bool) async throws -> URL {
+    let key = "\(duration)-\(audio)"
+    let cached: URL
+    if let existing = encodedFixtures[key], FileManager.default.fileExists(atPath: existing.path) {
+      cached = existing
+    } else {
+      let cacheDirectory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("VideoEditorActivityFixture-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
+      try FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+      cached = try await encodeWithRetry(in: cacheDirectory, duration: duration, audio: audio)
+      encodedFixtures[key] = cached
+    }
+    let url = directory.appendingPathComponent("analyzer-\(UUID().uuidString).mov")
+    try FileManager.default.copyItem(at: cached, to: url)
+    return url
+  }
+
+  private static func encodeWithRetry(in directory: URL, duration: TimeInterval, audio: Bool) async throws -> URL {
+    var lastError: Error?
+    for _ in 0 ..< encodeAttempts {
+      do {
+        return try await encodeVideoFile(in: directory, duration: duration, audio: audio)
+      } catch let error as FixtureStall {
+        lastError = error
+      }
+    }
+    throw lastError ?? FixtureStall()
+  }
+
+  private struct FixtureStall: Error, CustomStringConvertible {
+    var description: String { "AVAssetWriter stopped accepting fixture media" }
+  }
+
+  private static func encodeVideoFile(in directory: URL, duration: TimeInterval, audio: Bool) async throws -> URL {
     let url = directory.appendingPathComponent("analyzer-\(UUID().uuidString).mov")
     let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
     let video = AVAssetWriterInput(mediaType: .video, outputSettings: [
@@ -90,7 +132,17 @@ enum VideoEditorActivityFixture {
     let steps = Int(duration * Double(frameRate))
     var videoIndex = 0
     var audioIndex = audio ? 0 : steps
+    var lastProgress = Date()
     while videoIndex < steps || audioIndex < steps {
+      let progressMark = videoIndex + audioIndex
+      defer {
+        if videoIndex + audioIndex != progressMark { lastProgress = Date() }
+      }
+      if Date().timeIntervalSince(lastProgress) > stallTimeout {
+        writer.cancelWriting()
+        try? FileManager.default.removeItem(at: url)
+        throw FixtureStall()
+      }
       var progressed = false
       if videoIndex < steps, videoIndex <= audioIndex || audioIndex >= steps, video.isReadyForMoreMediaData {
         var buffer: CVPixelBuffer?
