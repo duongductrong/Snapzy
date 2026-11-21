@@ -42,6 +42,7 @@ enum PreferencesKeys {
   static let menuBarItemOrder = "menuBar.itemOrder"
   static let menuBarHiddenItems = "menuBar.hiddenItems"
   static let menuBarIconStyle = "menuBar.iconStyle"
+  static let menuBarShowItemIcons = "menuBar.showItemIcons"
 
   /// Appearance
   static let appearanceMode = "appearanceMode"

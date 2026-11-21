@@ -2,26 +2,20 @@
 //  MenuBarItemImage.swift
 //  Snapzy
 //
-//  SF Symbol images for status bar menu entries.
+//  SF Symbol images for menu entries, plus the opt-in that keeps them on screen.
 //
 
 import AppKit
 
-/// Builds the glyph shown to the left of a menu item title, and asks menus to draw it.
+/// Hands menus plain SF Symbols and, when the user opts in, applies Apple's documented
+/// visibility opt-out to every image-bearing row.
 ///
-/// macOS 27 stopped drawing symbol-backed image reps inside `NSMenu`: the row is laid
-/// out, the glyph is skipped. Two mechanisms are applied, because the release notes
-/// describe them for different builds:
-///
-/// - Rasterizing into a template bitmap rep keeps the glyph on every supported system,
-///   which is also how the menu bar status image itself is produced
-///   (`MenuBarIconRenderer`).
-/// - `NSMenuItem.preferredImageVisibility = .visible` is the documented opt-out
-///   (radars 170477566 and 179374305) and the only path guaranteed to survive a tightening
-///   of the policy for apps linked on the macOS 27 SDK, where non-symbol images are
-///   supposed to be hidden too. It is applied through the runtime because it does not
-///   exist before macOS 27, which is also why the rasterization still carries the older
-///   systems and the older toolchains.
+/// macOS 27 hides menu item images by default (radars 170477566 and 179374305), and the
+/// policy keys off the representation: symbol-backed images are hidden on every linked
+/// SDK, while a rasterized bitmap still draws on builds linked against SDK 26.2 — which
+/// is what CI and releases use. Rasterizing here would therefore keep icons on screen
+/// even with the setting off, so glyphs stay symbol-backed and `preferredImageVisibility`
+/// is the only thing deciding visibility.
 @MainActor
 enum MenuBarItemImage {
   /// Returns an image safe to assign to `NSMenuItem.image`.
@@ -29,64 +23,23 @@ enum MenuBarItemImage {
     _ name: String,
     accessibilityDescription: String? = nil
   ) -> NSImage? {
-    // No symbol configuration: the glyph keeps the size menus already drew.
-    guard let symbol = NSImage(
-      systemSymbolName: name,
-      accessibilityDescription: accessibilityDescription
-    ) else {
-      return nil
-    }
-    return rasterized(symbol)
+    NSImage(systemSymbolName: name, accessibilityDescription: accessibilityDescription)
   }
 
-  /// Marks every image-bearing entry of a menu, including submenus, to stay visible.
+  /// Marks every image-bearing entry of a menu, including submenus, to stay visible —
+  /// but only while the user has opted in. With the setting off the rows keep
+  /// `.automatic`, so AppKit's macOS 27 default applies unchanged.
   ///
   /// `NSMenu` has no menu-wide switch, so the property is set per item. Separators and
-  /// imageless entries are skipped: they render the same either way, and touching them
-  /// only adds noise to the diff of a future audit.
+  /// imageless entries are skipped: they render the same either way.
   static func enableIcons(in menu: NSMenu?) {
+    guard MenuBarCustomizationStore.shared.showItemIcons else { return }
     for item in menu?.items ?? [] {
       if !item.isSeparatorItem, item.image != nil {
         item.preferImageVisible()
       }
       enableIcons(in: item.submenu)
     }
-  }
-
-  /// Draws the symbol once into an alpha bitmap at the display scale, keeping the
-  /// logical point size so the menu lays the glyph out exactly as before.
-  private static func rasterized(_ image: NSImage) -> NSImage {
-    let size = image.size
-    let scale = max(2, NSScreen.screens.first?.backingScaleFactor ?? 2)
-    let pixelsWide = max(1, Int((size.width * scale).rounded()))
-    let pixelsHigh = max(1, Int((size.height * scale).rounded()))
-
-    if let rep = NSBitmapImageRep(
-      bitmapDataPlanes: nil,
-      pixelsWide: pixelsWide,
-      pixelsHigh: pixelsHigh,
-      bitsPerSample: 8,
-      samplesPerPixel: 4,
-      hasAlpha: true,
-      isPlanar: false,
-      colorSpaceName: .deviceRGB,
-      bytesPerRow: 0,
-      bitsPerPixel: 0
-    ) {
-      rep.size = size
-      NSGraphicsContext.saveGraphicsState()
-      NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-      image.draw(in: NSRect(origin: .zero, size: size))
-      NSGraphicsContext.restoreGraphicsState()
-
-      let raster = NSImage(size: size)
-      raster.addRepresentation(rep)
-      raster.isTemplate = image.isTemplate
-      raster.accessibilityDescription = image.accessibilityDescription
-      return raster
-    }
-
-    return image
   }
 }
 

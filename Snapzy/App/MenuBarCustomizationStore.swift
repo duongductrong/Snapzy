@@ -17,6 +17,8 @@ final class MenuBarCustomizationStore: ObservableObject {
   @Published private(set) var itemOrder: [MenuBarItemKind]
   @Published private(set) var hiddenItems: Set<MenuBarItemKind>
   @Published private(set) var iconStyle: MenuBarIconStyle
+  /// Opt-in to menu item icons on macOS 27, where AppKit hides them by default.
+  @Published private(set) var showItemIcons: Bool
 
   private let defaults: UserDefaults
 
@@ -25,6 +27,7 @@ final class MenuBarCustomizationStore: ObservableObject {
     itemOrder = Self.normalizedOrder(from: defaults.stringArray(forKey: PreferencesKeys.menuBarItemOrder))
     hiddenItems = Self.normalizedHiddenItems(from: defaults.stringArray(forKey: PreferencesKeys.menuBarHiddenItems))
     iconStyle = Self.normalizedIconStyle(from: defaults.string(forKey: PreferencesKeys.menuBarIconStyle))
+    showItemIcons = defaults.bool(forKey: PreferencesKeys.menuBarShowItemIcons)
   }
 
   // MARK: - Queries
@@ -92,10 +95,16 @@ final class MenuBarCustomizationStore: ObservableObject {
     save()
   }
 
+  func setShowItemIcons(_ show: Bool) {
+    showItemIcons = show
+    save()
+  }
+
   func resetToDefaults() {
     itemOrder = MenuBarItemKind.allCases.filter(\.isCustomizable)
     hiddenItems = []
     iconStyle = .default
+    showItemIcons = false
     save()
   }
 
@@ -123,6 +132,7 @@ final class MenuBarCustomizationStore: ObservableObject {
     defaults.set(itemOrder.map(\.rawValue), forKey: PreferencesKeys.menuBarItemOrder)
     defaults.set(hiddenItems.map(\.rawValue).sorted(), forKey: PreferencesKeys.menuBarHiddenItems)
     defaults.set(iconStyle.rawValue, forKey: PreferencesKeys.menuBarIconStyle)
+    defaults.set(showItemIcons, forKey: PreferencesKeys.menuBarShowItemIcons)
   }
 
   // MARK: - Normalization

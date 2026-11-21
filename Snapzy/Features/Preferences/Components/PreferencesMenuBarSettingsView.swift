@@ -105,6 +105,19 @@ struct MenuBarSettingsView: View {
           .foregroundColor(.secondary)
           .fixedSize(horizontal: false, vertical: true)
 
+        if #available(macOS 27.0, *) {
+          SettingRow(
+            title: L10n.PreferencesMenuBar.showItemIconsTitle,
+            description: L10n.PreferencesMenuBar.showItemIconsDescription
+          ) {
+            Toggle("", isOn: Binding(
+              get: { store.showItemIcons },
+              set: { store.setShowItemIcons($0) }
+            ))
+            .labelsHidden()
+          }
+        }
+
         if store.iconStyle == .custom {
           HStack(spacing: 8) {
             Button(L10n.PreferencesMenuBar.importButton) {

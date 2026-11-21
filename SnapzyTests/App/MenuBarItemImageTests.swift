@@ -16,20 +16,17 @@ final class MenuBarItemImageTests: XCTestCase {
     XCTAssertNil(MenuBarItemImage.symbol("definitely.not.a.real.symbol.name"))
   }
 
-  /// macOS 27 stopped drawing symbol-backed image reps inside `NSMenu`, so the
-  /// helper must hand the menu item something the menu drawing path accepts.
-  func testSymbol_isBitmapBackedRatherThanSymbolBacked() {
+  /// The hiding policy keys off the representation: a bitmap rep keeps drawing on
+  /// SDK 26.2-linked release builds even with the setting off, so glyphs must stay
+  /// symbol-backed and let `preferredImageVisibility` decide visibility.
+  func testSymbol_isSymbolBackedNotRasterized() {
     guard let image = MenuBarItemImage.symbol("crop") else {
       return XCTFail("Expected an image for a built-in symbol")
     }
 
-    XCTAssertTrue(
-      image.representations.contains { $0 is NSBitmapImageRep },
-      "Menu item glyphs must be bitmap backed, got \(image.representations.map { NSStringFromClass(type(of: $0)) })"
-    )
     XCTAssertFalse(
-      image.representations.contains { NSStringFromClass(type(of: $0)).contains("Symbol") },
-      "Menu item glyphs must not keep the SF Symbol rep"
+      image.representations.contains { $0 is NSBitmapImageRep },
+      "Rasterizing would bypass the off-by-default setting on release builds, got \(image.representations.map { NSStringFromClass(type(of: $0)) })"
     )
   }
 
@@ -43,8 +40,8 @@ final class MenuBarItemImageTests: XCTestCase {
     XCTAssertEqual(image?.accessibilityDescription, "Capture Area")
   }
 
-  /// Rasterizing at the wrong size either squashes the glyph or overflows the
-  /// menu's image well, so the logical size must follow the symbol itself.
+  /// Menus size the image well from the glyph's natural size, so the helper must not
+  /// rescale the symbol it hands back.
   func testSymbol_preservesNaturalGlyphSize() {
     let reference = NSImage(systemSymbolName: "crop", accessibilityDescription: nil)
     let image = MenuBarItemImage.symbol("crop")
@@ -56,30 +53,15 @@ final class MenuBarItemImageTests: XCTestCase {
     XCTAssertEqual(image.size.height, reference.size.height, accuracy: 0.5)
   }
 
-  /// A bitmap rep with no drawn content would render as blank space, which is
-  /// the same user-visible failure as the missing glyph this replaces.
-  func testSymbol_containsDrawnPixels() {
-    guard let image = MenuBarItemImage.symbol("crop"),
-          let rep = image.representations.first as? NSBitmapImageRep else {
-      return XCTFail("Expected a bitmap representation")
-    }
-
-    var paintedPixels = 0
-    for x in stride(from: 0, to: rep.pixelsWide, by: 2) {
-      for y in stride(from: 0, to: rep.pixelsHigh, by: 2) {
-        if let color = rep.colorAt(x: x, y: y), color.alphaComponent > 0.1 {
-          paintedPixels += 1
-        }
-      }
-    }
-    XCTAssertGreaterThan(paintedPixels, 0, "Rasterized glyph is empty")
-  }
-
   /// macOS 27 hides menu images by policy and hands apps `preferredImageVisibility` as
-  /// the opt-out. The helper must set it on the entries that carry a glyph, and leave
-  /// separators and text-only rows alone. Below macOS 27 the property does not exist,
-  /// so the call has to be a no-op that still cannot crash.
+  /// the opt-out. With the setting on, the helper must set it on the entries that carry
+  /// a glyph, and leave separators and text-only rows alone. Below macOS 27 the property
+  /// does not exist, so the call has to be a no-op that still cannot crash.
   func testEnableIcons_marksGlyphBearingItemsVisible() {
+    let previous = MenuBarCustomizationStore.shared.showItemIcons
+    MenuBarCustomizationStore.shared.setShowItemIcons(true)
+    defer { MenuBarCustomizationStore.shared.setShowItemIcons(previous) }
+
     let submenu = NSMenu(title: "Sub")
     let child = NSMenuItem(title: "Child", action: nil, keyEquivalent: "")
     child.image = MenuBarItemImage.symbol("crop")
@@ -104,6 +86,27 @@ final class MenuBarItemImageTests: XCTestCase {
     } else {
       XCTAssertNil(rawImageVisibility(of: child), "Below macOS 27 there is no such property, so the call must leave it alone")
     }
+  }
+
+  /// With the setting off, AppKit's macOS 27 default must stay in charge: rows keep
+  /// `.automatic` (0) instead of being forced visible.
+  func testEnableIcons_settingOff_leavesRowsAutomatic() {
+    let previous = MenuBarCustomizationStore.shared.showItemIcons
+    MenuBarCustomizationStore.shared.setShowItemIcons(false)
+    defer { MenuBarCustomizationStore.shared.setShowItemIcons(previous) }
+
+    let item = NSMenuItem(title: "Row", action: nil, keyEquivalent: "")
+    item.image = MenuBarItemImage.symbol("crop")
+    let menu = NSMenu()
+    menu.addItem(item)
+
+    MenuBarItemImage.enableIcons(in: menu)
+
+    XCTAssertEqual(
+      rawImageVisibility(of: item) ?? 0,
+      0,
+      "The off-by-default setting must not opt rows out of AppKit's hiding policy"
+    )
   }
 
   /// Reads `preferredImageVisibility` the way the helper writes it. The property is not
