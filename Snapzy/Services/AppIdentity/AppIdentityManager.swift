@@ -67,6 +67,15 @@ struct AppIdentityHealth: Equatable {
   }
 }
 
+/// Cheap fingerprint of the bundle on disk. Strict signature validation costs
+/// hundreds of milliseconds, so its result is reused until the executable that
+/// actually carries the signature changes (reinstall, `brew upgrade --cask`).
+nonisolated struct AppBundleSignature: Equatable {
+  let path: String
+  let modificationTime: TimeInterval
+  let size: Int64
+}
+
 @MainActor
 final class AppIdentityManager: ObservableObject {
   static let shared = AppIdentityManager()
@@ -76,12 +85,56 @@ final class AppIdentityManager: ObservableObject {
     issues: []
   )
 
+  private var evaluatedSignature: AppBundleSignature?
+
   private init() {
-    refresh()
+    refresh(force: true)
   }
 
-  func refresh() {
+  /// Re-reads the bundle health. Without `force`, an unchanged bundle is served
+  /// from the previous evaluation instead of re-validating nested code.
+  func refresh(force: Bool = false) {
+    let bundleURL = Bundle.main.bundleURL.standardizedFileURL
+    let signature = Self.signature(for: bundleURL)
+    guard force || Self.needsRevalidation(previous: evaluatedSignature, current: signature) else {
+      return
+    }
+
+    let startedAt = Date()
     health = Self.evaluate()
+    evaluatedSignature = signature
+    DiagnosticLogger.shared.log(.info, .system, "App identity revalidated", context: [
+      "duration_ms": "\(Int(Date().timeIntervalSince(startedAt) * 1000))",
+      "forced": "\(force)",
+      "issues": "\(health.issues.count)",
+    ])
+  }
+
+  nonisolated static func needsRevalidation(
+    previous: AppBundleSignature?,
+    current: AppBundleSignature?
+  ) -> Bool {
+    // An unreadable bundle means the fingerprint cannot prove anything, so keep
+    // validating instead of trusting a stale result.
+    guard let previous, let current else { return true }
+    return previous != current
+  }
+
+  nonisolated static func signature(for bundleURL: URL) -> AppBundleSignature? {
+    guard let executableURL = Bundle(url: bundleURL)?.executableURL else { return nil }
+    let values = try? executableURL.resourceValues(forKeys: [
+      .contentModificationDateKey,
+      .fileSizeKey,
+    ])
+    guard let modificationDate = values?.contentModificationDate, let fileSize = values?.fileSize else {
+      return nil
+    }
+
+    return AppBundleSignature(
+      path: executableURL.path,
+      modificationTime: modificationDate.timeIntervalSince1970,
+      size: Int64(fileSize)
+    )
   }
 
   private static func evaluate() -> AppIdentityHealth {

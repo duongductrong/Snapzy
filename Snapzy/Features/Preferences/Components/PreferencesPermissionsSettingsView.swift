@@ -206,7 +206,7 @@ struct PermissionsSettingsView: View {
   }
 
   private func checkScreenRecordingPermission() async {
-    AppIdentityManager.shared.refresh()
+    AppIdentityManager.shared.refresh(force: true)
     await screenCaptureManager.checkPermission()
   }
 

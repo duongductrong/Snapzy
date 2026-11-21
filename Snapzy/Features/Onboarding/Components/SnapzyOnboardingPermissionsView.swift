@@ -181,7 +181,7 @@ struct SnapzyOnboardingPermissionsView: View {
 
   private func refreshPermissions() async {
     fileAccessManager.ensureExportLocationInitialized()
-    AppIdentityManager.shared.refresh()
+    AppIdentityManager.shared.refresh(force: true)
     await screenCaptureManager.checkPermission()
     accessibilityGranted = AXIsProcessTrusted()
     exportFolderGranted = fileAccessManager.hasPersistedExportPermission
