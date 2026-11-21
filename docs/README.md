@@ -40,6 +40,7 @@ Flow-first entrypoint for humans and agents working in Snapzy. Docs are separate
 | [`QUICK_ACCESS.md`](QUICK_ACCESS.md) | Floating post-capture panel, card actions, gestures, pin windows |
 | [`HISTORY.md`](HISTORY.md) | Capture history panel, restore flow, GRDB storage, retention |
 | [`ANNOTATE.md`](ANNOTATE.md) | Annotation editor, tools, mockups, redaction, session sidecars, inline Capture Markup |
+| [`AI.md`](AI.md) | Annotate AI prompt (Ask): providers (Apple Intelligence, endpoints, agent CLIs), `snapzy mcp`, privacy, Settings → AI |
 | [`VIDEO_EDITOR.md`](VIDEO_EDITOR.md) | Trim, zoom segments, Follow Mouse, speed, backgrounds, export, GIF |
 | [`CLOUD.md`](CLOUD.md) | S3/R2/Google Drive uploads, credentials, uploads window, history |
 

@@ -111,6 +111,10 @@ enum RecordingCameraDeviceProvider {
   }
 
   private static func captureDevices() -> [AVCaptureDevice] {
+    CaptureDeviceListCache.devices(for: .video, discover: discoverCaptureDevices)
+  }
+
+  private static func discoverCaptureDevices() -> [AVCaptureDevice] {
     let deviceTypes: [AVCaptureDevice.DeviceType] = if #available(macOS 14.0, *) {
       [.builtInWideAngleCamera, .continuityCamera, .external, .deskViewCamera]
     } else {
@@ -181,6 +185,26 @@ private final nonisolated class RecordingCameraCaptureSession: @unchecked Sendab
         session.startRunning()
       }
       publishAvailability(session.isRunning)
+    }
+  }
+
+  /// Adds an extra output (Studio camera writer) to the running session.
+  func addOutput(_ output: AVCaptureOutput) {
+    sessionQueue.async { [self] in
+      session.beginConfiguration()
+      if session.canAddOutput(output) {
+        session.addOutput(output)
+      }
+      session.commitConfiguration()
+    }
+  }
+
+  func removeOutput(_ output: AVCaptureOutput) {
+    sessionQueue.async { [self] in
+      guard session.outputs.contains(output) else { return }
+      session.beginConfiguration()
+      session.removeOutput(output)
+      session.commitConfiguration()
     }
   }
 
@@ -366,6 +390,32 @@ final class RecordingCameraOverlayWindow: NSPanel {
   func startPreview() {
     orderFrontRegardless()
     cameraSession.start()
+  }
+
+  /// Studio recording: feed the camera writer from the preview's own capture session.
+  func attachRecordingOutput(_ output: AVCaptureOutput) {
+    cameraSession.addOutput(output)
+  }
+
+  func detachRecordingOutput(_ output: AVCaptureOutput) {
+    cameraSession.removeOutput(output)
+  }
+
+  /// Current overlay placement relative to the capture rect (top-left normalized).
+  var studioLayout: RecordingStudioCameraLayout {
+    let rect = recordingRect
+    let frame = self.frame
+    let normalized = rect.width > 0 && rect.height > 0
+      ? CGRect(
+        x: (frame.minX - rect.minX) / rect.width,
+        y: (rect.maxY - frame.maxY) / rect.height,
+        width: frame.width / rect.width,
+        height: frame.height / rect.height
+      )
+      : .zero
+    return RecordingStudioCameraLayout(
+      shape: shape, isMirrored: isMirrored, normalizedFrame: normalized, pointSize: frame.size
+    )
   }
 
   func updateShape(_ newShape: RecordingCameraShape, animate: Bool = true) {

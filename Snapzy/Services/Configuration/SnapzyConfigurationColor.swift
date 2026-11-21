@@ -8,7 +8,7 @@
 import AppKit
 import Foundation
 
-enum SnapzyConfigurationColor {
+nonisolated enum SnapzyConfigurationColor {
   static func hexString(from color: NSColor) -> String {
     let srgb = color.usingColorSpace(.sRGB) ?? color
     let red = clampByte(srgb.redComponent)

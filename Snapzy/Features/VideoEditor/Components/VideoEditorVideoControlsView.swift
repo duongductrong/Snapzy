@@ -7,13 +7,9 @@
 
 import AppKit
 import AVFoundation
+import Combine
 import SwiftUI
 import UniformTypeIdentifiers
-
-private enum VideoControlsSection: Hashable {
-  case left
-  case right
-}
 
 private enum VideoControlsLayoutStyle {
   case compact
@@ -125,14 +121,28 @@ private enum VideoControlsLayoutStyle {
   }
 }
 
-private struct VideoControlsSectionWidthKey: PreferenceKey {
-  static var defaultValue: [VideoControlsSection: CGFloat] = [:]
+private enum VideoControlsPart: Hashable {
+  case left, center, status, zoom
+}
+
+private struct VideoControlsPartWidthKey: PreferenceKey {
+  static var defaultValue: [VideoControlsPart: CGFloat] = [:]
 
   static func reduce(
-    value: inout [VideoControlsSection: CGFloat],
-    nextValue: () -> [VideoControlsSection: CGFloat]
+    value: inout [VideoControlsPart: CGFloat],
+    nextValue: () -> [VideoControlsPart: CGFloat]
   ) {
     value.merge(nextValue(), uniquingKeysWith: { _, next in next })
+  }
+}
+
+private extension View {
+  func measureVideoControlsPart(_ part: VideoControlsPart) -> some View {
+    background(
+      GeometryReader { proxy in
+        Color.clear.preference(key: VideoControlsPartWidthKey.self, value: [part: proxy.size.width])
+      }
+    )
   }
 }
 
@@ -144,47 +154,57 @@ private struct VideoControlsContainerWidthKey: PreferenceKey {
   }
 }
 
-private extension View {
-  func measureVideoControlsWidth(for section: VideoControlsSection) -> some View {
-    background(
-      GeometryReader { proxy in
-        Color.clear.preference(
-          key: VideoControlsSectionWidthKey.self,
-          value: [section: proxy.size.width]
-        )
-      }
-    )
-  }
-}
-
 /// Playback controls view with play/pause and time display
+///
+/// The bar observes the editor state only. The playhead-driven parts (current time,
+/// play/pause glyph, auto-zoom badge) are leaf views that subscribe to the playback
+/// stream themselves, so a playback tick never re-runs this whole glass row.
 struct VideoControlsView: View {
   @ObservedObject var state: VideoEditorState
-  @ObservedObject private var playbackState: VideoEditorPlaybackState
+  private let playbackState: VideoEditorPlaybackState
+  /// While the AI runs, the clip tools lock (play and stepping stay live). Follows the
+  /// agent's `chrome` snapshot only, so status, transcript and focus-request updates
+  /// during a run don't re-render the bar.
+  private let agent: VideoEditorAgentController
+  @State private var aiChrome = VideoEditorAgentController.Chrome()
   private let stepIntervalSeconds: Double = 1.0
-  @State private var leftSectionWidth: CGFloat = 0
-  @State private var rightSectionWidth: CGFloat = 0
   @State private var containerWidth: CGFloat = 0
+  /// Natural widths of the row's parts. None depends on whether the status badges show,
+  /// so the show/hide decision can't feed back into its own inputs.
+  @State private var partWidths: [VideoControlsPart: CGFloat] = [:]
 
   init(state: VideoEditorState) {
     _state = ObservedObject(wrappedValue: state)
-    _playbackState = ObservedObject(wrappedValue: state.playbackState)
+    playbackState = state.playbackState
+    agent = state.agent
+    _aiChrome = State(initialValue: state.agent.chrome)
   }
 
   var body: some View {
+    let _ = VideoEditorRenderRateGuard.record("VideoControlsView", isPlaying: playbackState.isPlaying)
+    // Both sides are equally flexible, so the transport stays centred whenever each half
+    // fits its side; when it doesn't, the row goes asymmetric and then drops the status
+    // badges instead of demanding width. The bar must stay compressible: its minimum
+    // width feeds the window's content minimum (NSHostingView `.minSize`), and a rigid
+    // row made ⌘K's sidebar reservation grow the window instead of narrowing the editor.
+    // (Not `ViewThatFits`: probing both glass candidates on every layout pass made each
+    // editor layout ~15× slower.)
     HStack(spacing: controlsLayout.outerSpacing) {
       leftActions
+        .disabled(aiChrome.isRunning)
         .fixedSize(horizontal: true, vertical: false)
-        .measureVideoControlsWidth(for: .left)
-        .frame(width: reservedSideWidth, alignment: .leading)
+        .measureVideoControlsPart(.left)
+        .frame(maxWidth: .infinity, alignment: .leading)
 
       centerTransport
-        .frame(maxWidth: .infinity, alignment: .center)
-
-      rightActions
         .fixedSize(horizontal: true, vertical: false)
-        .measureVideoControlsWidth(for: .right)
-        .frame(width: reservedSideWidth, alignment: .trailing)
+        .measureVideoControlsPart(.center)
+
+      rightActions(showsStatus: showsStatus)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+    .onPreferenceChange(VideoControlsPartWidthKey.self) { widths in
+      if partWidths != widths { partWidths = widths }
     }
     .padding(.vertical, controlsLayout.verticalPadding)
     .frame(maxWidth: .infinity)
@@ -193,21 +213,24 @@ struct VideoControlsView: View {
         Color.clear.preference(key: VideoControlsContainerWidthKey.self, value: proxy.size.width)
       }
     )
-    .onPreferenceChange(VideoControlsSectionWidthKey.self) { widths in
-      leftSectionWidth = widths[.left] ?? 0
-      rightSectionWidth = widths[.right] ?? 0
-    }
     .onPreferenceChange(VideoControlsContainerWidthKey.self) { width in
       containerWidth = width
     }
+    .onReceive(agent.chromePublisher) { aiChrome = $0 }
   }
 
-  private var isAutoZoomActiveAtCurrentTime: Bool {
-    state.activeZoomSegment(atTimeline: CMTimeGetSeconds(playbackState.currentTime))?.isAutoMode == true
-  }
-
-  private var reservedSideWidth: CGFloat {
-    max(leftSectionWidth, rightSectionWidth)
+  /// Whether the status badges fit beside the zoom cluster without squeezing the row.
+  /// Unknown widths (first pass) show them, matching the previous layout.
+  private var showsStatus: Bool {
+    guard containerWidth > 0,
+          let left = partWidths[.left],
+          let center = partWidths[.center],
+          let zoom = partWidths[.zoom],
+          let status = partWidths[.status],
+          status > 0
+    else { return true }
+    let available = containerWidth - left - center - zoom - 2 * controlsLayout.outerSpacing
+    return available >= status + controlsLayout.metadataSpacing
   }
 
   private var controlsLayout: VideoControlsLayoutStyle {
@@ -222,13 +245,13 @@ struct VideoControlsView: View {
       cutButton(icon: "scissors", isDisabled: !state.canSplitAtPlayhead) {
         state.splitAtPlayhead()
       }
-      .keyboardShortcut("s", modifiers: [])
+      .keyboardShortcut(aiChrome.allowsPlainKeyShortcuts ? KeyboardShortcut("s", modifiers: []) : nil)
       .help(L10n.VideoEditor.splitAtPlayheadHint)
 
       cutButton(icon: "trash", isDisabled: !state.canDeleteSelectedClip) {
         state.deleteSelectedClip()
       }
-      .keyboardShortcut(.delete, modifiers: [])
+      .keyboardShortcut(aiChrome.allowsPlainKeyShortcuts ? KeyboardShortcut(.delete, modifiers: []) : nil)
       .help(L10n.VideoEditor.deleteClipHint)
 
       cutButton(icon: "plus.viewfinder", isDisabled: false) {
@@ -288,7 +311,9 @@ struct VideoControlsView: View {
 
   private var centerTransport: some View {
     HStack(spacing: controlsLayout.centerSpacing) {
-      timeLabel(playbackState.formattedCurrentTime, alignment: .trailing)
+      VideoControlsCurrentTimeLabel(playbackState: playbackState) { text in
+        timeLabel(text, alignment: .trailing)
+      }
 
       transportButton(systemName: "backward.fill") {
         state.stepTimeline(by: -stepIntervalSeconds)
@@ -306,16 +331,47 @@ struct VideoControlsView: View {
     .liquidGlassGroup(spacing: controlsLayout.centerSpacing)
   }
 
-  private var rightActions: some View {
+  private func rightActions(showsStatus: Bool) -> some View {
     HStack(spacing: controlsLayout.metadataSpacing) {
-      statusMetadata
+      if showsStatus, hasStatusBadges {
+        // Natural width when shown, but no contribution to the row's minimum: otherwise
+        // the editor's minimum would keep room for the badges, the AI slot would give up
+        // that room, and the badges would "fit" forever with the panel over the editor.
+        statusBadges
+          .fixedSize(horizontal: true, vertical: false)
+          .measureVideoControlsPart(.status)
+          .frame(minWidth: 0, alignment: .trailing)
+      }
 
       // Timeline zoom cluster lives with the other transport controls so it
       // never occludes the ruler or tracks underneath it.
-      TimelineZoomControls(
-        viewport: state.timelineViewport,
-        anchorTime: CMTimeGetSeconds(playbackState.currentTime)
-      )
+      TimelineZoomControls(viewport: state.timelineViewport) { [playbackState] in
+        CMTimeGetSeconds(playbackState.currentTime)
+      }
+      .fixedSize(horizontal: true, vertical: false)
+      .measureVideoControlsPart(.zoom)
+    }
+    // Hidden badges are still measured (one invisible copy, only while narrow) so a badge
+    // added or removed while hidden updates the decision.
+    .background(alignment: .trailing) {
+      if !showsStatus, hasStatusBadges {
+        statusBadges
+          .fixedSize(horizontal: true, vertical: false)
+          .hidden()
+          .measureVideoControlsPart(.status)
+          .allowsHitTesting(false)
+      }
+    }
+  }
+
+  /// Mirrors `statusMetadata`'s conditions, so an empty badge group adds no spacing.
+  private var hasStatusBadges: Bool {
+    !state.zoomSegments.isEmpty || state.hasUnsavedChanges || state.hasSpeedSegments
+  }
+
+  private var statusBadges: some View {
+    HStack(spacing: controlsLayout.metadataSpacing) {
+      statusMetadata
     }
   }
 
@@ -323,7 +379,7 @@ struct VideoControlsView: View {
   /// rather than materialising on hover — it is the primary control of the window.
   private var playPauseButton: some View {
     Button(action: { state.togglePlayback() }) {
-      Image(systemName: playbackState.isPlaying ? "pause.fill" : "play.fill")
+      VideoControlsPlayPauseGlyph(playbackState: playbackState)
         .font(.system(size: controlsLayout.playIconSize, weight: .bold))
         // Accent-tinted glass, so the glyph is resolved against the tint rather than the app
         // appearance — adaptive ink drew a black triangle on the blue transport in Light theme.
@@ -363,11 +419,19 @@ struct VideoControlsView: View {
   @ViewBuilder
   private var statusMetadata: some View {
     if !state.zoomSegments.isEmpty {
-      statusBadge(systemName: "plus.magnifyingglass", text: "\(state.zoomSegments.count)")
-    }
-
-    if isAutoZoomActiveAtCurrentTime {
-      statusBadge(systemName: "camera.metering.center.weighted", text: L10n.VideoEditor.auto)
+      // The auto badge follows the playhead inside this leaf; the bar itself only
+      // re-renders when the segments change.
+      VideoControlsZoomBadges(
+        playbackState: playbackState,
+        zoomSegments: state.zoomSegments,
+        spacing: controlsLayout.metadataSpacing,
+        countBadge: {
+          statusBadge(systemName: "plus.magnifyingglass", text: "\(state.zoomSegments.count)")
+        },
+        autoBadge: {
+          statusBadge(systemName: "camera.metering.center.weighted", text: L10n.VideoEditor.auto)
+        }
+      )
     }
 
     if state.hasUnsavedChanges {
@@ -403,5 +467,73 @@ struct VideoControlsView: View {
       isVisible: true,
       isActive: false
     )
+  }
+}
+
+// MARK: - Playhead-driven leaves
+
+/// Current-time readout. The label shows whole seconds, so it re-renders once per second
+/// rather than on every 30 Hz playback tick.
+private struct VideoControlsCurrentTimeLabel<Label: View>: View {
+  let playbackState: VideoEditorPlaybackState
+  @ViewBuilder let label: (String) -> Label
+  @State private var text: String
+
+  init(playbackState: VideoEditorPlaybackState, @ViewBuilder label: @escaping (String) -> Label) {
+    self.playbackState = playbackState
+    self.label = label
+    _text = State(initialValue: playbackState.formattedCurrentTime)
+  }
+
+  var body: some View {
+    label(text)
+      .onReceive(
+        playbackState.$currentTime
+          .map(VideoEditorPlaybackState.formatTime)
+          .removeDuplicates()
+      ) { text = $0 }
+  }
+}
+
+/// Play/pause glyph; re-renders only when the transport starts or stops.
+private struct VideoControlsPlayPauseGlyph: View {
+  @State private var isPlaying: Bool
+  private let playbackState: VideoEditorPlaybackState
+
+  init(playbackState: VideoEditorPlaybackState) {
+    self.playbackState = playbackState
+    _isPlaying = State(initialValue: playbackState.isPlaying)
+  }
+
+  var body: some View {
+    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+      .onReceive(playbackState.$isPlaying.removeDuplicates()) { isPlaying = $0 }
+  }
+}
+
+/// Zoom count badge plus the auto (Follow Mouse) badge, shown while the playhead sits in
+/// an auto zoom block. Only the in/out flip re-renders, not every tick.
+/// The subscriptions hang off the always-present count badge's row, never an empty view.
+private struct VideoControlsZoomBadges<Count: View, Auto: View>: View {
+  let playbackState: VideoEditorPlaybackState
+  let zoomSegments: [ZoomSegment]
+  let spacing: CGFloat
+  @ViewBuilder let countBadge: () -> Count
+  @ViewBuilder let autoBadge: () -> Auto
+  @State private var isActive = false
+
+  var body: some View {
+    HStack(spacing: spacing) {
+      countBadge()
+      if isActive { autoBadge() }
+    }
+    .onAppear { refresh(at: playbackState.currentTime) }
+    .onChange(of: zoomSegments) { _ in refresh(at: playbackState.currentTime) }
+    .onReceive(playbackState.$currentTime) { refresh(at: $0) }
+  }
+
+  private func refresh(at time: CMTime) {
+    let active = ZoomCalculator.activeSegment(at: CMTimeGetSeconds(time), in: zoomSegments)?.isAutoMode == true
+    if isActive != active { isActive = active }
   }
 }

@@ -46,7 +46,7 @@ step and grant access later from Settings -> Advanced.
 The TOML file covers portable app preferences:
 
 - General settings: language, appearance, sounds, URL scheme integration, `snapzy` command line access (`cli_enabled`, default `true`), show menu bar icon, login item, export folder path.
-- Menu bar customization: icon style, item order, hidden items (`[menu_bar]`). The custom icon PNG file itself is not portable — `icon_style = "custom"` falls back to `default` on a Mac without a locally imported custom icon.
+- Menu bar customization: icon style, item order, hidden items, and the macOS 27 "Show icons in menus" opt-in (`[menu_bar] show_item_icons`, default `false`; ignored on earlier macOS versions, which always show menu icons). The custom icon PNG file itself is not portable — `icon_style = "custom"` falls back to `default` on a Mac without a locally imported custom icon.
 - Updates: automatic check/download and the Sparkle update channel (`stable` or `beta`).
 - Capture settings: naming templates, screenshot format, clipboard content for copied images (`[capture.screenshot] clipboard_content`: `"image_and_file"` (default) or `"image_only"`, which drops the file reference for Citrix/RDP/terminal paste targets), cursor/app inclusion, freeze area, Delayed Capture countdown (`[capture.screenshot] delayed_capture_seconds`: `3`, `5`, or `10`, default `3`; shared by delayed area and delayed fullscreen), show selection area overlay, magnifier preferences (`[capture.screenshot] reverse_magnifier_zoom_direction`, `show_magnifier_by_default`, `show_magnifier_color_panel`, `magnifier_size`: `"small"`, `"medium"`, or `"large"`, default `"medium"`), window shadow in Application Capture (`[capture.screenshot] include_window_shadow`, default `true`), scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR provider selection (`[capture.ocr] selected_model`: `"builtin"` or `"custom:<uuid>"`), and custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), object cutout auto-crop.
 - After-capture actions for screenshot and recording: `save`, `quick_access`, `copy_file`, and `open_annotate` under `[capture.after.screenshot]` / `[capture.after.recording]`. Cloud upload is not part of this matrix — it is manual-only from Quick Access, Annotate, Video Editor, and History surfaces.
@@ -55,7 +55,7 @@ The TOML file covers portable app preferences:
 - History: retention, maximum count, panel layout and filter, the History presentation style (`[history] display_style`: `"traditional"` (default) or `"hanging"`), and the traditional panel's top-edge reveal (`[history.floating] reveal_at_top_edge`, default `false`).
 - Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, share link style (`[cloud] share_link_style`: `"descriptive"` or `"short"`, default `"descriptive"`, S3 and R2 only), and upload window position.
 - Annotate preferences.
-- Global, overlay, Annotate tool, and Annotate action shortcuts.
+- Global, overlay, Annotate tool, Annotate action, and Video Editor action shortcuts.
 
 The export intentionally excludes secrets and machine-private state:
 
@@ -110,6 +110,16 @@ Configurations created by older Snapzy versions may still contain a
 `dl:<id>` selection or `catalog_models` field. The removed downloadable
 provider is ignored and the selection is canonicalized to `builtin`.
 
+## Annotate AI configuration
+
+`[annotate.ai]` holds Annotate's AI prompt options ([AI.md](AI.md)):
+`provider` (`automatic`, `apple`, `endpoint:<uuid>`, `cli:claude`,
+`cli:codex`, `cli:opencode`; anything else imports as `automatic`),
+`send_image`, `cli_timeout` (seconds, 30...1800) and a model override per
+agent CLI (`claude_model`, `codex_model`, `opencode_model`; empty = the CLI's
+default). CLI paths, sending permissions and learned endpoint capabilities are
+per-Mac and never exported.
+
 ## Example
 
 ```toml
@@ -133,6 +143,7 @@ channel = "stable" # "stable" | "beta" — invalid values are rejected on import
 
 [menu_bar]
 icon_style = "default" # "default" | "cameraViewfinder" | "cameraFill" | "scissors" | "photoOnRectangle" | "custom"
+show_item_icons = false # macOS 27+: show icons next to Snapzy menu items
 item_order = ["captureArea", "captureAreaAnnotate", "captureApplication", "captureFullscreen", "captureActiveWindow", "scrollingCapture", "captureOCR", "captureSmartElement", "captureObjectCutout", "recordScreen", "recordApplication", "openAnnotate", "combineImages", "editVideo", "cloudUploads", "openHistory", "shortcutList"]
 hidden_items = []
 
@@ -177,10 +188,12 @@ fps = 30
 capture_system_audio = false
 capture_microphone = false
 show_cursor = true
+studio_mode = false
 dim_non_selected_area = true
 highlight_clicks = false
 show_keystrokes = false
 video_editor_zoom_transition_duration = 0.4
+video_editor_caption_language = ""
 
 [quick_access]
 enabled = true
@@ -216,10 +229,19 @@ close_after_drag = true
 bring_forward_after_drag = false
 quick_properties_sync = true
 combine_save_as_edit = true
+auto_expand_canvas = true
 crop_snap_to_edges = true
 highlighter_text_snapping = true
 measure_unit = "points"
 measure_axis = "both"
+
+[annotate.ai]
+provider = "automatic"
+send_image = true
+cli_timeout = 180
+claude_model = ""
+codex_model = ""
+opencode_model = ""
 
 [shortcuts.global.fullscreen]
 key = "3"
@@ -246,6 +268,16 @@ enabled = true
 key = "t"
 modifiers = ["command", "option"]
 
+[shortcuts.annotate_actions.ai_prompt]
+enabled = true
+key = "k"
+modifiers = ["command"]
+
+[shortcuts.video_editor.ai_prompt]
+enabled = true
+key = "k"
+modifiers = ["command"]
+
 [shortcuts.quick_access.edit_latest_capture]
 enabled = false
 key = "return"
@@ -270,6 +302,13 @@ modifiers = ["command"]
 `⌘`, `⌥`, or `⌃` in `modifiers` — bare and shift-only combos are rejected on import,
 as is `fn`. `key = ""` clears a binding. Named keys accept either the exported symbol
 or a readable word (`"delete"`/`"⌫"`, `"return"`/`"↩"`, `"esc"`/`"⎋"`, `"tab"`, arrows).
+
+`shortcuts.video_editor.ai_prompt` is the Video Editor's Ask AI shortcut. It needs a
+modifier, and the editor's built-in combos (`⌘Z`, `⇧⌘Z`, `⌘S`, `⌘U`, `⌘B`, `⌘=`, `⌘-`,
+`⌘0`, `⌘C`/`⌘V`/`⌘X`/`⌘A`, `⌘W`/`⌘Q`/`⌘M`/`⌘H`/`⌘,`) are rejected on import. `key = ""`
+clears it; `enabled = false` turns it off without losing the binding. Import does not
+check global hotkeys (same as Annotate actions): an enabled global shortcut with the same
+combo wins, and Settings → Shortcuts flags the clash the next time the row is edited.
 
 ## Manual Testing
 

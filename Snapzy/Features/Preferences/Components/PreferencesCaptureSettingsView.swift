@@ -89,7 +89,9 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.recordingRememberLastArea) private var rememberLastArea = true
   @AppStorage(PreferencesKeys.recordingIncludeOwnApp) private var includeOwnAppInRecordings = false
   @AppStorage(PreferencesKeys.recordingShowCursor) private var recordingShowCursor = true
+  @AppStorage(PreferencesKeys.recordingStudioMode) private var recordingStudioMode = false
   @AppStorage(PreferencesKeys.recordingDimNonSelectedArea) private var recordingDimNonSelectedArea = true
+  @AppStorage(PreferencesKeys.recordingShowAreaBorder) private var recordingShowAreaBorder = true
   @AppStorage(PreferencesKeys.recordingHoverBarVisible) private var recordingHoverBarVisible = true
   @AppStorage(PreferencesKeys.recordingShowTimeOnMenuBar) private var recordingShowTimeOnMenuBar = true
 
@@ -584,10 +586,27 @@ struct CaptureSettingsView: View {
             }
 
             SettingRow(
+              title: L10n.PreferencesCapture.recordingStudioModeTitle,
+              description: L10n.PreferencesCapture.recordingStudioModeDescription
+            ) {
+              Toggle("", isOn: $recordingStudioMode)
+                .labelsHidden()
+                .disabled(!recordingShowCursor)
+            }
+
+            SettingRow(
               title: L10n.PreferencesCapture.recordingDimNonSelectedAreaTitle,
               description: L10n.PreferencesCapture.recordingDimNonSelectedAreaDescription
             ) {
               Toggle("", isOn: $recordingDimNonSelectedArea)
+                .labelsHidden()
+            }
+
+            SettingRow(
+              title: L10n.PreferencesCapture.recordingShowAreaBorderTitle,
+              description: L10n.PreferencesCapture.recordingShowAreaBorderDescription
+            ) {
+              Toggle("", isOn: $recordingShowAreaBorder)
                 .labelsHidden()
             }
 

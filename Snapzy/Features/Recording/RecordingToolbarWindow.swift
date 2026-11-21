@@ -112,6 +112,10 @@ enum RecordingToolbarPreferences {
     defaults.object(forKey: PreferencesKeys.recordingShowKeystrokes) as? Bool ?? false
   }
 
+  static func studioRecording(defaults: UserDefaults = .standard) -> Bool {
+    defaults.object(forKey: PreferencesKeys.recordingStudioMode) as? Bool ?? false
+  }
+
   static func showCursor(defaults: UserDefaults = .standard) -> Bool {
     defaults.object(forKey: PreferencesKeys.recordingShowCursor) as? Bool ?? true
   }
@@ -120,6 +124,12 @@ enum RecordingToolbarPreferences {
   /// Defaults to `true` (dimmed) to preserve prior behavior when unset.
   static func dimNonSelectedArea(defaults: UserDefaults = .standard) -> Bool {
     defaults.object(forKey: PreferencesKeys.recordingDimNonSelectedArea) as? Bool ?? true
+  }
+
+  /// Whether a thin frame marks the recording region while recording, independent of
+  /// the dim preference. Defaults to `true`.
+  static func showAreaBorder(defaults: UserDefaults = .standard) -> Bool {
+    defaults.object(forKey: PreferencesKeys.recordingShowAreaBorder) as? Bool ?? true
   }
 
   /// Whether the floating recording controls bar is shown during recording.
@@ -179,6 +189,9 @@ final class RecordingToolbarState: ObservableObject {
   @Published var captureMode: RecordingCaptureMode
   @Published var outputMode: RecordingOutputMode
   @Published var showCursor: Bool
+  @Published var studioRecording: Bool
+  /// Studio recording applies to video output with a visible cursor only.
+  var isStudioRecordingActive: Bool { studioRecording && outputMode != .gif && showCursor }
   @Published var highlightClicks: Bool
   @Published var showKeystrokes: Bool
   @Published var dimNonSelectedArea: Bool
@@ -201,6 +214,7 @@ final class RecordingToolbarState: ObservableObject {
     self.captureMode = .area
     self.outputMode = RecordingToolbarPreferences.outputMode()
     self.showCursor = RecordingToolbarPreferences.showCursor()
+    self.studioRecording = RecordingToolbarPreferences.studioRecording()
     self.highlightClicks = RecordingToolbarPreferences.highlightClicks()
     self.showKeystrokes = RecordingToolbarPreferences.showKeystrokes()
     self.dimNonSelectedArea = RecordingToolbarPreferences.dimNonSelectedArea()

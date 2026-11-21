@@ -8,8 +8,9 @@
 
 import Foundation
 
-/// Posts a chat-completions request to a `CustomOCRModel` endpoint and returns
-/// the first choice's text. Maps transport/HTTP failures to `RemoteOCRError`.
+/// Posts chat-completions requests to a `CustomOCRModel` endpoint. `complete`
+/// returns the first choice's text; `send` returns the raw body. Maps
+/// transport/HTTP failures to `RemoteOCRError`.
 struct OpenAICompatibleChatClient {
   let model: CustomOCRModel
   let keychainStore: OCRKeychainStoring
@@ -29,6 +30,22 @@ struct OpenAICompatibleChatClient {
   }
 
   func complete(messages: [ChatCompletionMessage]) async throws -> String {
+    let body = try JSONEncoder().encode(ChatCompletionRequest(
+      model: model.modelIdentifier,
+      messages: messages
+    ))
+    let data = try await send(jsonBody: body)
+    guard let chatResponse = try? JSONDecoder().decode(ChatCompletionResponse.self, from: data),
+          let content = chatResponse.choices.first?.message.content else {
+      throw RemoteOCRError.invalidResponse
+    }
+    return content.text
+  }
+
+  /// Posts an already-encoded chat-completions body and returns the raw response
+  /// body of a 2xx answer. For callers that need more than the first choice's text
+  /// (tool calls in the Annotate AI prompt).
+  func send(jsonBody: Data) async throws -> Data {
     guard let endpoint = Self.endpointURL(forBaseURL: model.baseURL) else {
       throw RemoteOCRError.invalidBaseURL
     }
@@ -40,10 +57,7 @@ struct OpenAICompatibleChatClient {
     if let apiKey = keychainStore.readKey(for: model.id), !apiKey.isEmpty {
       request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
     }
-    request.httpBody = try JSONEncoder().encode(ChatCompletionRequest(
-      model: model.modelIdentifier,
-      messages: messages
-    ))
+    request.httpBody = jsonBody
 
     let data: Data
     let response: URLResponse
@@ -58,18 +72,12 @@ struct OpenAICompatibleChatClient {
     }
     switch httpResponse.statusCode {
     case 200...299:
-      break
+      return data
     case 401, 403:
       throw RemoteOCRError.unauthorized
     default:
       throw RemoteOCRError.httpStatus(httpResponse.statusCode, Self.bodySnippet(from: data))
     }
-
-    guard let chatResponse = try? JSONDecoder().decode(ChatCompletionResponse.self, from: data),
-          let content = chatResponse.choices.first?.message.content else {
-      throw RemoteOCRError.invalidResponse
-    }
-    return content.text
   }
 
   /// Normalizes the user-entered base URL: trims whitespace and trailing

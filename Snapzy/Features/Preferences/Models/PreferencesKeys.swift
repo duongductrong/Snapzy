@@ -42,6 +42,7 @@ enum PreferencesKeys {
   static let menuBarItemOrder = "menuBar.itemOrder"
   static let menuBarHiddenItems = "menuBar.hiddenItems"
   static let menuBarIconStyle = "menuBar.iconStyle"
+  static let menuBarShowItemIcons = "menuBar.showItemIcons"
 
   /// Appearance
   static let appearanceMode = "appearanceMode"
@@ -62,6 +63,7 @@ enum PreferencesKeys {
   static let clearedGlobalShortcuts = "shortcuts.clearedGlobalActions"
   static let disabledAnnotateActionShortcuts = "shortcuts.disabledAnnotateActionShortcuts"
   static let disabledAnnotateToolShortcuts = "shortcuts.disabledAnnotateToolShortcuts"
+  static let disabledVideoEditorActionShortcuts = "shortcuts.disabledVideoEditorActionShortcuts"
 
   // Screenshot
   static let screenshotFormat = "screenshot.format"
@@ -107,9 +109,18 @@ enum PreferencesKeys {
   static let annotateBringForwardAfterDrag = "annotate.bringForwardAfterDrag"
   static let annotatePrimaryColor = "annotate.primaryColor.v1"
   static let annotateParameterDefaults = "annotate.parameterDefaults.v1"
+  /// Annotate AI prompt provider: "automatic", "apple", "endpoint:<uuid>" or "cli:<kind>".
+  static let annotateAgentProvider = "annotateAgent.provider"
+  /// Provider ids ("endpoint:<uuid>@<origin>", "cli:<kind>") the user allowed to receive screenshots.
+  static let annotateAgentConsentedProviders = "annotateAgent.consentedProviders"
+  /// Send the screenshot image to endpoints and agent CLIs (scene text always goes). Default on.
+  static let annotateAgentSendImage = "annotateAgent.sendImage"
+  /// Seconds before an agent CLI run is stopped (default 180).
+  static let annotateAgentCLITimeout = "annotateAgent.cliTimeout"
   static let annotateToolParameterDefaults = "annotate.toolParameterDefaults.v1"
   static let annotateQuickPropertiesSyncEnabled = "annotate.quickPropertiesSyncEnabled"
   static let annotateCropSnapToEdgesEnabled = "annotate.cropSnapToEdgesEnabled"
+  static let annotateAutoExpandCanvasEnabled = "annotate.autoExpandCanvasEnabled"
   static let annotateHighlighterTextSnappingEnabled = "annotate.highlighterTextSnappingEnabled"
   /// Annotate Measure tool unit (`MeasureUnit` raw value, default points). Edge tolerance is
   /// shared with Screen Ruler (`screenRulerEdgeTolerance`).
@@ -141,6 +152,7 @@ enum PreferencesKeys {
   static let quickAccessPinZoomMode = "quickAccess.pin.zoom.mode"
   static let quickAccessActionOrder = "quickAccess.actions.order.v1"
   static let quickAccessEnabledActions = "quickAccess.actions.enabled.v1"
+  static let quickAccessKnownActions = "quickAccess.actions.known.v1"
   static let quickAccessActionSlotAssignments = "quickAccess.actions.slots.v1"
   static let quickAccessSwipeLeftAction = "quickAccess.swipe.action.left"
   static let quickAccessSwipeRightAction = "quickAccess.swipe.action.right"
@@ -148,6 +160,8 @@ enum PreferencesKeys {
   static let quickAccessAnimationStyle = "quickAccess.animationStyle"
   static let quickAccessPlaySounds = "quickAccess.playSounds"
   static let quickAccessOpenInFinderAfterSave = "quickAccess.openInFinderAfterSave"
+  static let quickAccessOptimizePresets = "quickAccess.optimize.presets.v1"
+  static let quickAccessOptimizeLastCustom = "quickAccess.optimize.lastCustom.v1"
 
   // Recording
   static let recordingFormat = "recording.format"
@@ -169,13 +183,20 @@ enum PreferencesKeys {
   static let recordingOutputMode = "recording.outputMode"
   static let recordingIncludeOwnApp = "recording.includeOwnApp"
   static let recordingShowCursor = "recording.showCursor"
+  /// Studio recording: cursor captured as editable data, flattened after stop. Default false.
+  static let recordingStudioMode = "recording.studioMode"
   static let recordingDimNonSelectedArea = "recording.dimNonSelectedArea"
+  static let recordingShowAreaBorder = "recording.showAreaBorder"
   static let recordingHighlightClicks = "recording.highlightClicks"
   static let recordingShowKeystrokes = "recording.showKeystrokes"
   static let recordingHoverBarVisible = "recording.hoverBarVisible"
   static let recordingShowTimeOnMenuBar = "recording.showTimeOnMenuBar"
   static let recordingHoverBarFrameOrigin = "recording.hoverBarFrameOrigin"
   static let videoEditorZoomTransitionDuration = "videoEditor.zoom.transitionDuration"
+  /// Video Editor AI assistant layout: "sidebar" (right panel, default) or "dock" (floating over the player).
+  static let videoEditorAILayout = "videoEditor.ai.layout"
+  /// Speech language for new captions (BCP-47); unset = app language, then the Mac's.
+  static let videoEditorCaptionLanguage = "videoEditor.captions.language"
 
   // Mouse Highlight Customization
   static let mouseHighlightSize = "recording.mouseHighlight.size"

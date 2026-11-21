@@ -62,6 +62,7 @@ enum SnapzyConfigurationExporter {
 
     writer.section("menu_bar")
     writer.value("icon_style", store.iconStyle.rawValue)
+    writer.value("show_item_icons", store.showItemIcons)
     writer.stringArray("item_order", store.itemOrder.map(\.rawValue))
     writer.stringArray("hidden_items", store.hiddenItems.map(\.rawValue).sorted())
   }
@@ -124,10 +125,12 @@ enum SnapzyConfigurationExporter {
     writer.value("remember_last_area", defaults.boolValue(PreferencesKeys.recordingRememberLastArea, default: true))
     writer.value("include_snapzy", defaults.boolValue(PreferencesKeys.recordingIncludeOwnApp, default: false))
     writer.value("show_cursor", RecordingToolbarPreferences.showCursor(defaults: defaults))
+    writer.value("studio_mode", RecordingToolbarPreferences.studioRecording(defaults: defaults))
     writer.value("dim_non_selected_area", RecordingToolbarPreferences.dimNonSelectedArea(defaults: defaults))
     writer.value("highlight_clicks", RecordingToolbarPreferences.highlightClicks(defaults: defaults))
     writer.value("show_keystrokes", RecordingToolbarPreferences.showKeystrokes(defaults: defaults))
     writer.value("video_editor_zoom_transition_duration", defaults.doubleValue(PreferencesKeys.videoEditorZoomTransitionDuration, default: 0.4))
+    writer.value("video_editor_caption_language", defaults.string(forKey: PreferencesKeys.videoEditorCaptionLanguage) ?? "")
 
     writer.section("recording.mouse_highlight")
     let color = storedMouseColor(defaults: defaults)
@@ -229,6 +232,7 @@ enum SnapzyConfigurationExporter {
     writer.value("bring_forward_after_drag", defaults.boolValue(PreferencesKeys.annotateBringForwardAfterDrag, default: false))
     writer.value("quick_properties_sync", AnnotateQuickPropertiesSyncPreference.isEnabled(userDefaults: defaults))
     writer.value("combine_save_as_edit", CombineSaveAsEditPreference.isEnabled(userDefaults: defaults))
+    writer.value("auto_expand_canvas", defaults.boolValue(PreferencesKeys.annotateAutoExpandCanvasEnabled, default: true))
     writer.value("crop_snap_to_edges", defaults.boolValue(PreferencesKeys.annotateCropSnapToEdgesEnabled, default: true))
     writer.value(
       "highlighter_text_snapping",
@@ -244,6 +248,17 @@ enum SnapzyConfigurationExporter {
       defaults.string(forKey: PreferencesKeys.annotateMeasureAxis).flatMap(MeasureAxis.init(rawValue:))?.rawValue
         ?? MeasureAxis.both.rawValue
     )
+
+    writer.section("annotate.ai")
+    writer.value("provider", AgentProviderSelection(
+      persistedValue: defaults.string(forKey: PreferencesKeys.annotateAgentProvider)
+    ).persistedValue)
+    writer.value("send_image", defaults.boolValue(PreferencesKeys.annotateAgentSendImage, default: true))
+    writer.value("cli_timeout", AnnotateAgentAISettings.cliTimeout(defaults: defaults))
+    for kind in AnnotateAgentCLIKind.allCases {
+      writer.value("\(kind.rawValue)_model", defaults.string(forKey: kind.modelDefaultsKey) ?? "")
+      writer.value("\(kind.rawValue)_effort", defaults.string(forKey: kind.effortDefaultsKey) ?? "")
+    }
   }
 
   private static func language(defaults: UserDefaults) -> String {

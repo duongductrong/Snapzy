@@ -24,6 +24,7 @@ class ZoomCompositor {
   private let backgroundStyle: BackgroundStyle
   private let backgroundPadding: CGFloat
   private let cornerRadius: CGFloat
+  private let studioRecipe: VideoEditorStudioRecipe
   let paddedRenderSize: CGSize
 
   // MARK: - Initialization
@@ -36,7 +37,8 @@ class ZoomCompositor {
     transitionDuration: TimeInterval = ZoomCalculator.defaultTransitionDuration,
     backgroundStyle: BackgroundStyle = .none,
     backgroundPadding: CGFloat = 0,
-    cornerRadius: CGFloat = 0
+    cornerRadius: CGFloat = 0,
+    studioRecipe: VideoEditorStudioRecipe = .empty
   ) {
     self.zooms = zooms.filter(\.isEnabled)
     self.autoFocusPaths = autoFocusPaths
@@ -46,6 +48,7 @@ class ZoomCompositor {
     self.backgroundStyle = backgroundStyle
     self.backgroundPadding = backgroundPadding
     self.cornerRadius = cornerRadius
+    self.studioRecipe = studioRecipe
 
     // Calculate padded render size
     if backgroundStyle != .none, backgroundPadding > 0 {
@@ -60,10 +63,18 @@ class ZoomCompositor {
 
   // MARK: - Video Composition Creation
 
-  /// Create a video composition that applies zoom effects
+  /// Create a video composition that applies zoom effects.
+  /// - Parameters:
+  ///   - screenTrackID: The screen-recording track. Required whenever the asset carries
+  ///     more than one video track (e.g. a camera sidecar), so the compositor never
+  ///     mistakes an auxiliary track for the screen. `nil` keeps the legacy
+  ///     single-track behaviour (first video track).
+  ///   - auxiliaryTrackIDs: Extra video tracks Studio layers read, keyed by role.
   func createVideoComposition(
     for asset: AVAsset,
-    timeRange: CMTimeRange
+    timeRange: CMTimeRange,
+    screenTrackID: CMPersistentTrackID? = nil,
+    auxiliaryTrackIDs: [VideoEditorStudioAuxiliaryTrack: CMPersistentTrackID] = [:]
   ) async throws -> AVMutableVideoComposition {
     print("🎬 [ZoomCompositor] Creating video composition")
     print("🎬 [ZoomCompositor] Render size: \(renderSize)")
@@ -74,34 +85,64 @@ class ZoomCompositor {
     videoComposition.renderSize = renderSize
     videoComposition.frameDuration = frameDuration
 
-    // Get video track
-    guard let videoTrack = try await asset.loadTracks(withMediaType: .video).first else {
-      print("❌ [ZoomCompositor] ERROR: No video track found")
-      DiagnosticLogger.shared.log(.error, .export, "Zoom compositor failed; source video track missing")
-      throw ZoomCompositorError.noVideoTrack
-    }
-    print("🎬 [ZoomCompositor] Video track ID: \(videoTrack.trackID)")
+    let videoTracks = try await asset.loadTracks(withMediaType: .video)
+    let resolvedScreenTrackID = try Self.resolveScreenTrackID(
+      explicit: screenTrackID,
+      available: videoTracks.map(\.trackID),
+      auxiliary: Array(auxiliaryTrackIDs.values)
+    )
+    print("🎬 [ZoomCompositor] Video track ID: \(resolvedScreenTrackID)")
 
     // Create instruction covering the entire time range
     let instruction = ZoomVideoCompositionInstruction(
       timeRange: timeRange,
       zooms: zooms,
       autoFocusPaths: autoFocusPaths,
-      trackID: videoTrack.trackID,
+      trackID: resolvedScreenTrackID,
       renderSize: renderSize,
       transitionDuration: transitionDuration,
       backgroundStyle: backgroundStyle,
       backgroundPadding: backgroundPadding,
       cornerRadius: cornerRadius,
-      paddedRenderSize: paddedRenderSize
+      paddedRenderSize: paddedRenderSize,
+      studioRecipe: studioRecipe,
+      auxiliaryTrackIDs: auxiliaryTrackIDs
     )
-    print("🎬 [ZoomCompositor] Created instruction with trackID: \(videoTrack.trackID)")
+    print("🎬 [ZoomCompositor] Created instruction with trackID: \(resolvedScreenTrackID)")
 
     videoComposition.instructions = [instruction]
     videoComposition.customVideoCompositorClass = ZoomVideoCompositorClass.self
     print("🎬 [ZoomCompositor] Set custom compositor class: ZoomVideoCompositorClass")
 
     return videoComposition
+  }
+
+  /// Picks the screen track. With auxiliary tracks present the caller must name the
+  /// screen track explicitly; "first video track" is only safe for single-track assets.
+  nonisolated static func resolveScreenTrackID(
+    explicit: CMPersistentTrackID?,
+    available: [CMPersistentTrackID],
+    auxiliary: [CMPersistentTrackID]
+  ) throws -> CMPersistentTrackID {
+    if let explicit {
+      guard available.contains(explicit), !auxiliary.contains(explicit) else {
+        DiagnosticLogger.shared.log(.error, .export, "Zoom compositor screen track missing", context: [
+          "expectedTrackID": "\(explicit)",
+          "availableTrackCount": "\(available.count)",
+        ])
+        throw ZoomCompositorError.trackMismatch(expected: explicit, available: available)
+      }
+      return explicit
+    }
+    guard auxiliary.isEmpty else {
+      throw ZoomCompositorError.trackMismatch(expected: kCMPersistentTrackID_Invalid, available: available)
+    }
+    guard let first = available.first else {
+      print("❌ [ZoomCompositor] ERROR: No video track found")
+      DiagnosticLogger.shared.log(.error, .export, "Zoom compositor failed; source video track missing")
+      throw ZoomCompositorError.noVideoTrack
+    }
+    return first
   }
 
   // MARK: - Errors
@@ -141,6 +182,10 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
   let backgroundPadding: CGFloat
   let cornerRadius: CGFloat
   let paddedRenderSize: CGSize
+  let studioRecipe: VideoEditorStudioRecipe
+  /// Auxiliary video tracks (camera sidecar, ...) Studio layers read. Never used as a
+  /// stand-in for the screen track.
+  let auxiliaryTrackIDs: [VideoEditorStudioAuxiliaryTrack: CMPersistentTrackID]
 
   var enablePostProcessing: Bool {
     true
@@ -152,9 +197,16 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
 
   var requiredSourceTrackIDs: [NSValue]? {
     // Must return NSNumber (which is a subclass of NSValue) for track IDs
-    // AVFoundation calls intValue on these objects
-    [NSNumber(value: trackID)]
+    // AVFoundation calls intValue on these objects. Screen track first.
+    let auxiliary = auxiliaryTrackIDs
+      .sorted { $0.key.rawValue < $1.key.rawValue }
+      .map(\.value)
+      .filter { $0 != trackID }
+    return ([trackID] + auxiliary).map { NSNumber(value: $0) }
   }
+
+  /// Layers draw something, so the compositor must not pass frames through untouched.
+  var hasStudioLayers: Bool { studioRecipe.hasActiveLayers }
 
   var passthroughTrackID: CMPersistentTrackID {
     kCMPersistentTrackID_Invalid
@@ -170,7 +222,9 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
     backgroundStyle: BackgroundStyle = .none,
     backgroundPadding: CGFloat = 0,
     cornerRadius: CGFloat = 0,
-    paddedRenderSize: CGSize? = nil
+    paddedRenderSize: CGSize? = nil,
+    studioRecipe: VideoEditorStudioRecipe = .empty,
+    auxiliaryTrackIDs: [VideoEditorStudioAuxiliaryTrack: CMPersistentTrackID] = [:]
   ) {
     self.timeRange = timeRange
     self.zooms = zooms
@@ -188,6 +242,8 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
     self.backgroundPadding = backgroundPadding
     self.cornerRadius = cornerRadius
     self.paddedRenderSize = paddedRenderSize ?? renderSize
+    self.studioRecipe = studioRecipe
+    self.auxiliaryTrackIDs = auxiliaryTrackIDs
     super.init()
   }
 }
@@ -294,8 +350,10 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
         ]
       )
 
-      // Try fallback: use first available track
-      if let firstTrackID = availableTrackIDs.first,
+      // Try fallback: use first available track that is not an auxiliary (camera, ...)
+      // track — passing a camera frame through as the screen would be worse than failing.
+      let auxiliaryIDs = Set(instruction.auxiliaryTrackIDs.values)
+      if let firstTrackID = availableTrackIDs.first(where: { !auxiliaryIDs.contains($0) }),
          let fallbackBuffer = request.sourceFrame(byTrackID: firstTrackID) {
         print("🔄 [Compositor] Frame \(frameCount): Using fallback trackID \(firstTrackID)")
         request.finish(withComposedVideoFrame: fallbackBuffer)
@@ -328,8 +386,11 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
     let needsCanvasFit = abs(sourceSize.width - instruction.renderSize.width) > 0.5
       || abs(sourceSize.height - instruction.renderSize.height) > 0.5
 
-    // If no zoom and no background, pass through original frame
-    if zoomLevel <= minimumRenderableZoomLevel, !instruction.hasBackground, !needsCanvasFit {
+    // If no zoom, no background and no Studio layer, pass through original frame
+    if zoomLevel <= minimumRenderableZoomLevel,
+       !instruction.hasBackground,
+       !needsCanvasFit,
+       !instruction.hasStudioLayers {
       request.finish(withComposedVideoFrame: sourceBuffer)
       return
     }
@@ -339,7 +400,9 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
       to: sourceBuffer,
       zoomLevel: zoomLevel,
       center: zoomCenter,
-      instruction: instruction
+      instruction: instruction,
+      outputTime: currentTime,
+      auxiliaryFrames: auxiliaryFrames(for: instruction, request: request)
     ) else {
       print("❌ [Compositor] Frame \(frameCount): applyEffects returned nil, passing through")
       if frameCount == 1 || frameCount % 30 == 0 {
@@ -361,11 +424,21 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
     to sourceBuffer: CVPixelBuffer,
     zoomLevel: CGFloat,
     center: CGPoint,
-    instruction: ZoomVideoCompositionInstruction
+    instruction: ZoomVideoCompositionInstruction,
+    outputTime: TimeInterval,
+    auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer]
   ) -> CVPixelBuffer? {
     // Create CIImage from source buffer
     var processedImage = CIImage(cvPixelBuffer: sourceBuffer)
     let sourceExtent = processedImage.extent
+
+    // Studio source-space layers (cursor, clicks) ride along with the screen into zoom.
+    processedImage = compositeSourceSpaceLayers(
+      processedImage,
+      outputTime: outputTime,
+      instruction: instruction,
+      auxiliaryFrames: auxiliaryFrames
+    )
 
     // Apply zoom if needed
     if zoomLevel > minimumRenderableZoomLevel {
@@ -426,6 +499,16 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
       processedImage = translatedVideo.composited(over: background)
     }
 
+    // Studio canvas-space layers (camera, captions) are never zoomed.
+    let padding = instruction.hasBackground ? instruction.backgroundPadding : 0
+    processedImage = compositeCanvasSpaceLayers(
+      processedImage,
+      outputTime: outputTime,
+      instruction: instruction,
+      auxiliaryFrames: auxiliaryFrames,
+      videoRect: fittedRect.offsetBy(dx: padding, dy: padding)
+    )
+
     // Create output buffer
     guard let renderContext else { return nil }
     guard let outputBuffer = renderContext.newPixelBuffer() else { return nil }
@@ -434,6 +517,52 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
     ciContext.render(processedImage, to: outputBuffer)
 
     return outputBuffer
+  }
+
+  // MARK: - Studio Layer Hooks
+
+  /// Draws `.source` layers on the untouched source frame, before the zoom crop.
+  private func compositeSourceSpaceLayers(
+    _ image: CIImage,
+    outputTime: TimeInterval,
+    instruction: ZoomVideoCompositionInstruction,
+    auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer]
+  ) -> CIImage {
+    guard instruction.hasStudioLayers else { return image }
+    return instruction.studioRecipe
+      .composite(image, space: .source, outputTime: outputTime, auxiliaryFrames: auxiliaryFrames)
+      .cropped(to: image.extent)
+  }
+
+  /// Draws `.canvas` layers on the final canvas, after background and padding.
+  private func compositeCanvasSpaceLayers(
+    _ image: CIImage,
+    outputTime: TimeInterval,
+    instruction: ZoomVideoCompositionInstruction,
+    auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer],
+    videoRect: CGRect
+  ) -> CIImage {
+    guard instruction.hasStudioLayers else { return image }
+    let canvasRect = CGRect(origin: .zero, size: instruction.paddedRenderSize)
+    let base = image.extent.isInfinite ? image.cropped(to: canvasRect) : image
+    return instruction.studioRecipe
+      .composite(base, space: .canvas, outputTime: outputTime, auxiliaryFrames: auxiliaryFrames, videoRect: videoRect)
+      .cropped(to: canvasRect)
+  }
+
+  /// Auxiliary frames only for tracks the active layers actually need.
+  private func auxiliaryFrames(
+    for instruction: ZoomVideoCompositionInstruction,
+    request: AVAsynchronousVideoCompositionRequest
+  ) -> [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer] {
+    guard instruction.hasStudioLayers else { return [:] }
+    var frames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer] = [:]
+    for role in instruction.studioRecipe.requiredAuxiliaryTracks {
+      guard let trackID = instruction.auxiliaryTrackIDs[role],
+            let frame = request.sourceFrame(byTrackID: trackID) else { continue }
+      frames[role] = frame
+    }
+    return frames
   }
 
   /// Apply corner radius mask to a CIImage
@@ -577,7 +706,11 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
         return CIImage(color: .black).cropped(to: rect)
       }
       let scaled = scaleToFill(image: image, targetSize: size)
-      let blurred = scaled.applyingGaussianBlur(sigma: 20).cropped(to: rect)
+      let lazyBlur = scaled.applyingGaussianBlur(sigma: 20).cropped(to: rect)
+      // Materialize once: a cached lazy CIImage re-runs the blur on every exported frame.
+      let blurred = ciContext.createCGImage(lazyBlur, from: rect)
+        .map { CIImage(cgImage: $0).transformed(by: CGAffineTransform(translationX: rect.minX, y: rect.minY)) }
+        ?? lazyBlur
 
       // Store in cache
       cachedBlurredURL = url

@@ -21,6 +21,8 @@ struct AnnotateAutoTranslateOverlayView: View {
   @ObservedObject var state: AnnotateState
   let scale: CGFloat
   let canvasBounds: CGRect
+  /// Corner radius the canvas clips the image with (display points).
+  var cornerRadius: CGFloat = 0
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.colorScheme) private var colorScheme
@@ -57,6 +59,9 @@ struct AnnotateAutoTranslateOverlayView: View {
     let elapsed = now.timeIntervalSince(phaseStart)
     let fullRect = CGRect(origin: .zero, size: size)
     let isDark = colorScheme == .dark
+    // Paint only inside the image's own outline (rounded corners included).
+    let imageShape = AnnotateAIOverlayPainter.imageShape(size: size, cornerRadius: cornerRadius)
+    context.clip(to: imageShape)
 
     // Veil: whole image while reading, eased back once blocks are known.
     let veilTarget: Double = phase == .reading ? (isDark ? 0.22 : 0.12) : (isDark ? 0.12 : 0.06)
@@ -81,6 +86,12 @@ struct AnnotateAutoTranslateOverlayView: View {
       if phase == .reading, !reduceMotion {
         drawSweep(in: &context, rect: fullRect, now: now, phaseOffset: 0, strength: 0.16)
       }
+      // Whole image is being read: light its edge; fades out with the veil on resolve.
+      AnnotateAIOverlayPainter.drawEdgeGlow(
+        in: &context, shape: imageShape, rect: fullRect, now: now,
+        strength: (phase == .reading ? 1 : 0.6) * veilFade,
+        reduceMotion: reduceMotion, isDark: isDark
+      )
     }
 
     let blocks = state.autoTranslateBlocks
@@ -163,34 +174,13 @@ struct AnnotateAutoTranslateOverlayView: View {
     layer.draw(resolved, in: CGRect(x: x, y: y, width: available.width, height: min(measured.height, rect.height)))
   }
 
-  /// Faint multi-hue light running around the block, like the card's rim.
   private func drawRim(in context: inout GraphicsContext, shape: Path, rect: CGRect, now: Date, strength: Double) {
-    guard strength > 0.01 else { return }
-    let hues = TranslationCardMotion.rimHues
-    let angle: Angle
-    if reduceMotion {
-      angle = .zero
-    } else {
-      let turn = now.timeIntervalSinceReferenceDate
-        .truncatingRemainder(dividingBy: TranslationCardMotion.rimTurnDuration) / TranslationCardMotion.rimTurnDuration
-      angle = .degrees(turn * 360)
-    }
-    let shading = GraphicsContext.Shading.conicGradient(
-      Gradient(colors: hues),
-      center: CGPoint(x: rect.midX, y: rect.midY),
-      angle: angle
+    AnnotateAIOverlayPainter.drawRim(
+      in: &context, shape: shape, rect: rect, now: now, strength: strength,
+      reduceMotion: reduceMotion, isDark: colorScheme == .dark
     )
-    var glow = context
-    glow.opacity = strength * (colorScheme == .dark ? 0.55 : 0.45)
-    glow.addFilter(.blur(radius: 4))
-    glow.stroke(shape, with: shading, lineWidth: 3)
-
-    var line = context
-    line.opacity = strength * (colorScheme == .dark ? 0.85 : 0.75)
-    line.stroke(shape, with: shading, lineWidth: 1.2)
   }
 
-  /// A soft diagonal band moving leading → trailing, as in the card's reading sweep.
   private func drawSweep(
     in context: inout GraphicsContext,
     rect: CGRect,
@@ -199,30 +189,8 @@ struct AnnotateAutoTranslateOverlayView: View {
     phaseOffset: Double,
     strength: Double
   ) {
-    guard strength > 0.01 else { return }
-    let cycle = TranslationCardMotion.sweepDuration + TranslationCardMotion.sweepRest
-    let t = (now.timeIntervalSinceReferenceDate + phaseOffset).truncatingRemainder(dividingBy: cycle)
-    let raw = min(t / TranslationCardMotion.sweepDuration, 1)
-    guard raw < 1 else { return }
-    let eased = raw < 0.5 ? 4 * raw * raw * raw : 1 - pow(-2 * raw + 2, 3) / 2
-    let width = 0.38
-    let center = -width + eased * (1 + 2 * width)
-
-    var layer = context
-    if let clip { layer.clip(to: clip) }
-    layer.blendMode = .plusLighter
-    let gradient = Gradient(stops: [
-      .init(color: .clear, location: max(0, min(1, center - width))),
-      .init(color: .white.opacity(strength), location: max(0, min(1, center))),
-      .init(color: .clear, location: max(0, min(1, center + width))),
-    ])
-    layer.fill(
-      Path(rect),
-      with: .linearGradient(
-        gradient,
-        startPoint: CGPoint(x: rect.minX, y: rect.minY + rect.height * 0.2),
-        endPoint: CGPoint(x: rect.maxX, y: rect.minY + rect.height * 0.8)
-      )
+    AnnotateAIOverlayPainter.drawSweep(
+      in: &context, rect: rect, clip: clip, now: now, phaseOffset: phaseOffset, strength: strength
     )
   }
 
@@ -312,10 +280,8 @@ struct AnnotateAutoTranslatePill: View {
 
   var body: some View {
     Group {
-      if state.isAutoTranslateRunning {
-        pill { runningContent }
-          .overlay(TranslationReadingRim(shape: Capsule(style: .continuous)))
-      } else if state.isTranslateAreaSelecting {
+      // A running translation shows its status inside the AI dock.
+      if state.isTranslateAreaSelecting {
         pill { areaSelectionContent }
       } else if let notice = state.autoTranslateNotice {
         pill { noticeContent(notice) }
@@ -323,7 +289,6 @@ struct AnnotateAutoTranslatePill: View {
       }
     }
     .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 8)))
-    .animation(.timingCurve(0.2, 0.9, 0.25, 1, duration: 0.32), value: state.isAutoTranslateRunning)
     .animation(.timingCurve(0.2, 0.9, 0.25, 1, duration: 0.32), value: state.isTranslateAreaSelecting)
     .animation(.timingCurve(0.2, 0.9, 0.25, 1, duration: 0.32), value: state.autoTranslateNotice)
   }
@@ -340,18 +305,6 @@ struct AnnotateAutoTranslatePill: View {
   }
 
   @ViewBuilder
-  private var runningContent: some View {
-    Image(systemName: "translate")
-      .font(.system(size: 12, weight: .semibold))
-      .foregroundStyle(.secondary)
-    Text(statusText)
-      .foregroundStyle(.primary)
-    Text(L10n.AnnotateTranslate.cancelHint)
-      .foregroundStyle(.tertiary)
-    pillButton(L10n.Common.cancel) { state.cancelAutoTranslate() }
-  }
-
-  @ViewBuilder
   private var areaSelectionContent: some View {
     Image(systemName: "text.viewfinder")
       .font(.system(size: 12, weight: .semibold))
@@ -362,15 +315,6 @@ struct AnnotateAutoTranslatePill: View {
       .foregroundStyle(.tertiary)
     pillButton(L10n.AnnotateTranslate.wholeImage) { state.autoTranslate() }
     pillButton(L10n.Common.cancel) { state.endTranslateAreaSelection() }
-  }
-
-  private var statusText: String {
-    switch state.autoTranslatePhase {
-    case .reading, .idle:
-      return L10n.AnnotateTranslate.reading
-    case .translating, .resolving:
-      return L10n.Translate.translating
-    }
   }
 
   @ViewBuilder

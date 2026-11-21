@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import SwiftUI
 import Combine
 import CoreGraphics
 import Foundation
@@ -100,6 +101,9 @@ final class InlineAreaAnnotateSession: ObservableObject {
   private var magnifierHostViewBoxes: [CGDirectDisplayID: InlineAreaMagnifierHostViewBox] = [:]
   private var selectionStartPoint: CGPoint?
   private var stateChangeCancellable: AnyCancellable?
+  private var agentBusyCancellable: AnyCancellable?
+  private var settingsObserver: NSObjectProtocol?
+  private var keyWindowObserver: NSObjectProtocol?
   private var didComplete = false
   /// Populated asynchronously in `init` (see `startWindowSelectionQuery`) — nil until the
   /// query resolves, so hover hit-testing simply has nothing to match until then.
@@ -157,6 +161,10 @@ final class InlineAreaAnnotateSession: ObservableObject {
       defaults: defaults,
       appliesDefaultCanvasPresetOnNewImages: false
     )
+    // Capture Markup has no canvas styling (background, padding, shadow) to preview.
+    self.state.allowsAgentCanvasChanges = false
+    // The canvas is the selected screen area; annotations stay inside it.
+    self.state.allowsCanvasAutoExpand = false
     self.state.onToolActivated = { tool in
       AnnotateToolPreference.remember(tool, userDefaults: defaults)
     }
@@ -165,6 +173,17 @@ final class InlineAreaAnnotateSession: ObservableObject {
         self?.objectWillChange.send()
       }
     }
+    // The agent publishes on its own object; the overlay only needs to know when a run
+    // starts or ends (move/resize are held while it works).
+    self.agentBusyCancellable = state.agent.$phase
+      .map { $0 != .idle }
+      .removeDuplicates()
+      .dropFirst()
+      .sink { [weak self] _ in
+        Task { @MainActor in
+          self?.objectWillChange.send()
+        }
+      }
     // Session always starts in `.selecting` — hide the real cursor for every display up
     // front; `beginAnnotating(with:)` shows it again once selection ends.
     cursorHider.hide(displayIDs: Set(displays.map(\.displayID)))
@@ -404,7 +423,14 @@ final class InlineAreaAnnotateSession: ObservableObject {
     }
   }
 
+  /// An AI prompt or a translation is working on the current image: the selection stays
+  /// put until it ends, so its coordinates keep pointing at the same pixels.
+  var isIntelligenceBusy: Bool {
+    state.agent.isRunning || state.isAutoTranslateRunning
+  }
+
   func moveSelection(to localRect: CGRect, refreshImage: Bool) {
+    guard !isIntelligenceBusy else { return }
     let clampedRect = clampedSelectionRect(localRect.standardized)
     guard refreshImage else {
       selectionRect = clampedRect
@@ -416,6 +442,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
   }
 
   func resizeSelection(to localRect: CGRect, previousRect: CGRect) {
+    guard !isIntelligenceBusy else { return }
     let clampedRect = clampedSelectionRect(localRect.standardized)
     guard clampedRect.width > 5,
           clampedRect.height > 5,
@@ -438,6 +465,10 @@ final class InlineAreaAnnotateSession: ObservableObject {
   }
 
   func handleKeyEvent(_ event: NSEvent, source: InlineAreaKeyEventSource = .local) -> Bool {
+    if let handled = handleIntelligenceKeyEvent(event, source: source) {
+      return handled
+    }
+
     let action = Self.keyAction(
       for: event,
       source: source,
@@ -457,6 +488,8 @@ final class InlineAreaAnnotateSession: ObservableObject {
       cancel()
       return true
     case .finish:
+      // Return right after sending a prompt must not save a half-finished run.
+      guard !isIntelligenceBusy else { return true }
       Task { await finish() }
       return true
     case .copyCurrentImage:
@@ -472,6 +505,143 @@ final class InlineAreaAnnotateSession: ObservableObject {
     case .resetMoveModifierAndPassThrough:
       isMoveModifierActive = false
       return false
+    }
+  }
+
+  /// AI dock keys, ahead of the capture's own: Esc unwinds one layer at a time (run →
+  /// translation → area pick → prompt → dock tools) before it cancels the capture, and
+  /// the Annotate shortcuts for Ask / Translate / Translate Area work here too.
+  /// Returns nil when the key is not for the dock.
+  private func handleIntelligenceKeyEvent(_ event: NSEvent, source: InlineAreaKeyEventSource) -> Bool? {
+    guard phase == .annotating, event.type == .keyDown else { return nil }
+    let agent = state.agent
+    let isEditingAnnotationText = state.editingTextAnnotationId != nil
+    let hasTextResponder = windows.allObjects.contains { $0.firstResponder is NSTextView }
+    let isPromptEditing = windows.allObjects.contains { PromptTextField.isEditing(in: $0) }
+
+    if Self.matchesCancelShortcut(event) {
+      // Editing an annotation's text: Esc belongs to that edit.
+      if isEditingAnnotationText { return nil }
+      if agent.isRunning {
+        agent.stop()
+        return true
+      }
+      // The prompt field closes itself on Esc.
+      if isPromptEditing { return nil }
+      if state.isAutoTranslateRunning {
+        state.cancelAutoTranslate()
+        return true
+      }
+      if state.isTranslateAreaSelecting {
+        state.endTranslateAreaSelection()
+        return true
+      }
+      if agent.isPromptPresented {
+        withAnimation(Self.dockAnimation) { agent.dismissPrompt() }
+        return true
+      }
+      if agent.isDockExpanded {
+        withAnimation(Self.dockAnimation) { agent.collapseDock() }
+        return true
+      }
+      return nil
+    }
+
+    guard source == .local else { return nil }
+    let shortcuts = AnnotateShortcutManager.shared
+
+    if AnnotateAgentProviderResolver.isFeatureAvailable,
+       shortcuts.matchesAIPrompt(event),
+       !isEditingAnnotationText,
+       agent.isAvailable || agent.isPromptPresented {
+      // On an open prompt that lost the caret, bring the caret back instead of closing it.
+      if agent.isPromptPresented, !agent.isRunning, !isPromptEditing {
+        agent.focusPrompt()
+      } else {
+        withAnimation(Self.dockAnimation) { agent.togglePrompt() }
+      }
+      return true
+    }
+
+    guard !hasTextResponder else { return nil }
+    if shortcuts.matchesAutoTranslate(event) {
+      state.toggleAutoTranslate()
+      return true
+    }
+    if shortcuts.matchesTranslateArea(event) {
+      state.toggleTranslateAreaSelection()
+      return true
+    }
+    return nil
+  }
+
+  private static let dockAnimation: Animation = .spring(response: 0.42, dampingFraction: 0.86)
+
+  /// Hold ⌥ alone to peek at the text under Auto Translate overlays; any click or key ends
+  /// the peek so ⌥-drag duplication keeps working.
+  private func updateTranslationPeek(for event: NSEvent) {
+    guard phase == .annotating else { return }
+    switch event.type {
+    case .flagsChanged:
+      let flags = event.modifierFlags.intersection([.command, .option, .shift, .control])
+      let hasTextResponder = windows.allObjects.contains { $0.firstResponder is NSTextView }
+      state.setPeekingOriginalTranslations(
+        flags == .option && NSEvent.pressedMouseButtons == 0 && !hasTextResponder
+      )
+    case .leftMouseDown, .rightMouseDown, .keyDown:
+      state.setPeekingOriginalTranslations(false)
+    default:
+      break
+    }
+  }
+
+  /// Settings opens behind a `.screenSaver` overlay. Step down to a normal window so it
+  /// can come forward; the overlay returns to its level when it is clicked again.
+  private func yieldToSettingsWindow() {
+    guard !didComplete, phase == .annotating else { return }
+    for window in windows.allObjects {
+      window.level = .normal
+    }
+  }
+
+  private func restoreOverlayLevelIfNeeded(for window: NSWindow) {
+    guard !didComplete, windows.contains(window), window.level != .screenSaver else { return }
+    for window in windows.allObjects {
+      window.level = .screenSaver
+      window.orderFrontRegardless()
+    }
+  }
+
+  private func installWindowObservers() {
+    settingsObserver = NotificationCenter.default.addObserver(
+      forName: .annotateAgentWillOpenSettings,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.yieldToSettingsWindow()
+      }
+    }
+    keyWindowObserver = NotificationCenter.default.addObserver(
+      forName: NSWindow.didBecomeKeyNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] notification in
+      MainActor.assumeIsolated {
+        guard let window = notification.object as? NSWindow else { return }
+        self?.restoreOverlayLevelIfNeeded(for: window)
+      }
+    }
+  }
+
+  private func removeWindowObservers() {
+    if let settingsObserver {
+      NotificationCenter.default.removeObserver(settingsObserver)
+      self.settingsObserver = nil
+    }
+    if let keyWindowObserver {
+      NotificationCenter.default.removeObserver(keyWindowObserver)
+      self.keyWindowObserver = nil
     }
   }
 
@@ -505,6 +675,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
 
   private func finish(pinToScreen: Bool) async {
     guard phase == .annotating else { return }
+    stopIntelligence()
     if let selectionRect, let crop = cropImage(for: selectionRect) {
       self.selectionRect = crop.localRect
       state.replaceSourceImagePreservingAnnotations(crop.image)
@@ -596,8 +767,27 @@ final class InlineAreaAnnotateSession: ObservableObject {
     return result
   }
 
+  /// A provider (process, network) or a translation must not outlive the capture.
+  private func stopIntelligence() {
+    state.agent.stop()
+    state.cancelAutoTranslate()
+    state.endTranslateAreaSelection()
+    state.setPeekingOriginalTranslations(false)
+  }
+
   private func installKeyMonitors() {
-    localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
+    installWindowObservers()
+    localKeyMonitor = NSEvent.addLocalMonitorForEvents(
+      matching: [.keyDown, .keyUp, .flagsChanged, .leftMouseDown, .rightMouseDown]
+    ) { [weak self] event in
+      self?.updateTranslationPeek(for: event)
+      guard event.type == .keyDown || event.type == .keyUp else {
+        // The panels only become key for text input, so a click is what brings them back.
+        if event.type == .leftMouseDown || event.type == .rightMouseDown, let window = event.window {
+          self?.restoreOverlayLevelIfNeeded(for: window)
+        }
+        return event
+      }
       guard self?.handleKeyEvent(event) == true else { return event }
       return nil
     }
@@ -609,6 +799,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
   }
 
   private func removeKeyMonitors() {
+    removeWindowObservers()
     if let localKeyMonitor {
       NSEvent.removeMonitor(localKeyMonitor)
       self.localKeyMonitor = nil
@@ -711,6 +902,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
     didComplete = true
     isMoveModifierActive = false
     selectionPointerLocation = nil
+    stopIntelligence()
     removeKeyMonitors()
     removeSelectionMonitor()
     stopPointerTracking()

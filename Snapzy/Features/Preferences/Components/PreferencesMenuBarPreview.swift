@@ -197,9 +197,11 @@ struct MenuBarSettingsPreview: View {
     let isHovered = hoveredRow == id
 
     return HStack(spacing: 7) {
-      Image(systemName: symbol)
-        .font(.system(size: 12, weight: .regular))
-        .frame(width: 16)
+      if showsMenuIcons {
+        Image(systemName: symbol)
+          .font(.system(size: 12, weight: .regular))
+          .frame(width: 16)
+      }
 
       Text(title)
         .font(.system(size: 13))
@@ -237,6 +239,15 @@ struct MenuBarSettingsPreview: View {
       .frame(height: 1)
       .padding(.horizontal, 8)
       .padding(.vertical, 5)
+  }
+
+  /// AppKit collapses the image column when it hides menu images on macOS 27, so the
+  /// preview drops the glyph entirely rather than reserving its slot.
+  private var showsMenuIcons: Bool {
+    if #available(macOS 27.0, *) {
+      return store.showItemIcons
+    }
+    return true
   }
 
   // MARK: - Content Mapping

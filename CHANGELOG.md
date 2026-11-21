@@ -4,6 +4,63 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.5] - 2026-11-21
+
+### Features
+- Include menu icon visibility in TOML config (#776) (905e6757)
+
+### Bug Fixes
+- Restore menu item icons on macOS 27 (#773) (af30c722)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @williamcachamwri
+
+## [2.3.0-beta.4] - 2026-11-21
+
+### Features
+- rotate individual annotations (#772) (ad995855)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
+## [2.3.0-beta.3] - 2026-11-20
+
+### Features
+- Added recording area border shown during recording, independent of dim (#545) (#768) (494f494b)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
+## [2.3.0-beta.2] - 2026-11-20
+
+### Features
+- Added auto-expanding canvas to the Annotate editor (#492) (#766) (3f52d5a2)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
+## [2.3.0-beta.1] - 2026-11-20
+
+### Features
+- Added Quick Access Optimize action to shrink screenshots (#763) (49ddfbdc)
+- Added Video Editor Studio recording, editable layers, captions and Studio-aware agent (#760) (ad07e833)
+- Added AI agent for Annotate and Video Editor (#755) (837947f4)
+
+### Bug Fixes
+- Stop the video fixture from hanging CI and collect test-host crash reports (#764) (22ea076c)
+
+### Chore
+- ci: split CI into parallel checks, test and release-build jobs (#759) (4a61039c)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.2.0] - 2026-11-18
 
 ### Features

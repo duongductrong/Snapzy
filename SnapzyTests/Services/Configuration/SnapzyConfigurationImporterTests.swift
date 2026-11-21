@@ -430,6 +430,53 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertTrue(manager.isActionShortcutEnabled(for: .autoRedactSensitiveData))
   }
 
+  func testImportAppliesVideoEditorAIPromptShortcut() {
+    let defaults = UserDefaultsFactory.make()
+    let manager = VideoEditorShortcutManager.shared
+    manager.resetToDefaults()
+    defer { manager.resetToDefaults() }
+
+    let source = """
+    schema_version = 1
+
+    [shortcuts.video_editor.ai_prompt]
+    enabled = false
+    key = "j"
+    modifiers = ["command", "option"]
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(manager.shortcut(for: .aiPrompt)?.displayString, "⌘ ⌥ J")
+    XCTAssertFalse(manager.isActionShortcutEnabled(for: .aiPrompt))
+  }
+
+  func testImportRejectsReservedVideoEditorShortcut() {
+    let defaults = UserDefaultsFactory.make()
+    let manager = VideoEditorShortcutManager.shared
+    manager.resetToDefaults()
+    defer { manager.resetToDefaults() }
+
+    let source = """
+    schema_version = 1
+
+    [shortcuts.video_editor.ai_prompt]
+    key = "z"
+    modifiers = ["command"]
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertEqual(manager.shortcut(for: .aiPrompt), VideoEditorShortcutManager.defaultAIPrompt)
+  }
+
+  func testDefaultDocumentIncludesVideoEditorAIPromptShortcut() {
+    let source = SnapzyConfigurationDefaultDocument.toml()
+    XCTAssertTrue(source.contains("[shortcuts.video_editor.ai_prompt]"))
+  }
+
   func testImportAppliesNewConfigurationFields() {
     let defaults = UserDefaultsFactory.make()
     let manager = QuickAccessManager.shared
@@ -579,7 +626,8 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
       store.applyConfiguration(
         order: originalOrder,
         hiddenItems: originalHidden,
-        iconStyle: originalStyle
+        iconStyle: originalStyle,
+        showItemIcons: nil
       )
     }
     let source = """
@@ -616,6 +664,82 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
 
     XCTAssertTrue(result.hasErrors)
     XCTAssertEqual(store.iconStyle, originalStyle)
+  }
+
+  func testImportAppliesMenuBarShowItemIcons() {
+    let defaults = UserDefaultsFactory.make()
+    let store = MenuBarCustomizationStore.shared
+    let originalShowItemIcons = store.showItemIcons
+    defer { store.setShowItemIcons(originalShowItemIcons) }
+
+    for expected in [!originalShowItemIcons, originalShowItemIcons] {
+      let source = """
+      schema_version = 1
+
+      [menu_bar]
+      show_item_icons = \(expected)
+      """
+
+      let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+      XCTAssertFalse(result.hasErrors)
+      XCTAssertEqual(store.showItemIcons, expected)
+    }
+  }
+
+  func testImportRejectsNonBooleanMenuBarShowItemIcons() {
+    let defaults = UserDefaultsFactory.make()
+    let store = MenuBarCustomizationStore.shared
+    let originalShowItemIcons = store.showItemIcons
+    defer { store.setShowItemIcons(originalShowItemIcons) }
+    let source = """
+    schema_version = 1
+
+    [menu_bar]
+    show_item_icons = "yes"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertTrue(result.issues.contains { $0.message == "menu_bar.show_item_icons must be a boolean" })
+    XCTAssertEqual(store.showItemIcons, originalShowItemIcons)
+  }
+
+  func testImportWithoutMenuBarShowItemIconsLeavesValueUnchanged() {
+    let defaults = UserDefaultsFactory.make()
+    let store = MenuBarCustomizationStore.shared
+    let originalShowItemIcons = store.showItemIcons
+    defer { store.setShowItemIcons(originalShowItemIcons) }
+    store.setShowItemIcons(true)
+    // Re-import the current order so applyConfiguration runs with the key absent.
+    let currentOrder = store.itemOrder.map { "\"\($0.rawValue)\"" }.joined(separator: ", ")
+    let source = """
+    schema_version = 1
+
+    [menu_bar]
+    item_order = [\(currentOrder)]
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertTrue(store.showItemIcons)
+  }
+
+  func testExportIncludesMenuBarShowItemIcons() throws {
+    let store = MenuBarCustomizationStore.shared
+    let originalShowItemIcons = store.showItemIcons
+    defer { store.setShowItemIcons(originalShowItemIcons) }
+
+    for expected in [true, false] {
+      store.setShowItemIcons(expected)
+      let document = try SimpleTOMLParser.parse(
+        SnapzyConfigurationExporter.exportTOML(defaults: UserDefaultsFactory.make())
+      )
+
+      XCTAssertEqual(document.value(at: "menu_bar", "show_item_icons")?.boolValue, expected)
+    }
   }
 
   // MARK: - History display style

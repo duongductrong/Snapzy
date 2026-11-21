@@ -16406,6 +16406,146 @@
         }
       }
     },
+    "preferences-menubar.show-item-icons-title": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbole in Menüs anzeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show icons in menus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar iconos en los menús"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher les icônes dans les menus"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת סמלים בתפריטים"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューにアイコンを表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메뉴에 아이콘 표시"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать значки в меню"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiện biểu tượng trong menu"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在菜单中显示图标"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在選單中顯示圖示"
+          }
+        }
+      }
+    },
+    "preferences-menubar.show-item-icons-description": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 27 blendet Symbole in Menüs standardmäßig aus. Aktiviere diese Option, um sie wieder anzuzeigen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 27 hides icons in menus by default. Turn this on to show them again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 27 oculta los iconos de los menús de forma predeterminada. Activa esta opción para volver a mostrarlos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 27 masque par défaut les icônes des menus. Activez cette option pour les réafficher."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 27 מסתיר כברירת מחדל סמלים בתפריטים. הפעלת אפשרות זו תציג אותם שוב."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 27 ではメニューのアイコンが既定で非表示になります。オンにすると再び表示されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 27은 기본적으로 메뉴 아이콘을 숨깁니다. 이 옵션을 켜면 다시 표시됩니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 27 по умолчанию скрывает значки в меню. Включите этот параметр, чтобы показать их снова."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 27 mặc định ẩn biểu tượng trong menu. Bật tuỳ chọn này để hiện lại."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 27 默认隐藏菜单中的图标。开启此选项可重新显示。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 27 預設隱藏選單中的圖示。開啟此選項可重新顯示。"
+          }
+        }
+      }
+    },
     "preferences-menubar.import-button": {
       "localizations": {
         "de": {
@@ -17812,6 +17952,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "鍵盤快速鍵"
+          }
+        }
+      }
+    },
+    "preferences.tab.ai": {
+      "comment": "Preferences tab title for the Annotate AI prompt (Ask) settings",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KI"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בינה מלאכותית"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ИИ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
           }
         }
       }

@@ -103,9 +103,11 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("remember_last_area", true)
     writer.value("include_snapzy", false)
     writer.value("show_cursor", true)
+    writer.value("studio_mode", false)
     writer.value("highlight_clicks", false)
     writer.value("show_keystrokes", false)
     writer.value("video_editor_zoom_transition_duration", 0.4)
+    writer.value("video_editor_caption_language", "")
 
     writer.section("recording.mouse_highlight")
     writer.value("size", 50)
@@ -192,10 +194,20 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("bring_forward_after_drag", false)
     writer.value("quick_properties_sync", true)
     writer.value("combine_save_as_edit", true)
+    writer.value("auto_expand_canvas", true)
     writer.value("crop_snap_to_edges", true)
     writer.value("highlighter_text_snapping", true)
     writer.value("measure_unit", MeasureUnit.points.rawValue)
     writer.value("measure_axis", MeasureAxis.both.rawValue)
+
+    writer.section("annotate.ai")
+    writer.value("provider", AgentProviderSelection.automatic.persistedValue)
+    writer.value("send_image", true)
+    writer.value("cli_timeout", AnnotateAgentAISettings.defaultCLITimeout)
+    for kind in AnnotateAgentCLIKind.allCases {
+      writer.value("\(kind.rawValue)_model", "")
+      writer.value("\(kind.rawValue)_effort", "")
+    }
   }
 
   private static func writeShortcuts(_ writer: inout SimpleTOMLWriter) {
@@ -249,6 +261,12 @@ enum SnapzyConfigurationDefaultDocument {
       writer.section("shortcuts.annotate_actions.\(kind.configKey)")
       writer.value("enabled", true)
       writeShortcutValues(&writer, shortcut: annotateActionShortcut(for: kind))
+    }
+
+    for kind in VideoEditorActionShortcutKind.allCases {
+      writer.section("shortcuts.video_editor.\(kind.configKey)")
+      writer.value("enabled", true)
+      writeShortcutValues(&writer, shortcut: VideoEditorShortcutManager.defaultShortcut(for: kind))
     }
   }
 
@@ -326,6 +344,7 @@ enum SnapzyConfigurationDefaultDocument {
     case .autoRedactSensitiveData: return AnnotateShortcutManager.defaultAutoRedactSensitiveData
     case .autoTranslate: return AnnotateShortcutManager.defaultAutoTranslate
     case .translateArea: return AnnotateShortcutManager.defaultTranslateArea
+    case .aiPrompt: return AnnotateShortcutManager.defaultAIPrompt
     }
   }
 }

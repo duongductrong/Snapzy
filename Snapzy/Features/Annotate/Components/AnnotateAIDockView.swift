@@ -6,11 +6,18 @@
 //  single glass orb with the multi-hue AI glyph (the same hues as the translation
 //  reading rim). Clicking it grows the glass horizontally into a small toolbar:
 //
-//    [ orb ] | [ Translate ] [ Area ] [ 🌐 Language ⌄ ] [ ⋯ ]
+//    [ orb ] | [ ✦ Ask ] | [ Translate ] [ Area ] [ 🌐 Language ⌄ ] [ ⋯ ]
 //
-//  Each feature is its own section after the orb, separated by a hairline, so
-//  future AI tools (e.g. the prompt pen) slot in as another section without
-//  changing the dock itself.
+//  "Ask" opens the AI prompt in the same glass: the tools leave, Ask turns into a back
+//  button and the field slides in. While the agent works the field becomes a live
+//  status line and the dock carries the reading rim.
+//
+//    [ orb ] [ ‹ ] [ Describe what to annotate…        ] [ ◉ Mock ⌄ ] [ ↑ ]
+//
+//  Translate / Area runs the same way: the tools give way to a live status line and a
+//  stop button in the same glass, then the dock returns to where it was.
+//
+//    [ orb ] [ 文A ] [ Reading text…   esc ] [ ■ ]
 //
 
 import AppKit
@@ -18,14 +25,24 @@ import SwiftUI
 
 struct AnnotateAIDockView: View {
   @ObservedObject var state: AnnotateState
+  @ObservedObject private var agent: AnnotateAgentController
+  /// Widest the dock may grow (the canvas width minus margins).
+  let maxWidth: CGFloat
+
   @ObservedObject private var shortcuts = AnnotateShortcutManager.shared
-  @State private var isExpanded = false
+  @State private var promptGlow: Double = 0
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  fileprivate static let height: CGFloat = 40
-  fileprivate static let inset: CGFloat = 4
-  fileprivate static let itemHeight: CGFloat = height - inset * 2
+  static let height: CGFloat = 40
+  static let inset: CGFloat = 4
+  static let itemHeight: CGFloat = height - inset * 2
+
+  init(state: AnnotateState, maxWidth: CGFloat = .infinity) {
+    self.state = state
+    _agent = ObservedObject(wrappedValue: state.agent)
+    self.maxWidth = maxWidth
+  }
 
   private var expandAnimation: Animation {
     reduceMotion ? .easeInOut(duration: 0.18) : .spring(response: 0.42, dampingFraction: 0.86)
@@ -33,7 +50,26 @@ struct AnnotateAIDockView: View {
 
   /// Annotate mode only, same rule as the Auto Translate actions; stays up while a run finishes.
   private var isAvailable: Bool {
-    state.canAutoTranslate || state.isAutoTranslateRunning
+    state.canAutoTranslate || state.isAutoTranslateRunning || agent.isRunning
+  }
+
+  private var isWorking: Bool {
+    state.isAutoTranslateRunning || agent.isRunning
+  }
+
+  private var isPrompt: Bool { agent.isPromptPresented }
+
+  private var isExpanded: Bool {
+    get { agent.isDockExpanded }
+    nonmutating set { agent.isDockExpanded = newValue }
+  }
+
+  private var isTranslating: Bool { state.isAutoTranslateRunning }
+
+  /// Rounded rect with the capsule's radius: a capsule at one line, a soft card when the
+  /// prompt wraps onto more lines.
+  private var dockShape: RoundedRectangle {
+    RoundedRectangle(cornerRadius: Radius.panel, style: .continuous)
   }
 
   var body: some View {
@@ -47,47 +83,111 @@ struct AnnotateAIDockView: View {
   }
 
   private var dock: some View {
-    HStack(spacing: 0) {
+    HStack(alignment: .bottom, spacing: 0) {
       AnnotateAIDockOrb(
-        isExpanded: isExpanded,
-        isWorking: state.isAutoTranslateRunning
+        isExpanded: isExpanded || isPrompt || isTranslating,
+        isWorking: isWorking
       ) {
-        withAnimation(expandAnimation) { isExpanded.toggle() }
+        withAnimation(expandAnimation) {
+          // While a translation runs the glass belongs to its status; stop ends it.
+          guard !isTranslating else { return }
+          if isPrompt {
+            agent.dismissPrompt()
+            isExpanded = false
+          } else {
+            isExpanded.toggle()
+          }
+        }
       }
 
-      if isExpanded {
+      if isTranslating {
+        // Translate / Area morph into the run's status line in the same glass, like Ask.
+        AnnotateAIDockTranslateStatusRow(state: state, maxWidth: maxWidth)
+          .transition(promptTransition)
+      } else if isPrompt {
+        AnnotateAIDockPromptRow(
+          state: state,
+          agent: agent,
+          maxWidth: maxWidth
+        ) {
+          withAnimation(expandAnimation) { agent.dismissPrompt() }
+        }
+        .transition(promptTransition)
+      } else if isExpanded {
         Group {
           AnnotateAIDockHairline()
+          if AnnotateAgentProviderResolver.isFeatureAvailable {
+            AnnotateAIDockAskItem(
+              help: help(L10n.AnnotateAI.askHelp, .aiPrompt)
+            ) {
+              withAnimation(expandAnimation) { agent.presentPrompt() }
+            }
+            .disabled(!agent.isAvailable)
+            AnnotateAIDockHairline()
+          }
           AnnotateAIDockTranslateSection(state: state, shortcuts: shortcuts)
-          // Future AI sections (prompt pen, …) go here, each after its own hairline.
         }
         .transition(sectionTransition)
       }
     }
     .padding(Self.inset)
-    .frame(height: Self.height)
-    .clipShape(Capsule(style: .continuous))
+    .frame(minHeight: Self.height)
+    .clipShape(dockShape)
     .liquidGlassSurface(
-      shape: Capsule(style: .continuous),
+      shape: dockShape,
       substrate: LiquidGlassTokens.baseDarkness,
       tint: 0.04,
       highlight: .none,
       withRimLighting: true
     )
     .overlay {
-      if state.isAutoTranslateRunning {
-        TranslationReadingRim(shape: Capsule(style: .continuous))
+      if isWorking {
+        TranslationReadingRim(shape: dockShape)
           .transition(.opacity)
       }
     }
+    .overlay {
+      // Ask's colors flow into the field's border as it opens, then settle.
+      dockShape
+        .strokeBorder(
+          AngularGradient(colors: TranslationCardMotion.rimHues, center: .center),
+          lineWidth: 1.5
+        )
+        .opacity(promptGlow)
+        .allowsHitTesting(false)
+    }
     .shadow(color: .black.opacity(0.18), radius: 12, y: 5)
     .fixedSize()
-    .animation(.easeInOut(duration: 0.25), value: state.isAutoTranslateRunning)
+    .animation(.easeInOut(duration: 0.25), value: isWorking)
+    .animation(expandAnimation, value: isPrompt)
+    .animation(expandAnimation, value: isTranslating)
     .onChange(of: isAvailable) { available in
-      if !available { isExpanded = false }
+      if !available {
+        isExpanded = false
+        agent.dismissPrompt()
+      }
+    }
+    .onChange(of: isPrompt) { presented in
+      // ⌘K opens the prompt straight from the orb; back lands on the tools.
+      if presented {
+        isExpanded = true
+        flashPromptGlow()
+      }
     }
     .accessibilityElement(children: .contain)
     .accessibilityLabel(L10n.AnnotateTranslate.aiTools)
+  }
+
+  private func flashPromptGlow() {
+    guard !reduceMotion else { return }
+    promptGlow = 0.9
+    withAnimation(.easeOut(duration: 0.7).delay(0.15)) { promptGlow = 0 }
+  }
+
+  private func help(_ title: String, _ kind: AnnotateActionShortcutKind) -> String {
+    guard shortcuts.isActionShortcutEnabled(for: kind),
+          let config = shortcuts.shortcut(for: kind) else { return title }
+    return "\(title) (\(config.displayString))"
   }
 
   /// Items fade and settle in from the orb while the glass grows; they leave faster than they come.
@@ -96,29 +196,57 @@ struct AnnotateAIDockView: View {
     return .asymmetric(
       insertion: .opacity.combined(with: .scale(scale: 0.86, anchor: .leading))
         .animation(.spring(response: 0.42, dampingFraction: 0.86).delay(0.05)),
-      removal: .opacity.combined(with: .scale(scale: 0.92, anchor: .leading))
-        .animation(.easeOut(duration: 0.14))
+      removal: .modifier(
+        active: AnnotateAIDockBlurFade(radius: 4, opacity: 0, scale: 0.92),
+        identity: AnnotateAIDockBlurFade(radius: 0, opacity: 1, scale: 1)
+      )
+      .animation(.easeOut(duration: 0.14))
     )
+  }
+
+  /// The field slides in from where Ask was; it leaves quickly with a little blur.
+  private var promptTransition: AnyTransition {
+    if reduceMotion { return .opacity }
+    return .asymmetric(
+      insertion: .opacity.combined(with: .offset(x: -8))
+        .animation(.spring(response: 0.42, dampingFraction: 0.86).delay(0.05)),
+      removal: .modifier(
+        active: AnnotateAIDockBlurFade(radius: 4, opacity: 0, scale: 0.96),
+        identity: AnnotateAIDockBlurFade(radius: 0, opacity: 1, scale: 1)
+      )
+      .animation(.easeOut(duration: 0.14))
+    )
+  }
+}
+
+struct AnnotateAIDockBlurFade: ViewModifier {
+  let radius: CGFloat
+  let opacity: Double
+  let scale: CGFloat
+
+  func body(content: Content) -> some View {
+    content
+      .blur(radius: radius)
+      .opacity(opacity)
+      .scaleEffect(scale, anchor: .leading)
   }
 }
 
 // MARK: - Orb
 
 /// The AI glyph in a circle. Static multi-hue at rest; the hues turn slowly and glow while working.
-private struct AnnotateAIDockOrb: View {
+struct AnnotateAIDockOrb: View {
   let isExpanded: Bool
   let isWorking: Bool
+  /// Tooltip and VoiceOver name at rest.
+  var label: String = L10n.AnnotateTranslate.aiTools
+  /// Tooltip while collapsed; falls back to `label` (e.g. to append the shortcut).
+  var help: String? = nil
   let action: () -> Void
 
   @State private var isHovered = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.colorScheme) private var colorScheme
-
-  private static let symbolName: String = {
-    NSImage(systemSymbolName: "apple.intelligence", accessibilityDescription: nil) != nil
-      ? "apple.intelligence"
-      : "sparkles"
-  }()
 
   var body: some View {
     Button(action: action) {
@@ -140,7 +268,7 @@ private struct AnnotateAIDockOrb: View {
             .blur(radius: 9)
             .opacity(glowOpacity)
 
-          Image(systemName: Self.symbolName)
+          Image(systemName: AnnotateAgentGlyph.symbolName)
             .font(.system(size: 16, weight: .medium))
             .foregroundStyle(gradient)
             .scaleEffect(isHovered ? 1.06 : 1)
@@ -153,8 +281,8 @@ private struct AnnotateAIDockOrb: View {
     .onHover { hovering in
       withAnimation(LiquidGlassTokens.hoverSpring) { isHovered = hovering }
     }
-    .help(isExpanded ? L10n.Common.close : L10n.AnnotateTranslate.aiTools)
-    .accessibilityLabel(L10n.AnnotateTranslate.aiTools)
+    .help(isExpanded ? L10n.Common.close : (help ?? label))
+    .accessibilityLabel(label)
     .accessibilityAddTraits(isExpanded ? .isSelected : [])
   }
 
@@ -170,6 +298,467 @@ private struct AnnotateAIDockOrb: View {
     let duration = TranslationCardMotion.rimTurnDuration * 0.6
     let turn = date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: duration) / duration
     return rest + .degrees(turn * 360)
+  }
+}
+
+// MARK: - Ask
+
+/// The AI prompt's entry: the only dock item painted with the AI hues. Glyph and label carry
+/// the gradient; a tinted pill with a gradient hairline sits behind. On hover the hues turn and
+/// bloom. The first time it appears it shimmers once as a hint.
+private struct AnnotateAIDockAskItem: View {
+  let help: String
+  let action: () -> Void
+
+  @AppStorage("annotateAgent.didUseAsk") private var didUseAsk = false
+  /// The hint plays once per launch until Ask has been used, not every time the dock opens.
+  private static var didShimmerThisLaunch = false
+  @State private var isHovered = false
+  @State private var shimmerStart: Date?
+  @Environment(\.isEnabled) private var isEnabled
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.colorSchemeContrast) private var contrast
+
+  private static let shimmerDuration: TimeInterval = 0.9
+
+  var body: some View {
+    Button {
+      didUseAsk = true
+      action()
+    } label: {
+      TimelineView(.animation(paused: !isAnimating)) { timeline in
+        let angle = gradientAngle(at: timeline.date)
+        let gradient = AngularGradient(colors: TranslationCardMotion.rimHues, center: .center, angle: angle)
+        let label = HStack(spacing: 6) {
+          Image(systemName: AnnotateAgentGlyph.askSymbolName)
+            .font(.system(size: 13, weight: .medium))
+          Text(L10n.AnnotateAI.ask)
+            .font(.system(size: 12, weight: .semibold))
+            .lineLimit(1)
+        }
+        label
+          .foregroundStyle(gradient)
+          .overlay { shimmer(at: timeline.date).mask(label) }
+          .padding(.horizontal, 11)
+          .frame(minWidth: AnnotateAIDockView.itemHeight)
+          .frame(height: AnnotateAIDockView.itemHeight)
+          .background {
+            // Nothing at rest: the AI colors alone set Ask apart. Hover = the same neutral
+            // fill as the other items plus a faint bloom of the hues.
+            ZStack {
+              Capsule(style: .continuous)
+                .fill(gradient)
+                .blur(radius: 10)
+                .opacity(isHovered ? 0.18 : 0)
+              Capsule(style: .continuous)
+                .fill(Color.primary.opacity(isHovered ? 0.08 : 0))
+              if contrast == .increased {
+                Capsule(style: .continuous)
+                  .strokeBorder(gradient, lineWidth: 1)
+                  .opacity(0.8)
+              }
+            }
+          }
+      }
+      .contentShape(Capsule(style: .continuous))
+      .opacity(isEnabled ? 1 : 0.45)
+    }
+    .buttonStyle(AnnotateAIDockPressStyle(pressedScale: 0.96))
+    .onHover { hovering in
+      withAnimation(LiquidGlassTokens.hoverSpring) { isHovered = hovering && isEnabled }
+    }
+    .onAppear {
+      guard !didUseAsk, !reduceMotion, !Self.didShimmerThisLaunch else { return }
+      Self.didShimmerThisLaunch = true
+      let start = Date().addingTimeInterval(0.35)
+      shimmerStart = start
+      // Clearing it pauses the timeline once the hint has played.
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.35 + Self.shimmerDuration + 0.05) {
+        if shimmerStart == start { shimmerStart = nil }
+      }
+    }
+    .help(help)
+    .accessibilityLabel(L10n.AnnotateAI.askHelp)
+  }
+
+  private var isAnimating: Bool {
+    !reduceMotion && (isHovered || shimmerStart != nil)
+  }
+
+  private func gradientAngle(at date: Date) -> Angle {
+    let rest = Angle.degrees(-135)
+    guard isHovered, !reduceMotion else { return rest }
+    return rest + .degrees(date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 6) / 6 * 360)
+  }
+
+  /// One soft band of light across the pill, once.
+  @ViewBuilder
+  private func shimmer(at date: Date) -> some View {
+    if let shimmerStart {
+      let t = date.timeIntervalSince(shimmerStart) / Self.shimmerDuration
+      if t > 0, t < 1 {
+        GeometryReader { proxy in
+          let band = proxy.size.width * 0.5
+          LinearGradient(
+            colors: [.clear, .white.opacity(0.45), .clear],
+            startPoint: .leading,
+            endPoint: .trailing
+          )
+          .frame(width: band)
+          .offset(x: -band + (proxy.size.width + band) * (1 - pow(1 - t, 2)))
+          .blendMode(.plusLighter)
+        }
+        .allowsHitTesting(false)
+      }
+    }
+  }
+}
+
+// MARK: - Prompt
+
+private struct AnnotateAIDockPromptRow: View {
+  @ObservedObject var state: AnnotateState
+  @ObservedObject var agent: AnnotateAgentController
+  let maxWidth: CGFloat
+  let onBack: () -> Void
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  /// The field hugs its text (placeholder, draft or status) between these widths;
+  /// past the maximum the single-line field scrolls with the caret.
+  private static let minimumFieldWidth: CGFloat = 140
+  private static let maximumFieldWidth: CGFloat = 300
+  /// Width changes snap to this step so typing doesn't resize the glass on every key.
+  private static let fieldWidthStep: CGFloat = 16
+  /// Orb, back, provider, send and paddings.
+  private static let chromeWidth: CGFloat = 170
+  private static let fieldFont = AnnotateAIDockPromptField.font
+
+  private var placeholderText: String {
+    agent.hasConversation ? L10n.AnnotateAI.followUpPlaceholder : L10n.AnnotateAI.placeholder
+  }
+
+  private var fieldWidth: CGFloat {
+    let available = maxWidth - Self.chromeWidth - (selectionCount > 0 ? 110 : 0)
+    // Both placeholders, whichever shows: switching provider resets the conversation and
+    // would otherwise resize the dock under a draft that hides the placeholder anyway.
+    var content = max(Self.textWidth(L10n.AnnotateAI.placeholder), Self.textWidth(L10n.AnnotateAI.followUpPlaceholder))
+    if agent.isRunning {
+      content = max(content, Self.textWidth(agent.status))
+    } else {
+      content = max(content, Self.textWidth(agent.draft))
+    }
+    // Room for the caret, then snap up to the next step.
+    let stepped = ((content + 8) / Self.fieldWidthStep).rounded(.up) * Self.fieldWidthStep
+    let upper = max(min(Self.maximumFieldWidth, available), Self.minimumFieldWidth)
+    return min(max(stepped, Self.minimumFieldWidth), upper)
+  }
+
+  private static func textWidth(_ text: String) -> CGFloat {
+    guard !text.isEmpty else { return 0 }
+    return ceil((text as NSString).size(withAttributes: [.font: fieldFont]).width)
+  }
+
+  private var selectionCount: Int {
+    agent.isRunning ? 0 : state.selectedAnnotationIds.count
+  }
+
+  var body: some View {
+    HStack(alignment: .bottom, spacing: 2) {
+      backButton
+
+      if selectionCount > 0 {
+        selectionChip
+          .transition(.opacity.combined(with: .scale(scale: 0.9)))
+      }
+
+      ZStack(alignment: .leading) {
+        // The field stays mounted through a run (hidden under the status line) so its
+        // caret comes straight back when the run ends.
+        field
+          .opacity(agent.isRunning ? 0 : 1)
+          .allowsHitTesting(!agent.isRunning)
+          .accessibilityHidden(agent.isRunning)
+        if agent.isRunning {
+          AnnotateAIDockStatusLine(text: agent.status)
+            .transition(.opacity)
+        }
+      }
+      .frame(width: fieldWidth, height: AnnotateAIDockView.itemHeight, alignment: .leading)
+      .padding(.horizontal, 6)
+      .animation(.easeInOut(duration: 0.2), value: agent.isRunning)
+      .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.9), value: fieldWidth)
+
+      providerChip
+      sendButton
+    }
+    .animation(.spring(response: 0.3, dampingFraction: 0.86), value: selectionCount > 0)
+  }
+
+  private var field: some View {
+    // AppKit-backed so the caret lands reliably even while the dock is still animating in;
+    // see AnnotateAIDockPromptField for why @FocusState wasn't enough.
+    AnnotateAIDockPromptField(
+      text: $agent.draft,
+      placeholder: placeholderText,
+      focusRequest: agent.promptFocusRequest,
+      isActive: !agent.isRunning,
+      onSubmit: { agent.submit() },
+      onEscape: {
+        if agent.draft.isEmpty {
+          onBack()
+        } else {
+          agent.handleEscape()
+        }
+      }
+    )
+    .frame(height: AnnotateAIDockView.itemHeight)
+    .accessibilityLabel(L10n.AnnotateAI.askHelp)
+  }
+
+  private var backButton: some View {
+    Button(action: onBack) {
+      Image(systemName: "chevron.left")
+        .font(.system(size: 12, weight: .semibold))
+        .frame(width: AnnotateAIDockView.itemHeight)
+    }
+    .buttonStyle(AnnotateAIDockItemStyle())
+    .disabled(agent.isRunning)
+    .help(L10n.AnnotateAI.back)
+    .accessibilityLabel(L10n.AnnotateAI.back)
+  }
+
+  private var selectionChip: some View {
+    HStack(spacing: 4) {
+      Text(L10n.AnnotateAI.selected(selectionCount))
+        .font(.system(size: 11, weight: .medium))
+        .lineLimit(1)
+      Button {
+        state.setSelectedAnnotationIds([])
+      } label: {
+        Image(systemName: "xmark")
+          .font(.system(size: 8, weight: .bold))
+          .frame(width: 14, height: 14)
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .help(L10n.AnnotateAI.clearSelection)
+    }
+    .foregroundStyle(Color.accentColor)
+    .padding(.horizontal, 8)
+    .frame(height: 22)
+    .background(Capsule(style: .continuous).fill(Color.accentColor.opacity(0.16)))
+    .padding(.bottom, (AnnotateAIDockView.itemHeight - 22) / 2)
+    .fixedSize()
+  }
+
+  private var providerChip: some View {
+    let provider = agent.provider
+    return AnnotateAIDockMenuButton(help: provider?.displayName ?? L10n.AnnotateAI.notConfigured, makeMenu: providerMenu) { _ in
+      HStack(spacing: 5) {
+        // Icon only: the name lives in the tooltip and the menu, keeping the dock compact.
+        AnnotateAgentProviderIcon(
+          symbolName: provider?.symbolName ?? "exclamationmark.circle",
+          logoImageName: provider?.logoImageName
+        )
+        .accessibilityLabel(provider?.displayName ?? L10n.AnnotateAI.notConfigured)
+        if agent.hasConversation {
+          Circle()
+            .fill(Color.accentColor)
+            .frame(width: 5, height: 5)
+        }
+        Image(systemName: "chevron.down")
+          .font(.system(size: 8, weight: .bold))
+          .opacity(0.6)
+      }
+      .padding(.horizontal, 8)
+    }
+    .disabled(agent.isRunning)
+  }
+
+  private func providerMenu() -> NSMenu {
+    AnnotateAIDockProviderMenu.make(
+      provider: agent.provider,
+      selection: agent.providerSelection,
+      isRunning: agent.isRunning,
+      hasConversation: agent.hasConversation,
+      onSelect: { [weak agent] in agent?.selectProvider($0) },
+      onNewConversation: { [weak agent] in agent?.startNewConversation() }
+    )
+  }
+
+  @ViewBuilder
+  private var sendButton: some View {
+    if agent.isRunning {
+      AnnotateAIDockRoundButton(symbol: "stop.fill", isProminent: false, help: L10n.AnnotateAI.stop) {
+        agent.stop()
+      }
+    } else {
+      AnnotateAIDockRoundButton(symbol: "arrow.up", isProminent: true, help: L10n.AnnotateAI.send) {
+        agent.submit()
+      }
+      .disabled(!agent.canSend)
+    }
+  }
+}
+
+// MARK: - Translate status
+
+/// Auto Translate / Translate Area in progress, shown in place of the tools:
+///
+///    [ orb ] [ 文A ] [ Reading text…        esc ] [ ■ ]
+private struct AnnotateAIDockTranslateStatusRow: View {
+  @ObservedObject var state: AnnotateState
+  let maxWidth: CGFloat
+
+  private static let minimumWidth: CGFloat = 120
+  /// Orb, icon, stop and paddings.
+  private static let chromeWidth: CGFloat = 110
+  private static let font = NSFont.systemFont(ofSize: 13, weight: .medium)
+
+  private var status: String {
+    switch state.autoTranslatePhase {
+    case .reading, .idle: L10n.AnnotateTranslate.reading
+    case .translating, .resolving: L10n.Translate.translating
+    }
+  }
+
+  /// Hug the longest phase text so the glass doesn't resize between phases.
+  private var statusWidth: CGFloat {
+    let longest = [L10n.AnnotateTranslate.reading, L10n.Translate.translating]
+      .map { ceil(($0 as NSString).size(withAttributes: [.font: Self.font]).width) }
+      .max() ?? 0
+    let upper = max(maxWidth - Self.chromeWidth, Self.minimumWidth)
+    return min(max(longest + 8, Self.minimumWidth), upper)
+  }
+
+  var body: some View {
+    HStack(alignment: .bottom, spacing: 2) {
+      Image(systemName: state.autoTranslateRegion == nil ? "translate" : "text.viewfinder")
+        .font(.system(size: 12, weight: .medium))
+        .foregroundStyle(LiquidGlassTokens.inkBody)
+        .frame(width: AnnotateAIDockView.itemHeight, height: AnnotateAIDockView.itemHeight)
+
+      AnnotateAIDockStatusLine(text: status)
+        .frame(width: statusWidth, height: AnnotateAIDockView.itemHeight, alignment: .leading)
+
+      Text("esc")
+        .font(.system(size: 10, weight: .semibold))
+        .foregroundStyle(LiquidGlassTokens.inkFaint)
+        .padding(.horizontal, 5)
+        .frame(height: 16)
+        .background(
+          RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(Color.primary.opacity(0.07))
+        )
+        .frame(height: AnnotateAIDockView.itemHeight)
+        .padding(.horizontal, 4)
+        .help(L10n.AnnotateTranslate.cancelHint)
+        .accessibilityHidden(true)
+
+      AnnotateAIDockRoundButton(symbol: "stop.fill", isProminent: false, help: L10n.Common.cancel) {
+        state.cancelAutoTranslate()
+      }
+    }
+    .accessibilityElement(children: .contain)
+  }
+}
+
+/// Pauses the AI status shimmer while its host is off screen (a parked side panel
+/// stays mounted at zero opacity, and a run keeps going after the panel closes).
+private struct AIStatusAnimationPausedKey: EnvironmentKey {
+  static let defaultValue = false
+}
+
+extension EnvironmentValues {
+  var aiStatusAnimationPaused: Bool {
+    get { self[AIStatusAnimationPausedKey.self] }
+    set { self[AIStatusAnimationPausedKey.self] = newValue }
+  }
+}
+
+/// Live status while the agent works: the text in body ink with a band of the AI hues
+/// passing through it, like the dock's reading rim.
+struct AnnotateAIDockStatusLine: View {
+  let text: String
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.aiStatusAnimationPaused) private var isAnimationPaused
+
+  var body: some View {
+    let label = Text(text.isEmpty ? L10n.AnnotateAI.statusThinking : text)
+      .font(.system(size: 13, weight: .medium))
+    label
+      .lineLimit(1)
+      .foregroundStyle(LiquidGlassTokens.inkBody)
+      .overlay {
+        if !reduceMotion {
+          // 30 fps is plenty for a soft band 1.8 s across; display rate (60–120 Hz)
+          // rebuilt this body on the main thread for the whole run.
+          TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: isAnimationPaused)) { timeline in
+            GeometryReader { proxy in
+              let cycle = 1.8
+              let t = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: cycle) / cycle
+              let band = max(proxy.size.width * 0.45, 60)
+              LinearGradient(
+                stops: [
+                  .init(color: .clear, location: 0),
+                  .init(color: TranslationCardMotion.rimHues[0], location: 0.3),
+                  .init(color: TranslationCardMotion.rimHues[2], location: 0.55),
+                  .init(color: TranslationCardMotion.rimHues[3], location: 0.75),
+                  .init(color: .clear, location: 1),
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+              )
+              .frame(width: band)
+              .offset(x: -band + (proxy.size.width + band) * t)
+            }
+          }
+          .mask(label.lineLimit(1).frame(maxWidth: .infinity, alignment: .leading))
+          .allowsHitTesting(false)
+        }
+      }
+      .id(text)
+      .transition(.opacity)
+      .animation(.easeInOut(duration: 0.2), value: text)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .accessibilityLabel(text)
+  }
+}
+
+/// Circular send / stop button at the trailing end of the prompt.
+struct AnnotateAIDockRoundButton: View {
+  let symbol: String
+  let isProminent: Bool
+  let help: String
+  let action: () -> Void
+
+  @Environment(\.isEnabled) private var isEnabled
+  @State private var isHovered = false
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: symbol)
+        .font(.system(size: 12, weight: .bold))
+        .foregroundStyle(isProminent && isEnabled ? Color.white : LiquidGlassTokens.inkPrimary)
+        .frame(width: 26, height: 26)
+        .background(
+          Circle().fill(
+            isProminent && isEnabled
+              ? Color.accentColor
+              : Color.primary.opacity(isHovered ? 0.16 : 0.1)
+          )
+        )
+        .opacity(isEnabled ? 1 : 0.45)
+        .frame(width: AnnotateAIDockView.itemHeight, height: AnnotateAIDockView.itemHeight)
+        .contentShape(Circle())
+    }
+    .buttonStyle(AnnotateAIDockPressStyle())
+    .onHover { hovering in
+      withAnimation(LiquidGlassTokens.hoverSpring) { isHovered = hovering && isEnabled }
+    }
+    .help(help)
+    .accessibilityLabel(help)
   }
 }
 
@@ -312,7 +901,107 @@ private struct AnnotateAIDockTranslateSection: View {
   }
 }
 
+// MARK: - Provider menu
+
+/// The provider chip's menu, shared by every AI dock: current provider, the choices
+/// (Automatic, Apple Intelligence when ready, custom endpoints, agent CLIs), New
+/// Conversation and AI Settings.
+@MainActor
+enum AnnotateAIDockProviderMenu {
+  static func make(
+    provider: AgentProvider?,
+    selection: AgentProviderSelection,
+    isRunning: Bool,
+    hasConversation: Bool,
+    /// `nil` = when Apple Intelligence is ready on this Mac.
+    showsAppleIntelligence: Bool? = nil,
+    onSelect: @escaping (AgentProviderSelection) -> Void,
+    onNewConversation: @escaping () -> Void
+  ) -> NSMenu {
+    let menu = NSMenu()
+    menu.autoenablesItems = false
+    let current = NSMenuItem(title: provider?.displayName ?? L10n.AnnotateAI.notConfigured, action: nil, keyEquivalent: "")
+    current.image = menuImage(symbol: provider?.symbolName ?? "exclamationmark.circle", logo: provider?.logoImageName)
+    current.isEnabled = false
+    menu.addItem(current)
+    menu.addItem(.separator())
+
+    var choices: [(title: String, symbol: String, logo: String?, value: AgentProviderSelection)] = [
+      (L10n.AnnotateAI.automatic, "sparkles", nil, .automatic),
+    ]
+    if showsAppleIntelligence ?? AnnotateAgentAppleIntelligence.isAvailable || selection == .appleIntelligence {
+      choices.append(("Apple Intelligence", "apple.intelligence", nil, .appleIntelligence))
+    }
+    for model in CustomOCRModelStore.shared.models {
+      choices.append((model.name, "network", nil, .endpoint(model.id)))
+    }
+    // Agent CLIs found on this Mac (the selected one stays listed even if it went missing).
+    let installedCLIs = AnnotateAgentCLIDetector.shared.installed
+    for kind in AnnotateAgentCLIKind.allCases where installedCLIs[kind] != nil || selection == .cli(kind) {
+      choices.append((kind.displayName, "terminal", kind.logoImageName, .cli(kind)))
+    }
+    for choice in choices {
+      let item = ClosureMenuItem(title: choice.title, keyEquivalent: "") {
+        onSelect(choice.value)
+      }
+      item.image = menuImage(symbol: choice.symbol, logo: choice.logo)
+      item.state = choice.value == selection ? .on : .off
+      item.isEnabled = !isRunning
+      menu.addItem(item)
+    }
+
+    menu.addItem(.separator())
+    let newConversation = ClosureMenuItem(title: L10n.AnnotateAI.newConversation, keyEquivalent: "") {
+      onNewConversation()
+    }
+    newConversation.image = NSImage(systemSymbolName: "plus.bubble", accessibilityDescription: nil)
+    newConversation.isEnabled = hasConversation && !isRunning
+    menu.addItem(newConversation)
+    let settings = ClosureMenuItem(title: L10n.AnnotateAI.settings, keyEquivalent: "") {
+      AnnotateAgentAISettings.open()
+    }
+    settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
+    menu.addItem(settings)
+    return menu
+  }
+
+  /// A provider's brand mark at menu size, else its SF Symbol.
+  static func menuImage(symbol: String, logo: String?) -> NSImage? {
+    if let logo, let image = NSImage(named: logo)?.copy() as? NSImage {
+      image.size = NSSize(width: 16, height: 16)
+      return image
+    }
+    return NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+  }
+}
+
 // MARK: - Building blocks
+
+/// A provider's icon: its maker's mark when it has one (agent CLIs), else its SF Symbol.
+/// Template marks take the surrounding ink; Claude's keeps its brand color.
+struct AnnotateAgentProviderIcon: View {
+  let symbolName: String
+  let logoImageName: String?
+  var size: CGFloat = 13
+
+  var body: some View {
+    // One fixed slot for every provider: marks are `size` wide but symbols run 15–17pt
+    // (terminal, apple.intelligence…), so switching provider would resize the dock.
+    Group {
+      if let logoImageName {
+        Image(logoImageName)
+          .resizable()
+          .interpolation(.high)
+          .aspectRatio(contentMode: .fit)
+          .frame(width: size, height: size)
+      } else {
+        Image(systemName: symbolName)
+          .font(.system(size: size - 1, weight: .medium))
+      }
+    }
+    .frame(width: size + 4, height: size + 4)
+  }
+}
 
 /// Icon + label segment with a hover glass capsule; accent-tinted while its action is active.
 private struct AnnotateAIDockItem: View {
@@ -338,8 +1027,9 @@ private struct AnnotateAIDockItem: View {
 }
 
 /// A dock segment that pops a native menu just above itself (the dock sits at the bottom).
-private struct AnnotateAIDockMenuButton<Label: View>: View {
+struct AnnotateAIDockMenuButton<Label: View>: View {
   let help: String
+  var itemHeight: CGFloat = AnnotateAIDockView.itemHeight
   let makeMenu: () -> NSMenu
   @ViewBuilder let label: (Bool) -> Label
 
@@ -352,7 +1042,7 @@ private struct AnnotateAIDockMenuButton<Label: View>: View {
     } label: {
       label(isOpen)
     }
-    .buttonStyle(AnnotateAIDockItemStyle(isActive: isOpen))
+    .buttonStyle(AnnotateAIDockItemStyle(isActive: isOpen, itemHeight: itemHeight))
     .background(MenuAnchorView(anchor: anchor))
     .help(help)
   }
@@ -369,17 +1059,19 @@ private struct AnnotateAIDockMenuButton<Label: View>: View {
   }
 }
 
-private struct AnnotateAIDockItemStyle: ButtonStyle {
+struct AnnotateAIDockItemStyle: ButtonStyle {
   var isActive: Bool = false
+  var itemHeight: CGFloat = AnnotateAIDockView.itemHeight
 
   func makeBody(configuration: Configuration) -> some View {
-    AnnotateAIDockItemBody(configuration: configuration, isActive: isActive)
+    AnnotateAIDockItemBody(configuration: configuration, isActive: isActive, itemHeight: itemHeight)
   }
 }
 
-private struct AnnotateAIDockItemBody: View {
+struct AnnotateAIDockItemBody: View {
   let configuration: ButtonStyleConfiguration
   let isActive: Bool
+  var itemHeight: CGFloat = AnnotateAIDockView.itemHeight
 
   @Environment(\.isEnabled) private var isEnabled
   @State private var isHovered = false
@@ -388,8 +1080,8 @@ private struct AnnotateAIDockItemBody: View {
     configuration.label
       .font(.system(size: 12, weight: .medium))
       .foregroundStyle(foreground)
-      .frame(minWidth: AnnotateAIDockView.itemHeight)
-      .frame(height: AnnotateAIDockView.itemHeight)
+      .frame(minWidth: itemHeight)
+      .frame(height: itemHeight)
       .background {
         Capsule(style: .continuous)
           .fill(fill)
@@ -419,19 +1111,23 @@ private struct AnnotateAIDockItemBody: View {
   }
 }
 
-private struct AnnotateAIDockPressStyle: ButtonStyle {
+struct AnnotateAIDockPressStyle: ButtonStyle {
+  var pressedScale: CGFloat = 0.92
+
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .scaleEffect(configuration.isPressed ? 0.92 : 1)
+      .scaleEffect(configuration.isPressed ? pressedScale : 1)
       .animation(LiquidGlassTokens.pressSpring, value: configuration.isPressed)
   }
 }
 
-private struct AnnotateAIDockHairline: View {
+struct AnnotateAIDockHairline: View {
   var body: some View {
     Rectangle()
       .fill(Color.primary.opacity(0.12))
       .frame(width: 1, height: 18)
+      // Same height as the items so the bottom-aligned dock row centers the rule.
+      .frame(height: AnnotateAIDockView.itemHeight)
       .padding(.horizontal, 5)
   }
 }

@@ -75,6 +75,7 @@ final class AnnotateState: ObservableObject {
     var isCropPortraitOrientation: Bool
     var didCutoutAutoApplyCrop: Bool
     var cutoutAutoAppliedCropRect: CGRect?
+    var cropBaselineFootprints: [UUID: CGRect]
   }
 
   private enum UndoEntry {
@@ -241,6 +242,11 @@ final class AnnotateState: ObservableObject {
   /// Area of the run in flight (nil = whole image); the overlay focuses it.
   @Published var autoTranslateRegion: CGRect?
   let autoTranslateRuntime = AnnotateAutoTranslateRuntime()
+  /// AI prompt ("Ask") for this window. Views observe it directly.
+  lazy var agent = AnnotateAgentController(state: self)
+  /// Off where the canvas styling (background, padding, shadow, corners) has no preview,
+  /// i.e. Capture Markup: the AI prompt may only change annotations there.
+  var allowsAgentCanvasChanges = true
 
   /// QuickAccess item ID if opened from quick access card (nil for drag-drop workflow)
   let quickAccessItemId: UUID?
@@ -388,11 +394,11 @@ final class AnnotateState: ObservableObject {
   @Published private(set) var combineResolvedDirection: CombineImagesDirection = .horizontal
   @Published private(set) var combineGap: CGFloat = 0
   @Published private(set) var combineContentBounds: CGRect = .zero
-  @Published var frozenCombineContentBounds: CGRect?
+  @Published var frozenCanvasBounds: CGRect?
   /// Canvas grown live while a layer is dragged or resized past the frozen bounds.
   /// The view keeps its fit scale from the frozen bounds and anchors the frozen area
   /// on screen, so the canvas grows around the pointer instead of rescaling under it.
-  @Published var liveCombineCanvasBounds: CGRect?
+  @Published var liveCanvasBounds: CGRect?
   /// Arrangement placed by dropping or dragging images on the canvas. nil means an
   /// automatic strip built from `combineDirection`; the arrangement buttons reset to it.
   @Published private(set) var combineStitchGrid: CombineStitchGrid?
@@ -412,20 +418,109 @@ final class AnnotateState: ObservableObject {
 
   var effectiveContentBounds: CGRect {
     guard isCombineMode else { return sourceImageBounds }
-    return liveCombineCanvasBounds ?? frozenCombineContentBounds ?? combineContentBounds
+    return liveCanvasBounds ?? frozenCanvasBounds ?? combineContentBounds
   }
 
   /// Bounds the canvas view fits to the viewport. Stays fixed during a gesture even
-  /// when `liveCombineCanvasBounds` grows, so the pointer keeps its canvas position.
-  var combineFitBounds: CGRect {
-    guard isCombineMode else { return sourceImageBounds }
-    return frozenCombineContentBounds ?? combineContentBounds
+  /// when `liveCanvasBounds` grows, so the pointer keeps its canvas position.
+  var canvasFitBounds: CGRect {
+    guard isCombineMode else { return frozenCanvasBounds ?? appliedCanvasRect ?? sourceImageBounds }
+    return frozenCanvasBounds ?? combineContentBounds
+  }
+
+  // MARK: - Auto-expanding canvas (#492)
+
+  /// Settings → Annotate → "Expand canvas automatically". Followed live from defaults.
+  @Published private(set) var isCanvasAutoExpandEnabled: Bool = true
+  /// Off for Capture Markup, whose canvas is the selected screen area.
+  var allowsCanvasAutoExpand = true
+  /// Each annotation's canvas footprint when a crop was last applied. An item still at
+  /// that footprint was cut by the crop and never grows the canvas; once the user moves,
+  /// resizes or restyles it, it counts again. Undo needs no extra state: restoring an
+  /// item to its crop-time geometry makes it stop counting.
+  private(set) var cropBaselineFootprints: [UUID: CGRect] = [:]
+  private var canvasAutoExpandDefaultsCancellable: AnyCancellable?
+
+  /// Annotations grow the canvas past the image (or applied crop) instead of being clamped.
+  var autoExpandsCanvas: Bool {
+    isCanvasAutoExpandEnabled && allowsCanvasAutoExpand && !isCombineMode && hasImage
+  }
+
+  /// The user's own canvas: the applied crop, or the whole image.
+  var baseCanvasRect: CGRect {
+    cropRect?.standardized ?? sourceImageBounds
+  }
+
+  /// Canvas grown past `baseCanvasRect` to fit every annotation that sticks out, or nil
+  /// when nothing does. Derived from annotations, so it shrinks back when they move in.
+  var autoExpandedCanvasRect: CGRect? {
+    guard autoExpandsCanvas, !isCropActive else { return nil }
+    let base = baseCanvasRect
+    let grown = annotations.reduce(base) { result, item in
+      guard let footprint = Self.canvasFootprint(of: item),
+            cropBaselineFootprints[item.id] != footprint else { return result }
+      return result.union(footprint)
+    }
+    return grown == base ? nil : grown
+  }
+
+  /// Canvas shown and exported outside combine mode when it is not the plain image:
+  /// the live gesture canvas, the auto-expanded canvas, or the applied crop.
+  var appliedCanvasRect: CGRect? {
+    if !isCombineMode, let liveCanvasBounds { return liveCanvasBounds }
+    return autoExpandedCanvasRect ?? cropRect?.standardized
+  }
+
+  /// Ids of annotations the last crop cut and nobody touched since.
+  private var cropPinnedAnnotationIDs: Set<UUID> {
+    Set(annotations.compactMap { item in
+      guard let baseline = cropBaselineFootprints[item.id],
+            baseline == Self.canvasFootprint(of: item) else { return nil }
+      return item.id
+    })
+  }
+
+  /// Record the current footprints of `ids` (all annotations when nil) as crop-cut.
+  private func captureCropBaseline(for ids: Set<UUID>? = nil) {
+    var baseline: [UUID: CGRect] = [:]
+    for item in annotations where ids?.contains(item.id) ?? true {
+      if let footprint = Self.canvasFootprint(of: item) {
+        baseline[item.id] = footprint
+      }
+    }
+    cropBaselineFootprints = baseline
+  }
+
+  /// Restore a persisted baseline. nil (sessions saved before auto-expand) treats every
+  /// item as crop-cut, so reopening an older session never changes its size.
+  func restoreCropBaselineFootprints(_ footprints: [UUID: CGRect]?) {
+    if let footprints {
+      cropBaselineFootprints = footprints
+    } else {
+      captureCropBaseline()
+    }
+  }
+
+  private func observeCanvasAutoExpandPreference() {
+    isCanvasAutoExpandEnabled =
+      defaults.object(forKey: PreferencesKeys.annotateAutoExpandCanvasEnabled) as? Bool ?? true
+    canvasAutoExpandDefaultsCancellable = NotificationCenter.default
+      .publisher(for: UserDefaults.didChangeNotification, object: defaults)
+      .receive(on: RunLoop.main)
+      .sink { [weak self] _ in
+        guard let self else { return }
+        let enabled =
+          self.defaults.object(forKey: PreferencesKeys.annotateAutoExpandCanvasEnabled) as? Bool ?? true
+        if self.isCanvasAutoExpandEnabled != enabled {
+          self.isCanvasAutoExpandEnabled = enabled
+        }
+      }
   }
 
   /// Footprint a layer adds to the combine canvas: images by their frame, markup by
   /// what it visibly draws (stroke, arrowhead, callout tail, measure label), so the
   /// canvas never clips a layer moved to its edge. Hit-test padding is left out.
-  static func combineCanvasFootprint(of annotation: AnnotationItem) -> CGRect? {
+  static func canvasFootprint(of annotation: AnnotationItem) -> CGRect? {
     var rect: CGRect
     let strokeWidth = max(0, annotation.properties.strokeWidth)
     switch annotation.type {
@@ -465,28 +560,35 @@ final class AnnotateState: ObservableObject {
     return rect
   }
 
-  /// Begin a combine-mode gesture: freeze the canvas so it does not shift under the pointer.
-  func beginCombineCanvasGesture() {
-    guard isCombineMode else { return }
-    frozenCombineContentBounds = combineContentBounds
-    liveCombineCanvasBounds = nil
+  /// Begin a gesture on a growing canvas (combine mode, or auto-expand): freeze the
+  /// canvas so it does not shift under the pointer.
+  func beginCanvasGesture() {
+    guard isCombineMode || (autoExpandsCanvas && !isCropActive) else { return }
+    // Cleared first: `appliedCanvasRect` prefers the live canvas.
+    liveCanvasBounds = nil
+    frozenCanvasBounds = isCombineMode ? combineContentBounds : (appliedCanvasRect ?? sourceImageBounds)
+  }
+
+  /// True while a pointer gesture may grow the canvas past its frozen bounds.
+  var growsCanvasLive: Bool {
+    frozenCanvasBounds != nil && (isCombineMode || autoExpandsCanvas)
   }
 
   /// Grow the canvas live to include `rects` (gesture-local layer footprints).
   /// Never shrinks mid-gesture; the canvas hugs its content again on release.
-  func updateLiveCombineCanvas(including rects: [CGRect]) {
-    guard isCombineMode, let frozen = frozenCombineContentBounds else { return }
+  func updateLiveCanvas(including rects: [CGRect]) {
+    guard isCombineMode || autoExpandsCanvas, let frozen = frozenCanvasBounds else { return }
     let grown = rects.reduce(frozen) { $0.union($1) }
     let next: CGRect? = grown == frozen ? nil : grown
-    if liveCombineCanvasBounds != next {
-      liveCombineCanvasBounds = next
+    if liveCanvasBounds != next {
+      liveCanvasBounds = next
     }
   }
 
   /// End a combine-mode gesture. Content bounds are recomputed by the commit itself.
-  func endCombineCanvasGesture() {
-    if frozenCombineContentBounds != nil { frozenCombineContentBounds = nil }
-    if liveCombineCanvasBounds != nil { liveCombineCanvasBounds = nil }
+  func endCanvasGesture() {
+    if frozenCanvasBounds != nil { frozenCanvasBounds = nil }
+    if liveCanvasBounds != nil { liveCanvasBounds = nil }
   }
 
   /// Stitched layer ids in reading order (row by row), base layer included.
@@ -520,8 +622,8 @@ final class AnnotateState: ObservableObject {
     guard isCombineMode else { return }
     isCombineMode = false
     combineContentBounds = sourceImageBounds
-    frozenCombineContentBounds = nil
-    liveCombineCanvasBounds = nil
+    frozenCanvasBounds = nil
+    liveCanvasBounds = nil
     combineDropPreview = nil
   }
 
@@ -1531,8 +1633,10 @@ final class AnnotateState: ObservableObject {
   var sourceImageBounds: CGRect {
     CGRect(origin: .zero, size: CGSize(width: imageWidth, height: imageHeight))
   }
+  /// Where annotations live: the crop being edited, or the (possibly grown) canvas.
   var activeAnnotationBounds: CGRect {
-    cropRect?.standardized ?? sourceImageBounds
+    if isCropActive { return cropRect?.standardized ?? sourceImageBounds }
+    return appliedCanvasRect ?? sourceImageBounds
   }
 
   /// Calculate display scale for given container size
@@ -1819,8 +1923,13 @@ final class AnnotateState: ObservableObject {
   @Published var canUndo: Bool = false
   @Published var canRedo: Bool = false
 
-  private var undoStack: [UndoEntry] = []
+  private var undoStack: [UndoEntry] = [] {
+    didSet { undoGeneration &+= 1 }
+  }
   private var redoStack: [UndoEntry] = []
+  /// Changes whenever the undo stack changes, so callers can tell whether "their" checkpoint
+  /// is still on top (the AI prompt's Undo).
+  private(set) var undoGeneration = 0
   private var textEditingUndoTransaction: TextEditingUndoTransaction?
 
   init(
@@ -1855,6 +1964,7 @@ final class AnnotateState: ObservableObject {
     loadSharedAnnotationParameterDefaults()
     loadAnnotationToolProperties()
     loadCanvasPresets()
+    observeCanvasAutoExpandPreference()
     applyDefaultCanvasPresetForNewImageIfNeeded()
   }
 
@@ -1883,6 +1993,7 @@ final class AnnotateState: ObservableObject {
     loadSharedAnnotationParameterDefaults()
     loadAnnotationToolProperties()
     loadCanvasPresets()
+    observeCanvasAutoExpandPreference()
   }
 
   // MARK: - Image Loading
@@ -2073,7 +2184,8 @@ final class AnnotateState: ObservableObject {
       editorMode: editorMode,
       isCombineMode: isCombineMode,
       effectiveContentBounds: effectiveContentBounds,
-      cropRect: cropRect,
+      // Applied crop and/or auto-expanded canvas: the exporter crops (or extends) to it.
+      cropRect: isCombineMode ? cropRect : appliedCanvasRect,
       // The single choke point for every flattened output (save, copy, drag, upload, mockup).
       annotations: includesTranslationsInExport ? annotations : annotations.filter { !$0.type.isTranslation },
       embeddedImages: embeddedImageAssets,
@@ -2194,8 +2306,8 @@ final class AnnotateState: ObservableObject {
     combineResolvedDirection = .horizontal
     combineGap = 0
     combineContentBounds = CGRect(origin: .zero, size: image.size)
-    frozenCombineContentBounds = nil
-    liveCombineCanvasBounds = nil
+    frozenCanvasBounds = nil
+    liveCanvasBounds = nil
     freeCombineBoundsByAnnotationID.removeAll()
     combineStitchGrid = nil
     combineOverlayIDs.removeAll()
@@ -2209,6 +2321,7 @@ final class AnnotateState: ObservableObject {
 
     // Reset crop for new image
     cropRect = nil
+    cropBaselineFootprints = [:]
     originalCropRect = nil
     cropInteractionContext = nil
     isCropActive = false
@@ -2571,6 +2684,8 @@ final class AnnotateState: ObservableObject {
     cropRect = clampedRect
     didCutoutAutoApplyCrop = true
     cutoutAutoAppliedCropRect = clampedRect
+    // Acts as a crop: annotations it cuts do not grow the canvas back out.
+    captureCropBaseline()
   }
 
   private func revertCutoutAutoCropIfNeeded() {
@@ -2972,7 +3087,7 @@ final class AnnotateState: ObservableObject {
     // Free Canvas hugs every layer, so moving one past the edge grows the canvas.
     setCombineContentBounds(
       annotations
-        .compactMap(Self.combineCanvasFootprint(of:))
+        .compactMap(Self.canvasFootprint(of:))
         .reduce(sourceImageBounds) { $0.union($1) }
     )
   }
@@ -3004,7 +3119,7 @@ final class AnnotateState: ObservableObject {
       if case .embeddedImage = annotation.type, !combineOverlayIDs.contains(annotation.id) {
         return result
       }
-      guard let footprint = Self.combineCanvasFootprint(of: annotation) else { return result }
+      guard let footprint = Self.canvasFootprint(of: annotation) else { return result }
       return result.union(footprint)
     }
   }
@@ -3063,6 +3178,14 @@ final class AnnotateState: ObservableObject {
     pushUndoSnapshot(currentSnapshot(), annotationCount: annotations.count)
   }
 
+  /// Records an undo checkpoint for a change already applied to `annotations`, so callers
+  /// can skip the checkpoint when the change turned out to be a no-op (AI prompt runs).
+  func recordUndoCheckpoint(annotationsBeforeChange before: [AnnotationItem]) {
+    var snapshot = currentSnapshot()
+    snapshot.annotations = before
+    pushUndoSnapshot(snapshot, annotationCount: before.count)
+  }
+
   private func pushUndoSnapshot(_ snapshot: AnnotationSnapshot, annotationCount: Int) {
     DiagnosticLogger.shared.log(.debug, .annotate, "Undo checkpoint", context: ["annotations": "\(annotationCount)"])
     undoStack.append(.annotations(snapshot))
@@ -3090,6 +3213,8 @@ final class AnnotateState: ObservableObject {
   }
 
   func undo() {
+    // An AI prompt run owns the top checkpoint while it works.
+    guard !agent.isRunning else { return }
     if editingTextAnnotationId != nil {
       commitTextEditing()
     }
@@ -3108,6 +3233,7 @@ final class AnnotateState: ObservableObject {
   }
 
   func redo() {
+    guard !agent.isRunning else { return }
     if editingTextAnnotationId != nil {
       commitTextEditing()
     }
@@ -3153,7 +3279,8 @@ final class AnnotateState: ObservableObject {
       cropAspectRatio: cropAspectRatio,
       isCropPortraitOrientation: isCropPortraitOrientation,
       didCutoutAutoApplyCrop: didCutoutAutoApplyCrop,
-      cutoutAutoAppliedCropRect: cutoutAutoAppliedCropRect
+      cutoutAutoAppliedCropRect: cutoutAutoAppliedCropRect,
+      cropBaselineFootprints: cropBaselineFootprints
     )
   }
 
@@ -3239,6 +3366,7 @@ final class AnnotateState: ObservableObject {
     isCropPortraitOrientation = snapshot.isCropPortraitOrientation
     didCutoutAutoApplyCrop = snapshot.didCutoutAutoApplyCrop
     cutoutAutoAppliedCropRect = snapshot.cutoutAutoAppliedCropRect
+    cropBaselineFootprints = snapshot.cropBaselineFootprints
 
     // Rotation is gated on `!isCropActive` (see `canRotateImage`), so any rotation snapshot
     // by definition represents a non-crop state. If the user enters crop mode and then
@@ -3303,6 +3431,7 @@ final class AnnotateState: ObservableObject {
 
     let oldSize = CGSize(width: imageWidth, height: imageHeight)
     pushImageTransformUndo(currentImageTransformSnapshot())
+    let cropPinnedIDs = cropPinnedAnnotationIDs
 
     sourceImage = rotatedSource
     if let cutoutImage {
@@ -3332,6 +3461,7 @@ final class AnnotateState: ObservableObject {
       isCropPortraitOrientation.toggle()
     }
 
+    captureCropBaseline(for: cropPinnedIDs)
     hasUnsavedChanges = true
   }
 
@@ -3430,6 +3560,7 @@ final class AnnotateState: ObservableObject {
 
     let size = CGSize(width: imageWidth, height: imageHeight)
     pushImageTransformUndo(currentImageTransformSnapshot())
+    let cropPinnedIDs = cropPinnedAnnotationIDs
 
     sourceImage = flippedSource
     if let cutoutImage {
@@ -3452,6 +3583,7 @@ final class AnnotateState: ObservableObject {
       AnnotateImageRotation.flipRect($0, size: size, axis: axis)
     }
 
+    captureCropBaseline(for: cropPinnedIDs)
     hasUnsavedChanges = true
   }
 
@@ -3498,6 +3630,14 @@ final class AnnotateState: ObservableObject {
       // Bounds-only annotations: the mirrored `bounds` above is the full transform we need.
       // Embedded image bitmaps were mirrored with the assets above.
       break
+    }
+
+    // A mirror reverses the turning direction: M·R(θ) = R(−θ)·M. Watermarks keep their
+    // own user-set tilt, like they do for 90° rotation.
+    if annotation.type.supportsRotation, annotation.properties.rotationDegrees != 0 {
+      flipped.properties.rotationDegrees = annotation.type.clampedRotationDegrees(
+        -annotation.properties.rotationDegrees
+      )
     }
 
     return flipped
@@ -3558,7 +3698,13 @@ final class AnnotateState: ObservableObject {
 
     guard hasImage else { return }
 
-    if cropRect == nil {
+    if let grownCanvas = autoExpandedCanvasRect {
+      // Start from what the user sees: the grown canvas, so Return keeps it and
+      // the handles (or auto-crop) can tighten it.
+      cropRect = grownCanvas
+      originalCropRect = grownCanvas
+      isCropActive = true
+    } else if cropRect == nil {
       initializeCrop()
     } else if let cropRect {
       originalCropRect = cropRect
@@ -3592,6 +3738,8 @@ final class AnnotateState: ObservableObject {
       clearCutoutAutoCropTracking()
     }
     isCropActive = false
+    // The crop is now the canvas: items it cuts stay cut until touched again.
+    captureCropBaseline()
     hasUnsavedChanges = true
     restoreSidebarAfterCropInteractionIfNeeded()
   }
@@ -3812,6 +3960,7 @@ final class AnnotateState: ObservableObject {
       "strip": "\(Int(fullStrip.width))x\(Int(fullStrip.height))"
     ])
     pushImageTransformUndo(currentImageTransformSnapshot())
+    let cropPinnedIDs = cropPinnedAnnotationIDs
     deselectAnnotation()
 
     sourceImage = newSource
@@ -3893,6 +4042,7 @@ final class AnnotateState: ObservableObject {
     cutoutAutoAppliedCropRect = cutoutAutoAppliedCropRect.map(shiftRect)
 
     cutOutPreviewStrip = nil
+    captureCropBaseline(for: cropPinnedIDs)
     hasUnsavedChanges = true
   }
 
@@ -4346,6 +4496,34 @@ final class AnnotateState: ObservableObject {
     annotations = reordered
     hasUnsavedChanges = true
     return true
+  }
+
+  /// Arrange for an explicit set of layers, without an undo checkpoint (the caller owns it).
+  @discardableResult
+  func arrangeAnnotationsWithoutUndo(_ ids: Set<UUID>, action: AnnotationArrangeAction) -> Bool {
+    let arrangeable = Set(annotations.filter { ids.contains($0.id) && isArrangeable($0) }.map(\.id))
+    guard let reordered = arrangedAnnotations(for: action, selection: arrangeable) else { return false }
+    annotations = reordered
+    hasUnsavedChanges = true
+    return true
+  }
+
+  /// Sets one text annotation's presentation (plain / label / callout) without an undo checkpoint.
+  func setTextPresentationWithoutUndo(id: UUID, _ presentation: TextPresentation) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }),
+          case .text = annotations[index].type else { return }
+    annotations[index].properties.textPresentation = presentation
+    switch presentation {
+    case .plain, .label:
+      annotations[index].properties.calloutTailTarget = nil
+    case .callout:
+      annotations[index].properties.calloutTailTarget = annotations[index].properties.calloutTailTarget
+        ?? defaultCalloutTailTarget(for: annotations[index].bounds, fontSize: annotations[index].properties.fontSize)
+    }
+    if presentation != .plain, annotations[index].properties.fillColor == .clear {
+      annotations[index].properties.fillColor = .black
+    }
+    hasUnsavedChanges = true
   }
 
   /// The annotation list after `action`, or nil when nothing would change.
@@ -4854,7 +5032,7 @@ final class AnnotateState: ObservableObject {
       annotations[index].properties.opacity = AnnotationProperties.clampedOpacity(opacity)
     }
     if let rotationDegrees = rotationDegrees {
-      annotations[index].properties.rotationDegrees = AnnotationProperties.clampedRotationDegrees(rotationDegrees)
+      annotations[index].properties.rotationDegrees = annotations[index].type.clampedRotationDegrees(rotationDegrees)
     }
     if let watermarkStyle = watermarkStyle {
       annotations[index].properties.watermarkStyle = watermarkStyle
@@ -4955,7 +5133,7 @@ final class AnnotateState: ObservableObject {
       return true
     }
     if let rotationDegrees,
-       properties.rotationDegrees != AnnotationProperties.clampedRotationDegrees(rotationDegrees) {
+       properties.rotationDegrees != annotation.type.clampedRotationDegrees(rotationDegrees) {
       return true
     }
     if let watermarkStyle,
@@ -6352,6 +6530,46 @@ final class AnnotateState: ObservableObject {
     )
   }
 
+  // MARK: - Annotation rotation
+
+  /// Whether the user may rotate this annotation. Images placed by Combine are
+  /// the canvas layout itself, so they never rotate.
+  func canUserRotate(_ annotation: AnnotationItem) -> Bool {
+    guard annotation.type.supportsRotation else { return false }
+    if isCombineMode, case .embeddedImage = annotation.type { return false }
+    return true
+  }
+
+  /// Selected items the quick bar angle field edits. Read from the raw
+  /// selection so an inserted image, which has no other quick properties,
+  /// still gets the field.
+  private var quickRotatableSelection: [AnnotationItem] {
+    quickPropertiesSelectionAnnotations.filter(canUserRotate)
+  }
+
+  var quickPropertiesSupportsAnnotationRotation: Bool {
+    !quickRotatableSelection.isEmpty
+  }
+
+  /// Whole-degree angle shared by the rotatable selection; nil when they differ.
+  var quickAnnotationRotationDegrees: CGFloat? {
+    let angles = Set(quickRotatableSelection.map {
+      AnnotationProperties.normalizedRotationDegrees($0.properties.rotationDegrees).rounded()
+    })
+    return angles.count == 1 ? angles.first : nil
+  }
+
+  /// Applies one angle to every rotatable selected item as a single undo step.
+  func setQuickAnnotationRotation(_ degrees: CGFloat) {
+    let angle = AnnotationProperties.normalizedRotationDegrees(degrees)
+    let changed = quickRotatableSelection.filter { $0.properties.rotationDegrees != angle }
+    guard !changed.isEmpty else { return }
+    saveState()
+    for annotation in changed {
+      updateAnnotationProperties(id: annotation.id, rotationDegrees: angle)
+    }
+  }
+
   var quickWatermarkRotationBinding: Binding<CGFloat> {
     Binding(
       get: { [weak self] in
@@ -6792,13 +7010,22 @@ final class AnnotateState: ObservableObject {
       "count": "\(selectedIds.count)"
     ])
     saveState()
-    annotations.removeAll { selectedIds.contains($0.id) }
-    autoSizingTextAnnotationIDs.subtract(selectedIds)
-    selectedIds.forEach { freeCombineBoundsByAnnotationID.removeValue(forKey: $0) }
+    removeAnnotationsWithoutUndo(selectedIds)
+    deselectAnnotation()
+  }
+
+  /// Removes annotations and their bookkeeping. Callers own the undo checkpoint
+  /// (AI prompt runs record one checkpoint for the whole run).
+  func removeAnnotationsWithoutUndo(_ ids: Set<UUID>) {
+    guard !ids.isEmpty else { return }
+    annotations.removeAll { ids.contains($0.id) }
+    autoSizingTextAnnotationIDs.subtract(ids)
+    ids.forEach { freeCombineBoundsByAnnotationID.removeValue(forKey: $0) }
     pruneUnusedEmbeddedAssets()
     updateImportWarningIfNeeded()
     refreshCombineLayout()
-    deselectAnnotation()
+    setSelectedAnnotationIds(selectedAnnotationIds.subtracting(ids))
+    hasUnsavedChanges = true
   }
 
   /// Commit the current text editing and exit edit mode

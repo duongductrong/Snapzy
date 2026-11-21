@@ -60,6 +60,7 @@ final class AnnotationSessionStoreTests: XCTestCase {
     guard case .text("Editable text") = loaded.annotations[0].type else {
       return XCTFail("Expected text annotation")
     }
+    XCTAssertEqual(loaded.annotations[0].properties.rotationDegrees, 12)
     guard case .arrow(let geometry) = loaded.annotations[1].type else {
       return XCTFail("Expected arrow annotation")
     }

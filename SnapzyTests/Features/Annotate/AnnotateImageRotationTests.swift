@@ -432,6 +432,38 @@ final class AnnotateImageRotationTests: XCTestCase {
     XCTAssertEqual(state.annotations.first?.bounds, path.bounds)
   }
 
+  @MainActor
+  func testFlipImage_negatesPerItemRotationAndKeepsWatermarkTilt() throws {
+    let state = makeAnnotateState()
+    state.loadImage(makeImage(width: imageSize.width, height: imageSize.height))
+    let rectangle = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 20, width: 80, height: 60),
+      properties: AnnotationProperties(rotationDegrees: 30)
+    )
+    let text = AnnotationItem(
+      type: .text("text"),
+      bounds: CGRect(x: 100, y: 80, width: 120, height: 30),
+      properties: AnnotationProperties(rotationDegrees: 180)
+    )
+    let watermark = AnnotationItem(
+      type: .watermark("wm"),
+      bounds: CGRect(x: 0, y: 0, width: 100, height: 40),
+      properties: AnnotationProperties(rotationDegrees: -24)
+    )
+    state.annotations = [rectangle, text, watermark]
+
+    state.flipImage(.horizontal)
+    XCTAssertEqual(state.annotations.map(\.properties.rotationDegrees), [-30, 180, -24])
+
+    state.flipImage(.vertical)
+    XCTAssertEqual(state.annotations.map(\.properties.rotationDegrees), [30, 180, -24])
+
+    state.undo()
+    state.undo()
+    XCTAssertEqual(state.annotations.map(\.properties.rotationDegrees), [30, 180, -24])
+  }
+
   // MARK: - Helpers
 
   @MainActor

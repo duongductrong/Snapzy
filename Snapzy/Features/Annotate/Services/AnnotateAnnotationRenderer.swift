@@ -57,6 +57,16 @@ nonisolated struct AnnotationRenderer {
       return
     }
 
+    // Rotated items draw their unrotated local frame under the rotation, so
+    // every type-specific path below stays axis-aligned.
+    if let transform = annotation.rotationTransform {
+      context.saveGState()
+      context.concatenate(transform)
+      draw(annotation.unrotatedLocalItem)
+      context.restoreGState()
+      return
+    }
+
     let strokeColor = NSColor(annotation.properties.strokeColor).cgColor
     let fillColor = NSColor(annotation.properties.fillColor).cgColor
 

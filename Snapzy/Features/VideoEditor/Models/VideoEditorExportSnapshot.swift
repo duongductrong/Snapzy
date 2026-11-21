@@ -28,6 +28,14 @@ struct VideoEditorExportSnapshot {
   let sequenceMap: TimelineSequenceMap
   private let clipAssets: [UUID: AVAsset]
   var autoFocusPaths: [UUID: [AutoFocusCameraSample]] = [:]
+  /// Studio layers resolved for this export. Empty until cursor/camera/caption phases
+  /// populate it; empty keeps the pre-Studio export routing byte-for-byte.
+  var studioRecipe: VideoEditorStudioRecipe = .empty
+  /// Studio click sound: output times of clicks (empty = no click lane) and volume.
+  var clickSoundTimes: [TimeInterval] = []
+  var clickSoundVolume: Float = 0
+  /// Studio camera sidecar read as an auxiliary track when the camera layer is active.
+  var cameraSourceURL: URL?
 
   init(state: VideoEditorState) {
     sourceURL = state.sourceURL

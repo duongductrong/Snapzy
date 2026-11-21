@@ -4,13 +4,22 @@ import Foundation
 
 @MainActor
 final class VideoEditorTimelineObservation: ObservableObject {
-  enum Surface { case container, zoom, speed, clips }
+  enum Surface { case container, zoom, speed, clips, captions, camera }
   @Published private(set) var revision: UInt64 = 0
   private var subscriptions = Set<AnyCancellable>()
 
   init(state: VideoEditorState, surface: Surface) {
+    // Zoom and speed blocks live on the structural axis, which a trim never moves
+    // (clip slots are fixed): they only need the axis length, not every in/out change.
+    // Their hover placeholder reads `isPlayableMaterial` live, so nothing goes stale.
+    let clipsChange: AnyPublisher<Void, Never> = switch surface {
+    case .zoom, .speed:
+      state.$clips.map(TimelineSequence.duration).removeDuplicates().map { _ in () }.eraseToAnyPublisher()
+    case .container, .clips, .captions, .camera:
+      state.$clips.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
+    }
     var changes: [AnyPublisher<Void, Never>] = [
-      state.$clips.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
+      clipsChange,
       state.$duration.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
     ]
     switch surface {
@@ -19,7 +28,9 @@ final class VideoEditorTimelineObservation: ObservableObject {
         state.$frameThumbnails.map { _ in () }.eraseToAnyPublisher(),
         state.$isExtractingFrames.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
         state.$isZoomTrackVisible.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
-        state.$isSpeedTrackVisible.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
+        state.$isSpeedTrackVisible.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
+        state.$captions.map(\.isEmpty).removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
+        state.$recordingMetadata.map { _ in () }.eraseToAnyPublisher()
       ]
     case .zoom:
       changes += [
@@ -32,6 +43,10 @@ final class VideoEditorTimelineObservation: ObservableObject {
         state.$selectedSpeedId.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
         state.$zoomSegments.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
       ]
+    case .camera:
+      changes += [state.$cameraSettings.map(\.hiddenRanges).removeDuplicates().map { _ in () }.eraseToAnyPublisher()]
+    case .captions:
+      changes += [state.$captions.removeDuplicates().map { _ in () }.eraseToAnyPublisher()]
     case .clips:
       changes += [
         state.$selectedClipId.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),

@@ -56,7 +56,7 @@ struct VideoEditorClipStripView: View, Equatable {
   @State private var drag: DragSession?
 
   /// One in-flight pointer gesture on a clip body.
-  private struct DragSession {
+  private struct DragSession: Equatable {
     let clipId: UUID
     let fromIndex: Int
     var translation: CGFloat = 0
@@ -111,6 +111,14 @@ struct VideoEditorClipStripView: View, Equatable {
     .coordinateSpace(name: Self.coordinateSpace)
     .onAppear { preloadInsertedThumbnails() }
     .onChange(of: state.clips) { _ in preloadInsertedThumbnails() }
+    // A trim holds speed-preview rebuilds until it ends; if the strip goes away
+    // mid-gesture, `onEnded` never fires, so end the trim here.
+    .onDisappear {
+      if drag?.isTrimming == true {
+        state.endClipTrim()
+        drag = nil
+      }
+    }
   }
 
   private var renderedPlacements: [TimelineSequence.Placement] {
@@ -382,7 +390,6 @@ struct VideoEditorClipStripView: View, Equatable {
         } else {
           state.updateClip(id: clip.id, sourceEnd: session.anchorEnd + delta)
         }
-        drag = session
       }
       .onEnded { _ in
         state.endClipTrim()
@@ -417,7 +424,6 @@ struct VideoEditorClipStripView: View, Equatable {
         }
         guard var session = drag, session.clipId == placement.clip.id, !session.isTrimming else { return }
 
-        session.translation = value.translation.width
         if session.isScrubbing {
           scrubTo(value.location.x)
         } else if !session.isReordering, abs(value.translation.width) > Self.reorderThreshold {
@@ -433,7 +439,12 @@ struct VideoEditorClipStripView: View, Equatable {
         } else if session.isReordering {
           session.targetIndex = dropIndex(for: placement, translation: value.translation.width)
         }
-        drag = session
+        // Only a reordering block draws the translation. Writing it during a click or a
+        // single-clip scrub re-ran every clip block (and its thumbnails) per mouse event.
+        if session.isReordering {
+          session.translation = value.translation.width
+        }
+        if drag != session { drag = session }
       }
       .onEnded { value in
         defer { drag = nil }

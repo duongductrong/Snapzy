@@ -125,6 +125,7 @@ final class PreferencesCoreTests: XCTestCase {
       .menuBar,
       .capture,
       .annotate,
+      .ai,
       .quickAccess,
       .history,
       .shortcuts,
@@ -135,8 +136,8 @@ final class PreferencesCoreTests: XCTestCase {
       .about,
     ]
 
-    XCTAssertEqual(tabs.count, 12)
-    XCTAssertEqual(PreferencesTab.allCases.count, 12)
+    XCTAssertEqual(tabs.count, 13)
+    XCTAssertEqual(PreferencesTab.allCases.count, 13)
   }
 
   func testPreferencesTabSidebar_coversAllCasesExactlyOnce() {

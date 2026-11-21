@@ -1,3 +1,4 @@
 "NSMicrophoneUsageDescription" = "Snapzy cần quyền microphone để ghi âm cùng với bản ghi màn hình của bạn.";
 "NSCameraUsageDescription" = "Snapzy cần quyền truy cập camera để thêm hình ảnh camera vào bản ghi màn hình của bạn.";
 "NSScreenCaptureUsageDescription" = "Snapzy cần quyền ghi màn hình để chụp ảnh màn hình và quay màn hình của bạn.";
+"NSSpeechRecognitionUsageDescription" = "Snapzy chép lời bản ghi ngay trên máy Mac này khi bạn hỏi AI của trình sửa video về nội dung lời nói.";

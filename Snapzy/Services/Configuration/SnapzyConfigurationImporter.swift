@@ -171,14 +171,18 @@ enum SnapzyConfigurationImporter {
       }
     }
 
+    // macOS 27 "Show icons in menus" opt-in; reader.bool reports a
+    // non-boolean value as an error, which rejects the whole import.
+    let showItemIcons = reader.bool("menu_bar", "show_item_icons")
     let order = reader.stringArray("menu_bar", "item_order")?.compactMap(MenuBarItemKind.init(rawValue:))
     let hidden = reader.stringArray("menu_bar", "hidden_items")?.compactMap(MenuBarItemKind.init(rawValue:))
-    if order != nil || hidden != nil {
+    if order != nil || hidden != nil || showItemIcons != nil {
       mutations.append {
         MenuBarCustomizationStore.shared.applyConfiguration(
           order: order,
           hiddenItems: hidden.map(Set.init),
-          iconStyle: nil
+          iconStyle: nil,
+          showItemIcons: showItemIcons
         )
       }
     }
@@ -315,6 +319,9 @@ enum SnapzyConfigurationImporter {
     collectBool(&reader, "recording", "show_cursor", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.recordingShowCursor)
     }
+    collectBool(&reader, "recording", "studio_mode", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.recordingStudioMode)
+    }
     collectBool(&reader, "recording", "dim_non_selected_area", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.recordingDimNonSelectedArea)
     }
@@ -366,6 +373,14 @@ enum SnapzyConfigurationImporter {
     }
     collectDouble(&reader, "recording", "video_editor_zoom_transition_duration", range: 0.15...0.75, mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.videoEditorZoomTransitionDuration)
+    }
+    collectString(&reader, "recording", "video_editor_caption_language", mutations: &mutations) {
+      let value = $0.trimmingCharacters(in: .whitespaces)
+      if value.isEmpty {
+        defaults.removeObject(forKey: PreferencesKeys.videoEditorCaptionLanguage)
+      } else {
+        defaults.set(value, forKey: PreferencesKeys.videoEditorCaptionLanguage)
+      }
     }
   }
 
@@ -585,6 +600,9 @@ enum SnapzyConfigurationImporter {
     collectBool(&reader, "annotate", "combine_save_as_edit", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.annotateCombineSaveAsEdit)
     }
+    collectBool(&reader, "annotate", "auto_expand_canvas", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.annotateAutoExpandCanvasEnabled)
+    }
     collectBool(&reader, "annotate", "crop_snap_to_edges", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.annotateCropSnapToEdgesEnabled)
     }
@@ -596,6 +614,34 @@ enum SnapzyConfigurationImporter {
     }
     collectEnumString(&reader, "annotate", "measure_axis", allowed: MeasureAxis.allCases.map(\.rawValue), mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.annotateMeasureAxis)
+    }
+    collectString(&reader, "annotate", "ai", "provider", mutations: &mutations) {
+      // Unknown or malformed values read as automatic, like a removed endpoint.
+      defaults.set(AgentProviderSelection(persistedValue: $0).persistedValue, forKey: PreferencesKeys.annotateAgentProvider)
+    }
+    collectBool(&reader, "annotate", "ai", "send_image", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.annotateAgentSendImage)
+    }
+    collectDouble(&reader, "annotate", "ai", "cli_timeout", range: AnnotateAgentAISettings.cliTimeoutRange, mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.annotateAgentCLITimeout)
+    }
+    for kind in AnnotateAgentCLIKind.allCases {
+      collectString(&reader, "annotate", "ai", "\(kind.rawValue)_model", mutations: &mutations) {
+        let model = $0.trimmingCharacters(in: .whitespacesAndNewlines)
+        if model.isEmpty {
+          defaults.removeObject(forKey: kind.modelDefaultsKey)
+        } else {
+          defaults.set(model, forKey: kind.modelDefaultsKey)
+        }
+      }
+      collectString(&reader, "annotate", "ai", "\(kind.rawValue)_effort", mutations: &mutations) {
+        let effort = $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if effort.isEmpty {
+          defaults.removeObject(forKey: kind.effortDefaultsKey)
+        } else {
+          defaults.set(effort, forKey: kind.effortDefaultsKey)
+        }
+      }
     }
   }
 

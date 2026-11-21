@@ -1,3 +1,4 @@
 "NSMicrophoneUsageDescription" = "Snapzy 需要麥克風存取權才能在螢幕錄製中錄製音訊。";
 "NSCameraUsageDescription" = "Snapzy 需要相機存取權才能在螢幕錄製中加入相機畫面。";
 "NSScreenCaptureUsageDescription" = "Snapzy 需要螢幕錄製權限才能擷取螢幕截圖並錄製螢幕。";
+"NSSpeechRecognitionUsageDescription" = "當你向影片編輯器 AI 詢問錄製中說了什麼時，Snapzy 會在這台 Mac 上轉寫你的錄製內容。";

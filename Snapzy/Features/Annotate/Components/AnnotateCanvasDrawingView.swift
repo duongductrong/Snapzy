@@ -219,6 +219,7 @@ enum ResizeHandle: Equatable {
   case arrowControl
   case textCalloutTail
   case counterArrowTip
+  case rotation
 }
 
 /// What a press with a drawing tool (anything but Selection and Crop) does
@@ -395,6 +396,8 @@ final class DrawingCanvasNSView: NSView {
   private var gestureLastPoint: CGPoint?
   private var gestureDidMutate = false
   private var gestureUndoCheckpointed = false
+  /// Raw image point where a rotation-handle drag started.
+  private var rotationPressPoint: CGPoint?
 
   // Layered canvas composition: stacked child views let CoreAnimation composite
   // unchanged content straight from their backing stores (a layer-backed view
@@ -867,13 +870,8 @@ final class DrawingCanvasNSView: NSView {
       ]
 
     case .text:
-      let bounds = coordinateSpace == .canvas ? imageToDisplay(annotation.resizeBounds) : annotation.resizeBounds
-      var handles: [(ResizeHandle, CGRect)] = [
-        (.topLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.maxY), in: coordinateSpace)),
-        (.topRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.maxY), in: coordinateSpace)),
-        (.bottomLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.minY), in: coordinateSpace)),
-        (.bottomRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.minY), in: coordinateSpace)),
-      ]
+      var handles = rotationHandleRects(for: annotation, in: coordinateSpace)
+      handles.append(contentsOf: cornerHandleRects(for: annotation, in: coordinateSpace))
       if annotation.properties.textPresentation == .callout,
          let tailTarget = annotation.properties.calloutTailTarget {
         let point = coordinateSpace == .canvas ? imageToDisplay(tailTarget) : tailTarget
@@ -899,20 +897,49 @@ final class DrawingCanvasNSView: NSView {
       return handles
 
     default:
-      let bounds = coordinateSpace == .canvas ? imageToDisplay(annotation.resizeBounds) : annotation.resizeBounds
-      var handles: [(ResizeHandle, CGRect)] = []
+      var handles = rotationHandleRects(for: annotation, in: coordinateSpace)
       if case .counter = annotation.type, let geometry = annotation.counterArrowGeometry {
         let point = coordinateSpace == .canvas ? imageToDisplay(geometry.end) : geometry.end
         handles.append((.counterArrowTip, handleRect(at: point, in: coordinateSpace)))
       }
-      handles.append(contentsOf: [
-        (.topLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.maxY), in: coordinateSpace)),
-        (.topRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.maxY), in: coordinateSpace)),
-        (.bottomLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.minY), in: coordinateSpace)),
-        (.bottomRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.minY), in: coordinateSpace)),
-      ])
+      handles.append(contentsOf: cornerHandleRects(for: annotation, in: coordinateSpace))
       return handles
     }
+  }
+
+  /// Corner grips of a box item, carried along with its rotation.
+  private func cornerHandleRects(
+    for annotation: AnnotationItem,
+    in coordinateSpace: ResizeHandleCoordinateSpace
+  ) -> [(ResizeHandle, CGRect)] {
+    let bounds = annotation.resizeBounds
+    let transform = annotation.rotationTransform ?? .identity
+    let corners: [(ResizeHandle, CGPoint)] = [
+      (.topLeft, CGPoint(x: bounds.minX, y: bounds.maxY)),
+      (.topRight, CGPoint(x: bounds.maxX, y: bounds.maxY)),
+      (.bottomLeft, CGPoint(x: bounds.minX, y: bounds.minY)),
+      (.bottomRight, CGPoint(x: bounds.maxX, y: bounds.minY)),
+    ]
+    return corners.map { handle, corner in
+      let imagePoint = corner.applying(transform)
+      let point = coordinateSpace == .canvas ? imageToDisplay(imagePoint) : imagePoint
+      return (handle, handleRect(at: point, in: coordinateSpace))
+    }
+  }
+
+  /// The rotation grip, listed first so it wins over overlapping grips. Empty
+  /// unless the item can rotate (see `canRotateAnnotation`).
+  private func rotationHandleRects(
+    for annotation: AnnotationItem,
+    in coordinateSpace: ResizeHandleCoordinateSpace
+  ) -> [(ResizeHandle, CGRect)] {
+    guard canRotateAnnotation(annotation) else { return [] }
+    let center = AnnotationRotationGesture.handleCenter(
+      for: annotation,
+      offset: selectionChromeMetrics.imageLength(forScreenPoints: AnnotateSelectionChromeMetrics.rotationHandleOffset)
+    )
+    let point = coordinateSpace == .canvas ? imageToDisplay(center) : center
+    return [(.rotation, handleRect(at: point, in: coordinateSpace))]
   }
 
   private func handleRect(at center: CGPoint, in coordinateSpace: ResizeHandleCoordinateSpace) -> CGRect {
@@ -1051,21 +1078,79 @@ final class DrawingCanvasNSView: NSView {
   private func interactionPoint(from displayPoint: CGPoint) -> CGPoint {
     let rawImagePoint = displayToImage(displayPoint)
     guard state.selectedTool != .crop else { return rawImagePoint }
-    if growsCombineCanvasDuringGesture { return rawImagePoint }
+    if growsCanvasDuringGesture || pointerLeavesAutoExpandingCanvas { return rawImagePoint }
     return clampToCanvasBounds(rawImagePoint)
   }
 
-  /// Moving or resizing layers in combine mode may leave the canvas: it grows to
-  /// follow them, like other screenshot editors' expanding canvas.
-  private var growsCombineCanvasDuringGesture: Bool {
-    state.isCombineMode && (isDraggingAnnotation || isResizingAnnotation)
+  /// With auto-expand on, drawing, moving and resizing follow the pointer past the
+  /// canvas edge (the canvas grows to fit). Cut Out, Measure (it reads source pixels)
+  /// and Translate Area keep their image-bound strips and areas.
+  private var pointerLeavesAutoExpandingCanvas: Bool {
+    state.autoExpandsCanvas
+      && !state.isCropActive
+      && state.selectedTool != .cutOut
+      && state.selectedTool != .measure
+      && !state.isTranslateAreaSelecting
   }
 
-  /// Grow the canvas live to the gesture-local layers' footprints.
-  private func updateLiveCombineCanvas() {
-    guard growsCombineCanvasDuringGesture else { return }
-    let footprints = gestureLocalItems.values.compactMap(AnnotateState.combineCanvasFootprint(of:))
-    state.updateLiveCombineCanvas(including: footprints)
+  /// Moving or resizing layers in combine mode may leave the canvas: it grows to
+  /// follow them, like other screenshot editors' expanding canvas. With auto-expand
+  /// on, drawing a new item past the edge grows it too.
+  private var growsCanvasDuringGesture: Bool {
+    guard state.growsCanvasLive else { return false }
+    if isDraggingAnnotation || isResizingAnnotation { return true }
+    return isDrawing && pointerLeavesAutoExpandingCanvas
+  }
+
+  /// Bounds that shift-constrained drawing (squares, snapped lines) stays within.
+  private var drawingConstraintBounds: CGRect {
+    guard pointerLeavesAutoExpandingCanvas else { return activeDrawingBounds }
+    // The canvas grows to the item, so only keep the math finite.
+    return activeDrawingBounds.insetBy(dx: -100_000, dy: -100_000)
+  }
+
+  /// Grow the canvas live to the gesture-local layers' footprints, or to the item
+  /// being drawn.
+  private func updateLiveCanvas() {
+    guard growsCanvasDuringGesture else { return }
+    var footprints = gestureLocalItems.values.compactMap(AnnotateState.canvasFootprint(of:))
+    if isDrawing, let preview = drawingPreviewItemForCanvasGrowth(),
+       let footprint = AnnotateState.canvasFootprint(of: preview) {
+      footprints.append(footprint)
+    }
+    state.updateLiveCanvas(including: footprints)
+  }
+
+  /// The item the current drawing would commit, for sizing the live canvas.
+  private func drawingPreviewItemForCanvasGrowth() -> AnnotationItem? {
+    guard let start = dragStart else { return nil }
+    let tool = state.selectedTool
+    let end: CGPoint
+    switch tool {
+    case .pencil, .highlighter:
+      end = currentPath.last ?? start
+    default:
+      end = currentPath.last ?? drawingRawEndPoint ?? start
+    }
+    return AnnotationFactory.createAnnotation(
+      tool: tool,
+      from: start,
+      to: end,
+      path: currentPath,
+      context: AnnotationFactory.CreationContext(
+        properties: state.annotationCreationProperties(for: tool),
+        arrowStyle: state.arrowStyle,
+        arrowType: state.arrowType,
+        arrowBendDirection: state.arrowBendDirection,
+        arrowStartHead: state.arrowStartHead,
+        arrowEndHead: state.arrowEndHead,
+        blurType: state.blurType,
+        counterValue: drawingCounterValue ?? 1,
+        watermarkText: state.watermarkText,
+        activeAnnotationBounds: state.activeAnnotationBounds,
+        counterArrowMinimumDragDistance: counterArrowMinimumDragDistance
+      )
+    )
   }
 
   // MARK: - Mouse Events
@@ -1074,7 +1159,7 @@ final class DrawingCanvasNSView: NSView {
     window?.makeFirstResponder(self)
     // Safety net: no drop or drag is in flight on a fresh press.
     state.endExternalCombineDrop()
-    state.beginCombineCanvasGesture()
+    state.beginCanvasGesture()
     let displayPoint = convert(event.locationInWindow, from: nil)
     updateCanvasMouseLocation(for: displayPoint)
     let imagePoint = interactionPoint(from: displayPoint)
@@ -1088,6 +1173,17 @@ final class DrawingCanvasNSView: NSView {
     let routingSelectedIds = userSelectedAnnotationIds
     autoSelectedAnnotationId = nil
     drawingToolGesture = nil
+
+    // Double-clicking the rotation handle straightens the item.
+    if event.clickCount == 2,
+       !Self.drawingToolOptionDraws(tool: state.selectedTool, optionHeld: event.modifierFlags.contains(.option)),
+       let selectedId = state.selectedAnnotationId,
+       let annotation = state.annotations.first(where: { $0.id == selectedId }),
+       hitTestHandle(at: displayPoint, for: annotation, in: .canvas) == .rotation {
+      state.updateAnnotationProperties(id: selectedId, rotationDegrees: 0, recordsUndo: true)
+      invalidateDrawing()
+      return
+    }
 
     // Handle double-click on text annotations to enter edit mode
     if event.clickCount == 2 {
@@ -1134,6 +1230,7 @@ final class DrawingCanvasNSView: NSView {
         resizingAnnotationId = selectedId
         activeResizeHandle = handle
         originalBounds = annotation.resizeBounds // Store in image coords
+        rotationPressPoint = handle == .rotation ? displayToImage(displayPoint) : nil
         gestureOriginalItems = [selectedId: annotation]
         gestureLocalItems = [selectedId: annotation]
         gestureLastResizeBounds = nil
@@ -1319,6 +1416,11 @@ final class DrawingCanvasNSView: NSView {
     !state.isAutoStitchedLayer(annotation)
   }
 
+  /// The rotation handle appears for a single selected item only.
+  private func canRotateAnnotation(_ annotation: AnnotationItem) -> Bool {
+    state.selectedAnnotationIds.count == 1 && state.canUserRotate(annotation)
+  }
+
   private func beginAreaSelection(at imagePoint: CGPoint) {
     state.deselectAnnotation()
     isSelectingArea = true
@@ -1371,8 +1473,11 @@ final class DrawingCanvasNSView: NSView {
     // copy; the final geometry commits to state once on mouseUp.
     if isResizingAnnotation, let handle = activeResizeHandle,
        let resizeId = resizingAnnotationId {
-      applyGestureResize(handle: handle, resizeId: resizeId, imagePoint: imagePoint, event: event)
-      updateLiveCombineCanvas()
+      // Rotation follows the raw pointer: clamping to the canvas would bend
+      // the angle near the border.
+      let point = handle == .rotation ? displayToImage(displayPoint) : imagePoint
+      applyGestureResize(handle: handle, resizeId: resizeId, imagePoint: point, event: event)
+      updateLiveCanvas()
       invalidateLiveLayers()
       return
     }
@@ -1509,7 +1614,7 @@ final class DrawingCanvasNSView: NSView {
               let updated = gestureLocalItems[id] else { continue }
         noteGestureMutation(original: original, updated: updated)
       }
-      updateLiveCombineCanvas()
+      updateLiveCanvas()
       invalidateLiveLayers()
       return
     }
@@ -1543,12 +1648,14 @@ final class DrawingCanvasNSView: NSView {
       drawingRawEndPoint = imagePoint
       updateConstrainedDrawingPreview(shiftHeld: event.modifierFlags.contains(.shift))
     }
+    updateLiveCanvas()
   }
 
   override func flagsChanged(with event: NSEvent) {
-    if isResizingAnnotation, activeResizeHandle == .counterArrowTip,
+    if isResizingAnnotation,
+       let handle = activeResizeHandle, handle == .counterArrowTip || handle == .rotation,
        let resizeId = resizingAnnotationId, let point = gestureLastPoint {
-      applyGestureResize(handle: .counterArrowTip, resizeId: resizeId, imagePoint: point, event: event)
+      applyGestureResize(handle: handle, resizeId: resizeId, imagePoint: point, event: event)
       invalidateLiveLayers()
       return
     }
@@ -1573,7 +1680,7 @@ final class DrawingCanvasNSView: NSView {
       start: dragStart,
       end: drawingRawEndPoint,
       shiftHeld: shiftHeld,
-      bounds: activeDrawingBounds
+      bounds: drawingConstraintBounds
     )
     currentPath = [constrainedEndPoint]
     invalidateLiveLayers()
@@ -1662,7 +1769,7 @@ final class DrawingCanvasNSView: NSView {
         start: CGPoint(x: original.bounds.midX, y: original.bounds.midY),
         end: imagePoint,
         shiftHeld: event.modifierFlags.contains(.shift),
-        bounds: activeDrawingBounds
+        bounds: drawingConstraintBounds
       )
       item.properties.counterArrowTarget = item.normalizedCounterArrowTarget(target)
       gestureLocalItems[resizeId] = item
@@ -1680,6 +1787,19 @@ final class DrawingCanvasNSView: NSView {
       gestureLocalItems[resizeId] = item
       noteGestureMutation(original: original, updated: item)
 
+    case .rotation:
+      guard let press = rotationPressPoint else { return }
+      var item = original
+      item.properties.rotationDegrees = AnnotationRotationGesture.rotationDegrees(
+        originalDegrees: original.properties.rotationDegrees,
+        center: CGPoint(x: original.bounds.midX, y: original.bounds.midY),
+        press: press,
+        current: imagePoint,
+        shiftHeld: event.modifierFlags.contains(.shift)
+      )
+      gestureLocalItems[resizeId] = item
+      noteGestureMutation(original: original, updated: item)
+
     default:
       let isEmbeddedImage: Bool = {
         if case .embeddedImage = original.type { return true }
@@ -1687,11 +1807,17 @@ final class DrawingCanvasNSView: NSView {
       }()
       let proportional = event.modifierFlags.contains(.shift)
         || (state.isCombineMode && isEmbeddedImage)
-      let newBounds = calculateResizedBounds(
+      // Rotated items resize in their own unrotated frame, then shift so the
+      // opposite corner stays where it was on screen.
+      let transform = original.rotationTransform
+      var newBounds = calculateResizedBounds(
         handle: handle,
-        currentPoint: imagePoint,
+        currentPoint: transform.map { imagePoint.applying($0.inverted()) } ?? imagePoint,
         proportional: proportional
       )
+      if let transform {
+        newBounds = AnnotationRotationGesture.anchoredBounds(forLocalResize: newBounds, originalTransform: transform)
+      }
       gestureLastResizeBounds = newBounds
       let updated = original.applyingResizeBounds(newBounds)
       gestureLocalItems[resizeId] = updated
@@ -1715,7 +1841,7 @@ final class DrawingCanvasNSView: NSView {
     // bounds the drag used.
     let displayPoint = convert(event.locationInWindow, from: nil)
     let imagePoint = interactionPoint(from: displayPoint)
-    defer { state.endCombineCanvasGesture() }
+    defer { state.endCanvasGesture() }
     if state.finishTranslateAreaDrag(at: imagePoint) {
       return
     }
@@ -1774,6 +1900,11 @@ final class DrawingCanvasNSView: NSView {
         case .textCalloutTail:
           if let lastPoint = gestureLastPoint {
             state.updateTextCalloutTail(id: resizeId, target: lastPoint)
+          }
+        case .rotation:
+          // The gesture already checkpointed undo on its first change.
+          if let item = gestureLocalItems[resizeId] {
+            state.updateAnnotationProperties(id: resizeId, rotationDegrees: item.properties.rotationDegrees)
           }
         default:
           if let lastBounds = gestureLastResizeBounds {
@@ -2050,6 +2181,7 @@ final class DrawingCanvasNSView: NSView {
     gestureLastPoint = nil
     gestureDidMutate = false
     gestureUndoCheckpointed = false
+    rotationPressPoint = nil
   }
 
   @MainActor
@@ -2348,6 +2480,43 @@ final class DrawingCanvasNSView: NSView {
         showsHandles: state.selectedAnnotationIds.count == 1 && annotation.supportsResize
       )
     }
+    drawRotationAngleLabel()
+  }
+
+  /// While the rotation handle is dragged, shows the angle next to the pointer.
+  private func drawRotationAngleLabel() {
+    guard isResizingAnnotation, activeResizeHandle == .rotation,
+          let resizeId = resizingAnnotationId,
+          let item = gestureLocalItems[resizeId],
+          let pointer = gestureLastPoint ?? rotationPressPoint,
+          let context = NSGraphicsContext.current?.cgContext else { return }
+
+    let metrics = selectionChromeMetrics
+    let degrees = Int(AnnotationProperties.normalizedRotationDegrees(item.properties.rotationDegrees).rounded())
+    let text = "\(degrees)°" as NSString
+    let attributes: [NSAttributedString.Key: Any] = [
+      .font: NSFont.monospacedDigitSystemFont(ofSize: metrics.imageLength(forScreenPoints: 11), weight: .medium),
+      .foregroundColor: NSColor.white,
+    ]
+    let textSize = text.size(withAttributes: attributes)
+    let padding = CGSize(width: metrics.imageLength(forScreenPoints: 6), height: metrics.imageLength(forScreenPoints: 3))
+    let offset = metrics.imageLength(forScreenPoints: 14)
+    let labelRect = CGRect(
+      x: pointer.x + offset,
+      y: pointer.y + offset,
+      width: textSize.width + padding.width * 2,
+      height: textSize.height + padding.height * 2
+    )
+
+    context.saveGState()
+    context.scaleBy(x: displayScale, y: displayScale)
+    context.translateBy(x: -effectiveCanvasBounds.minX, y: -effectiveCanvasBounds.minY)
+    let radius = labelRect.height / 2
+    context.addPath(CGPath(roundedRect: labelRect, cornerWidth: radius, cornerHeight: radius, transform: nil))
+    context.setFillColor(NSColor.black.withAlphaComponent(0.75).cgColor)
+    context.fillPath()
+    text.draw(at: CGPoint(x: labelRect.minX + padding.width, y: labelRect.minY + padding.height), withAttributes: attributes)
+    context.restoreGState()
   }
 
   private func drawSelectionItems(
@@ -2501,8 +2670,9 @@ final class DrawingCanvasNSView: NSView {
       break
     default:
       // Every other type reads as selected via a bounding box that frames the
-      // annotation instead of overlapping its body.
-      drawSelectionBounds(annotation.selectionDecorationBounds, in: context)
+      // annotation instead of overlapping its body; rotated items get a box
+      // that turns with them.
+      drawSelectionBounds(annotation.selectionDecorationBounds, transform: annotation.rotationTransform, in: context)
     }
 
     guard showsHandles else { return }
@@ -2530,7 +2700,12 @@ final class DrawingCanvasNSView: NSView {
     context.restoreGState()
   }
 
-  private func drawSelectionBounds(_ bounds: CGRect, in context: CGContext) {
+  private func drawSelectionBounds(_ bounds: CGRect, transform: CGAffineTransform? = nil, in context: CGContext) {
+    context.saveGState()
+    defer { context.restoreGState() }
+    if let transform {
+      context.concatenate(transform)
+    }
     context.setStrokeColor(NSColor.systemBlue.cgColor)
     context.setLineWidth(selectionChromeMetrics.imageLength(
       forScreenPoints: AnnotateSelectionChromeMetrics.selectionLineWidth
@@ -2595,6 +2770,15 @@ final class DrawingCanvasNSView: NSView {
 
     for (handle, rect) in resizeHandleRects(for: annotation, in: .image) {
       switch handle {
+      case .rotation:
+        // A short stem ties the round grip to the middle of the top edge.
+        let stemStart = AnnotationRotationGesture.handleStemStart(for: annotation)
+        context.beginPath()
+        context.move(to: stemStart)
+        context.addLine(to: CGPoint(x: rect.midX, y: rect.midY))
+        context.strokePath()
+        context.fillEllipse(in: rect)
+        context.strokeEllipse(in: rect)
       case .lineStart, .lineEnd, .arrowControl, .counterArrowTip:
         // Circular grips for line/arrow endpoint and Bezier control editing.
         context.fillEllipse(in: rect)
@@ -2850,8 +3034,35 @@ final class DrawingCanvasNSView: NSView {
       NSCursor.resizeUpDown.set()
     case .left, .right:
       NSCursor.resizeLeftRight.set()
+    case .rotation:
+      Self.rotationCursor.set()
     }
   }
+
+  /// A rotate-arrow cursor with a white halo so it reads on dark and light images.
+  private static let rotationCursor: NSCursor = {
+    let size = NSSize(width: 20, height: 20)
+    let symbolName = "arrow.clockwise"
+    guard let halo = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
+      .withSymbolConfiguration(.init(pointSize: 14, weight: .heavy).applying(.init(paletteColors: [.white]))),
+      let glyph = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
+      .withSymbolConfiguration(.init(pointSize: 13, weight: .semibold).applying(.init(paletteColors: [.black]))) else {
+      return .crosshair
+    }
+    let image = NSImage(size: size, flipped: false) { rect in
+      for symbol in [halo, glyph] {
+        let symbolRect = CGRect(
+          x: rect.midX - symbol.size.width / 2,
+          y: rect.midY - symbol.size.height / 2,
+          width: symbol.size.width,
+          height: symbol.size.height
+        )
+        symbol.draw(in: symbolRect)
+      }
+      return true
+    }
+    return NSCursor(image: image, hotSpot: NSPoint(x: size.width / 2, y: size.height / 2))
+  }()
 
   private func setCursorForCropHandle(_ handle: CropHandle) {
     // Note: In image coordinates, Y increases upward (bottom-left origin)

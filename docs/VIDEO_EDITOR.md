@@ -64,12 +64,12 @@ flowchart TD
 ## State and Playback
 
 - `VideoEditorState` (`VideoEditorState.swift`) is the central model: asset, trim range, zoom/speed segments, background, export settings, undo stacks. `VideoEditorPlaybackState` holds playhead/playing/scrubbing.
-- Playback position comes from an `AVPlayer` time observer, limited to roughly 30 UI updates per wall second even during fast playback. An item-end observer handles the source asset's end. Space is routed by `VideoEditorWindow` through the same Play/Pause action as the transport button, while text fields retain normal Space input.
+- Playback position comes from an `AVPlayer` time observer, limited to roughly 30 UI updates per wall second even during fast playback (the wall-clock gate is `0.8/30` s, below the period, so jittery callbacks are not dropped at 1×). Scrubbing uses a chase seek: the playhead follows every event, at most one frame-exact player seek is in flight, the latest target is issued when it lands, and `endScrubbing` flushes it. An item-end observer handles the source asset's end. Space is routed by `VideoEditorWindow` through the same Play/Pause action as the transport button, while text fields retain normal Space input.
 - When a Snapzy recording has an editor audio source sidecar, the state's asset URL is swapped to the multitrack sidecar (`editorAssetURL(for:metadata:)`) while save/replace keeps targeting the user-facing compatible file.
 
 ## Reopen and Continue Editing
 
-- Every successful in-place Video Editor Save persists a versioned edit recipe in `Application Support/Snapzy/VideoEditorSessions/`. The recipe includes the ordered cut/trim timeline, zoom blocks, speed blocks, background, audio/export settings, and recording metadata.
+- Every successful in-place Video Editor Save persists a versioned edit recipe in `Application Support/Snapzy/VideoEditorSessions/`. The recipe includes the ordered cut/trim timeline, zoom blocks, speed blocks, background, audio/export settings, recording metadata, and (when present) Studio cursor/camera settings and captions. Those last three are optional fields (`decodeIfPresent`), so manifests from before them still open and the schema version stays 1.
 - The first commit also preserves a private source snapshot captured before rendering. When the file is reopened from Quick Access, History, or a direct URL, `VideoEditorState` loads that snapshot as its editing asset while keeping the current rendered file as the replacement target. A later Save therefore applies the recipe to the original source again instead of applying edits to an already-rendered export.
 - The sidecar is keyed by the current media path and validated against its size, modification time, and extension. A missing, invalid, or incompatible sidecar falls back to opening the flattened media as a legacy session.
 - Temporary capture (`after capture → save = false`) commits the rendered file at its temp URL and keeps the recipe with the Quick Access card. Quick Access Save later promotes both the media and its editor session package to the export destination. Saved capture (`save = true`) keeps the package keyed at the existing destination.
@@ -189,8 +189,37 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 
 ## Left Rail and Sidebars
 
-- A slim icon rail (`Components/VideoEditorLeftRail.swift`, `VideoEditorLeftRail`) sits on the leading edge of the workspace and owns the left sidebar: **Background** (`paintpalette`) opens `VideoEditorVideoBackgroundSidebarView` (240 pt), **Zoom** (`plus.magnifyingglass`) opens `ZoomSettingsContent` (320 pt) — the configuration that used to live in the right sidebar. Inactive icons render in secondary gray; the active icon takes the accent color over a soft accent surface. Tapping the visible panel's icon collapses the sidebar; tapping another entry swaps the panel (`state.selectLeftSidebarPanel`).
+- A slim icon rail (`Components/VideoEditorLeftRail.swift`, `VideoEditorLeftRail`) sits on the leading edge of the workspace and owns the left sidebar: **Background** (`paintpalette`) opens `VideoEditorVideoBackgroundSidebarView` (240 pt), **Zoom** (`plus.magnifyingglass`) opens `ZoomSettingsContent` (320 pt), **Cursor** (`cursorarrow.rays`) opens `VideoEditorCursorSettingsPanel` (240 pt), **Camera** (`person.crop.square`) opens `VideoEditorCameraSettingsPanel` (240 pt) — the zoom configuration that used to live in the right sidebar. Inactive icons render in secondary gray; the active icon takes the accent color over a soft accent surface. Tapping the visible panel's icon collapses the sidebar; tapping another entry swaps the panel (`state.selectLeftSidebarPanel`).
 - Selecting a zoom block (`state.openZoomConfiguration`) switches the rail to the Zoom panel and expands the sidebar. The toolbar's sidebar toggle (⌘B) collapses/expands whichever panel is active; the former right-sidebar toggle and its ⌘⇧B shortcut were removed with the right sidebar. GIF mode shows neither (GIF editing is dimension-only).
+
+## Cursor Layer (Studio recordings)
+
+- Available when the recording's metadata has `cursorCapture` and `isCursorBaked == false` (`VideoEditorState.hasEditableCursor`, Studio recording — see [`RECORDING.md`](RECORDING.md)). The editor then edits the cursor-less source (`studioSourceFileName` or the audio source). Other recordings show a notice in the Cursor panel and no controls.
+- `VideoEditorCursorSettings`: show, size (0.5–3×, hotspot stays fixed), smoothing (0 = raw samples; forward-backward exponential filter, τ ≤ 120 ms, no lag), hide when idle (delay 0.5–5 s, 0.2 s fade), always use arrow, click effect (none / ripple / ring while held) + color, click sound (default off) + volume. Every change is one undo step (`EditorAction.updateCursor`; slider drags commit once on release). Session persistence is phase 6.
+- One pure resolver, two renderers: `VideoEditorCursorResolver.resolve(sourceTime:)` (recording time) feeds the export layer `VideoEditorCursorLayer` (Core Image, `.source` space, so zoom scales it) and the preview `VideoEditorCursorOverlayView` (SwiftUI `Canvas` in the source-space overlay host, redrawn on playback ticks). Export maps output → playable sequence → primary source time with `VideoEditorSourceTimeMapping` (speed, cuts, reorder; nothing over inserted files); preview maps the structural playhead through the active placement. Sprites load once per metadata (`VideoEditorCursorSpriteStore`, arrow fallback). The Studio recording flatten pass uses the same layer with `.recorded` settings and an identity mapping.
+- Click sound (`VideoEditorClickSound`): a synthesized click (no bundled audio). Export writes a mono PCM lane with clicks at their output times (merged when < 60 ms apart, e.g. at 4×) and adds it as an extra audio track; muted exports skip it. Preview: `VideoEditorClickSoundPlayer` (AVAudioEngine) schedules clicks within a 150 ms look-ahead at host time on each playback tick; seeks and pauses drop what was scheduled.
+
+## Camera Layer (Studio recordings)
+
+- Available when the recording has a camera sidecar (`RecordingMetadata.cameraSource`, file present: `VideoEditorState.hasEditableCamera`); otherwise the Camera panel shows a notice. Settings start from the overlay placement used while recording (`VideoEditorCameraSettings.recorded`).
+- `VideoEditorCameraSettings`: show, shape (rectangle / square / circle), size (8–60 % of the video width), center (one of nine anchors), mirror, reset to the recording layout. Position and size are relative to the video rect, while the layer is drawn in canvas space (after zoom and background, never zoomed). Undo via `EditorAction.updateCamera` (slider drags commit once).
+- Export: `VideoEditorExporter.addCameraTrack` lays the sidecar out clip by clip like the screen track (same source windows, empty over inserted files and past the sidecar end) and speed-scales it the same way; the compositor reads it as the `.camera` auxiliary track and `VideoEditorCameraLayer` draws it into the video rect the compositor passes (`VideoEditorStudioLayerContext.videoRect`, padding included), skipping recorded gaps. `VideoEditorCameraRenderer` (aspect fill, mirror, rounded-rect mask) is shared with the Studio recording flatten pass.
+- Preview (D2, simplified): `VideoEditorCameraPreviewController` owns a second, muted `AVPlayer` on the sidecar, whose time axis is recording source time. On each playback tick the playhead is mapped to source time (same mapping as the cursor): while playing it runs at the current speed segment's rate and re-seeks when drift exceeds 120 ms; while paused/scrubbing it seeks exactly, coalescing seeks. Rendered by an `AVPlayerLayer` (corner mask and mirroring in Core Animation) in the canvas-space overlay host; hidden over inserted clips, trimmed footage and gaps.
+- Drag the camera in the preview to move it (the canvas-space host takes the pointer only on the camera); it snaps to the nine panel anchors within 32 pt (`RecordingCameraOverlayPlacement.snapThreshold`, square distance) and stays inside the video (`VideoEditorCameraSettings.draggedCenter`). One undo step per drag.
+- Hide the camera for stretches: `VideoEditorCameraSettings.hiddenRanges` in SOURCE time (follow cuts, reorder and speed; saved and undone with the camera settings). Camera timeline track (`VideoEditorCameraTimelineTrack`, shown with an editable camera): double-click to hide 2 s there, drag a block or its edges, right-click → Show Camera Here; panel button Hide Camera at Playhead. Preview and export fade over 0.2 s at each edge (`visibility(atSource:)`, `VideoEditorCameraRenderer` opacity). Agent: `set_camera(hide_start, hide_end, hide_during_zooms, show_hidden, clear_hidden, reset)`; hidden stretches show in `get_timeline` as `h1…`.
+- Recording toolbar camera menu notes, while Studio Recording applies, that the camera stays editable (`RecordingToolbarState.isStudioRecordingActive`).
+
+## Captions
+
+- Work for any video with audio (not only Studio recordings); not for GIF. Left rail panel `captions.bubble` (`VideoEditorCaptionsPanel` + `VideoEditorCaptionSegmentList`) and a Captions timeline track (`VideoEditorCaptionTimelineTrack`) that appears once captions exist.
+- Model: `VideoEditorCaptions` = `[CaptionSegment]` in SOURCE time of the primary recording + `VideoEditorCaptionSettings` (show on video, language, text size as a fraction of the video height, bold, text color, background pill opacity — below 20 % the text gets an outline instead —, top/bottom + margin, 42 chars × 2 lines, hide faster than 2×). Cuts, reorder and speed never need a regenerate. Every edit is one undo step (`EditorAction.updateCaptions`; slider drags and timeline drags commit once; Generate/Regenerate is one checkpoint).
+- Generate: `VideoEditorState.generateCaptions()` → `VideoEditorTranscriptService` (SpeechAnalyzer on macOS 26 → chunked SFSpeech on-device; microphone track preferred) → `VideoEditorCaptionSegmenter`. Runs in the progress overlay as `.generateCaptions` / `.downloadSpeechModel` with a Cancel button. Language: panel choice → app language (with the Mac's region when they match) → Mac locale. Errors and "x parts could not be recognized" show in the panel (`captionNotice`). Remote (opt-in) transcription is not offered in the UI yet.
+- Layout: `VideoEditorCaptionLayout` (CoreText, sizes relative to the video rect) + `VideoEditorCaptionRenderer` (bitmap) are shared by preview and export, so line breaks and the box match. `VideoEditorCaptionImageCache` renders each caption once.
+- Preview: `VideoEditorCaptionOverlayView` in the canvas-space host above the camera, playhead → source time via `cursorSourceTime(atSequence:)`, rate via `previewSourceRate`.
+- Export: `VideoEditorCaptionLayer` (canvas space, last in the recipe) is added by `makeStudioRecipe` whenever captions are shown; output → source through `VideoEditorSourceTimeMapping`.
+- SRT / WebVTT: panel buttons; `VideoEditorCaptionResolver.outputCues` maps source → output time over the playable placements and `TimelineSequenceMap` (cut footage dropped, a caption split by a cut becomes two cues, back-to-back pieces merge, speed shrinks cues), written by `VideoEditorSubtitleWriter`. Independent of "Show on Video".
+- Language picked in the panel is remembered for the next video (`videoEditor.captions.language`, TOML `recording.video_editor_caption_language`; empty = automatic).
+- Saved with the session (see below) and editable by the agent (`generate_captions`, `edit_caption`, `get_captions`, `add_caption`, `remove_captions`, `replace_in_captions`, `translate_captions`).
 
 ## Background and Padding
 
@@ -209,7 +238,7 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 
 | Condition | Path |
 | --- | --- |
-| Zooms, background, speed segments, or a multi-clip sequence present | `exportWithZooms` — `AVMutableComposition` + custom `ZoomCompositor` (`AVVideoCompositing`, CI/Metal per-frame render) |
+| Zooms, background, speed segments, a multi-clip sequence, or an active Studio layer present | `exportWithZooms` — `AVMutableComposition` + custom `ZoomCompositor` (`AVVideoCompositing`, CI/Metal per-frame render) |
 | `exportSettings.audioMode == .mute` (no effects) | `exportVideoOnly` |
 | Otherwise | `exportStandard` |
 
@@ -234,6 +263,7 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 
 - In-memory `undoStack`/`redoStack` of `EditorAction` (max 50) inside `VideoEditorState`; covers zoom add/remove/update, speed add/remove/update/toggle, mute, background changes, and the clip sequence (add/remove/update/move/split — which subsumes trim). Shortcuts: ⌘Z / ⇧⌘Z (toolbar buttons in `VideoEditorToolbarView`).
 - Any recorded action sets `hasUnsavedChanges` → `isDocumentEdited` + close alert.
+- Undo groups: `beginUndoGroup()` / `endUndoGroup()` (nestable) collect actions into one `EditorAction.group`; an empty group pushes nothing, a single action is pushed as is. ⌘Z/redo are ignored while a group is open, and the preview composition rebuilds once when it closes. The AI prompt and its quick actions use one group per run.
 - Continuous zoom/speed drags and settings gestures record one update when the interaction ends. A clamped/no-op update does not publish or add history; undo/redo finalizes any active transaction first.
 
 ## Timeline interaction performance
@@ -245,7 +275,23 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 - Export captures an immutable recipe and asset references before awaiting exact autofocus paths. Subsequent editor changes cannot mix into that export.
 - The editor disables authoring controls and shortcuts while exporting and persisting the session; the exported file and saved session use the same recipe.
 - Debug builds expose `VideoEditor` signposts when the `perf.signposts` user-default is enabled before launch. Use Instruments to measure pointer handling, model updates, path work and release settling. Close cancels pending performance work.
+### Rendering rules
+
+These keep playback, scrubbing, sidebar edits and opening ⌘K smooth. Break one and the editor re-renders at playback rate again.
+
+- **No unguarded `@Published` writes on hot paths.** `@Published` notifies on every assignment, equal or not, and about 20 views observe the whole `VideoEditorState`. Anything called per tick, scrub, seek or drag event writes only real changes (`updateClipActionAvailability`, caption progress, viewport `setScrollOffset` / `setGeometry`). `testPlaybackTicksAndScrubbing_doNotPublishEditorStateWhenNothingChanged` guards this. In Debug, `VideoEditorRenderRateGuard` logs a warning when `VideoEditorMainView` or `VideoControlsView` re-renders more than 5×/s while playing.
+- **Only leaf views follow the playhead.** Views observing the editor state hold `playbackState` as a plain `let` and use `.onReceive`. The controls bar's time label (whole seconds), play glyph and auto-zoom badge are leaves.
+- **The timeline draws a snapped range.** `viewport.renderRange` is the visible window ±1 viewport, snapped to whole viewport widths, so scrolling and auto-follow don't invalidate the equatable tracks. The caption track culls to it too. Zoom and speed tracks ignore trims, which never move clip slots.
+- **Drags preview cheaply and commit once.** Clip trims hold the speed preview rebuild until release (like speed drags), and the auto-focus remap waits 100 ms while trimming. Clip drag sessions are written only when they change.
+- **No layout animation of the player column.** The left sidebar and the ⌘K panel change width in one non-animated step. The sidebar's content fades in; the AI panel slides by offset one main-queue turn after the editor narrows, and its prompt field takes focus one turn later. The controls bar must stay horizontally compressible, because the hosting view turns its minimum into the window's content minimum. A rigid row made ⌘K widen the window. The AI slot is compressible with layout priority, and the status badges drop out (measured, not `ViewThatFits`) when they don't fit. `testAIPanelOpen_withLeftSidebar_keepsWindowWidth` guards this.
+- **No per-frame offscreen work on live content.** The preview shadow and the AI panel shadow are cast by static shapes, not by the video or glass content. The blurred wallpaper is rendered once into a bitmap (preview off main, export once per size). The AI status shimmer runs at 30 fps and pauses while the panel is parked.
+- **Lookups that run per tick are indexed.** The caption resolver is cached and binary-searches visible segments. The cursor resolver's `updating(settings:)` reuses the smoothed path and activity times.
+
 - Run `scripts/run-video-editor-performance-probe.sh` for the reproducible CPU matrix, or `--quick` for a shorter equality check. The runner can attach Instruments to a running process with `--attach PID --duration 30 --template 'Time Profiler'`. CPU results isolate camera algorithms; they do not measure native pointer-to-frame latency.
+
+## AI Prompt
+
+Two layouts, picked in Settings → AI → Video Editor: **Sidebar** (default), a full-height right panel (the editor and toolbar narrow beside it; its close button replaces the AI toggle) toggled by the toolbar's AI button or ⌘K (conversation transcript, clickable edit steps, quick actions, provider chip, Undo per reply); or **Floating dock** over the bottom of the player (orb → prompt, quick-action chips, result pill with Undo). The agent edits clips, zooms, speeds, frame and audio through the state's mutators, one undo step per prompt, and can read activity (silence/idle/motion, Studio clicks), frames, on-screen text and an on-device transcript. On Studio recordings it also restyles the cursor and camera, zooms on clicks and edits or translates captions. Authoring is locked while it runs; playback stays live. Not for GIFs. Full reference: [AI.md](AI.md#video-editor).
 
 ## Editor Shortcuts (video only)
 
@@ -258,6 +304,10 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 | Set trim end at playhead | `O` |
 | Timeline zoom in/out/fit | `⌘=` / `⌘-` / `⌘0` |
 | Cloud upload | `⌘U` |
+| AI prompt (open / refocus / close) | `⌘K` — configurable (Settings → Shortcuts → Video Editor Actions, `shortcuts.video_editor.ai_prompt`) |
+
+- The single-key shortcuts (Z, S, ⌫, I, O) are off while the AI prompt is open, so typing never edits the timeline. Close the prompt (Esc / ⌘K) to use them again.
+- The AI prompt shortcut cannot take a built-in editor combo (⌘Z, ⇧⌘Z, ⌘S, ⌘U, ⌘B, ⌘=, ⌘-, ⌘0, ⌘C/V/X/A, ⌘W/Q/M/H, ⌘,) or an enabled global hotkey; see [SHORTCUTS.md](SHORTCUTS.md#video-editor-shortcuts).
 
 ## Bottom Bar (HEAD)
 
@@ -282,13 +332,21 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 | `Snapzy/Features/VideoEditor/Services/VideoEditorZoomCalculator.swift` | Per-frame zoom progress/crop math, easing, transition clamps |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorExporter.swift` | Export routing, composition build, replace/copy, audio normalization |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorSessionStore.swift` | Private source snapshots, sidecar validation, package moves, and cleanup |
-| `Snapzy/Features/VideoEditor/Services/VideoEditorZoomCompositor.swift` | Custom `AVVideoCompositing` per-frame zoom/background renderer |
+| `Snapzy/Features/VideoEditor/Services/VideoEditorZoomCompositor.swift` | Custom `AVVideoCompositing` per-frame zoom/background renderer; Studio hooks `compositeSourceSpaceLayers` (before zoom) / `compositeCanvasSpaceLayers` (after background); explicit screen track + auxiliary (camera) track IDs |
+| `Snapzy/Features/VideoEditor/Models/VideoEditorStudioRecipe.swift` | Sendable Studio layer recipe (cursor/camera/captions) carried by the compositor instruction; empty ⇒ no behaviour change |
+| `Snapzy/Features/VideoEditor/Components/VideoEditorStudioOverlayHost.swift` | Preview hosts: `.source` inside the zoom transform, `.canvas` over the padded composite |
+| `Snapzy/Features/VideoEditor/Services/VideoEditorCursorResolver.swift`, `VideoEditorCursorLayer.swift` | Studio cursor: pure resolver and Core Image export layer (+ output → source time mapping) |
+| `Snapzy/Features/VideoEditor/Components/VideoEditorCursorOverlayView.swift`, `VideoEditorCursorSettingsPanel.swift` | Cursor preview overlay and left-sidebar panel |
 | `Snapzy/Features/VideoEditor/Services/GIFResizer.swift` | ImageIO GIF resize preserving loop/delays |
 | `Snapzy/Features/VideoEditor/Components/VideoEditorClipStripView.swift` | The clip sequence strip: select, reorder, trim, split, delete |
 | `Snapzy/Features/VideoEditor/Components/VideoEditorLeftRail.swift` | Collapsed left rail: Background and Zoom configuration entries |
 | `Snapzy/Features/VideoEditor/Components/VideoEditorLeftSidebar.swift` | Left sidebar panels (background canvas settings, zoom item configuration) |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorClipThumbnailCache.swift` | Frame strips for inserted clips, cached per URL |
 | `Snapzy/Features/VideoEditor/Components/VideoEditorBottomBar.swift` | Cancel / cloud-upload / Convert-Save bar |
+| `Snapzy/Features/VideoEditor/Agent/` | AI prompt: toolbox, tool catalog, controller, analyzer, vision/OCR, transcriber, Apple Intelligence tools (see [AI.md](AI.md#source-map)) |
+| `Snapzy/Features/VideoEditor/Components/VideoEditorAIPanelView.swift` | AI assistant right sidebar: transcript, edit steps, quick actions, composer |
+| `Snapzy/Features/VideoEditor/Components/VideoEditorAIDockView.swift` | AI floating dock layout: orb, prompt row, quick-action chips, result pill |
+| `Snapzy/Features/VideoEditor/Services/VideoEditorShortcutManager.swift` | Configurable editor action shortcuts (AI prompt) and reserved editor combos |
 | `Snapzy/Services/Capture/RecordingMetadata.swift` | Metadata consumed by Follow Mouse and multitrack audio |
 
 ## Related docs
@@ -296,3 +354,4 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 - [`RECORDING.md`](RECORDING.md) — recording pipeline, GIF conversion, Smart Camera metadata format and store
 - [`CAPTURE.md`](CAPTURE.md) — post-capture routing, Quick Access actions, history restore
 - [`STRUCTURE.md`](STRUCTURE.md) — runtime map and persistence layout
+- [`AI.md`](AI.md) — AI prompt providers, tools, privacy

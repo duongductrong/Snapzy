@@ -13,6 +13,11 @@ enum VideoEditorProgressOperation: Equatable {
   case saveGIF
   case exportGIF
   case uploadToCloud
+  case generateCaptions
+  case downloadSpeechModel
+
+  /// Caption work runs in the overlay too and can be cancelled from it.
+  var isCaptionWork: Bool { self == .generateCaptions || self == .downloadSpeechModel }
 
   var title: String {
     switch self {
@@ -26,6 +31,10 @@ enum VideoEditorProgressOperation: Equatable {
       L10n.VideoEditor.saveResizedGIFTitle
     case .uploadToCloud:
       L10n.PreferencesHistory.uploadingToCloud
+    case .generateCaptions:
+      L10n.VideoEditor.generatingCaptions
+    case .downloadSpeechModel:
+      L10n.VideoEditor.downloadingSpeechModel
     }
   }
 
@@ -39,6 +48,10 @@ enum VideoEditorProgressOperation: Equatable {
       L10n.VideoEditor.resizingGIF
     case .uploadToCloud:
       L10n.PreferencesHistory.uploadingToCloud
+    case .generateCaptions:
+      L10n.VideoEditor.transcribingSpeech
+    case .downloadSpeechModel:
+      L10n.VideoEditor.downloadingSpeechModelDetail
     }
   }
 }

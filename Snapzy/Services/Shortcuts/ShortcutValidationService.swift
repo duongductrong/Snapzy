@@ -18,6 +18,7 @@ struct ShortcutSwapProposal: Equatable {
   enum Owner: Equatable {
     case global(GlobalShortcutKind)
     case annotateAction(AnnotateActionShortcutKind)
+    case videoEditorAction(VideoEditorActionShortcutKind)
     case quickAccessAction(QuickAccessActionKind)
     case annotateTool(AnnotationToolType)
   }
@@ -74,6 +75,14 @@ final class ShortcutValidationService {
       ))
     }
 
+    if let conflictKind = conflictingVideoEditorActionShortcut(for: config, excluding: nil) {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.ShortcutValidation.alreadyUsedByInVideoEditor(conflictKind.displayName),
+        swapProposal: ShortcutSwapProposal(owner: .videoEditorAction(conflictKind), value: .combo(config))
+      ))
+    }
+
     let systemConflicts = SystemScreenshotShortcutManager.shared.conflictDescriptions(
       for: kind,
       shortcut: config
@@ -100,6 +109,41 @@ final class ShortcutValidationService {
         severity: .error,
         message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName),
         swapProposal: ShortcutSwapProposal(owner: .annotateAction(conflictKind), value: .combo(config))
+      ))
+    }
+
+    if let conflictKind = conflictingGlobalShortcut(for: config, excluding: nil) {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName),
+        swapProposal: ShortcutSwapProposal(owner: .global(conflictKind), value: .combo(config))
+      ))
+    }
+
+    return .accept(issue: nil)
+  }
+
+  /// Video Editor actions are editor-local: they may reuse Annotate keys (the two windows are
+  /// never key at once), but not a global hotkey (Carbon takes it first) or a built-in editor
+  /// combo (the action is matched ahead of SwiftUI and would shadow it).
+  func validateVideoEditorActionShortcut(
+    _ config: ShortcutConfig?,
+    for kind: VideoEditorActionShortcutKind
+  ) -> ShortcutValidationDecision {
+    guard let config else { return .accept(issue: nil) }
+
+    if VideoEditorShortcutManager.reservedShortcuts.contains(config) {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.ShortcutValidation.reservedByVideoEditor
+      ))
+    }
+
+    if let conflictKind = conflictingVideoEditorActionShortcut(for: config, excluding: kind) {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName),
+        swapProposal: ShortcutSwapProposal(owner: .videoEditorAction(conflictKind), value: .combo(config))
       ))
     }
 
@@ -232,8 +276,20 @@ final class ShortcutValidationService {
   ) -> AnnotateActionShortcutKind? {
     AnnotateActionShortcutKind.allCases.first(where: {
       $0 != excludedKind
+        && ($0 != .aiPrompt || AnnotateAgentProviderResolver.isFeatureAvailable)
         && AnnotateShortcutManager.shared.isActionShortcutEnabled(for: $0)
         && AnnotateShortcutManager.shared.shortcut(for: $0) == config
+    })
+  }
+
+  private func conflictingVideoEditorActionShortcut(
+    for config: ShortcutConfig,
+    excluding excludedKind: VideoEditorActionShortcutKind?
+  ) -> VideoEditorActionShortcutKind? {
+    VideoEditorActionShortcutKind.allCases.first(where: {
+      $0 != excludedKind
+        && VideoEditorShortcutManager.shared.isActionShortcutEnabled(for: $0)
+        && VideoEditorShortcutManager.shared.shortcut(for: $0) == config
     })
   }
 
@@ -289,6 +345,17 @@ private extension AnnotateActionShortcutKind {
       return L10n.AnnotateTranslate.actionTitle
     case .translateArea:
       return L10n.AnnotateTranslate.translateArea
+    case .aiPrompt:
+      return L10n.AnnotateAI.askHelp
+    }
+  }
+}
+
+extension VideoEditorActionShortcutKind {
+  var displayName: String {
+    switch self {
+    case .aiPrompt:
+      return L10n.VideoEditorAI.askHelp
     }
   }
 }

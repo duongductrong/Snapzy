@@ -2,7 +2,7 @@
 
 `snapzy` lets AI agents, scripts, and terminals capture a display, a window, or an area through Snapzy — no overlay, no clicks — and get back a file path, JSON metadata, and an exit code. It ships inside the app at `Snapzy.app/Contents/Helpers/snapzy`.
 
-Current as of HEAD (`v2.2.0`, build 233, macOS 13.0+ deployment target).
+Current as of HEAD (`v2.3.0-beta.5`, build 238, macOS 13.0+ deployment target).
 
 ## How it works
 
@@ -61,6 +61,7 @@ Sparkle replaces the whole bundle at the same path, so the helper updates with t
 | `snapzy measure screen [--display main\|ID] (--at … \| --box …)…` | Captures one display, then measures it locally |
 | `snapzy measure window --id ID \| --app NAME … \| --active (--at … \| --box …)…` | Captures one window without its shadow, then measures it |
 | `snapzy measure area --rect x,y,w,h (--at … \| --box …)…` | Captures a rectangle, then measures it |
+| `snapzy mcp [--session TOKEN] [--timeout S]` | Hidden. stdio MCP server for an agent CLI that Snapzy itself started for Annotate's AI prompt — see [snapzy mcp](#snapzy-mcp) |
 
 App matching (`--app`): exact bundle ID, else exact name, else name prefix — case-insensitive, best tier only (so `Code` never mixes VS Code's windows with Codex's; with no app named exactly `Code`, the prefix tier still matches `Codex`). With several matches the frontmost window wins and `matchedCandidates` reports the count; `--index` picks another (0-based).
 
@@ -155,6 +156,15 @@ The first request shows **Always Allow / Allow Once / Don't Allow**:
 
 While a CLI capture runs the menu bar icon is tinted; if the icon is hidden, a toast names the app (at most every 30 s per app). See [`../SECURITY.md`](../SECURITY.md) for the threat model and limits.
 
+## snapzy mcp
+
+Hidden (`shouldDisplay: false`) subcommand Snapzy hands to Claude Code, Codex or OpenCode when an Annotate AI prompt runs through them ([AI.md](AI.md)). Not meant to be configured by hand.
+
+- Transport: MCP over stdio, one JSON-RPC message per line; capability `tools` only. `initialize` echoes the client's `protocolVersion` when it is a known one (2024-11-05 … 2025-11-25).
+- Token: `SNAPZY_AGENT_SESSION` (or `--session`), created by Snapzy for one run and dead once that run ends or is stopped. No token → exits `invalidArguments`; an expired token → each tool call returns `isError` the model can read.
+- Each tool call opens a fresh socket connection (`agent.tools` / `agent.call`), so a model that thinks longer than the 60 s idle timeout still works. `--timeout` (default 90 s) bounds one call. It never launches Snapzy.
+- `agent.*` methods skip per-app approval — the token authorizes them. While a run is in flight Snapzy opens the socket even with Command Line access off, in agent-only mode (only `hello`, `system.status`, `agent.*`).
+
 ## Socket and files
 
 | Path | Purpose |
@@ -166,7 +176,7 @@ Debug (`com.trongduong.snapzy.debug`) and release builds use separate sockets. T
 
 ## Wire protocol
 
-`SnapzyCLIProtocol` (Foundation-only, linked by the app): 4-byte big-endian length + one UTF-8 JSON document, max 1 MiB. The first request must be `hello` with `protocolVersion` (`"1.0"`); a different major version gets `versionMismatch`. Requests are `{id, method, params}`, responses `{id, result}` or `{id, error}`; errors to unreadable requests use `id: 0`. Methods: `hello`, `system.status`, `list.displays|windows|apps`, `capture.screen|window|area`. One request at a time per connection; 5 s handshake and 60 s idle timeouts; over 8 connections the server answers `busy` instead of refusing.
+`SnapzyCLIProtocol` (Foundation-only, linked by the app): 4-byte big-endian length + one UTF-8 JSON document, max 1 MiB. The first request must be `hello` with `protocolVersion` (`"1.0"`); a different major version gets `versionMismatch`. Requests are `{id, method, params}`, responses `{id, result}` or `{id, error}`; errors to unreadable requests use `id: 0`. Methods: `hello`, `system.status`, `list.displays|windows|apps`, `capture.screen|window|area`, `agent.tools|call` (token-bound, for `snapzy mcp`). One request at a time per connection; 5 s handshake and 60 s idle timeouts; over 8 connections the server answers `busy` instead of refusing.
 
 ## Source map
 

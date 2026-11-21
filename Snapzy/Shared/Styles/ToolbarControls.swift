@@ -24,6 +24,8 @@ struct ToolbarButton: View {
   /// Shows a small trailing chevron, marking the button as a pull-down that opens a menu.
   /// The glyph keeps its size; the button grows by `menuIndicatorWidth` and the glass covers both.
   var showsMenuIndicator: Bool = false
+  /// Optional multi-hue fill for the glyph (e.g. the Apple Intelligence palette). Ignored while disabled.
+  var glyphGradient: [Color]? = nil
 
   let action: () -> Void
 
@@ -40,6 +42,13 @@ struct ToolbarButton: View {
           // With a chevron the glyph sits a little left of centre so the pair reads as one unit.
           .frame(width: showsMenuIndicator ? ControlMetrics.toolbarButton - 4 : ControlMetrics.toolbarButton)
           .padding(.leading, showsMenuIndicator ? 2 : 0)
+          .overlay {
+            if let glyphGradient, isEnabled {
+              LinearGradient(colors: glyphGradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+                .mask(Image(systemName: displayedIcon).font(.system(size: 14, weight: .medium)))
+                .allowsHitTesting(false)
+            }
+          }
         if showsMenuIndicator {
           Image(systemName: "chevron.down")
             .font(.system(size: 7, weight: .bold))

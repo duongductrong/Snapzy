@@ -17,6 +17,9 @@ import SwiftUI
 enum VideoEditorLeftSidebarPanel: Hashable, CaseIterable {
   case background
   case zoom
+  case cursor
+  case camera
+  case captions
 }
 
 /// AVPlayer callbacks and schedule access are serialized on `queue`. Observer
@@ -265,6 +268,25 @@ enum EditorAction: Equatable {
   case updateClip(old: TimelineClip, new: TimelineClip)
   case moveClip(id: UUID, fromIndex: Int, toIndex: Int)
   case splitClip(original: TimelineClip, index: Int, first: TimelineClip, second: TimelineClip)
+  /// Whole-sequence swap, for edits that reshape several clips at once (agent `cut_range`).
+  case replaceClips(old: [TimelineClip], new: [TimelineClip])
+  case updateFrame(old: VideoEditorFrameSettings, new: VideoEditorFrameSettings)
+  case updateExportSettings(old: ExportSettings, new: ExportSettings)
+  case updateCursor(old: VideoEditorCursorSettings, new: VideoEditorCursorSettings)
+  case updateCamera(old: VideoEditorCameraSettings, new: VideoEditorCameraSettings)
+  case updateCaptions(old: VideoEditorCaptions, new: VideoEditorCaptions)
+  /// Several actions that undo and redo as one step (one AI prompt).
+  case group([EditorAction])
+}
+
+/// Everything the background/frame panel changes, as one undoable value.
+struct VideoEditorFrameSettings: Equatable {
+  var style: BackgroundStyle
+  var padding: CGFloat
+  var shadowIntensity: CGFloat
+  var cornerRadius: CGFloat
+  var alignment: ImageAlignment
+  var aspectRatio: AspectRatioOption
 }
 
 /// Playback state changes frequently, so it stays isolated from the broader editor model.
@@ -293,7 +315,7 @@ final class VideoEditorPlaybackState: ObservableObject {
     isScrubbing = value
   }
 
-  private static func formatTime(_ time: CMTime) -> String {
+  nonisolated static func formatTime(_ time: CMTime) -> String {
     let totalSeconds = Int(CMTimeGetSeconds(time))
     let hours = totalSeconds / 3600
     let minutes = (totalSeconds % 3600) / 60
@@ -685,7 +707,37 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Auto Focus
 
-  @Published private(set) var recordingMetadata: RecordingMetadata?
+  @Published private(set) var recordingMetadata: RecordingMetadata? {
+    didSet { reloadCursorLayer() }
+  }
+  /// Studio cursor layer settings (only meaningful when `hasEditableCursor`).
+  @Published private(set) var cursorSettings = VideoEditorCursorSettings.default
+  private(set) var initialCursorSettings = VideoEditorCursorSettings.default
+  /// Captured cursor images, loaded once per metadata.
+  private(set) var cursorSprites = VideoEditorCursorSpriteStore.empty
+  /// Resolver for the current metadata + settings; `nil` without an editable cursor.
+  private(set) var cursorResolver: VideoEditorCursorResolver?
+  /// Studio camera layer settings (only meaningful when `hasEditableCamera`).
+  @Published private(set) var cameraSettings = VideoEditorCameraSettings.default
+  private(set) var initialCameraSettings = VideoEditorCameraSettings.default
+  private var didSeedCameraSettings = false
+  /// Camera sidecar movie of a Studio recording, when present on disk.
+  private(set) var cameraSourceURL: URL?
+  /// Second, muted player on the camera sidecar for the preview.
+  private(set) var cameraPreview: VideoEditorCameraPreviewController?
+  /// Captions (segments in source time + style); see `VideoEditorState+Captions`.
+  @Published internal(set) var captions = VideoEditorCaptions.empty {
+    didSet { cachedCaptionResolver = nil }
+  }
+  /// Preview caption lookup, rebuilt only when `captions` changes (not per tick).
+  var cachedCaptionResolver: VideoEditorCaptionResolver?
+  internal(set) var initialCaptions = VideoEditorCaptions.empty
+  /// Caption generation in flight (transcription), cancellable from the progress overlay.
+  internal(set) var captionTask: Task<Void, Never>?
+  /// Last caption generation problem or partial result, shown in the captions panel.
+  @Published internal(set) var captionNotice: String?
+  /// Live Studio click sound for the preview (engine starts only when used).
+  let clickSoundPlayer = VideoEditorClickSoundPlayer()
   @Published private(set) var autoFocusPaths: [UUID: [AutoFocusCameraSample]] = [:]
 
   // MARK: - GIF Metadata
@@ -697,6 +749,11 @@ final class VideoEditorState: ObservableObject {
 
   @Published var backgroundStyle: BackgroundStyle = .none {
     didSet {
+      // Re-picking the current wallpaper reloaded and re-blurred it. Still retry when the
+      // last load produced nothing.
+      if backgroundStyle == oldValue, loadingBackgroundURL != nil || hasCachedBackgroundForStyle {
+        return
+      }
       handleBackgroundStyleChange()
     }
   }
@@ -733,6 +790,18 @@ final class VideoEditorState: ObservableObject {
   // MARK: - Unsaved Changes
 
   @Published var hasUnsavedChanges: Bool = false
+
+  /// Runs caption translations for the agent (`VideoEditorCaptionTranslationHost` in the window).
+  let captionTranslator = VideoEditorCaptionTranslator()
+
+  /// The AI prompt of this editor window, created on first use.
+  private(set) var agentIfLoaded: VideoEditorAgentController?
+  var agent: VideoEditorAgentController {
+    if let agentIfLoaded { return agentIfLoaded }
+    let agent = VideoEditorAgentController(state: self)
+    agentIfLoaded = agent
+    return agent
+  }
   private var initialZoomSegments: [ZoomSegment] = []
   private var initialSpeedSegments: [SpeedSegment] = []
   private var initialClips: [TimelineClip] = []
@@ -740,6 +809,8 @@ final class VideoEditorState: ObservableObject {
   private var initialBackgroundPadding: CGFloat = 0
   private var initialBackgroundShadowIntensity: CGFloat = 0
   private var initialBackgroundCornerRadius: CGFloat = 0
+  private var initialBackgroundAlignment: ImageAlignment = .center
+  private var initialBackgroundAspectRatio: AspectRatioOption = .auto
   private var initialExportSettings: ExportSettings = .init()
 
   // MARK: - Cloud State
@@ -756,6 +827,9 @@ final class VideoEditorState: ObservableObject {
   private var redoStack: [EditorAction] = []
   private let maxUndoStackSize = 50
   private var isUndoingOrRedoing: Bool = false
+  /// Open `beginUndoGroup` calls; while > 0 recorded actions collect in the buffer.
+  private var undoGroupDepth = 0
+  private var undoGroupBuffer: [EditorAction] = []
 
   // MARK: - Rename State
 
@@ -922,6 +996,7 @@ final class VideoEditorState: ObservableObject {
     previewRateController = VideoEditorPreviewRateController(player: player)
     zoomTransitionDuration = Self.loadZoomTransitionDuration()
     recordingMetadata = initialMetadata
+    reloadCursorLayer()
 
     setupTimeObserver()
     setupEndObserver()
@@ -938,15 +1013,19 @@ final class VideoEditorState: ObservableObject {
     return candidateURLs.lazy.compactMap { RecordingMetadataStore.load(for: $0) }.first
   }
 
+  /// The file the editor actually edits: the multi-track audio source when present,
+  /// else a flattened Studio recording's cursor-less original, else `url` itself.
   static func editorAssetURL(for url: URL, metadata: RecordingMetadata?) -> URL {
-    guard
-      let audioSourceURL = metadata?.audioSourceURL,
-      FileManager.default.fileExists(atPath: audioSourceURL.path)
-    else {
-      return url
+    if let audioSourceURL = metadata?.audioSourceURL,
+       FileManager.default.fileExists(atPath: audioSourceURL.path) {
+      return audioSourceURL
     }
-
-    return audioSourceURL
+    if let name = metadata?.studioSourceFileName,
+       let studioSourceURL = try? RecordingMetadataStore.sidecarURL(named: name, kind: .studioSource),
+       FileManager.default.fileExists(atPath: studioSourceURL.path) {
+      return studioSourceURL
+    }
+    return url
   }
 
   static func audioTrackRoles(for audioTracks: [AVAssetTrack],
@@ -1148,6 +1227,7 @@ final class VideoEditorState: ObservableObject {
     backgroundAspectRatio = sessionData.backgroundAspectRatio
     exportSettings = sessionData.exportSettings
     isMuted = sessionData.isMuted
+    restoreStudioLayers(from: sessionData)
     rebuildAutoFocusPaths(for: zoomSegments)
 
     // Restored values are the new clean baseline. A later user change should
@@ -1226,6 +1306,8 @@ final class VideoEditorState: ObservableObject {
   private var speedTrackDragDidChange = false
   /// Pre-drag snapshot for clip trim gestures (one undo entry per gesture).
   private var clipTrimOriginal: TimelineClip?
+  /// Latest scrub position waiting for the in-flight seek to land (chase seek).
+  private var pendingScrubSeekSeconds: TimeInterval?
   private let primaryPlayerItem: AVPlayerItem
 
   func play() {
@@ -1382,15 +1464,31 @@ final class VideoEditorState: ObservableObject {
 
   /// Scrubbing follows the structural timeline but snaps over inactive trim slots,
   /// keeping the playhead on playable material.
+  ///
+  /// Chase seek: the playhead follows every event, but only one frame-exact player seek
+  /// is in flight at a time. A newer target waits and is issued when that seek lands;
+  /// otherwise each mouse event cancelled the previous decode and the frame rarely
+  /// landed during a fast drag. `endScrubbing` flushes the last target, so the final
+  /// frame is exactly the one the playhead shows.
   func scrub(to time: CMTime) {
     let clampedTime = normalizedTimelineTime(time)
     playbackState.setCurrentTime(clampedTime)
-    seekPlayerInternally(to: CMTimeGetSeconds(clampedTime))
+    let seconds = CMTimeGetSeconds(clampedTime)
+    if playbackState.isScrubbing, internalSeekToken != nil {
+      pendingScrubSeekSeconds = seconds
+    } else {
+      seekPlayerInternally(to: seconds)
+    }
     updateClipActionAvailability()
   }
 
   func endScrubbing() {
     playbackState.setScrubbing(false)
+    // With a seek still decoding, its completion chases the pending target; issuing it
+    // here would only cancel that decode.
+    if let pending = pendingScrubSeekSeconds, internalSeekToken == nil {
+      seekPlayerInternally(to: pending)
+    }
   }
 
   // MARK: - Player Item Management (clip sequence)
@@ -1400,7 +1498,7 @@ final class VideoEditorState: ObservableObject {
   /// cannot install an old speed map over a newer edit.
   private func scheduleSpeedPreviewRebuild(immediate: Bool = false) {
     guard !isPerformanceWorkClosed else { return }
-    if speedTrackDragInProgress && speedTrackDragDidChange {
+    if defersPreviewRebuild && speedTrackDragDidChange {
       return
     }
     let debounceBuild = !immediate && (speedPreviewIsPreparing || speedPreviewItem != nil)
@@ -1429,7 +1527,7 @@ final class VideoEditorState: ObservableObject {
     internalSeekToken = nil
     handoffSeekToken = nil
     handoffSeekInFlight = false
-    if speedTrackDragInProgress {
+    if defersPreviewRebuild {
       speedTrackDragDidChange = true
       return
     }
@@ -1467,18 +1565,27 @@ final class VideoEditorState: ObservableObject {
 
   func beginSpeedTrackDrag() {
     guard !isPerformanceWorkClosed else { return }
+    // A rebuild an open undo group is already holding must survive the drag.
+    if !defersPreviewRebuild { speedTrackDragDidChange = false }
     speedTrackDragInProgress = true
-    speedTrackDragDidChange = false
   }
 
   func endSpeedTrackDrag() {
     guard !isPerformanceWorkClosed else { return }
     guard speedTrackDragInProgress else { return }
     speedTrackDragInProgress = false
-    if speedTrackDragDidChange {
-      speedTrackDragDidChange = false
-      scheduleSpeedPreviewRebuild(immediate: true)
-    }
+    flushDeferredPreviewRebuild()
+  }
+
+  /// A speed drag or an undo group holds preview rebuilds until it ends.
+  private var defersPreviewRebuild: Bool {
+    speedTrackDragInProgress || undoGroupDepth > 0
+  }
+
+  private func flushDeferredPreviewRebuild() {
+    guard !isPerformanceWorkClosed, !defersPreviewRebuild, speedTrackDragDidChange else { return }
+    speedTrackDragDidChange = false
+    scheduleSpeedPreviewRebuild(immediate: true)
   }
 
   private func makeSpeedPreviewItem(
@@ -1597,6 +1704,8 @@ final class VideoEditorState: ObservableObject {
   /// Point the player at whichever clip covers a sequence time, seeking to that
   /// clip's own source time.
   private func seekPlayerInternally(to sequenceSeconds: TimeInterval) {
+    // Any seek supersedes a scrub target still waiting for the previous seek.
+    pendingScrubSeekSeconds = nil
     previewRateController?.setEnabled(false)
     player.pause()
     // A seek supersedes any pending clip handoff, even when it lands inside that
@@ -1644,6 +1753,11 @@ final class VideoEditorState: ObservableObject {
       Task { @MainActor [weak self] in
         guard let self, internalSeekToken == token else { return }
         internalSeekToken = nil
+        // The scrub moved on while this seek was decoding: chase the latest target.
+        if let pending = pendingScrubSeekSeconds {
+          seekPlayerInternally(to: pending)
+          return
+        }
         setupTimeObserver()
         refreshPreviewRateSchedule()
         guard finished else {
@@ -1911,15 +2025,28 @@ final class VideoEditorState: ObservableObject {
     initialBackgroundPadding = backgroundPadding
     initialBackgroundShadowIntensity = backgroundShadowIntensity
     initialBackgroundCornerRadius = backgroundCornerRadius
+    initialBackgroundAlignment = backgroundAlignment
+    initialBackgroundAspectRatio = backgroundAspectRatio
     initialExportSettings = exportSettings
+    initialCaptions = captions
     clearUndoHistory()
   }
 
   // MARK: - Undo/Redo Actions
 
   /// Record an action for undo support
-  private func recordAction(_ action: EditorAction) {
+  func recordAction(_ action: EditorAction) {
     guard !isUndoingOrRedoing else { return }
+    if undoGroupDepth > 0 {
+      undoGroupBuffer.append(action)
+      redoStack.removeAll()
+      updateUndoRedoState()
+      return
+    }
+    pushUndoEntry(action)
+  }
+
+  private func pushUndoEntry(_ action: EditorAction) {
     undoStack.append(action)
     if undoStack.count > maxUndoStackSize {
       undoStack.removeFirst()
@@ -1937,8 +2064,10 @@ final class VideoEditorState: ObservableObject {
     interruptedSpeedEdits.formUnion(speedIDs)
   }
 
-  /// Undo the last action
+  /// Undo the last action. Ignored while an undo group is open (an AI run is
+  /// mid-flight): its changes are not on the stack yet.
   func undo() {
+    guard undoGroupDepth == 0 else { return }
     finishSegmentEdits()
     guard let action = undoStack.popLast() else { return }
     DiagnosticLogger.shared.log(.debug, .editor, "Undo", context: ["stackDepth": "\(undoStack.count)"])
@@ -1947,102 +2076,12 @@ final class VideoEditorState: ObservableObject {
       isUndoingOrRedoing = false
       updateUndoRedoState()
     }
-
-    switch action {
-    case .trimStart(let old, let new):
-      trimStart = old
-      redoStack.append(.trimStart(old: new, new: old))
-
-    case .trimEnd(let old, let new):
-      trimEnd = old
-      redoStack.append(.trimEnd(old: new, new: old))
-
-    case .addZoom(let segment):
-      zoomSegments.removeAll { $0.id == segment.id }
-      if selectedZoomId == segment.id { selectedZoomId = nil }
-      redoStack.append(.removeZoom(segment: segment))
-
-    case .removeZoom(let segment):
-      zoomSegments.append(segment)
-      redoStack.append(.addZoom(segment: segment))
-
-    case .updateZoom(let old, let new):
-      if let index = zoomSegments.firstIndex(where: { $0.id == new.id }) {
-        zoomSegments[index] = old
-      }
-      redoStack.append(.updateZoom(old: new, new: old))
-
-    case .addSpeed(let segment):
-      speedSegments.removeAll { $0.id == segment.id }
-      if selectedSpeedId == segment.id { selectedSpeedId = nil }
-      redoStack.append(.removeSpeed(segment: segment))
-
-    case .removeSpeed(let segment):
-      speedSegments.append(segment)
-      redoStack.append(.addSpeed(segment: segment))
-
-    case .updateSpeed(let old, let new):
-      if let index = speedSegments.firstIndex(where: { $0.id == new.id }) {
-        speedSegments[index] = old
-      }
-      redoStack.append(.updateSpeed(old: new, new: old))
-
-    case .toggleMute(let old, _):
-      isMuted = old
-      redoStack.append(.toggleMute(old: !old, new: old))
-
-    case .updateBackground(
-      let oldStyle,
-      let newStyle,
-      let oldPadding,
-      let newPadding,
-      let oldShadow,
-      let newShadow,
-      let oldCorner,
-      let newCorner
-    ):
-      backgroundStyle = oldStyle
-      backgroundPadding = oldPadding
-      backgroundShadowIntensity = oldShadow
-      backgroundCornerRadius = oldCorner
-      redoStack.append(.updateBackground(
-        oldStyle: newStyle,
-        newStyle: oldStyle,
-        oldPadding: newPadding,
-        newPadding: oldPadding,
-        oldShadow: newShadow,
-        newShadow: oldShadow,
-        oldCorner: newCorner,
-        newCorner: oldCorner
-      ))
-
-    case .addClip(let clip, let index):
-      removeClipSilently(id: clip.id)
-      redoStack.append(.removeClip(clip: clip, index: index))
-
-    case .removeClip(let clip, let index):
-      insertClipSilently(clip, at: index)
-      redoStack.append(.addClip(clip: clip, index: index))
-
-    case .updateClip(let old, let new):
-      replaceClipSilently(id: new.id, with: old)
-      redoStack.append(.updateClip(old: new, new: old))
-
-    case .moveClip(let id, let fromIndex, let toIndex):
-      moveClipSilently(id: id, to: fromIndex)
-      redoStack.append(.moveClip(id: id, fromIndex: toIndex, toIndex: fromIndex))
-
-    case .splitClip(let original, let index, let first, let second):
-      // Rejoin: drop both halves and restore the clip they came from.
-      removeClipSilently(id: first.id)
-      removeClipSilently(id: second.id)
-      insertClipSilently(original, at: index)
-      redoStack.append(.splitClip(original: original, index: index, first: first, second: second))
-    }
+    redoStack.append(revert(action, isRedo: false))
   }
 
   /// Redo the last undone action
   func redo() {
+    guard undoGroupDepth == 0 else { return }
     finishSegmentEdits()
     guard let action = redoStack.popLast() else { return }
     DiagnosticLogger.shared.log(.debug, .editor, "Redo", context: ["stackDepth": "\(redoStack.count)"])
@@ -2051,49 +2090,55 @@ final class VideoEditorState: ObservableObject {
       isUndoingOrRedoing = false
       updateUndoRedoState()
     }
+    undoStack.append(revert(action, isRedo: true))
+  }
 
+  /// Apply the inverse of `action` and return the entry for the opposite stack.
+  /// The stacks hold inverses, so the same code serves undo and redo; only a
+  /// split differs (undo rejoins the halves, redo divides again).
+  private func revert(_ action: EditorAction, isRedo: Bool) -> EditorAction {
     switch action {
     case .trimStart(let old, let new):
       trimStart = old
-      undoStack.append(.trimStart(old: new, new: old))
+      return .trimStart(old: new, new: old)
 
     case .trimEnd(let old, let new):
       trimEnd = old
-      undoStack.append(.trimEnd(old: new, new: old))
+      return .trimEnd(old: new, new: old)
 
     case .addZoom(let segment):
       zoomSegments.removeAll { $0.id == segment.id }
       if selectedZoomId == segment.id { selectedZoomId = nil }
-      undoStack.append(.removeZoom(segment: segment))
+      return .removeZoom(segment: segment)
 
     case .removeZoom(let segment):
       zoomSegments.append(segment)
-      undoStack.append(.addZoom(segment: segment))
+      return .addZoom(segment: segment)
 
     case .updateZoom(let old, let new):
       if let index = zoomSegments.firstIndex(where: { $0.id == new.id }) {
         zoomSegments[index] = old
       }
-      undoStack.append(.updateZoom(old: new, new: old))
+      return .updateZoom(old: new, new: old)
 
     case .addSpeed(let segment):
       speedSegments.removeAll { $0.id == segment.id }
       if selectedSpeedId == segment.id { selectedSpeedId = nil }
-      undoStack.append(.removeSpeed(segment: segment))
+      return .removeSpeed(segment: segment)
 
     case .removeSpeed(let segment):
       speedSegments.append(segment)
-      undoStack.append(.addSpeed(segment: segment))
+      return .addSpeed(segment: segment)
 
     case .updateSpeed(let old, let new):
       if let index = speedSegments.firstIndex(where: { $0.id == new.id }) {
         speedSegments[index] = old
       }
-      undoStack.append(.updateSpeed(old: new, new: old))
+      return .updateSpeed(old: new, new: old)
 
     case .toggleMute(let old, _):
       isMuted = old
-      undoStack.append(.toggleMute(old: !old, new: old))
+      return .toggleMute(old: !old, new: old)
 
     case .updateBackground(
       let oldStyle,
@@ -2109,7 +2154,7 @@ final class VideoEditorState: ObservableObject {
       backgroundPadding = oldPadding
       backgroundShadowIntensity = oldShadow
       backgroundCornerRadius = oldCorner
-      undoStack.append(.updateBackground(
+      return .updateBackground(
         oldStyle: newStyle,
         newStyle: oldStyle,
         oldPadding: newPadding,
@@ -2118,30 +2163,69 @@ final class VideoEditorState: ObservableObject {
         newShadow: oldShadow,
         oldCorner: newCorner,
         newCorner: oldCorner
-      ))
+      )
 
     case .addClip(let clip, let index):
       removeClipSilently(id: clip.id)
-      undoStack.append(.removeClip(clip: clip, index: index))
+      return .removeClip(clip: clip, index: index)
 
     case .removeClip(let clip, let index):
       insertClipSilently(clip, at: index)
-      undoStack.append(.addClip(clip: clip, index: index))
+      return .addClip(clip: clip, index: index)
 
     case .updateClip(let old, let new):
       replaceClipSilently(id: new.id, with: old)
-      undoStack.append(.updateClip(old: new, new: old))
+      return .updateClip(old: new, new: old)
 
     case .moveClip(let id, let fromIndex, let toIndex):
       moveClipSilently(id: id, to: fromIndex)
-      undoStack.append(.moveClip(id: id, fromIndex: toIndex, toIndex: fromIndex))
+      return .moveClip(id: id, fromIndex: toIndex, toIndex: fromIndex)
 
     case .splitClip(let original, let index, let first, let second):
-      // Re-split: the undo handler rejoined the halves, so redo has to divide again.
-      removeClipSilently(id: original.id)
-      insertClipSilently(first, at: index)
-      insertClipSilently(second, at: index + 1)
-      undoStack.append(.splitClip(original: original, index: index, first: first, second: second))
+      if isRedo {
+        // The undo handler rejoined the halves, so redo has to divide again.
+        removeClipSilently(id: original.id)
+        insertClipSilently(first, at: index)
+        insertClipSilently(second, at: index + 1)
+      } else {
+        // Rejoin: drop both halves and restore the clip they came from.
+        removeClipSilently(id: first.id)
+        removeClipSilently(id: second.id)
+        insertClipSilently(original, at: index)
+      }
+      return .splitClip(original: original, index: index, first: first, second: second)
+
+    case .replaceClips(let old, let new):
+      clips = old
+      if let selectedClipId, !old.contains(where: { $0.id == selectedClipId }) {
+        self.selectedClipId = nil
+      }
+      updateClipActionAvailability()
+      return .replaceClips(old: new, new: old)
+
+    case .updateFrame(let old, let new):
+      applyFrameSettings(old)
+      return .updateFrame(old: new, new: old)
+
+    case .updateExportSettings(let old, let new):
+      updateExportSettings(old)
+      return .updateExportSettings(old: new, new: old)
+
+    case .updateCursor(let old, let new):
+      applyCursorSettings(old)
+      return .updateCursor(old: new, new: old)
+
+    case .updateCamera(let old, let new):
+      applyCameraSettings(old)
+      return .updateCamera(old: new, new: old)
+
+    case .updateCaptions(let old, let new):
+      applyCaptions(old)
+      return .updateCaptions(old: new, new: old)
+
+    case .group(let actions):
+      // Undo the members newest first; the returned group replays them oldest first.
+      return .group(actions.reversed().map { revert($0, isRedo: isRedo) })
     }
   }
 
@@ -2156,6 +2240,47 @@ final class VideoEditorState: ObservableObject {
     undoStack.removeAll()
     redoStack.removeAll()
     updateUndoRedoState()
+  }
+
+  // MARK: - Undo Groups
+
+  /// Collect every action recorded until the matching `endUndoGroup` into one undo
+  /// step. Calls nest; only the outermost end pushes. Preview media rebuilds are
+  /// held until then too, so a burst of edits rebuilds the composition once.
+  func beginUndoGroup() {
+    if undoGroupDepth == 0 {
+      finishSegmentEdits()
+      undoGroupBuffer = []
+    }
+    undoGroupDepth += 1
+  }
+
+  /// Close a group. An empty group leaves no entry; a single action is pushed as is.
+  /// Returns the entry the outermost end pushed, if any.
+  @discardableResult
+  func endUndoGroup() -> EditorAction? {
+    guard undoGroupDepth > 0 else { return nil }
+    undoGroupDepth -= 1
+    guard undoGroupDepth == 0 else { return nil }
+    let actions = undoGroupBuffer
+    undoGroupBuffer = []
+    let entry: EditorAction? = switch actions.count {
+    case 0: nil
+    case 1: actions[0]
+    default: .group(actions)
+    }
+    if let entry { pushUndoEntry(entry) }
+    flushDeferredPreviewRebuild()
+    return entry
+  }
+
+  var isUndoGroupOpen: Bool {
+    undoGroupDepth > 0
+  }
+
+  /// The top undo entry, for callers that check whether their step is still the latest.
+  var lastUndoEntry: EditorAction? {
+    undoStack.last
   }
 
   // MARK: - File Operations
@@ -2611,15 +2736,25 @@ final class VideoEditorState: ObservableObject {
   /// Both halves must clear `TimelineClip.minDuration`, so splitting right at a clip
   /// edge is a no-op rather than creating a sliver.
   func splitAtPlayhead() {
-    guard !isGIF else { return }
-    let t = CMTimeGetSeconds(currentTime)
-    guard let placement = TimelineSequence.activePlacement(at: t, in: placements) else { return }
+    guard let (_, second) = splitClip(atTimeline: CMTimeGetSeconds(currentTime)) else { return }
+    // The playhead sits on the new boundary, which belongs to the second half.
+    selectedClipId = second
+    updateClipActionAvailability()
+  }
+
+  /// Split the clip playing at a structural timeline time. Returns the ids of the
+  /// two halves, or nil when the time is not over active material or a half would
+  /// be shorter than `TimelineClip.minDuration`.
+  @discardableResult
+  func splitClip(atTimeline t: TimeInterval) -> (first: UUID, second: UUID)? {
+    guard !isGIF else { return nil }
+    guard let placement = TimelineSequence.activePlacement(at: t, in: placements) else { return nil }
 
     let original = placement.clip
     let cutPoint = placement.sourceTime(at: t)
     guard cutPoint - original.sourceStart >= TimelineClip.minDuration,
           original.sourceEnd - cutPoint >= TimelineClip.minDuration
-    else { return }
+    else { return nil }
 
     let first = TimelineClip(
       source: original.source,
@@ -2645,9 +2780,31 @@ final class VideoEditorState: ObservableObject {
 
     clips.replaceSubrange(placement.index ... placement.index, with: [first, second])
     recordAction(.splitClip(original: original, index: placement.index, first: first, second: second))
-    // The playhead sits on the new boundary, which belongs to the second half.
-    selectedClipId = second.id
+    if selectedClipId == original.id { selectedClipId = second.id }
     updateClipActionAvailability()
+    return (first.id, second.id)
+  }
+
+  // MARK: Cut range (ripple)
+
+  /// Remove a structural timeline range from the sequence in one step; everything
+  /// after it slides left. Returns the structural spans that were removed (the
+  /// range, plus slivers too short to keep), or nil when nothing would be left.
+  /// Zoom and speed blocks are not moved here: callers decide whether to shift them.
+  @discardableResult
+  func cutTimeline(range: ClosedRange<TimeInterval>) -> [ClosedRange<TimeInterval>]? {
+    guard !isGIF, let result = VideoEditorTimelineCut.cut(clips, range: range),
+          !result.removed.isEmpty else { return nil }
+    let old = clips
+    clips = result.clips
+    recordAction(.replaceClips(old: old, new: result.clips))
+    if let selectedClipId, !clips.contains(where: { $0.id == selectedClipId }) {
+      self.selectedClipId = nil
+    }
+    let landing = min(range.lowerBound, CMTimeGetSeconds(timelineDuration))
+    seek(to: CMTime(seconds: max(0, landing), preferredTimescale: 600))
+    updateClipActionAvailability()
+    return result.removed
   }
 
   // MARK: Delete (ripple)
@@ -2745,12 +2902,19 @@ final class VideoEditorState: ObservableObject {
 
   /// Start a trim drag. Captures the pre-drag clip so the gesture collapses into a
   /// single undo entry.
+  ///
+  /// Like a speed drag, a trim holds the speed preview rebuild until release: otherwise
+  /// every mouse event cancels and restarts the composition build and reparks the player.
   func beginClipTrim(id: UUID) {
     clipTrimOriginal = clips.first { $0.id == id }
+    beginSpeedTrackDrag()
   }
 
   func endClipTrim() {
-    defer { clipTrimOriginal = nil }
+    defer {
+      clipTrimOriginal = nil
+      endSpeedTrackDrag()
+    }
     guard let old = clipTrimOriginal,
           let new = clips.first(where: { $0.id == old.id }),
           new != old
@@ -2806,22 +2970,28 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: Availability
 
+  /// Runs on every playback tick and scrub event. `@Published` notifies on every
+  /// assignment, equal or not, so write only real changes: an unconditional write here
+  /// re-renders every view observing the whole editor state ~30×/s while playing.
   private func updateClipActionAvailability() {
-    guard !isGIF else {
-      canSplitAtPlayhead = false
-      canDeleteSelectedClip = false
-      return
-    }
-
-    if let placement = activePlacement {
-      let cutPoint = placement.sourceTime(at: CMTimeGetSeconds(currentTime))
-      canSplitAtPlayhead = cutPoint - placement.clip.sourceStart >= TimelineClip.minDuration
-        && placement.clip.sourceEnd - cutPoint >= TimelineClip.minDuration
+    let canSplit: Bool
+    let canDelete: Bool
+    if isGIF {
+      canSplit = false
+      canDelete = false
     } else {
-      canSplitAtPlayhead = false
+      if let placement = activePlacement {
+        let cutPoint = placement.sourceTime(at: CMTimeGetSeconds(currentTime))
+        canSplit = cutPoint - placement.clip.sourceStart >= TimelineClip.minDuration
+          && placement.clip.sourceEnd - cutPoint >= TimelineClip.minDuration
+      } else {
+        canSplit = false
+      }
+      canDelete = clips.count > 1 && targetClip != nil
     }
 
-    canDeleteSelectedClip = clips.count > 1 && targetClip != nil
+    if canSplitAtPlayhead != canSplit { canSplitAtPlayhead = canSplit }
+    if canDeleteSelectedClip != canDelete { canDeleteSelectedClip = canDelete }
   }
 
   /// Currently selected speed segment, if any.
@@ -2884,6 +3054,145 @@ final class VideoEditorState: ObservableObject {
     exportSettings = settings
     syncPlayerAudioWithExportSettings()
     recalculateEstimatedFileSize()
+  }
+
+  /// `updateExportSettings` with an undo entry (agent edits; the panels stay as they were).
+  func updateExportSettingsRecordingUndo(_ settings: ExportSettings) {
+    let old = exportSettings
+    guard settings != old else { return }
+    updateExportSettings(settings)
+    recordAction(.updateExportSettings(old: old, new: settings))
+  }
+
+  // MARK: - Frame (background) settings
+
+  var frameSettings: VideoEditorFrameSettings {
+    VideoEditorFrameSettings(
+      style: backgroundStyle,
+      padding: backgroundPadding,
+      shadowIntensity: backgroundShadowIntensity,
+      cornerRadius: backgroundCornerRadius,
+      alignment: backgroundAlignment,
+      aspectRatio: backgroundAspectRatio
+    )
+  }
+
+  // MARK: - Cursor settings
+
+  /// Apply cursor settings. `recordUndo: false` for live slider drags; commit the drag
+  /// with `commitCursorSettings(from:)` so it lands as one undo step.
+  func setCursorSettings(_ settings: VideoEditorCursorSettings, recordUndo: Bool = true) {
+    let old = cursorSettings
+    guard settings != old else { return }
+    applyCursorSettings(settings)
+    if recordUndo { recordAction(.updateCursor(old: old, new: settings)) }
+  }
+
+  func commitCursorSettings(from old: VideoEditorCursorSettings) {
+    guard old != cursorSettings else { return }
+    recordAction(.updateCursor(old: old, new: cursorSettings))
+  }
+
+  private func applyCursorSettings(_ settings: VideoEditorCursorSettings) {
+    cursorSettings = settings
+    // Same recording, new settings: reuse the resolver's smoothed path and activity
+    // times when possible (slider ticks land here).
+    if let resolver = cursorResolver {
+      cursorResolver = resolver.updating(settings: settings)
+    } else {
+      rebuildCursorResolver()
+    }
+    updateHasUnsavedChanges()
+  }
+
+  func setCameraSettings(_ settings: VideoEditorCameraSettings, recordUndo: Bool = true) {
+    let old = cameraSettings
+    guard settings != old else { return }
+    applyCameraSettings(settings)
+    if recordUndo { recordAction(.updateCamera(old: old, new: settings)) }
+  }
+
+  func commitCameraSettings(from old: VideoEditorCameraSettings) {
+    guard old != cameraSettings else { return }
+    recordAction(.updateCamera(old: old, new: cameraSettings))
+  }
+
+  private func applyCameraSettings(_ settings: VideoEditorCameraSettings) {
+    cameraSettings = settings
+    updateHasUnsavedChanges()
+  }
+
+  /// Cursor, camera and captions saved with the session become the clean baseline.
+  private func restoreStudioLayers(from sessionData: VideoEditorSessionData) {
+    if let cursor = sessionData.cursorSettings {
+      cursorSettings = cursor
+      initialCursorSettings = cursor
+      rebuildCursorResolver()
+    }
+    if let camera = sessionData.cameraSettings {
+      cameraSettings = camera
+      initialCameraSettings = camera
+      didSeedCameraSettings = true
+    }
+    if let captions = sessionData.captions, !isGIF {
+      self.captions = captions
+    }
+  }
+
+  private func reloadCameraLayer() {
+    guard let source = recordingMetadata?.cameraSource,
+          let url = try? RecordingMetadataStore.sidecarURL(named: source.fileName, kind: .camera),
+          FileManager.default.fileExists(atPath: url.path)
+    else {
+      cameraSourceURL = nil
+      cameraPreview?.stop()
+      cameraPreview = nil
+      return
+    }
+    if cameraSourceURL != url {
+      cameraPreview?.stop()
+      cameraPreview = VideoEditorCameraPreviewController(url: url)
+    }
+    cameraSourceURL = url
+    // A fresh editor starts from the placement used while recording (once: a later
+    // metadata reload or a restored session keeps the user's layout).
+    if !didSeedCameraSettings {
+      didSeedCameraSettings = true
+      let recorded = VideoEditorCameraSettings.recorded(source)
+      cameraSettings = recorded
+      initialCameraSettings = recorded
+    }
+  }
+
+  private func reloadCursorLayer() {
+    reloadCameraLayer()
+    cursorSprites = hasEditableCursor ? VideoEditorCursorSpriteStore.load(capture: recordingMetadata?.cursorCapture) : .empty
+    rebuildCursorResolver()
+  }
+
+  private func rebuildCursorResolver() {
+    guard hasEditableCursor, let metadata = recordingMetadata, let capture = metadata.cursorCapture else {
+      cursorResolver = nil
+      return
+    }
+    cursorResolver = VideoEditorCursorResolver(samples: metadata.mouseSamples, capture: capture, settings: cursorSettings)
+  }
+
+  /// Apply background/frame settings as one undoable step.
+  func setFrameSettings(_ settings: VideoEditorFrameSettings) {
+    let old = frameSettings
+    guard settings != old else { return }
+    applyFrameSettings(settings)
+    recordAction(.updateFrame(old: old, new: settings))
+  }
+
+  private func applyFrameSettings(_ settings: VideoEditorFrameSettings) {
+    if backgroundStyle != settings.style { backgroundStyle = settings.style }
+    if backgroundPadding != settings.padding { backgroundPadding = settings.padding }
+    if backgroundShadowIntensity != settings.shadowIntensity { backgroundShadowIntensity = settings.shadowIntensity }
+    if backgroundCornerRadius != settings.cornerRadius { backgroundCornerRadius = settings.cornerRadius }
+    if backgroundAlignment != settings.alignment { backgroundAlignment = settings.alignment }
+    if backgroundAspectRatio != settings.aspectRatio { backgroundAspectRatio = settings.aspectRatio }
   }
 
   /// Recalculate estimated file size based on current settings
@@ -3051,8 +3360,10 @@ final class VideoEditorState: ObservableObject {
         guard latestItemTime.isNumeric else { return }
         // AVPlayer's interval is measured in source time. At 8x, a 30 fps
         // interval can publish the whole editor over 200 times per wall second.
+        // Gate below the 1/30 s period: callbacks jitter early by a few ms, and a gate
+        // equal to the period dropped about half of them at 1x (overlays at 15–30 Hz).
         let now = ProcessInfo.processInfo.systemUptime
-        guard now - self.lastTimeObserverUpdate >= 1.0 / 30.0 else { return }
+        guard now - self.lastTimeObserverUpdate >= 0.8 / 30.0 else { return }
         self.lastTimeObserverUpdate = now
         self.handlePlaybackTick(itemTime: CMTimeGetSeconds(latestItemTime))
       }
@@ -3247,6 +3558,15 @@ final class VideoEditorState: ObservableObject {
       }
       .store(in: &cancellables)
 
+    // Alignment and aspect ratio change the exported frame too.
+    Publishers.CombineLatest($backgroundAlignment, $backgroundAspectRatio)
+      .dropFirst()
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _, _ in
+        self?.updateHasUnsavedChanges()
+      }
+      .store(in: &cancellables)
+
     // Track export settings changes for file size estimation
     $exportSettings
       .dropFirst()
@@ -3258,7 +3578,7 @@ final class VideoEditorState: ObservableObject {
       .store(in: &cancellables)
   }
 
-  private func updateHasUnsavedChanges(currentZoomSegments: [ZoomSegment]? = nil) {
+  func updateHasUnsavedChanges(currentZoomSegments: [ZoomSegment]? = nil) {
     // GIF mode: only track dimension changes
     if isGIF {
       let dimensionChanged = exportSettings.dimensionPreset != initialExportSettings.dimensionPreset
@@ -3268,22 +3588,24 @@ final class VideoEditorState: ObservableObject {
       return
     }
 
-    // Trim now lives inside the clip sequence, so `clipsChanged` covers it.
-    let clipsChanged = clips != initialClips
-    let muteChanged = isMuted != initialIsMuted
-    // Use passed segments if available, otherwise read from self
+    // Runs on every edit tick. Short-circuit from the cheap scalar checks to the arrays
+    // (clips, segments, captions with their words), stopping at the first difference.
+    // Trim lives inside the clip sequence, so the clips comparison covers it.
     let segments = currentZoomSegments ?? zoomSegments
-    let zoomsChanged = segments != initialZoomSegments
-    let speedsChanged = speedSegments != initialSpeedSegments
-    // Background changes
-    let bgStyleChanged = backgroundStyle != initialBackgroundStyle
-    let bgPaddingChanged = backgroundPadding != initialBackgroundPadding
-    let bgShadowChanged = backgroundShadowIntensity != initialBackgroundShadowIntensity
-    let bgCornerChanged = backgroundCornerRadius != initialBackgroundCornerRadius
-    let backgroundChanged = bgStyleChanged || bgPaddingChanged || bgShadowChanged || bgCornerChanged
-    let exportSettingsChanged = exportSettings != initialExportSettings
-    let changed = clipsChanged || muteChanged || zoomsChanged || speedsChanged
-      || backgroundChanged || exportSettingsChanged
+    let changed = isMuted != initialIsMuted
+      || backgroundStyle != initialBackgroundStyle
+      || backgroundPadding != initialBackgroundPadding
+      || backgroundShadowIntensity != initialBackgroundShadowIntensity
+      || backgroundCornerRadius != initialBackgroundCornerRadius
+      || backgroundAlignment != initialBackgroundAlignment
+      || backgroundAspectRatio != initialBackgroundAspectRatio
+      || exportSettings != initialExportSettings
+      || cursorSettings != initialCursorSettings
+      || cameraSettings != initialCameraSettings
+      || clips != initialClips
+      || segments != initialZoomSegments
+      || speedSegments != initialSpeedSegments
+      || captions != initialCaptions
     if hasUnsavedChanges != changed { hasUnsavedChanges = changed }
   }
 
@@ -3328,14 +3650,21 @@ final class VideoEditorState: ObservableObject {
         self.cachedBackgroundImage = image
         self.loadingBackgroundURL = nil
 
-        // Pre-compute blur if needed
-        if case .blurred = self.backgroundStyle {
-          self.cachedBlurredImage = self.applyGaussianBlur(
-            to: image,
-            radius: WallpaperQualityConfig.blurRadius
-          )
-        } else {
-          self.cachedBlurredImage = nil
+        // Pre-compute blur if needed, off the main thread. The preview shows the sharp
+        // wallpaper until it lands (the background view's existing fallback).
+        self.cachedBlurredImage = nil
+        if case .blurred = self.backgroundStyle,
+           let source = image?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+          let radius = WallpaperQualityConfig.blurRadius
+          Task.detached(priority: .userInitiated) {
+            let blurred = Self.renderGaussianBlur(of: source, radius: radius)
+            await MainActor.run { [weak self] in
+              guard let self, case .blurred(let current) = self.backgroundStyle, current == url,
+                    self.loadingBackgroundURL == nil
+              else { return }
+              self.cachedBlurredImage = blurred.map { NSImage(cgImage: $0, size: .zero) }
+            }
+          }
         }
       }
     }
@@ -3409,7 +3738,14 @@ final class VideoEditorState: ObservableObject {
     let paths = autoFocusPaths
     let layout = placements
     let worker = autoFocusWorker
+    // A trim drag changes the layout per mouse event; let the edge settle briefly so
+    // superseded remaps are cancelled before they reach the worker.
+    let settleDelay: UInt64 = clipTrimOriginal != nil ? 100_000_000 : 0
     mappedAutoFocusBuildTask = Task { [weak self] in
+      if settleDelay > 0 {
+        try? await Task.sleep(nanoseconds: settleDelay)
+        guard !Task.isCancelled else { return }
+      }
       let mapped = await worker.timelinePaths(paths, placements: layout)
       guard !Task.isCancelled, let self,
             self.autoFocusPathRevision == sourceRevision,
@@ -3433,6 +3769,9 @@ final class VideoEditorState: ObservableObject {
 
   func cancelPendingPerformanceWork() {
     isPerformanceWorkClosed = true
+    clickSoundPlayer.shutdown()
+    cameraPreview?.stop()
+    cancelCaptionGeneration()
     speedPreviewRevision &+= 1
     estimateRevision &+= 1
     speedTrackDragInProgress = false
@@ -3445,22 +3784,28 @@ final class VideoEditorState: ObservableObject {
     speedPreviewBuildTask?.cancel()
   }
 
-  /// Apply Gaussian blur to image (computed once, reused during render)
-  private func applyGaussianBlur(to image: NSImage?, radius: CGFloat) -> NSImage? {
-    guard let image,
-          let tiffData = image.tiffRepresentation,
-          let ciImage = CIImage(data: tiffData) else { return nil }
+  /// The current style's images are in place (for `.blurred`, the blur too).
+  private var hasCachedBackgroundForStyle: Bool {
+    guard cachedBackgroundImage != nil else { return false }
+    if case .blurred = backgroundStyle { return cachedBlurredImage != nil }
+    return true
+  }
 
-    let filter = CIFilter(name: "CIGaussianBlur")
-    filter?.setValue(ciImage, forKey: kCIInputImageKey)
-    filter?.setValue(radius, forKey: kCIInputRadiusKey)
+  private nonisolated static let blurContext = CIContext(options: [.useSoftwareRenderer: false])
 
-    guard let output = filter?.outputImage else { return nil }
-    let croppedOutput = output.cropped(to: ciImage.extent)
-
-    let rep = NSCIImageRep(ciImage: croppedOutput)
-    let blurred = NSImage(size: rep.size)
-    blurred.addRepresentation(rep)
-    return blurred
+  /// Gaussian blur rendered once into a bitmap. The old path TIFF-encoded the wallpaper on
+  /// the main thread and returned a lazy `NSCIImageRep`, so the full-resolution blur ran
+  /// again on every redraw of the preview background (resizes, sidebar and panel changes).
+  nonisolated static func renderGaussianBlur(of image: CGImage, radius: CGFloat) -> CGImage? {
+    let input = CIImage(cgImage: image)
+    guard let filter = CIFilter(name: "CIGaussianBlur") else { return nil }
+    filter.setValue(input, forKey: kCIInputImageKey)
+    filter.setValue(radius, forKey: kCIInputRadiusKey)
+    guard let output = filter.outputImage?.cropped(to: input.extent) else { return nil }
+    // Keep the wallpaper's own color space (a P3 wallpaper would otherwise clip to sRGB).
+    if let colorSpace = image.colorSpace {
+      return blurContext.createCGImage(output, from: input.extent, format: .RGBA8, colorSpace: colorSpace)
+    }
+    return blurContext.createCGImage(output, from: input.extent)
   }
 }

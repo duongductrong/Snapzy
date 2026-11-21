@@ -99,8 +99,7 @@ final class VideoEditorTimelineViewport: ObservableObject {
 
     let viewportX = max(0, min(anchorViewportX, max(0, viewportWidth)))
     zoomLevel = clamped
-    scrollOffset = max(0, x(for: anchorTime) - viewportX)
-    clampScroll()
+    setScrollOffset(x(for: anchorTime) - viewportX)
   }
 
   /// Multiplicative zoom keeping `anchorTime` at the same viewport position.
@@ -143,8 +142,7 @@ final class VideoEditorTimelineViewport: ObservableObject {
   /// forward along the timeline (wheel down reveals later content).
   func pan(byContentDeltaX deltaX: CGFloat, contentDeltaY deltaY: CGFloat) {
     guard deltaX.isFinite, deltaY.isFinite else { return }
-    scrollOffset += deltaY - deltaX
-    clampScroll()
+    setScrollOffset(scrollOffset + deltaY - deltaX)
   }
 
   private func anchorViewportX(for time: TimeInterval) -> CGFloat {
@@ -154,8 +152,8 @@ final class VideoEditorTimelineViewport: ObservableObject {
 
   /// Reset to fit; clears the scroll offset.
   func fit() {
-    zoomLevel = Self.minZoom
-    scrollOffset = 0
+    if zoomLevel != Self.minZoom { zoomLevel = Self.minZoom }
+    setScrollOffset(0)
   }
 
   /// Clamp the zoom so at least `minVisibleSeconds` stays visible.
@@ -165,8 +163,44 @@ final class VideoEditorTimelineViewport: ObservableObject {
 
   /// Clamp the scroll offset to the scrollable range.
   func clampScroll() {
+    setScrollOffset(scrollOffset)
+  }
+
+  /// Clamp once and publish only a real change. Every write re-renders the timeline
+  /// container, and scroll events arrive at 60–120 Hz (pinned at an edge or at fit zoom,
+  /// most of them change nothing).
+  func setScrollOffset(_ offset: CGFloat) {
     let maxOffset = max(0, contentWidth - viewportWidth)
-    scrollOffset = max(0, min(scrollOffset, maxOffset))
+    let clamped = max(0, min(offset, maxOffset))
+    if scrollOffset != clamped { scrollOffset = clamped }
+  }
+
+  /// Size and duration pushed by the view; publish only real changes.
+  func setGeometry(viewportWidth width: CGFloat, durationSeconds duration: TimeInterval) {
+    if viewportWidth != width { viewportWidth = width }
+    if durationSeconds != duration { durationSeconds = duration }
+    clampScroll()
+  }
+
+  // MARK: - Render range
+
+  /// Content range the tracks draw: the visible window plus one viewport of overscan each
+  /// side, snapped outward to whole viewport widths. Snapping keeps the value constant
+  /// while scrolling or auto-following inside a band, so the equatable tracks (ruler, clip
+  /// strip, zoom, speed) skip their bodies; scrolling itself is just the container offset.
+  /// Always contains `[scrollOffset - viewportWidth, scrollOffset + 2 * viewportWidth]`.
+  var renderRange: ClosedRange<CGFloat> {
+    let width = contentWidth
+    guard viewportWidth > 0 else {
+      let leading = min(width, max(0, scrollOffset))
+      return leading ... leading
+    }
+    let band = viewportWidth
+    let rawLeading = scrollOffset - viewportWidth
+    let rawTrailing = scrollOffset + 2 * viewportWidth
+    let leading = min(width, max(0, (rawLeading / band).rounded(.down) * band))
+    let trailing = max(leading, min(width, (rawTrailing / band).rounded(.up) * band))
+    return leading ... trailing
   }
 
   // MARK: - Playhead follow

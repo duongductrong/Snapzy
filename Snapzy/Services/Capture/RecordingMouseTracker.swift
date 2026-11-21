@@ -63,8 +63,31 @@ final class RecordingMouseTracker {
     self.mouseMonitorRemover = mouseMonitorRemover
   }
 
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   var samplesPerSecond: Int {
     samplesPerSecondValue
+  }
+
+  /// Recording time on this tracker's clock (pauses excluded); `nil` before `start()`.
+  /// Studio cursor/click capture stamps events with it so they line up with samples.
+  var elapsedTime: TimeInterval? {
+    currentElapsedTime()
+  }
+
+  var isPaused: Bool {
+    pausedAtUptime != nil
+  }
+
+  var isRunning: Bool {
+    startUptime != nil
+  }
+
+  /// Global capture rect in AppKit coordinates (bottom-left origin).
+  var captureRect: CGRect {
+    recordingRect
   }
 
   func start() {

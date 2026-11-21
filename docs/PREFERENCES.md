@@ -1,6 +1,6 @@
 # Preferences
 
-Reference for the Settings window: tab structure, every section, and how preferences are stored. Verified against `Snapzy/Features/Preferences/` at HEAD (`v2.2.0`).
+Reference for the Settings window: tab structure, every section, and how preferences are stored. Verified against `Snapzy/Features/Preferences/` at HEAD (`v2.3.0-beta.5`).
 
 ## Root
 
@@ -74,11 +74,16 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
 - Behavior section only:
   - Sync Tool Defaults / quick-properties sync (`annotate.quickPropertiesSyncEnabled`, default on).
   - Combine Save-as-Edit (`annotate.combineSaveAsEdit`, default on).
+  - Expand Canvas Automatically (`annotate.autoExpandCanvasEnabled`, default on; config `[annotate] auto_expand_canvas`): drawing, moving or resizing an annotation past the image/crop edge grows the canvas (transparent area, exported); open editors follow the toggle live. Not used by Capture Markup.
   - Crop Snap to Edges (`annotate.cropSnapToEdgesEnabled`, default on; also togglable from the crop toolbar; ⌘ held during a drag temporarily bypasses).
   - Snap Highlight to Text (`annotate.highlighterTextSnappingEnabled`, default on; also togglable from the highlighter quick-properties bar; aligns highlighter drags to detected text lines, ⌘ held during a drag temporarily bypasses).
   - Clipboard image open behavior (`annotate.clipboardImageOpenBehavior`): `ask` (default) / `loadAutomatically` / `doNothing` (`AnnotateClipboardImageBehavior`).
   - Close After Drag (`annotate.closeAfterDrag`, default on).
   - Bring Forward After Drag (`annotate.bringForwardAfterDrag`, default off; disabled when Close After Drag is on).
+
+### AI (`PreferencesAISettingsView.swift`)
+
+Sidebar tab after Annotate (deep link `snapzy://settings/ai`, aliases `ask`, `ask-ai`). Settings for Annotate's AI prompt (Ask): provider picker (`annotateAgent.provider`: Automatic / Apple Intelligence / custom endpoints / Claude Code, Codex, OpenCode) with a warning when the pick can't run; Apple Intelligence status + Open System Settings; custom endpoints (shared OCR/Translate list) with Tools/Vision badges and **Test** (`AnnotateAgentEndpointProbe`), Manage Endpoints… → Capture › OCR; agent CLIs with version/path, **Refresh**, per-CLI model (`annotateAgent.cli.<kind>.model`) and location (`annotateAgent.cli.<kind>.path`); Privacy: Send screenshot image (`annotateAgent.sendImage`, default on), Agent CLI time limit (`annotateAgent.cliTimeout`, default 180 s), Sending permissions (`annotateAgent.consentedProviders`) Reset. See [AI.md](AI.md).
 
 ### Quick Access (`PreferencesQuickAccessSettingsView.swift`)
 
@@ -101,7 +106,7 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
 ### Shortcuts (`PreferencesShortcutsSettingsView.swift`)
 
 - Master toggle (`shortcutsEnabled`).
-- Grouped recorders with per-shortcut enable toggles and per-section Reset: Capture, Recording, Tools, History, Quick Access, Quick Access Card Actions, Annotate Actions, Annotate Tool Keys; Reset to Defaults (all).
+- Grouped recorders with per-shortcut enable toggles and per-section Reset: Capture, Recording, Tools, History, Quick Access, Quick Access Card Actions, Annotate Actions, Annotate Tool Keys, Annotate Reference (read-only), Video Editor Actions (Ask AI, ⌘K); Reset to Defaults (all).
 - Quick Access Card Actions (`PreferencesQuickAccessActionShortcutsSection.swift`): master toggle plus one recorder per card action, active only while a card is hovered.
 - System-conflict guidance via `SystemScreenshotShortcutManager`.
 - Full mechanics and default bindings: [SHORTCUTS.md](SHORTCUTS.md).

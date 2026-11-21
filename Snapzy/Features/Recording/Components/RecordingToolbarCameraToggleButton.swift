@@ -18,7 +18,8 @@ struct RecordingToolbarCameraToggleButton: View {
   }
 
   private var tooltipText: String {
-    state.captureCamera ? L10n.Camera.on : L10n.Camera.off
+    guard state.captureCamera else { return L10n.Camera.off }
+    return state.isStudioRecordingActive ? "\(L10n.Camera.on)\n\(L10n.Camera.studioNote)" : L10n.Camera.on
   }
 
   var body: some View {
@@ -87,6 +88,12 @@ struct RecordingToolbarCameraToggleButton: View {
             title: L10n.Camera.mirrorCamera,
             isSelected: state.cameraMirrored
           )
+        }
+
+        if state.isStudioRecordingActive {
+          Divider()
+          // Informational: Studio keeps the camera editable after recording.
+          Text(L10n.Camera.studioNote)
         }
       }
     } label: {

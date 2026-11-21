@@ -45,6 +45,7 @@ struct CaptureSettingsPreview: View {
   @AppStorage(PreferencesKeys.recordingCaptureMicrophone) private var captureMicrophone = false
   @AppStorage(PreferencesKeys.recordingShowCursor) private var recordingShowCursor = true
   @AppStorage(PreferencesKeys.recordingDimNonSelectedArea) private var dimNonSelectedArea = true
+  @AppStorage(PreferencesKeys.recordingShowAreaBorder) private var showAreaBorder = true
   @AppStorage(PreferencesKeys.recordingHoverBarVisible) private var hoverBarVisible = true
   @AppStorage(PreferencesKeys.recordingShowTimeOnMenuBar) private var showTimeOnMenuBar = true
   @AppStorage(PreferencesKeys.mouseHighlightSize) private var highlightSize: Double = 50
@@ -516,7 +517,14 @@ struct CaptureSettingsPreview: View {
           .fill(Color.black.opacity(0.4), style: FillStyle(eoFill: true))
           .transition(.opacity)
       }
-      // While recording the region has no border; only the dim marks it.
+      if showAreaBorder {
+        // Drawn just outside the region, like the live overlay.
+        Rectangle()
+          .stroke(Color.red.opacity(0.9), lineWidth: 2)
+          .frame(width: rect.width + 2, height: rect.height + 2)
+          .offset(x: rect.minX - 1, y: rect.minY - 1)
+          .transition(.opacity)
+      }
 
       ZStack {
         ForEach(0..<max(1, min(rippleCount, 5)), id: \.self) { index in

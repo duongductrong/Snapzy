@@ -144,7 +144,10 @@ extension PersistedAnnotationSession {
       updatedAt: updatedAt,
       combineSession: persistedCombineSession,
       sourceLogicalSize: sessionData.sourceLogicalSize,
-      excludesTranslationsFromExport: sessionData.excludesTranslationsFromExport ? true : nil
+      excludesTranslationsFromExport: sessionData.excludesTranslationsFromExport ? true : nil,
+      cropBaselineFootprints: sessionData.cropBaselineFootprints.map { footprints in
+        Dictionary(uniqueKeysWithValues: footprints.map { ($0.key.uuidString, $0.value) })
+      }
     )
   }
 
@@ -168,7 +171,13 @@ extension PersistedAnnotationSession {
       embeddedImageAssetsData: embeddedImageAssetsData,
       combineSession: combineSession?.toSnapshot(),
       sourceLogicalSize: sourceLogicalSize,
-      excludesTranslationsFromExport: excludesTranslationsFromExport ?? false
+      excludesTranslationsFromExport: excludesTranslationsFromExport ?? false,
+      cropBaselineFootprints: cropBaselineFootprints.map { footprints in
+        Dictionary(
+          footprints.compactMap { key, rect in UUID(uuidString: key).map { ($0, rect) } },
+          uniquingKeysWith: { first, _ in first }
+        )
+      }
     )
   }
 }

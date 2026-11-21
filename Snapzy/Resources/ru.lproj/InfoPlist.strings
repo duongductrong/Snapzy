@@ -1,3 +1,4 @@
 "NSMicrophoneUsageDescription" = "Snapzy требуется доступ к микрофону для записи звука вместе с записями экрана.";
 "NSCameraUsageDescription" = "Snapzy требуется доступ к камере, чтобы добавить изображение с камеры к записи экрана.";
 "NSScreenCaptureUsageDescription" = "Snapzy требуется разрешение на запись экрана, чтобы делать снимки экрана и записывать ваш экран.";
+"NSSpeechRecognitionUsageDescription" = "Snapzy расшифровывает ваши записи на этом Mac, когда вы спрашиваете ИИ видеоредактора о том, что в них говорится.";

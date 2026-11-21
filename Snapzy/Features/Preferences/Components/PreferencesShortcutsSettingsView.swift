@@ -45,6 +45,10 @@ struct ShortcutsSettingsView: View {
   @State private var autoRedactSensitiveDataShortcut: ShortcutConfig?
   @State private var autoTranslateShortcut: ShortcutConfig?
   @State private var translateAreaShortcut: ShortcutConfig?
+  @State private var aiPromptShortcut: ShortcutConfig?
+  @State private var videoEditorAIPromptShortcut: ShortcutConfig?
+  @State private var videoEditorActionEnabled: [VideoEditorActionShortcutKind: Bool]
+  @State private var videoEditorActionValidationIssues: [VideoEditorActionShortcutKind: ShortcutValidationIssue] = [:]
   @State private var globalShortcutEnabled: [GlobalShortcutKind: Bool]
   @State private var annotateActionEnabled: [AnnotateActionShortcutKind: Bool]
   @State private var globalValidationIssues: [GlobalShortcutKind: ShortcutValidationIssue] = [:]
@@ -65,6 +69,7 @@ struct ShortcutsSettingsView: View {
   private let manager = KeyboardShortcutManager.shared
   private let validator = ShortcutValidationService.shared
   @ObservedObject private var annotateManager = AnnotateShortcutManager.shared
+  private let videoEditorManager = VideoEditorShortcutManager.shared
   @ObservedObject private var historyFloatingManager = HistoryFloatingManager.shared
 
   init() {
@@ -117,6 +122,15 @@ struct ShortcutsSettingsView: View {
     )
     _autoTranslateShortcut = State(initialValue: AnnotateShortcutManager.shared.autoTranslateShortcut)
     _translateAreaShortcut = State(initialValue: AnnotateShortcutManager.shared.translateAreaShortcut)
+    _aiPromptShortcut = State(initialValue: AnnotateShortcutManager.shared.aiPromptShortcut)
+    _videoEditorAIPromptShortcut = State(initialValue: VideoEditorShortcutManager.shared.aiPromptShortcut)
+    _videoEditorActionEnabled = State(
+      initialValue: Dictionary(
+        uniqueKeysWithValues: VideoEditorActionShortcutKind.allCases.map {
+          ($0, VideoEditorShortcutManager.shared.isActionShortcutEnabled(for: $0))
+        }
+      )
+    )
     _globalShortcutEnabled = State(
       initialValue: Dictionary(
         uniqueKeysWithValues: GlobalShortcutKind.allCases.map {
@@ -321,6 +335,7 @@ struct ShortcutsSettingsView: View {
     case .annotateActions: return resetAnnotateActionsSection
     case .annotateTools: return resetAnnotateToolKeysSection
     case .annotateReference: return nil
+    case .videoEditorActions: return resetVideoEditorActionsSection
     }
   }
 
@@ -344,6 +359,8 @@ struct ShortcutsSettingsView: View {
       annotateToolKeysRows
     case .annotateReference:
       annotateReferenceRows
+    case .videoEditorActions:
+      videoEditorActionsRows
     }
   }
 
@@ -761,6 +778,33 @@ struct ShortcutsSettingsView: View {
       onSwap: swapAction(for: .annotateAction(.translateArea)),
       onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .translateArea) }
     )
+
+    if AnnotateAgentProviderResolver.isFeatureAvailable {
+      ShortcutRecorderView(
+        label: L10n.AnnotateAI.askHelp,
+        description: L10n.AnnotateAI.shortcutDescription,
+        shortcut: $aiPromptShortcut,
+        defaultShortcut: AnnotateShortcutManager.defaultAIPrompt,
+        isEnabled: annotateActionEnabledBinding(for: .aiPrompt),
+        validationIssue: annotateActionValidationIssues[.aiPrompt],
+        onSwap: swapAction(for: .annotateAction(.aiPrompt)),
+        onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .aiPrompt) }
+      )
+    }
+  }
+
+  @ViewBuilder
+  private var videoEditorActionsRows: some View {
+    ShortcutRecorderView(
+      label: L10n.VideoEditorAI.askHelp,
+      description: L10n.VideoEditorAI.shortcutDescription,
+      shortcut: $videoEditorAIPromptShortcut,
+      defaultShortcut: VideoEditorShortcutManager.defaultAIPrompt,
+      isEnabled: videoEditorActionEnabledBinding(for: .aiPrompt),
+      validationIssue: videoEditorActionValidationIssues[.aiPrompt],
+      onSwap: swapAction(for: .videoEditorAction(.aiPrompt)),
+      onShortcutChanged: { handleVideoEditorActionShortcutChange($0, for: .aiPrompt) }
+    )
   }
 
   @ViewBuilder
@@ -957,6 +1001,7 @@ struct ShortcutsSettingsView: View {
     autoRedactSensitiveDataShortcut = AnnotateShortcutManager.defaultAutoRedactSensitiveData
     autoTranslateShortcut = AnnotateShortcutManager.defaultAutoTranslate
     translateAreaShortcut = AnnotateShortcutManager.defaultTranslateArea
+    aiPromptShortcut = AnnotateShortcutManager.defaultAIPrompt
 
     for kind in AnnotateActionShortcutKind.allCases {
       annotateActionEnabled[kind] = true
@@ -971,6 +1016,16 @@ struct ShortcutsSettingsView: View {
     annotateManager.setAutoRedactSensitiveDataShortcut(AnnotateShortcutManager.defaultAutoRedactSensitiveData)
     annotateManager.setAutoTranslateShortcut(AnnotateShortcutManager.defaultAutoTranslate)
     annotateManager.setTranslateAreaShortcut(AnnotateShortcutManager.defaultTranslateArea)
+    annotateManager.setAIPromptShortcut(AnnotateShortcutManager.defaultAIPrompt)
+  }
+
+  private func resetVideoEditorActionsSection() {
+    videoEditorAIPromptShortcut = VideoEditorShortcutManager.defaultAIPrompt
+    for kind in VideoEditorActionShortcutKind.allCases {
+      videoEditorActionEnabled[kind] = true
+      videoEditorActionValidationIssues.removeValue(forKey: kind)
+    }
+    videoEditorManager.resetToDefaults()
   }
 
   private func resetAnnotateToolKeysSection() {
@@ -988,6 +1043,7 @@ struct ShortcutsSettingsView: View {
     resetQuickAccessSection()
     resetAnnotateActionsSection()
     resetAnnotateToolKeysSection()
+    resetVideoEditorActionsSection()
 
     manager.refreshShortcutRegistration()
     hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
@@ -1084,6 +1140,29 @@ struct ShortcutsSettingsView: View {
     )
   }
 
+  private func videoEditorActionEnabledBinding(for kind: VideoEditorActionShortcutKind) -> Binding<Bool> {
+    Binding(
+      get: { videoEditorActionEnabled[kind] ?? true },
+      set: { newValue in
+        if newValue {
+          switch validator.validateVideoEditorActionShortcut(videoEditorManager.shortcut(for: kind), for: kind) {
+          case .accept(let issue):
+            videoEditorActionValidationIssues[kind] = issue
+          case .reject(let issue):
+            videoEditorActionValidationIssues[kind] = issue
+            return
+          }
+        }
+
+        videoEditorActionEnabled[kind] = newValue
+        videoEditorManager.setActionShortcutEnabled(newValue, for: kind)
+        if !newValue {
+          videoEditorActionValidationIssues.removeValue(forKey: kind)
+        }
+      }
+    )
+  }
+
   // MARK: - Shortcut Swap
 
   /// Swap closure for a combo row whose last rejection named another action as owner.
@@ -1099,13 +1178,14 @@ struct ShortcutsSettingsView: View {
     switch owner {
     case .global(let kind): return globalValidationIssues[kind]
     case .annotateAction(let kind): return annotateActionValidationIssues[kind]
+    case .videoEditorAction(let kind): return videoEditorActionValidationIssues[kind]
     case .quickAccessAction, .annotateTool: return nil
     }
   }
 
   private func isComboOwner(_ owner: ShortcutSwapProposal.Owner) -> Bool {
     switch owner {
-    case .global, .annotateAction: return true
+    case .global, .annotateAction, .videoEditorAction: return true
     case .quickAccessAction, .annotateTool: return false
     }
   }
@@ -1114,6 +1194,7 @@ struct ShortcutsSettingsView: View {
     switch owner {
     case .global(let kind): return manager.shortcut(for: kind)
     case .annotateAction(let kind): return annotateManager.shortcut(for: kind)
+    case .videoEditorAction(let kind): return videoEditorManager.shortcut(for: kind)
     case .quickAccessAction, .annotateTool: return nil
     }
   }
@@ -1123,6 +1204,7 @@ struct ShortcutsSettingsView: View {
     switch owner {
     case .global(let kind): return handleGlobalShortcutChange(config, for: kind)
     case .annotateAction(let kind): return handleAnnotateActionShortcutChange(config, for: kind)
+    case .videoEditorAction(let kind): return handleVideoEditorActionShortcutChange(config, for: kind)
     case .quickAccessAction, .annotateTool: return false
     }
   }
@@ -1286,10 +1368,33 @@ struct ShortcutsSettingsView: View {
       case .translateArea:
         translateAreaShortcut = config
         annotateManager.setTranslateAreaShortcut(config)
+      case .aiPrompt:
+        aiPromptShortcut = config
+        annotateManager.setAIPromptShortcut(config)
       }
       return true
     case .reject(let issue):
       annotateActionValidationIssues[kind] = issue
+      return false
+    }
+  }
+
+  @discardableResult
+  private func handleVideoEditorActionShortcutChange(
+    _ config: ShortcutConfig?,
+    for kind: VideoEditorActionShortcutKind
+  ) -> Bool {
+    switch validator.validateVideoEditorActionShortcut(config, for: kind) {
+    case .accept(let issue):
+      videoEditorActionValidationIssues[kind] = issue
+      switch kind {
+      case .aiPrompt:
+        videoEditorAIPromptShortcut = config
+      }
+      videoEditorManager.setShortcut(config, for: kind)
+      return true
+    case .reject(let issue):
+      videoEditorActionValidationIssues[kind] = issue
       return false
     }
   }
@@ -1493,13 +1598,16 @@ private enum ShortcutsPage: String, CaseIterable, Identifiable {
   case annotateActions
   case annotateTools
   case annotateReference
+  case videoEditorActions
 
   var id: String { rawValue }
 
   /// Registered system-wide; they work while any app is frontmost.
   static let globalPages: [ShortcutsPage] = [.capture, .recording, .tools, .history]
   /// Only active inside a Snapzy surface (Quick Access card, editor).
-  static let inAppPages: [ShortcutsPage] = [.quickAccess, .annotateActions, .annotateTools, .annotateReference]
+  static let inAppPages: [ShortcutsPage] = [
+    .quickAccess, .annotateActions, .annotateTools, .annotateReference, .videoEditorActions,
+  ]
 
   /// Extra guidance behind the ⓘ beside the card title.
   var help: String? {
@@ -1514,6 +1622,7 @@ private enum ShortcutsPage: String, CaseIterable, Identifiable {
         L10n.PreferencesShortcuts.singleKeyHint,
       ].joined(separator: "\n")
     case .annotateReference: return L10n.PreferencesShortcuts.referenceDescription
+    case .videoEditorActions: return L10n.PreferencesShortcuts.videoEditorActionsDescription
     case .capture, .recording: return nil
     }
   }
@@ -1528,6 +1637,7 @@ private enum ShortcutsPage: String, CaseIterable, Identifiable {
     case .annotateActions: return L10n.ShortcutOverlay.annotateActions
     case .annotateTools: return L10n.ShortcutOverlay.annotateToolKeys
     case .annotateReference: return L10n.ShortcutOverlay.annotateReference
+    case .videoEditorActions: return L10n.ShortcutOverlay.videoEditorActions
     }
   }
 
@@ -1541,6 +1651,7 @@ private enum ShortcutsPage: String, CaseIterable, Identifiable {
     case .annotateActions: return L10n.PreferencesShortcuts.annotateActionsPageDescription
     case .annotateTools: return L10n.PreferencesShortcuts.annotateToolsPageDescription
     case .annotateReference: return L10n.PreferencesShortcuts.annotateReferencePageDescription
+    case .videoEditorActions: return L10n.PreferencesShortcuts.videoEditorActionsPageDescription
     }
   }
 
@@ -1555,6 +1666,7 @@ private enum ShortcutsPage: String, CaseIterable, Identifiable {
     case .annotateActions: return PreferencesTab.annotate.iconTint
     case .annotateTools: return PreferencesTab.menuBar.iconTint
     case .annotateReference: return PreferencesIconTint(hue: 138, saturation: 0.55)
+    case .videoEditorActions: return PreferencesIconTint(hue: 280, saturation: 0.5)
     }
   }
 
@@ -1568,6 +1680,7 @@ private enum ShortcutsPage: String, CaseIterable, Identifiable {
     case .annotateActions: return "paintbrush.pointed.fill"
     case .annotateTools: return "character.cursor.ibeam"
     case .annotateReference: return "book.closed.fill"
+    case .videoEditorActions: return "film"
     }
   }
 }

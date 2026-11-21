@@ -33,6 +33,8 @@ struct VideoTimelineView: View {
     var height = TimelineRulerView.height + spacing + frameStripHeight
     if state.isZoomTrackVisible { height += spacing + segmentTrackHeight }
     if state.isSpeedTrackVisible, !state.isGIF { height += spacing + segmentTrackHeight }
+    if state.showsCameraTrack { height += spacing + segmentTrackHeight }
+    if showsCaptionTrack { height += spacing + segmentTrackHeight }
     return height
   }
 
@@ -121,26 +123,40 @@ struct VideoTimelineView: View {
       if state.isSpeedTrackVisible, !state.isGIF {
         SpeedTimelineTrack(state: state, timelineWidth: contentWidth, visibleRange: renderRange).equatable()
       }
+
+      // Camera track (hidden stretches) — Studio recordings with a camera sidecar.
+      if state.showsCameraTrack {
+        VideoEditorCameraTimelineTrack(state: state, timelineWidth: contentWidth).equatable()
+      }
+
+      // Captions track — shown once the video has captions.
+      if showsCaptionTrack {
+        VideoEditorCaptionTimelineTrack(state: state, timelineWidth: contentWidth, visibleRange: renderRange).equatable()
+      }
     }
   }
 
-  /// One viewport of overscan on either side preserves smooth panning.
+  private var showsCaptionTrack: Bool {
+    !state.isGIF && !state.captions.isEmpty
+  }
+
+  /// One viewport of overscan on either side, snapped to whole viewports (see
+  /// `VideoEditorTimelineViewport.renderRange`).
   private var renderRange: ClosedRange<CGFloat> {
-    let leading = min(viewport.contentWidth, max(0, viewport.scrollOffset - viewport.viewportWidth))
-    let trailing = max(leading, min(viewport.contentWidth, viewport.scrollOffset + 2 * viewport.viewportWidth))
-    return leading ... trailing
+    viewport.renderRange
   }
 
   // MARK: - Viewport Sync
 
   private func syncViewport(width: CGFloat) {
-    viewport.viewportWidth = width
-    syncViewportDuration()
+    viewport.setGeometry(
+      viewportWidth: width,
+      durationSeconds: max(0, CMTimeGetSeconds(state.timelineDuration))
+    )
   }
 
   private func syncViewportDuration() {
-    viewport.durationSeconds = max(0, CMTimeGetSeconds(state.timelineDuration))
-    viewport.clampScroll()
+    syncViewport(width: viewport.viewportWidth)
   }
 
   // MARK: - Playhead Follow
@@ -151,7 +167,7 @@ struct VideoTimelineView: View {
       contentX: contentX,
       margin: Self.playheadFollowMargin
     ) else { return }
-    viewport.scrollOffset = target
+    viewport.setScrollOffset(target)
   }
 
   // MARK: - Pinch Zoom

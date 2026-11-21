@@ -5609,6 +5609,148 @@
         }
       }
     },
+    "recording-toolbar.studio-recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Studio-Aufnahme"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Studio Recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabación Studio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement Studio"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת סטודיו"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スタジオ録画"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스튜디오 녹화"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Студийная запись"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quay Studio"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作室录制"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作室錄製"
+          }
+        }
+      }
+    },
+    "recording-toolbar.studio-recording-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeiger nach der Aufnahme bearbeiten. Die Verarbeitung dauert nach dem Stoppen einige Sekunden länger."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit the cursor after recording. Takes a few extra seconds to process after you stop."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edita el cursor después de grabar. Tarda unos segundos más en procesarse al detener."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifiez le curseur après l’enregistrement. Le traitement prend quelques secondes de plus après l’arrêt."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עריכת הסמן אחרי ההקלטה. העיבוד לוקח כמה שניות נוספות אחרי העצירה."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "録画後にカーソルを編集できます。停止後の処理に数秒余分にかかります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹화 후 커서를 편집합니다. 중지 후 처리에 몇 초가 더 걸립니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Редактируйте курсор после записи. Обработка после остановки займёт на несколько секунд дольше."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chỉnh con trỏ sau khi quay. Cần thêm vài giây xử lý sau khi dừng."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录制后可编辑光标。停止后需额外几秒进行处理。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錄製後可編輯游標。停止後需額外幾秒進行處理。"
+          }
+        }
+      }
+    },
     "recording-toolbar.show-cursor": {
       "extractionState": "stale",
       "localizations": {
@@ -8729,6 +8871,77 @@
           "stringUnit": {
             "state": "translated",
             "value": "鏡像鏡頭"
+          }
+        }
+      }
+    },
+    "camera.studio-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Studio-Aufnahme: Die Kamera wird separat gesichert, sodass du sie im Editor verschieben, skalieren oder ausblenden kannst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Studio Recording: the camera is saved separately, so you can move, resize or hide it in the editor."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabación Studio: la cámara se guarda aparte para que puedas moverla, cambiar su tamaño u ocultarla en el editor."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement Studio : la caméra est enregistrée à part, vous pouvez la déplacer, la redimensionner ou la masquer dans l’éditeur."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת סטודיו: המצלמה נשמרת בנפרד, כך שאפשר להזיז, לשנות גודל או להסתיר אותה בעורך."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スタジオ録画：カメラは別に保存されるため、エディタで移動、サイズ変更、非表示にできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스튜디오 녹화: 카메라가 따로 저장되므로 편집기에서 이동, 크기 조절, 숨기기를 할 수 있습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Студийная запись: камера сохраняется отдельно, её можно перемещать, менять размер или скрывать в редакторе."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quay Studio: camera được lưu riêng nên có thể di chuyển, đổi kích thước hoặc ẩn trong trình chỉnh sửa."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作室录制：摄像头单独保存，可在编辑器中移动、调整大小或隐藏。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作室錄製：攝影機會另外儲存，可在編輯器中移動、調整大小或隱藏。"
           }
         }
       }

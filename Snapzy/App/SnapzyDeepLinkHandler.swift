@@ -275,6 +275,8 @@ enum SnapzyDeepLinkAction: Equatable {
       return .capture
     case "annotate", "annotation", "annotations":
       return .annotate
+    case "ai", "ask", "ask-ai":
+      return .ai
     case "quick-access", "quickaccess":
       return .quickAccess
     case "history":

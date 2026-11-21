@@ -632,6 +632,82 @@ final class AnnotateCoreTests: XCTestCase {
     )
   }
 
+  func testInlineAreaIntelligenceDock_hangsBelowSelectionWhenToolbarIsAbove() {
+    let containerSize = CGSize(width: 1512, height: 982)
+    let rect = CGRect(x: 120, y: 200, width: 900, height: 300)
+
+    let placement = InlineAreaControlGeometry.placement(
+      for: rect,
+      containerSize: containerSize,
+      showsProperties: true,
+      propertiesContentWidth: 0,
+      controlInsets: .zero
+    )
+
+    XCTAssertLessThan(placement.toolbarCenter.y, rect.minY)
+    XCTAssertTrue(placement.intelligenceDockGrowsDown)
+    XCTAssertEqual(placement.intelligenceDockAnchor.x, rect.midX, accuracy: 0.0001)
+    XCTAssertEqual(
+      placement.intelligenceDockAnchor.y,
+      rect.maxY + InlineAreaLayout.selectionGap,
+      accuracy: 0.0001
+    )
+  }
+
+  func testInlineAreaIntelligenceDock_sitsInsideBottomWhenSelectionReachesScreenBottom() {
+    let containerSize = CGSize(width: 1512, height: 982)
+    let rect = CGRect(x: 120, y: 300, width: 900, height: 682)
+    let controlInsets = InlineAreaControlInsets.zero
+
+    let placement = InlineAreaControlGeometry.placement(
+      for: rect,
+      containerSize: containerSize,
+      showsProperties: false,
+      propertiesContentWidth: 0,
+      controlInsets: controlInsets
+    )
+
+    XCTAssertLessThan(placement.toolbarCenter.y, rect.minY)
+    XCTAssertFalse(placement.intelligenceDockGrowsDown)
+    XCTAssertEqual(
+      placement.intelligenceDockAnchor.y,
+      containerSize.height - controlInsets.controlBottomPadding,
+      accuracy: 0.0001
+    )
+  }
+
+  func testInlineAreaIntelligenceDock_fullscreenSelectionKeepsDockAwayFromInnerToolbar() {
+    let containerSize = CGSize(width: 1512, height: 982)
+    let rect = CGRect(origin: .zero, size: containerSize)
+    let controlInsets = InlineAreaControlInsets.zero
+
+    let placement = InlineAreaControlGeometry.placement(
+      for: rect,
+      containerSize: containerSize,
+      showsProperties: true,
+      propertiesContentWidth: 0,
+      controlInsets: controlInsets
+    )
+
+    XCTAssertGreaterThan(placement.toolbarCenter.y, rect.midY)
+    XCTAssertTrue(placement.intelligenceDockGrowsDown)
+    XCTAssertEqual(
+      placement.intelligenceDockAnchor.y,
+      controlInsets.controlTopPadding,
+      accuracy: 0.0001
+    )
+  }
+
+  func testInlineAreaToolbarPreferredWidthFitsEveryInlineTool() {
+    let toolCount = AnnotationToolType.inlineToolGroups.reduce(0) { $0 + $1.count }
+    XCTAssertEqual(toolCount, AnnotationToolType.inlineAnnotateTools.count)
+    // Tools plus the move grip, undo and redo, each at least one button wide.
+    XCTAssertGreaterThan(
+      InlineAreaLayout.toolbarPreferredWidth,
+      CGFloat(toolCount + 3) * ToolbarConstants.iconButtonSize
+    )
+  }
+
   func testInlineAreaControlInsetsPreferVisibleFrameAndSafeArea() {
     let insets = InlineAreaControlInsets(
       screenFrame: CGRect(x: 0, y: 0, width: 1512, height: 982),
@@ -2765,6 +2841,8 @@ final class AnnotateCoreTests: XCTestCase {
   @MainActor
   func testCanvasCurvedArrowControlHandleClampsToActiveCanvasBounds() throws {
     let state = makeAnnotateState()
+    // Clamping applies only when the canvas does not auto-expand (#492).
+    state.allowsCanvasAutoExpand = false
     state.loadImage(NSImage(size: CGSize(width: 400, height: 300)))
     let geometry = ArrowGeometry(
       start: CGPoint(x: 80, y: 100),

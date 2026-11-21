@@ -39,6 +39,29 @@ private extension View {
 /// Top toolbar for video editor window
 struct VideoEditorToolbarView: View {
   @ObservedObject var state: VideoEditorState
+  /// Not observed: the toolbar follows `aiChrome`, so typing in the prompt doesn't re-render it.
+  private let agent: VideoEditorAgentController
+
+  /// A run holds the timeline: everything but the AI toggle stands down.
+  var isAuthoringLocked: Bool
+  var aiChrome: VideoEditorAgentController.Chrome
+  /// The toggle belongs to the sidebar; the dock has its own orb over the player.
+  var aiLayout: VideoEditorAILayout
+
+  init(
+    state: VideoEditorState,
+    isAuthoringLocked: Bool = false,
+    aiChrome: VideoEditorAgentController.Chrome = .init(),
+    aiLayout: VideoEditorAILayout = .defaultValue
+  ) {
+    self.state = state
+    self.isAuthoringLocked = isAuthoringLocked
+    self.aiChrome = aiChrome
+    self.aiLayout = aiLayout
+    agent = state.agent
+  }
+
+  @ObservedObject private var shortcuts = VideoEditorShortcutManager.shared
 
   @State private var editingFilename: String = ""
   @State private var renameError: String?
@@ -52,9 +75,11 @@ struct VideoEditorToolbarView: View {
         .fixedSize(horizontal: true, vertical: false)
         .measureVideoEditorToolbarWidth(for: .left)
         .frame(width: reservedSideWidth, alignment: .leading)
+        .disabled(isAuthoringLocked)
       centerSection
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, WindowSpacingConfiguration.default.toolbarItemSpacing)
+        .disabled(isAuthoringLocked)
       rightSection
         .fixedSize(horizontal: true, vertical: false)
         .measureVideoEditorToolbarWidth(for: .right)
@@ -120,7 +145,7 @@ struct VideoEditorToolbarView: View {
       ) {
         state.toggleVideoInfoSidebar()
       }
-      .keyboardShortcut("i", modifiers: [])
+      .keyboardShortcut(aiChrome.allowsPlainKeyShortcuts ? KeyboardShortcut("i", modifiers: []) : nil)
       .help(state.isVideoInfoSidebarVisible ? L10n.VideoEditor.hideVideoInfoHint : L10n.VideoEditor.showVideoInfoHint)
       .popover(isPresented: $state.isVideoInfoSidebarVisible, arrowEdge: .bottom) {
         VideoDetailsSidebarView(state: state)
@@ -203,10 +228,35 @@ struct VideoEditorToolbarView: View {
 
   // MARK: - Right Section
 
-  // No trailing controls: the zoom configuration moved into the collapsed left
-  // rail. The empty spacer keeps the filename geometrically centered.
+  // The AI assistant toggle. The section is measured so the filename stays centered.
+  // Hidden while the panel is open: the panel's own close button takes its place on this line.
   private var rightSection: some View {
-    HStack(spacing: WindowSpacingConfiguration.default.toolbarItemSpacing) {}
+    HStack(spacing: WindowSpacingConfiguration.default.toolbarItemSpacing) {
+      if aiLayout == .sidebar, !state.isGIF, !aiChrome.isPromptPresented, agent.isAvailable || aiChrome.isRunning {
+        aiPanelToggleButton
+      }
+    }
+  }
+
+  private var aiPanelToggleButton: some View {
+    ToolbarButton(
+      icon: AnnotateAgentGlyph.symbolName,
+      isSelected: aiChrome.isPromptPresented,
+      activeGlassTint: ZoomColors.primary,
+      glyphGradient: TranslationCardMotion.rimHues
+    ) {
+      withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) { agent.togglePrompt() }
+    }
+    .overlay(alignment: .topTrailing) {
+      // Working while the panel is hidden: a pulsing dot says a run is still going.
+      if aiChrome.isRunning, !aiChrome.isPromptPresented {
+        VideoEditorAIRunningDot()
+          .offset(x: 1, y: -1)
+          .allowsHitTesting(false)
+      }
+    }
+    .help(shortcuts.helpText(L10n.VideoEditorAI.togglePanelHelp, for: .aiPrompt))
+    .accessibilityLabel(L10n.VideoEditorAI.togglePanelHelp)
   }
 
   // MARK: - Helpers
@@ -251,6 +301,23 @@ struct VideoEditorToolbarView: View {
     } catch {
       renameError = error.localizedDescription
     }
+  }
+}
+
+private struct VideoEditorAIRunningDot: View {
+  @State private var isPulsing = false
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  var body: some View {
+    Circle()
+      .fill(Color.accentColor)
+      .frame(width: 7, height: 7)
+      .scaleEffect(isPulsing ? 1.25 : 0.85)
+      .opacity(isPulsing ? 1 : 0.6)
+      .onAppear {
+        guard !reduceMotion else { return }
+        withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { isPulsing = true }
+      }
   }
 }
 
