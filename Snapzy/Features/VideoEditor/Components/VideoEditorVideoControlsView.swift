@@ -213,10 +213,11 @@ struct VideoControlsView: View {
 
   var body: some View {
     let _ = VideoEditorRenderRateGuard.record("VideoControlsView", isPlaying: playbackState.isPlaying)
-    // Both sides are equally flexible, so the transport stays centred whenever each half
-    // fits its side; when it doesn't, the row goes asymmetric and then drops the status
-    // badges instead of demanding width. The bar must stay compressible: its minimum
-    // width feeds the window's content minimum (NSHostingView `.minSize`), and a rigid
+    // The two side frames are equally flexible, which is what keeps the transport centred, and
+    // `VideoControlsFitPolicy` drops the status badges as soon as the trailing group stops
+    // fitting the width that side frame is actually given — measured off the frame, because
+    // that width is the only space the badges really have. The bar must stay compressible: its
+    // minimum width feeds the window's content minimum (NSHostingView `.minSize`), and a rigid
     // row made ⌘K's sidebar reservation grow the window instead of narrowing the editor.
     // (Not `ViewThatFits`: probing both glass candidates on every layout pass made each
     // editor layout ~15× slower.)
