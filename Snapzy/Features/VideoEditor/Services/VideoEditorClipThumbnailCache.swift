@@ -23,6 +23,9 @@ final class VideoEditorClipThumbnailCache: ObservableObject {
   private nonisolated static let frameCount = 12
   private nonisolated static let targetSize = CGSize(width: 120, height: 68)
 
+  // SwiftUI can release this outside a task on macOS 13–15; avoid isolated deinit back-deployment.
+  deinit {}
+
   func strip(for url: URL) -> [NSImage] {
     strips[url] ?? []
   }
