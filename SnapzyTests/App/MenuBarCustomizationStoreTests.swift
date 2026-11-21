@@ -192,6 +192,31 @@ final class MenuBarCustomizationStoreTests: XCTestCase {
     XCTAssertEqual(reloaded.iconStyle, .cameraViewfinder)
   }
 
+  func testStore_showItemIconsDefaultsToOff() {
+    let store = makeStore(defaults: makeIsolatedDefaults())
+
+    XCTAssertFalse(store.showItemIcons, "macOS 27 hides menu icons by default; the opt-in starts off")
+  }
+
+  func testStore_persistsShowItemIconsAcrossInstances() {
+    let defaults = makeIsolatedDefaults()
+    let store = makeStore(defaults: defaults)
+
+    store.setShowItemIcons(true)
+
+    let reloaded = makeStore(defaults: defaults)
+    XCTAssertTrue(reloaded.showItemIcons)
+  }
+
+  func testStore_resetToDefaultsTurnsShowItemIconsOff() {
+    let store = makeStore(defaults: makeIsolatedDefaults())
+    store.setShowItemIcons(true)
+
+    store.resetToDefaults()
+
+    XCTAssertFalse(store.showItemIcons)
+  }
+
   // MARK: - Helpers
 
   private func makeIsolatedDefaults() -> UserDefaults {

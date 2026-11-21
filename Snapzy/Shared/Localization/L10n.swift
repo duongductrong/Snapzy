@@ -226,6 +226,16 @@ nonisolated enum L10n {
       defaultValue: "Choose a built-in icon, or click + or drop a PNG to add your own (18×18 recommended). Icons render as monochrome templates in the menu bar.",
       comment: "Menu Bar preferences icon customization section description"
     )
+    static let showItemIconsTitle = string(
+      "preferences-menubar.show-item-icons-title",
+      defaultValue: "Show icons in menus",
+      comment: "Menu Bar preferences toggle opting back into menu item icons on macOS 27"
+    )
+    static let showItemIconsDescription = string(
+      "preferences-menubar.show-item-icons-description",
+      defaultValue: "macOS 27 hides icons in menus by default. Turn this on to show them again.",
+      comment: "Menu Bar preferences explanation for the menu item icons toggle"
+    )
     static let iconDefault = string(
       "preferences-menubar.icon-default",
       defaultValue: "Default",
