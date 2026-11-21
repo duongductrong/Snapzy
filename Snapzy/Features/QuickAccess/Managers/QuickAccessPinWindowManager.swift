@@ -226,6 +226,9 @@ private final class QuickAccessPinWindowController {
     window.setFrame(flight.flightFrame, display: false)
     contentContainer.frame = flight.containerFrame
     window.isInFlight = true
+    // Applied now rather than on the next pointer move: until then the wide transparent flight window
+    // would take the clicks and scrolls aimed at the card it is flying out of.
+    window.updateMousePassthrough()
     // The flight window is far larger than the pin, and its native shadow is drawn from the window
     // frame — which would put a soft rectangle around the whole path. The content carries its own
     // shadow inside the margin, so the window goes without one until the flight is over.
@@ -414,6 +417,11 @@ private final class QuickAccessPinWindowController {
       }
     )
     let hostingView = NSHostingView(rootView: view)
+    // This controller owns every frame the pin takes, so the host has no size to report to the
+    // window. Left on, its constraint pass re-measures the root on every update and, while a flight
+    // moves the container inside a larger window, keeps invalidating its own transform until AppKit
+    // throws for exceeding the window's Update Constraints pass limit.
+    hostingView.sizingOptions = []
     hostingView.frame = NSRect(origin: .zero, size: size)
     return hostingView
   }
