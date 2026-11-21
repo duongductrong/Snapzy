@@ -100,6 +100,13 @@ private enum QuickPropertiesDensity {
     }
   }
 
+  var annotationRotationControlWidth: CGFloat {
+    switch self {
+    case .regular: return 132
+    case .compact: return 112
+    }
+  }
+
   var cornerControlWidth: CGFloat {
     switch self {
     case .regular: return 190
@@ -193,6 +200,7 @@ struct AnnotateQuickPropertiesBar: View {
     let showMeasureAxis = state.quickPropertiesSupportsMeasureAxis
     let showMeasureUnit = state.quickPropertiesSupportsMeasureUnit
     let showTranslation = state.quickPropertiesSelectedAnnotationCount == 1 && state.selectedTranslation != nil
+    let showAnnotationRotation = state.quickPropertiesSupportsAnnotationRotation
     let hasEditableStyleControls = showTranslation
       || showStrokeColor
       || showFill
@@ -204,6 +212,7 @@ struct AnnotateQuickPropertiesBar: View {
       || showCornerRadius
       || showLineStyle
       || showArrowStyle
+      || showAnnotationRotation
     let showSelectionStyle = state.quickPropertiesShowsSelectionStyle && !hasEditableStyleControls
     let showSelectionInfo = state.quickPropertiesSelectedAnnotationCount > 0 && showSelectionStyle
     let hasBeforeTextPresentation = showStrokeColor || showFill
@@ -219,7 +228,8 @@ struct AnnotateQuickPropertiesBar: View {
     let hasBeforeCornerRadius = hasBeforeStrokeWidth || showStrokeWidth
     let hasBeforeLineStyle = hasBeforeCornerRadius || showCornerRadius
     let hasBeforeArrowStyle = hasBeforeLineStyle || showLineStyle
-    let hasBeforeTextSnap = hasBeforeArrowStyle || showArrowStyle
+    let hasBeforeAnnotationRotation = hasBeforeArrowStyle || showArrowStyle
+    let hasBeforeTextSnap = hasBeforeAnnotationRotation || showAnnotationRotation
 
     return HStack(spacing: density.rowSpacing) {
       contextChip(density: density)
@@ -494,6 +504,19 @@ struct AnnotateQuickPropertiesBar: View {
           showsEndpoints: state.quickPropertiesSupportsArrowEndpoints,
           buttonWidth: density.controlButtonWidth,
           groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showAnnotationRotation,
+        isEnabled: true,
+        showsLeadingDivider: hasBeforeAnnotationRotation,
+        width: density.annotationRotationControlWidth
+      ) {
+        QuickAnnotationRotationControl(
+          degrees: state.quickAnnotationRotationDegrees,
+          groupSpacing: density.groupSpacing,
+          onCommit: state.setQuickAnnotationRotation
         )
       }
 
@@ -1766,6 +1789,70 @@ private struct QuickWatermarkRotationControl: View {
           .frame(width: 44, alignment: .trailing)
       }
     }
+  }
+}
+
+/// Angle field for rotatable annotations. Empty (showing "—") when the
+/// selected items have different angles; commits on Return or focus loss.
+private struct QuickAnnotationRotationControl: View {
+  let degrees: CGFloat?
+  let groupSpacing: CGFloat
+  let onCommit: (CGFloat) -> Void
+
+  @State private var draft = ""
+  @FocusState private var isFocused: Bool
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.Common.rotation, spacing: groupSpacing) {
+      HStack(spacing: 4) {
+        Image(systemName: "rotate.right")
+          .font(.system(size: 10))
+          .foregroundColor(.secondary)
+
+        TextField("—", text: $draft)
+          .textFieldStyle(.plain)
+          .font(Typography.labelSmall)
+          .monospacedDigit()
+          .multilineTextAlignment(.trailing)
+          .foregroundColor(SidebarColors.labelPrimary)
+          .frame(width: 36)
+          .focused($isFocused)
+          .onSubmit(commit)
+
+        Text("°")
+          .font(Typography.labelSmall)
+          .foregroundColor(SidebarColors.labelSecondary)
+      }
+      .padding(.horizontal, 8)
+      .frame(height: QuickPropertiesMetrics.chip)
+      .liquidGlassControl(isActive: isFocused)
+    }
+    .onAppear(perform: syncDraft)
+    .onChange(of: degrees) { _ in
+      if !isFocused { syncDraft() }
+    }
+    .onChange(of: isFocused) { focused in
+      if !focused { commit() }
+    }
+  }
+
+  private func syncDraft() {
+    draft = degrees.map { "\(Int($0))" } ?? ""
+  }
+
+  private func commit() {
+    let trimmed = draft
+      .replacingOccurrences(of: "°", with: "")
+      .trimmingCharacters(in: .whitespaces)
+    guard let value = Double(trimmed), value.isFinite else {
+      syncDraft()
+      return
+    }
+    // `degrees` only refreshes on the next render, so show the committed
+    // (wrapped) angle right away; Return keeps focus in the field.
+    let angle = AnnotationProperties.normalizedRotationDegrees(CGFloat(value.rounded()))
+    onCommit(angle)
+    draft = "\(Int(angle))"
   }
 }
 
