@@ -29,4 +29,13 @@ nonisolated final class ScreenCapturePermissionGateTests: XCTestCase {
       )
     }
   }
+
+  func testOnlyIdentityBlockedStatusForcesAFreshIdentityCheck() {
+    XCTAssertTrue(
+      ScreenCaptureManager.needsFreshIdentityCheck(.grantedButUnavailableDueToAppIdentity("quarantined")),
+      "a user who fixed the identity issue must not be blocked by a cached result"
+    )
+    XCTAssertFalse(ScreenCaptureManager.needsFreshIdentityCheck(.granted))
+    XCTAssertFalse(ScreenCaptureManager.needsFreshIdentityCheck(.notGranted))
+  }
 }
