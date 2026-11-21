@@ -219,7 +219,7 @@ struct SnapzyOnboardingView: View {
       continueTitle: isLastStep ? L10n.Onboarding.actionFinish : L10n.Onboarding.actionContinue,
       continueKey: "\u{21A9}",
       isContinueEnabled: canAdvance,
-      isHinted: state.canGoForward && state.isCurrentStepComplete,
+      isHinted: state.isCurrentStepComplete || isLastStep,
       onSkip: skipAction,
       onContinue: advance
     )
