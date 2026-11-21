@@ -10,14 +10,14 @@ import SwiftUI
 
 struct SnapzyMockPrerecordToolbar: View {
   let onRecord: () -> Void
-  var onCapture: (() -> Void)? = nil
-  var onCancel: (() -> Void)? = nil
+  var onCapture: (() -> Void)?
+  var onCancel: (() -> Void)?
 
   @State private var hoveredItem: String? = nil
   @State private var isRecordHovered = false
 
   var body: some View {
-    VStack(alignment: .trailing, spacing: 4) {
+    VStack(alignment: .trailing, spacing: SnapzySpace.xs) {
       // Curved hint arrow pointing to the Record button
       SnapzyCurvedHintArrow(
         text: L10n.Onboarding.mockRecordHint,
@@ -28,7 +28,7 @@ struct SnapzyMockPrerecordToolbar: View {
       .padding(.trailing, 2)
 
       // Toolbar floating HUD
-      HStack(spacing: 4) {
+      HStack(spacing: SnapzySpace.xs) {
         // Close button
         iconButton(id: "cancel", icon: "xmark") {
           onCancel?()
@@ -60,42 +60,43 @@ struct SnapzyMockPrerecordToolbar: View {
         divider
 
         // Options dropdown
-        HStack(spacing: 3) {
-          Text("Options")
+        HStack(spacing: SnapzySpace.xxs) {
+          Text(L10n.RecordingToolbar.options)
             .font(.system(size: 11, weight: .regular))
           Image(systemName: "chevron.down")
             .font(.system(size: 7.5, weight: .bold))
-            .foregroundStyle(Color.primary.opacity(0.6))
+            .foregroundStyle(SnapzyGlassInk.muted)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
+        .padding(.horizontal, SnapzySpace.sm)
+        .padding(.vertical, SnapzySpace.xs)
         .background(
-          RoundedRectangle(cornerRadius: 5)
-            .fill(hoveredItem == "options" ? Color.primary.opacity(0.10) : Color.clear)
+          Radius.rect(Radius.controlXS)
+            .fill(hoveredItem == "options" ? SnapzyGlassInk.fillHover : Color.clear)
         )
         .onHover { h in hoveredItem = h ? "options" : nil }
 
         // Record Button Group: [● Record MP4] [▾]
         HStack(spacing: 1) {
           Button(action: onRecord) {
-            HStack(spacing: 4) {
+            HStack(spacing: SnapzySpace.xs) {
               Circle()
                 .fill(Color.red)
                 .frame(width: 7, height: 7)
 
               Text(L10n.Onboarding.mockRecordMp4)
                 .font(.system(size: 11.5, weight: .semibold))
-                .foregroundColor(.primary)
+                .foregroundStyle(SnapzyGlassInk.primary)
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, SnapzySpace.md)
             .padding(.vertical, 4.5)
             .background(
-              RoundedRectangle(cornerRadius: 6)
-                .fill(isRecordHovered ? Color.red.opacity(0.18) : Color.primary.opacity(0.08))
+              Radius.rect(Radius.controlM)
+                .fill(isRecordHovered ? Color.red.opacity(0.18) : SnapzyGlassInk.fillRaised)
             )
             .overlay(
-              RoundedRectangle(cornerRadius: 6)
-                .strokeBorder(isRecordHovered ? Color.red.opacity(0.4) : Color.clear, lineWidth: 1)
+              Radius.rect(Radius.controlM)
+                .strokeBorder(isRecordHovered ? Color.red.opacity(0.4) : Color.clear,
+                              lineWidth: 1)
             )
           }
           .buttonStyle(.plain)
@@ -103,35 +104,37 @@ struct SnapzyMockPrerecordToolbar: View {
 
           Image(systemName: "chevron.down")
             .font(.system(size: 7.5, weight: .bold))
-            .foregroundStyle(Color.primary.opacity(0.6))
-            .padding(.horizontal, 3)
-            .padding(.vertical, 4)
+            .foregroundStyle(SnapzyGlassInk.muted)
+            .padding(.horizontal, SnapzySpace.xxs)
+            .padding(.vertical, SnapzySpace.xs)
         }
       }
       .padding(.horizontal, 9)
       .padding(.vertical, 5.5)
       .background {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-          .fill(Color(nsColor: .windowBackgroundColor).opacity(0.94))
+        SnapzyGlassSurface(
+          shape: Radius.rect(Radius.controlL),
+          substrate: SnapzySurfaceGlass.baseDarkness,
+          tint: 0.12
+        )
       }
-      .overlay(
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-          .strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5)
-      )
-      .shadow(color: Color.black.opacity(0.28), radius: 16, y: 6)
-      .shadow(color: Color.black.opacity(0.10), radius: 4, y: 2)
+      .clipShape(Radius.rect(Radius.controlL))
+      .shadow(color: SnapzyGlassShadow.controlColor, radius: SnapzyGlassShadow.controlRadius,
+              y: SnapzyGlassShadow.controlY)
+      .shadow(color: Color.black.opacity(0.10), radius: SnapzySpace.xs, y: 2)
     }
   }
 
-  private func iconButton(id: String, icon: String, isSelected: Bool = false, action: @escaping () -> Void) -> some View {
+  private func iconButton(id: String, icon: String, isSelected: Bool = false,
+                          action: @escaping () -> Void) -> some View {
     Button(action: action) {
       Image(systemName: icon)
         .font(.system(size: 11, weight: .medium))
-        .foregroundStyle(isSelected ? Color(red: 0.16, green: 0.50, blue: 0.98) : Color.primary.opacity(0.85))
+        .foregroundStyle(isSelected ? SnapzyMockPalette.toggleAccent : SnapzyGlassInk.body)
         .frame(width: 22, height: 22)
         .background(
-          RoundedRectangle(cornerRadius: 5)
-            .fill(hoveredItem == id ? Color.primary.opacity(0.10) : Color.clear)
+          Radius.rect(Radius.controlXS)
+            .fill(hoveredItem == id ? SnapzyGlassInk.fillHover : Color.clear)
         )
     }
     .buttonStyle(.plain)
@@ -140,7 +143,7 @@ struct SnapzyMockPrerecordToolbar: View {
 
   private var divider: some View {
     Rectangle()
-      .fill(Color.primary.opacity(0.16))
+      .fill(SnapzyGlassInk.hairlineStrong)
       .frame(width: 1, height: 16)
       .padding(.horizontal, 2)
   }

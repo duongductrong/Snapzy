@@ -53,15 +53,19 @@ struct SnapzyMockVideoEditorWindow: View {
     }
     .frame(width: 480, height: 320)
     .background(Color(nsColor: .windowBackgroundColor))
-    .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+    .clipShape(Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 13, style: .continuous)
-        .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.75)
+      Radius.rect(Radius.card)
+        .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.5)
     )
     .shadow(color: Color.black.opacity(0.40), radius: 26, y: 12)
     .shadow(color: Color.black.opacity(0.15), radius: 6, y: 2)
     .onAppear {
-      startPlaybackTimer()
+      if !SnapzyMotionPreferences.shared.reduceMotion {
+        startPlaybackTimer()
+      } else {
+        isPlaying = false
+      }
     }
     .onDisappear {
       stopPlaybackTimer()
@@ -72,13 +76,8 @@ struct SnapzyMockVideoEditorWindow: View {
 
   private var windowToolbar: some View {
     HStack(spacing: 8) {
-      // Traffic lights
-      HStack(spacing: 5) {
-        Circle().fill(Color(red: 1.0, green: 0.36, blue: 0.33)).frame(width: 9, height: 9)
-        Circle().fill(Color(red: 1.0, green: 0.74, blue: 0.18)).frame(width: 9, height: 9)
-        Circle().fill(Color(red: 0.15, green: 0.79, blue: 0.25)).frame(width: 9, height: 9)
-      }
-      .padding(.leading, 12)
+      SnapzyMockTrafficLights(size: 9.5, spacing: 6)
+        .padding(.leading, 12)
 
       // Undo / Redo
       HStack(spacing: 3) {
@@ -228,10 +227,10 @@ struct SnapzyMockVideoEditorWindow: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
         .background(
-          RoundedRectangle(cornerRadius: 8)
+          Radius.rect(Radius.controlS)
             .fill(Color.black.opacity(0.65))
             .overlay(
-              RoundedRectangle(cornerRadius: 8)
+              Radius.rect(Radius.controlS)
                 .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
             )
         )
@@ -349,7 +348,7 @@ struct SnapzyMockVideoEditorWindow: View {
         .padding(.horizontal, 9)
         .padding(.vertical, 4.5)
         .background(
-          RoundedRectangle(cornerRadius: 6)
+          Radius.rect(Radius.controlXS)
             .fill(isReplayHovered ? Color.primary.opacity(0.10) : Color.primary.opacity(0.05))
         )
       }
@@ -372,10 +371,9 @@ struct SnapzyMockVideoEditorWindow: View {
         .padding(.horizontal, 11)
         .padding(.vertical, 5)
         .background(
-          RoundedRectangle(cornerRadius: 6)
-            .fill(isExportHovered ? Color(red: 0.12, green: 0.45, blue: 0.95) : Color(red: 0.08, green: 0.40, blue: 0.90))
+          Radius.rect(Radius.controlXS)
+            .fill(isExportHovered ? SnapzyMockPalette.macBlue.opacity(0.92) : SnapzyMockPalette.macBlue)
         )
-        .shadow(color: Color.blue.opacity(0.3), radius: 4, y: 1.5)
       }
       .buttonStyle(.plain)
       .onHover { h in isExportHovered = h }

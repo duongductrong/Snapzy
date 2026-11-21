@@ -22,41 +22,46 @@ struct SnapzyMockRecordingStatusBar: View {
   }
 
   var body: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: SnapzySpace.xs) {
       // Drag handle icon
       Image(systemName: "line.3.horizontal")
         .font(.system(size: 9, weight: .bold))
-        .foregroundColor(.primary.opacity(0.35))
+        .foregroundStyle(SnapzyGlassInk.faint)
         .frame(width: 16, height: 16)
 
       divider
 
       // Recording indicator + monospace timer
-      HStack(spacing: 6) {
+      HStack(spacing: SnapzySpace.sm) {
         Circle()
           .fill(Color.red)
           .frame(width: 7, height: 7)
           .opacity(indicatorOpacity)
-          .animation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true), value: indicatorOpacity)
-          .onAppear { indicatorOpacity = 0.3 }
+          .onAppear {
+            // A steady red dot carries the same meaning; the pulse is the motion-rich variant.
+            guard !SnapzyMotionPreferences.shared.reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
+              indicatorOpacity = 0.3
+            }
+          }
 
         Text(formattedTime)
           .font(.system(size: 11.5, weight: .medium, design: .monospaced))
-          .foregroundColor(.primary)
+          .foregroundStyle(SnapzyGlassInk.primary)
 
         // Mini audio waveform
         HStack(spacing: 1.5) {
-          ForEach(0..<3) { i in
-            RoundedRectangle(cornerRadius: 1)
+          ForEach(0 ..< 3) { i in
+            RoundedRectangle(cornerRadius: 1, style: .continuous)
               .fill(Color.green.opacity(0.85))
               .frame(width: 2, height: CGFloat([6, 11, 8][(i + elapsedSeconds) % 3]))
-              .animation(.easeInOut(duration: 0.3), value: elapsedSeconds)
+              .animation(SnapzyMotionPreferences.shared.spec(.hover).animation, value: elapsedSeconds)
           }
         }
         .frame(height: 12)
         .padding(.leading, 2)
       }
-      .padding(.horizontal, 6)
+      .padding(.horizontal, SnapzySpace.sm)
 
       divider
 
@@ -80,50 +85,51 @@ struct SnapzyMockRecordingStatusBar: View {
       Button(action: onStop) {
         Text(L10n.Onboarding.mockStop)
           .font(.system(size: 11.5, weight: .semibold))
-          .foregroundColor(.white)
-          .padding(.horizontal, 10)
+          .foregroundStyle(Color.white)
+          .padding(.horizontal, SnapzySpace.lg)
           .padding(.vertical, 4.5)
           .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            Radius.rect(Radius.controlM)
               .fill(isStopHovered ? Color.red.opacity(0.90) : Color.red)
           )
           .overlay(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-              .strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5)
+            Radius.rect(Radius.controlM)
+              .strokeBorder(Color.white.opacity(0.25), lineWidth: SnapzySurfaceGlass.specularLineWidth)
           )
       }
       .buttonStyle(.plain)
       .onHover { h in isStopHovered = h }
     }
-    .padding(.horizontal, 8)
-    .padding(.vertical, 5)
+    .padding(.horizontal, SnapzySpace.md)
+    .padding(.vertical, SnapzySpace.xs)
     .background {
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
-        .fill(Color(nsColor: .windowBackgroundColor).opacity(0.95))
+      SnapzyGlassSurface(
+        shape: Radius.rect(Radius.controlM),
+        substrate: SnapzySurfaceGlass.baseDarkness,
+        tint: 0.12
+      )
     }
-    .overlay(
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
-        .strokeBorder(Color.primary.opacity(0.16), lineWidth: 0.5)
-    )
-    .shadow(color: Color.black.opacity(0.30), radius: 18, y: 7)
-    .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
+    .clipShape(Radius.rect(Radius.controlM))
+    .shadow(color: SnapzyGlassShadow.controlColor, radius: SnapzyGlassShadow.controlRadius,
+            y: SnapzyGlassShadow.controlY)
+    .shadow(color: Color.black.opacity(0.12), radius: SnapzySpace.lg, y: 2)
   }
 
   private func actionButton(id: String, icon: String) -> some View {
     Image(systemName: icon)
       .font(.system(size: 10.5, weight: .medium))
-      .foregroundColor(.primary.opacity(0.85))
+      .foregroundStyle(SnapzyGlassInk.body)
       .frame(width: 22, height: 22)
       .background(
-        RoundedRectangle(cornerRadius: 5)
-          .fill(hoveredButton == id ? Color.primary.opacity(0.10) : Color.clear)
+        Radius.rect(Radius.controlS)
+          .fill(hoveredButton == id ? SnapzyGlassInk.fillHover : Color.clear)
       )
       .onHover { h in hoveredButton = h ? id : nil }
   }
 
   private var divider: some View {
     Rectangle()
-      .fill(Color.primary.opacity(0.15))
+      .fill(SnapzyGlassInk.hairlineStrong)
       .frame(width: 1, height: 16)
       .padding(.horizontal, 2)
   }

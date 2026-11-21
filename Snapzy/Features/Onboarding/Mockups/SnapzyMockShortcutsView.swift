@@ -12,14 +12,17 @@ struct SnapzyMockShortcutsView: View {
   @ObservedObject var state: SnapzyOnboardingState
   @State private var screenFlashOpacity: Double = 0
   @State private var triggeredMode: String? = nil
+  @State private var hoveredMode: String? = nil
+
+  private static let columnWidth: CGFloat = 512
 
   var body: some View {
     ZStack(alignment: .top) {
       // 1. macOS Desktop Wallpaper Canvas
       SnapzyMockWallpaper(app: .settings).equatable()
 
-      // 2. Main Content Stack: macOS System Settings Window + Snapzy HUD + Config Card
-      VStack(spacing: 12) {
+      // 2. Two aligned architectural blocks: System Settings window + unified Snapzy utility panel
+      VStack(spacing: 14) {
         Spacer(minLength: 8)
 
         SnapzyMockSystemSettingsWindow(
@@ -37,16 +40,13 @@ struct SnapzyMockShortcutsView: View {
           }
         )
 
-        // Floating Shortcut HUD Capsule
-        shortcutHUDCapsule
+        // Single unified Snapzy Companion Panel (aligned to the exact 512pt window width)
+        unifiedCompanionPanel
 
-        // Portable Config & Diagnostics Card
-        bottomConfigCard
-
-        Spacer(minLength: 12)
+        Spacer(minLength: 10)
       }
       .padding(.horizontal, 16)
-      .padding(.top, 28) // Room for Menu Bar
+      .padding(.top, SnapzyMockMenuBar.barHeight + 6)
 
       // 3. macOS Menu Bar & Camera Notch
       SnapzyMockMenuBar(app: .settings).equatable()
@@ -60,183 +60,191 @@ struct SnapzyMockShortcutsView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 
-  // MARK: - Shortcut HUD Capsule
+  // MARK: - Unified Companion Panel (Shortcuts + Status + Config + Diagnostics)
 
-  private var shortcutHUDCapsule: some View {
-    VStack(spacing: 8) {
-      HStack(spacing: 10) {
-        shortcutButton(mode: "Area", keys: ["⇧", "⌘", "4"], icon: "viewfinder")
-        divider
-        shortcutButton(mode: "Full", keys: ["⇧", "⌘", "3"], icon: "macwindow")
-        divider
-        shortcutButton(mode: "Record", keys: ["⇧", "⌘", "5"], icon: "record.circle")
-      }
-      .padding(.horizontal, 14)
-      .padding(.vertical, 8)
-      .background {
-        SnapzyGlassSurface(
-          shape: Capsule(style: .continuous),
-          substrate: SnapzySurfaceGlass.baseDarkness,
-          tint: 0.12
-        )
-      }
-      .clipShape(Capsule(style: .continuous))
-      .shadow(color: Color.black.opacity(0.35), radius: 18, y: 8)
-      .shadow(color: Color.black.opacity(0.12), radius: 4, y: 1)
-
-      // Active status / conflict resolution indicator
+  private var unifiedCompanionPanel: some View {
+    VStack(spacing: 0) {
+      // Row 1: Interactive Snapzy shortcuts + inline conflict status / Resolve All
       HStack(spacing: 6) {
-        if state.hasConflict {
-          Image(systemName: "exclamationmark.triangle.fill")
-            .font(.system(size: 9.5))
-            .foregroundStyle(Color.orange)
+        shortcutButton(mode: L10n.Onboarding.mockModeArea, keys: "⇧⌘4", icon: "viewfinder")
+        shortcutButton(mode: L10n.Onboarding.mockModeFull, keys: "⇧⌘3", icon: "macwindow")
+        shortcutButton(mode: L10n.Onboarding.mockModeRecord, keys: "⇧⌘5", icon: "record.circle")
 
-          Text(L10n.Onboarding.mockConflictsDetected)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(Color.white.opacity(0.85))
+        Spacer(minLength: 6)
+
+        statusAccessory
+      }
+      .padding(.horizontal, 12)
+      .padding(.vertical, 9)
+
+      Rectangle()
+        .fill(Color.white.opacity(0.09))
+        .frame(height: 0.5)
+
+      // Row 2: Portable config.toml + Anonymous Diagnostics cleanly paired side-by-side
+      HStack(spacing: 12) {
+        // Portable Config
+        HStack(spacing: 8) {
+          Image(systemName: "doc.text")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(Color.white.opacity(0.70))
+            .frame(width: 14)
+
+          VStack(alignment: .leading, spacing: 1) {
+            Text("~/.config/snapzy/config.toml")
+              .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+              .foregroundStyle(Color.white.opacity(0.92))
+              .lineLimit(1)
+
+            Text(L10n.Onboarding.mockPortableConfig)
+              .font(.system(size: 8.5))
+              .foregroundStyle(Color.white.opacity(0.52))
+              .lineLimit(1)
+          }
+
+          Spacer(minLength: 4)
 
           Button {
-            state.resolveShortcutConflicts()
+            withAnimation(SnapzyMotionPreferences.shared.spec(.hover).animation) {
+              state.isConfigGranted = true
+            }
           } label: {
-            Text(L10n.Onboarding.mockResolveAll)
-              .font(.system(size: 9.5, weight: .bold))
-              .foregroundStyle(Color.orange)
-              .underline()
-          }
-          .buttonStyle(.plain)
-        } else {
-          Image(systemName: "checkmark.circle.fill")
-            .font(.system(size: 9.5))
-            .foregroundStyle(Color.green)
-
-          Text(triggeredMode != nil ? L10n.Onboarding.mockCapturedMode(triggeredMode!) : L10n.Onboarding.mockShortcutsActive)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(Color.white.opacity(0.85))
-        }
-      }
-      .padding(.horizontal, 10)
-      .padding(.vertical, 4)
-      .background(
-        Capsule()
-          .fill(Color.black.opacity(0.40))
-      )
-    }
-  }
-
-  private func shortcutButton(mode: String, keys: [String], icon: String) -> some View {
-    Button {
-      triggerCaptureSimulation(mode: mode)
-    } label: {
-      HStack(spacing: 6) {
-        Image(systemName: icon)
-          .font(.system(size: 11, weight: .semibold))
-          .foregroundStyle(Color.accentColor)
-
-        Text(mode)
-          .font(.system(size: 11, weight: .medium))
-          .foregroundStyle(Color.white)
-
-        HStack(spacing: 2) {
-          ForEach(keys, id: \.self) { key in
-            Text(key)
-              .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-              .foregroundStyle(Color.white.opacity(0.90))
-              .padding(.horizontal, 4)
-              .padding(.vertical, 1.5)
+            Text(state.isConfigGranted ? L10n.Onboarding.mockLinked : L10n.Onboarding.mockGrant)
+              .font(.system(size: 9, weight: .semibold))
+              .foregroundStyle(state.isConfigGranted ? Color.white : Color(red: 0.06, green: 0.09, blue: 0.16))
+              .padding(.horizontal, 9)
+              .padding(.vertical, 3.5)
               .background(
-                RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-                  .fill(Color.white.opacity(0.12))
-                  .overlay(
-                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-                      .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
-                  )
+                Capsule(style: .continuous)
+                  .fill(state.isConfigGranted ? Color.green.opacity(0.82) : Color.white)
               )
           }
+          .buttonStyle(.plain)
         }
+        .frame(maxWidth: .infinity)
+
+        Rectangle()
+          .fill(Color.white.opacity(0.10))
+          .frame(width: 0.5, height: 24)
+
+        // Diagnostics Toggle
+        HStack(spacing: 8) {
+          VStack(alignment: .leading, spacing: 1) {
+            Text(L10n.Onboarding.mockAnonymousDiagnostics)
+              .font(.system(size: 9.5, weight: .medium))
+              .foregroundStyle(Color.white.opacity(0.90))
+              .lineLimit(1)
+
+            Text(L10n.Onboarding.mockDiagnosticsDetail)
+              .font(.system(size: 8.5))
+              .foregroundStyle(Color.white.opacity(0.52))
+              .lineLimit(1)
+          }
+
+          Spacer(minLength: 4)
+
+          Toggle("", isOn: $state.diagnosticsOptIn)
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+        }
+        .frame(maxWidth: .infinity)
       }
-      .padding(.horizontal, 6)
-      .padding(.vertical, 4)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 9)
+    }
+    .frame(width: Self.columnWidth)
+    .background {
+      SnapzyGlassSurface(
+        shape: Radius.rect(Radius.card),
+        substrate: 0.44,
+        tint: 0.06
+      )
+    }
+    .clipShape(Radius.rect(Radius.card))
+    .shadow(color: Color.black.opacity(0.28), radius: 16, y: 8)
+    .shadow(color: Color.black.opacity(0.10), radius: 3, y: 1)
+  }
+
+  private func shortcutButton(mode: String, keys: String, icon: String) -> some View {
+    let isHovered = hoveredMode == mode
+    return Button {
+      triggerCaptureSimulation(mode: mode)
+    } label: {
+      HStack(spacing: 5) {
+        Image(systemName: icon)
+          .font(.system(size: 10, weight: .medium))
+          .foregroundStyle(Color.white.opacity(0.78))
+
+        Text(mode)
+          .font(.system(size: 10, weight: .medium))
+          .foregroundStyle(Color.white.opacity(0.92))
+
+        Text(keys)
+          .font(.system(size: 9, weight: .semibold, design: .monospaced))
+          .foregroundStyle(Color.white.opacity(0.66))
+      }
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4.5)
       .background(
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-          .fill(Color.white.opacity(0.04))
+        Radius.rect(Radius.controlXS)
+          .fill(Color.white.opacity(isHovered ? 0.14 : 0.07))
+          .overlay(
+            Radius.rect(Radius.controlXS)
+              .strokeBorder(Color.white.opacity(isHovered ? 0.22 : 0.10), lineWidth: 0.5)
+          )
       )
     }
     .buttonStyle(.plain)
+    .onHover { hovering in
+      withAnimation(SnapzyMotionPreferences.shared.spec(.hover).animation) {
+        hoveredMode = hovering ? mode : nil
+      }
+    }
   }
 
-  private var divider: some View {
-    Rectangle()
-      .fill(Color.white.opacity(0.16))
-      .frame(width: 0.75, height: 16)
-  }
-
-  // MARK: - Bottom Config & Diagnostics Card
-
-  private var bottomConfigCard: some View {
-    HStack(spacing: 12) {
-      // Config.toml item
-      HStack(spacing: 8) {
-        Image(systemName: "doc.text.fill")
-          .font(.system(size: 12))
-          .foregroundStyle(Color.blue)
-
-        VStack(alignment: .leading, spacing: 1) {
-          Text("~/.config/snapzy/config.toml")
-            .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-            .foregroundStyle(Color.white.opacity(0.90))
-          Text(L10n.Onboarding.mockPortableConfig)
-            .font(.system(size: 8.5))
-            .foregroundStyle(Color.white.opacity(0.55))
+  @ViewBuilder
+  private var statusAccessory: some View {
+    if state.hasConflict {
+      Button {
+        withAnimation(.easeInOut(duration: 0.18)) {
+          state.resolveShortcutConflicts()
         }
+      } label: {
+        HStack(spacing: 5) {
+          Circle()
+            .fill(Color.orange)
+            .frame(width: 5.5, height: 5.5)
 
-        Button {
-          state.isConfigGranted = true
-        } label: {
-          Text(state.isConfigGranted ? L10n.Onboarding.mockLinked : L10n.Onboarding.mockGrant)
-            .font(.system(size: 9, weight: .bold))
-            .foregroundStyle(Color.white)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2.5)
-            .background(
-              RoundedRectangle(cornerRadius: 4, style: .continuous)
-                .fill(state.isConfigGranted ? Color.green.opacity(0.8) : Color.blue)
+          Text(L10n.Onboarding.mockResolveAll)
+            .font(.system(size: 9.5, weight: .semibold))
+            .foregroundStyle(Color.white.opacity(0.92))
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4.5)
+        .background(
+          Capsule(style: .continuous)
+            .fill(Color.white.opacity(0.10))
+            .overlay(
+              Capsule(style: .continuous)
+                .strokeBorder(Color.orange.opacity(0.45), lineWidth: 0.5)
             )
-        }
-        .buttonStyle(.plain)
+        )
       }
+      .buttonStyle(.plain)
+    } else {
+      HStack(spacing: 5) {
+        Circle()
+          .fill(Color.green)
+          .frame(width: 5.5, height: 5.5)
 
-      Rectangle()
-        .fill(Color.white.opacity(0.12))
-        .frame(width: 0.75, height: 22)
-
-      // Diagnostics Toggle
-      HStack(spacing: 6) {
-        Toggle("", isOn: $state.diagnosticsOptIn)
-          .labelsHidden()
-          .toggleStyle(.switch)
-          .scaleEffect(0.65)
-
-        VStack(alignment: .leading, spacing: 1) {
-          Text(L10n.Onboarding.mockAnonymousDiagnostics)
-            .font(.system(size: 9.5, weight: .medium))
-            .foregroundStyle(Color.white.opacity(0.85))
-          Text(L10n.Onboarding.mockDiagnosticsDetail)
-            .font(.system(size: 8))
-            .foregroundStyle(Color.white.opacity(0.50))
-        }
+        Text(triggeredMode != nil ? L10n.Onboarding.mockCapturedMode(triggeredMode!) : L10n.Onboarding.mockShortcutsReady)
+          .font(.system(size: 9.5, weight: .medium))
+          .foregroundStyle(Color.white.opacity(0.84))
+          .lineLimit(1)
       }
+      .padding(.horizontal, 6)
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 7)
-    .background {
-      SnapzyGlassSurface(
-        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
-        substrate: SnapzySurfaceGlass.baseDarkness,
-        tint: 0.08
-      )
-    }
-    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    .shadow(color: Color.black.opacity(0.24), radius: 10, y: 5)
   }
 
   // MARK: - Simulation Trigger

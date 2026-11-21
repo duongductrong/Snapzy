@@ -31,9 +31,9 @@ struct SnapzyMockFinderWindow: View, Equatable {
 
   var body: some View {
     HStack(spacing: 0) {
-      // Left Navigation Sidebar
+      // Left Navigation Sidebar (authentic full-height macOS Finder sidebar)
       sidebar
-        .frame(width: 140)
+        .frame(width: 142)
 
       Rectangle()
         .fill(Color.black.opacity(0.08))
@@ -44,30 +44,26 @@ struct SnapzyMockFinderWindow: View, Equatable {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     .background(Color.white)
-    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    .clipShape(Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 14, style: .continuous)
-        .strokeBorder(Color.black.opacity(0.12), lineWidth: 0.5)
+      Radius.rect(Radius.card)
+        .strokeBorder(Color.black.opacity(0.14), lineWidth: 0.5)
     )
     .shadow(color: Color.black.opacity(0.24), radius: 26, x: 0, y: 12)
     .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
+    .accessibilityHidden(true)
   }
 
   // MARK: - Left Sidebar
 
   private var sidebar: some View {
     VStack(alignment: .leading, spacing: 0) {
-      // Traffic lights
-      HStack(spacing: 6) {
-        Circle().fill(Color(red: 1.0, green: 0.37, blue: 0.34)).frame(width: 9.5, height: 9.5)
-        Circle().fill(Color(red: 1.0, green: 0.74, blue: 0.18)).frame(width: 9.5, height: 9.5)
-        Circle().fill(Color(red: 0.16, green: 0.80, blue: 0.25)).frame(width: 9.5, height: 9.5)
-      }
-      .padding(.top, 12)
-      .padding(.leading, 12)
-      .padding(.bottom, 10)
+      SnapzyMockTrafficLights()
+        .padding(.top, 13)
+        .padding(.leading, 12)
+        .padding(.bottom, 11)
 
-      VStack(alignment: .leading, spacing: 1) {
+      VStack(alignment: .leading, spacing: 1.5) {
         sidebarSectionHeader("Favorites")
 
         sidebarRow(title: "Applications", icon: "app.badge", isSelected: false)
@@ -76,38 +72,38 @@ struct SnapzyMockFinderWindow: View, Equatable {
         sidebarRow(title: "Downloads", icon: "arrow.down.circle", isSelected: false)
         sidebarRow(title: "Developer", icon: "hammer", isSelected: false)
       }
-      .padding(.horizontal, 6)
+      .padding(.horizontal, 7)
 
       Spacer()
     }
-    .background(Color(red: 0.945, green: 0.950, blue: 0.960))
+    .background(Color(red: 0.946, green: 0.950, blue: 0.960))
   }
 
   private func sidebarSectionHeader(_ text: String) -> some View {
     Text(text)
-      .font(.system(size: 9.5, weight: .bold))
+      .font(.system(size: 9.5, weight: .semibold))
       .foregroundStyle(Color.black.opacity(0.42))
-      .padding(.horizontal, 8)
+      .padding(.horizontal, 7)
       .padding(.vertical, 3)
   }
 
   private func sidebarRow(title: String, icon: String, isSelected: Bool) -> some View {
     HStack(spacing: 6) {
       Image(systemName: icon)
-        .font(.system(size: 11.5, weight: .medium))
-        .foregroundStyle(Color(red: 0.08, green: 0.46, blue: 0.96))
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(SnapzyMockPalette.macBlue)
         .frame(width: 15)
 
       Text(title)
-        .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-        .foregroundStyle(isSelected ? Color(red: 0.08, green: 0.46, blue: 0.96) : Color.black.opacity(0.85))
+        .font(.system(size: 11, weight: isSelected ? .medium : .regular))
+        .foregroundStyle(SnapzyMockPalette.ink.opacity(isSelected ? 0.95 : 0.84))
 
       Spacer(minLength: 0)
     }
-    .padding(.horizontal, 6)
+    .padding(.horizontal, 7)
     .padding(.vertical, 4)
     .background(
-      RoundedRectangle(cornerRadius: 5, style: .continuous)
+      Radius.rect(Radius.controlXS)
         .fill(isSelected ? Color.black.opacity(0.08) : Color.clear)
     )
   }
@@ -116,41 +112,57 @@ struct SnapzyMockFinderWindow: View, Equatable {
 
   private var mainContent: some View {
     VStack(spacing: 0) {
-      // Toolbar
+      // Unified macOS Finder Toolbar
       HStack(spacing: 8) {
-        HStack(spacing: 3) {
+        HStack(spacing: 6) {
           Image(systemName: "chevron.left")
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(Color.black.opacity(0.35))
+            .font(.system(size: 10.5, weight: .semibold))
+            .foregroundStyle(Color.black.opacity(0.45))
           Image(systemName: "chevron.right")
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 10.5, weight: .semibold))
             .foregroundStyle(Color.black.opacity(0.18))
         }
 
         Text("Desktop")
-          .font(.system(size: 12, weight: .bold))
-          .foregroundStyle(Color.black.opacity(0.85))
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundStyle(SnapzyMockPalette.ink)
 
         Spacer()
 
-        HStack(spacing: 6) {
-          Image(systemName: "list.bullet")
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(Color.black.opacity(0.75))
-
+        // Native Finder view-mode segmented control
+        HStack(spacing: 2) {
           Image(systemName: "square.grid.2x2")
-            .font(.system(size: 10))
+            .font(.system(size: 9.5))
             .foregroundStyle(Color.black.opacity(0.45))
+            .frame(width: 20, height: 17)
+
+          Image(systemName: "list.bullet")
+            .font(.system(size: 9.5, weight: .semibold))
+            .foregroundStyle(SnapzyMockPalette.ink)
+            .frame(width: 20, height: 17)
+            .background(
+              Radius.rect(Radius.ornament)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.10), radius: 1, y: 0.5)
+            )
         }
-        .padding(.horizontal, 5)
-        .padding(.vertical, 2.5)
+        .padding(2)
         .background(
-          RoundedRectangle(cornerRadius: 4)
-            .fill(Color.black.opacity(0.05))
+          Radius.rect(Radius.controlXS)
+            .fill(Color.black.opacity(0.055))
         )
+
+        Image(systemName: "magnifyingglass")
+          .font(.system(size: 10.5, weight: .medium))
+          .foregroundStyle(Color.black.opacity(0.48))
       }
-      .frame(height: 34)
-      .padding(.horizontal, 10)
+      .frame(height: 36)
+      .padding(.horizontal, 12)
+      .background(Color(red: 0.985, green: 0.986, blue: 0.990))
+
+      Rectangle()
+        .fill(Color.black.opacity(0.07))
+        .frame(height: 0.5)
 
       // Column Headers
       HStack(spacing: 0) {
@@ -159,54 +171,84 @@ struct SnapzyMockFinderWindow: View, Equatable {
           .padding(.leading, 12)
 
         Text("Date Modified")
-          .frame(width: 100, alignment: .leading)
+          .frame(width: 96, alignment: .leading)
 
         Text("Size")
-          .frame(width: 55, alignment: .trailing)
-          .padding(.trailing, 8)
+          .frame(width: 54, alignment: .trailing)
+          .padding(.trailing, 10)
       }
       .font(.system(size: 9, weight: .semibold))
-      .foregroundStyle(Color.black.opacity(0.48))
-      .padding(.vertical, 3.5)
-      .background(Color.black.opacity(0.02))
+      .foregroundStyle(Color.black.opacity(0.46))
+      .padding(.vertical, 4)
+      .background(Color.black.opacity(0.018))
 
       Rectangle()
         .fill(Color.black.opacity(0.06))
         .frame(height: 0.5)
 
-      // Rows
+      // Alternating Finder List Rows
       VStack(spacing: 0) {
-        ForEach(Self.items) { item in
+        ForEach(Array(Self.items.enumerated()), id: \.element.id) { index, item in
+          let isSelected = index == 1
           HStack(spacing: 6) {
             Image(systemName: item.isFolder ? "folder.fill" : "doc.text.fill")
-              .font(.system(size: 11))
-              .foregroundStyle(item.isFolder ? Color.blue : Color.gray)
-              .frame(width: 14)
+              .font(.system(size: 11.5))
+              .foregroundStyle(
+                isSelected
+                  ? Color.white
+                  : (item.isFolder ? SnapzyMockPalette.finderFolderBlue : Color.gray.opacity(0.75))
+              )
+              .frame(width: 15)
 
             Text(item.name)
-              .font(.system(size: 10, weight: .regular))
-              .foregroundStyle(Color.black.opacity(0.85))
+              .font(.system(size: 10, weight: isSelected ? .medium : .regular))
+              .foregroundStyle(isSelected ? Color.white : SnapzyMockPalette.ink.opacity(0.90))
               .lineLimit(1)
 
             Spacer()
 
             Text(item.dateModified)
               .font(.system(size: 9.5))
-              .foregroundStyle(Color.black.opacity(0.48))
-              .frame(width: 100, alignment: .leading)
+              .foregroundStyle(isSelected ? Color.white.opacity(0.88) : Color.black.opacity(0.48))
+              .frame(width: 96, alignment: .leading)
 
             Text(item.size)
               .font(.system(size: 9.5))
-              .foregroundStyle(Color.black.opacity(0.48))
-              .frame(width: 55, alignment: .trailing)
-              .padding(.trailing, 8)
+              .foregroundStyle(isSelected ? Color.white.opacity(0.88) : Color.black.opacity(0.48))
+              .frame(width: 54, alignment: .trailing)
+              .padding(.trailing, 10)
           }
           .padding(.horizontal, 8)
-          .padding(.vertical, 4)
+          .padding(.vertical, 4.5)
+          .background(
+            Radius.rect(Radius.ornament)
+              .fill(
+                isSelected
+                  ? SnapzyMockPalette.macBlue
+                  : (index.isMultiple(of: 2) ? Color.clear : Color.black.opacity(0.025))
+              )
+              .padding(.horizontal, 4)
+          )
         }
       }
+      .padding(.top, 2)
 
-      Spacer()
+      Spacer(minLength: 0)
+
+      // Native macOS Finder bottom status bar
+      Rectangle()
+        .fill(Color.black.opacity(0.07))
+        .frame(height: 0.5)
+
+      HStack {
+        Spacer()
+        Text("5 items, 142.8 GB available")
+          .font(.system(size: 8.5, weight: .medium))
+          .foregroundStyle(Color.black.opacity(0.45))
+        Spacer()
+      }
+      .frame(height: 19)
+      .background(Color(red: 0.975, green: 0.977, blue: 0.982))
     }
   }
 }

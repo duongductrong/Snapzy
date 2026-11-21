@@ -21,135 +21,131 @@ struct SnapzyMockSystemSettingsWindow: View {
   @State private var isRestoreHovered: Bool = false
 
   var body: some View {
-    ZStack {
-      // 1. Background System Settings Window (Keyboard Pane)
+    ZStack(alignment: .top) {
+      // 1. Background System Settings Window (Authentic macOS Split-View Keyboard Pane)
       backgroundSettingsWindow
 
       // 2. Dimming Sheet Backdrop (Standard macOS modal presentation)
-      Color.black.opacity(0.18)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      Color.black.opacity(0.16)
+        .clipShape(Radius.rect(Radius.card))
 
-      // 3. Modal Sheet (Keyboard Shortcuts → Screenshots)
+      // 3. Modal Sheet anchored cleanly beneath the window titlebar (like real macOS sheets)
       keyboardShortcutsSheet
+        .padding(.top, 28)
     }
-    .frame(width: 512, height: 324)
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .frame(width: 512, height: 310)
+    .clipShape(Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
+      Radius.rect(Radius.card)
         .strokeBorder(Color.black.opacity(0.14), lineWidth: 0.5)
     )
-    .shadow(color: Color.black.opacity(0.26), radius: 24, x: 0, y: 10)
+    .shadow(color: Color.black.opacity(0.24), radius: 22, x: 0, y: 10)
     .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
   }
 
-  // MARK: - 1. Background System Settings Window (Keyboard Pane)
+  // MARK: - 1. Background System Settings Window (Authentic Full-Height Sidebar)
 
   private var backgroundSettingsWindow: some View {
-    VStack(spacing: 0) {
-      // Background Window Titlebar
-      HStack(spacing: 8) {
-        // Traffic lights
-        HStack(spacing: 6) {
-          Circle().fill(Color(red: 1.0, green: 0.36, blue: 0.33)).frame(width: 9.5, height: 9.5)
-          Circle().fill(Color(red: 1.0, green: 0.74, blue: 0.18)).frame(width: 9.5, height: 9.5)
-          Circle().fill(Color(red: 0.15, green: 0.79, blue: 0.25)).frame(width: 9.5, height: 9.5)
-        }
-        .padding(.leading, 12)
+    HStack(spacing: 0) {
+      // Full-height macOS System Settings Sidebar
+      VStack(alignment: .leading, spacing: 6) {
+        SnapzyMockTrafficLights(size: 9.5, spacing: 6)
+          .padding(.horizontal, 12)
+          .padding(.top, 12)
+          .padding(.bottom, 2)
 
-        // Simulated Search Field
+        // Sidebar Search Field (positioned directly under traffic lights like real macOS Settings)
         HStack(spacing: 4) {
           Image(systemName: "magnifyingglass")
             .font(.system(size: 8.5))
-            .foregroundStyle(Color.black.opacity(0.40))
+            .foregroundStyle(Color.black.opacity(0.42))
           Text("Search")
             .font(.system(size: 9.5))
-            .foregroundStyle(Color.black.opacity(0.40))
+            .foregroundStyle(Color.black.opacity(0.42))
           Spacer()
         }
         .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .frame(width: 110)
+        .padding(.vertical, 3.5)
         .background(
-          RoundedRectangle(cornerRadius: 5, style: .continuous)
-            .fill(Color.black.opacity(0.05))
+          Radius.rect(Radius.controlXS)
+            .fill(Color.black.opacity(0.06))
         )
-        .padding(.leading, 6)
+        .padding(.horizontal, 8)
 
-        Spacer()
-
-        // Nav chevrons + Keyboard title
         HStack(spacing: 6) {
-          HStack(spacing: 3) {
-            Image(systemName: "chevron.left")
-            Image(systemName: "chevron.right")
+          Circle()
+            .fill(Color.gray.opacity(0.32))
+            .frame(width: 20, height: 20)
+            .overlay(Image(systemName: "person.fill").font(.system(size: 9)).foregroundStyle(Color.white))
+          VStack(alignment: .leading, spacing: 0.5) {
+            Text("User Account")
+              .font(.system(size: 8.5, weight: .semibold))
+              .foregroundStyle(SnapzyMockPalette.ink.opacity(0.85))
+            Text("Apple Account")
+              .font(.system(size: 7.5))
+              .foregroundStyle(SnapzyMockPalette.inkTertiary)
           }
-          .font(.system(size: 8.5, weight: .semibold))
-          .foregroundStyle(Color.black.opacity(0.35))
-          .padding(.horizontal, 5)
-          .padding(.vertical, 2.5)
-          .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.04)))
+        }
+        .padding(.horizontal, 9)
+        .padding(.top, 2)
 
-          Text("Keyboard")
-            .font(.system(size: 11.5, weight: .bold))
-            .foregroundStyle(Color.black.opacity(0.85))
+        Rectangle()
+          .fill(Color.black.opacity(0.06))
+          .frame(height: 0.5)
+          .padding(.horizontal, 8)
+
+        VStack(spacing: 2) {
+          bgSidebarItem(icon: "gearshape.fill", title: "General", badgeColor: Color.gray)
+          bgSidebarItem(icon: "sun.max.fill", title: "Displays", badgeColor: SnapzyMockPalette.macBlue)
+          bgSidebarItem(icon: "keyboard", title: "Keyboard", badgeColor: Color(white: 0.48), isSelected: false)
+          bgSidebarItem(icon: "hand.raised.fill", title: "Privacy & Security", badgeColor: SnapzyMockPalette.macBlue)
         }
 
         Spacer()
-
-        Color.clear.frame(width: 110, height: 1)
       }
-      .frame(height: 32)
-      .background(Color(red: 0.940, green: 0.943, blue: 0.950))
+      .frame(width: 136)
+      .background(Color(red: 0.942, green: 0.946, blue: 0.955))
 
       Rectangle()
-        .fill(Color.black.opacity(0.08))
-        .frame(height: 0.5)
+        .fill(Color.black.opacity(0.09))
+        .frame(width: 0.5)
 
-      // Background Window Content (Sidebar + Sliders preview)
-      HStack(spacing: 0) {
-        // Left background sidebar
-        VStack(alignment: .leading, spacing: 5) {
+      // Right Detail Pane (Titlebar + Grouped Settings Card)
+      VStack(alignment: .leading, spacing: 0) {
+        HStack(spacing: 8) {
           HStack(spacing: 6) {
-            Circle()
-              .fill(Color.gray.opacity(0.35))
-              .frame(width: 18, height: 18)
-              .overlay(Image(systemName: "person.fill").font(.system(size: 8.5)).foregroundStyle(Color.gray))
-            VStack(alignment: .leading, spacing: 0) {
-              Text("User Account")
-                .font(.system(size: 8.5, weight: .semibold))
-                .foregroundStyle(Color.black.opacity(0.75))
-              Text("Apple Account")
-                .font(.system(size: 7.5))
-                .foregroundStyle(Color.black.opacity(0.40))
-            }
+            Image(systemName: "chevron.left")
+              .foregroundStyle(Color.black.opacity(0.45))
+            Image(systemName: "chevron.right")
+              .foregroundStyle(Color.black.opacity(0.18))
           }
-          .padding(.horizontal, 8)
-          .padding(.top, 6)
+          .font(.system(size: 9.5, weight: .semibold))
 
-          Rectangle().fill(Color.black.opacity(0.06)).frame(height: 0.5)
+          Text("Keyboard")
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(SnapzyMockPalette.ink)
 
-          bgSidebarItem(icon: "sun.max.fill", title: "Displays", color: .blue)
-          bgSidebarItem(icon: "keyboard", title: "Keyboard", color: .gray, isSelected: true)
-          bgSidebarItem(icon: "gearshape.2.fill", title: "General", color: .gray)
           Spacer()
         }
-        .frame(width: 125)
-        .background(Color(red: 0.948, green: 0.951, blue: 0.958))
+        .padding(.horizontal, 14)
+        .frame(height: 36)
+        .background(Color(red: 0.968, green: 0.970, blue: 0.976))
 
-        Rectangle().fill(Color.black.opacity(0.08)).frame(width: 0.5)
+        Rectangle()
+          .fill(Color.black.opacity(0.06))
+          .frame(height: 0.5)
 
-        // Right background keyboard controls preview
         VStack(alignment: .leading, spacing: 14) {
           VStack(alignment: .leading, spacing: 4) {
             Text("Key repeat rate")
               .font(.system(size: 9.5, weight: .medium))
-              .foregroundStyle(Color.black.opacity(0.70))
+              .foregroundStyle(Color.black.opacity(0.72))
             sliderTrackPreview
           }
           VStack(alignment: .leading, spacing: 4) {
             Text("Delay until repeat")
               .font(.system(size: 9.5, weight: .medium))
-              .foregroundStyle(Color.black.opacity(0.70))
+              .foregroundStyle(Color.black.opacity(0.72))
             sliderTrackPreview
           }
           Spacer()
@@ -157,27 +153,34 @@ struct SnapzyMockSystemSettingsWindow: View {
         .padding(.horizontal, 16)
         .padding(.top, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color(red: 0.965, green: 0.968, blue: 0.974))
+        .background(Color(red: 0.962, green: 0.965, blue: 0.972))
       }
     }
   }
 
-  private func bgSidebarItem(icon: String, title: String, color: Color, isSelected: Bool = false) -> some View {
-    HStack(spacing: 5) {
+  private func bgSidebarItem(icon: String, title: String, badgeColor: Color, isSelected: Bool = false) -> some View {
+    HStack(spacing: 6) {
       Image(systemName: icon)
-        .font(.system(size: 8.5))
-        .foregroundStyle(isSelected ? Color.white : color)
-        .frame(width: 14, height: 14)
-        .background(RoundedRectangle(cornerRadius: 3).fill(isSelected ? Color(red: 0.08, green: 0.46, blue: 0.96) : Color.clear))
+        .font(.system(size: 8, weight: .semibold))
+        .foregroundStyle(Color.white)
+        .frame(width: 15, height: 15)
+        .background(
+          Radius.rect(Radius.ornament)
+            .fill(isSelected ? Color.white.opacity(0.24) : badgeColor)
+        )
       Text(title)
         .font(.system(size: 9, weight: isSelected ? .semibold : .regular))
-        .foregroundStyle(isSelected ? Color.white : Color.black.opacity(0.75))
+        .foregroundStyle(isSelected ? Color.white : SnapzyMockPalette.ink.opacity(0.82))
+        .lineLimit(1)
       Spacer()
     }
     .padding(.horizontal, 6)
-    .padding(.vertical, 3)
-    .background(RoundedRectangle(cornerRadius: 4).fill(isSelected ? Color(red: 0.08, green: 0.46, blue: 0.96) : Color.clear))
-    .padding(.horizontal, 6)
+    .padding(.vertical, 3.5)
+    .background(
+      Radius.rect(Radius.controlXS)
+        .fill(isSelected ? SnapzyMockPalette.macBlue : Color.clear)
+    )
+    .padding(.horizontal, 7)
   }
 
   private var sliderTrackPreview: some View {
@@ -220,15 +223,15 @@ struct SnapzyMockSystemSettingsWindow: View {
       // Sheet Footer Bar
       sheetFooterBar
     }
-    .frame(width: 486, height: 268)
+    .frame(width: 484, height: 264)
     .background(Color.white)
-    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+    .clipShape(Radius.rect(Radius.controlL))
     .overlay(
-      RoundedRectangle(cornerRadius: 11, style: .continuous)
+      Radius.rect(Radius.controlL)
         .strokeBorder(Color.black.opacity(0.14), lineWidth: 0.5)
     )
-    .shadow(color: Color.black.opacity(0.36), radius: 20, x: 0, y: 8)
-    .shadow(color: Color.black.opacity(0.10), radius: 4, x: 0, y: 1)
+    .shadow(color: Color.black.opacity(0.32), radius: 18, x: 0, y: 8)
+    .shadow(color: Color.black.opacity(0.08), radius: 3, x: 0, y: 1)
   }
 
   // MARK: - Categories Sidebar
@@ -270,8 +273,8 @@ struct SnapzyMockSystemSettingsWindow: View {
     .padding(.horizontal, 7)
     .padding(.vertical, 3.5)
     .background(
-      RoundedRectangle(cornerRadius: 5, style: .continuous)
-        .fill(isSelected ? Color(red: 0.08, green: 0.46, blue: 0.96) : Color.clear)
+      Radius.rect(Radius.controlXS)
+        .fill(isSelected ? SnapzyMockPalette.macBlue : Color.clear)
     )
     .padding(.horizontal, 5)
   }
@@ -280,66 +283,33 @@ struct SnapzyMockSystemSettingsWindow: View {
 
   private var sheetShortcutsPane: some View {
     VStack(alignment: .leading, spacing: 0) {
-      // Top helper note (exact wording from macOS System Settings)
-      VStack(alignment: .leading, spacing: 3) {
-        HStack {
-          Text("To change a shortcut, double click the key combination, and then type the new keys.")
-            .font(.system(size: 9, weight: .regular))
-            .foregroundStyle(Color.black.opacity(0.55))
-            .lineLimit(2)
-            .fixedSize(horizontal: false, vertical: true)
+      // Quiet native macOS header note + single clean status indicator (zero noisy warning banners)
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        Text("To change a shortcut, double click the key combination, then type the new keys.")
+          .font(.system(size: 9, weight: .regular))
+          .foregroundStyle(Color.black.opacity(0.52))
+          .lineLimit(2)
+          .fixedSize(horizontal: false, vertical: true)
 
-          Spacer(minLength: 4)
+        Spacer(minLength: 4)
 
-          if hasAnyConflict {
-            HStack(spacing: 3) {
-              Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 8))
-              Text(L10n.Onboarding.mockConflictsActive)
-                .font(.system(size: 8, weight: .semibold))
-            }
-            .foregroundStyle(Color.orange)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Color.orange.opacity(0.12)))
-          } else {
-            HStack(spacing: 3) {
-              Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 8))
-              Text(L10n.Onboarding.mockNoConflicts)
-                .font(.system(size: 8, weight: .semibold))
-            }
-            .foregroundStyle(Color.green)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Color.green.opacity(0.12)))
-          }
+        HStack(spacing: 4) {
+          Circle()
+            .fill(hasAnyConflict ? Color.orange : Color.green)
+            .frame(width: 5.5, height: 5.5)
+
+          Text(hasAnyConflict ? L10n.Onboarding.mockConflictsActive : L10n.Onboarding.mockNoConflicts)
+            .font(.system(size: 8.5, weight: .medium))
+            .foregroundStyle(Color.black.opacity(0.62))
         }
-
-        if hasAnyConflict {
-          HStack(spacing: 4) {
-            Image(systemName: "arrow.turn.down.right")
-              .font(.system(size: 8, weight: .bold))
-              .foregroundStyle(Color.orange)
-            Text(L10n.Onboarding.mockUncheckInstruction)
-              .font(.system(size: 8.5, weight: .medium))
-              .foregroundStyle(Color(red: 0.55, green: 0.32, blue: 0.05))
-          }
-          .padding(.horizontal, 6)
-          .padding(.vertical, 2)
-          .background(
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
-              .fill(Color.orange.opacity(0.10))
-          )
-          .padding(.top, 1)
-        }
+        .fixedSize()
       }
-      .padding(.horizontal, 10)
-      .padding(.top, 7)
-      .padding(.bottom, 5)
+      .padding(.horizontal, 12)
+      .padding(.top, 10)
+      .padding(.bottom, 8)
 
       Rectangle()
-        .fill(Color.black.opacity(0.06))
+        .fill(Color.black.opacity(0.07))
         .frame(height: 0.5)
 
       // 5 macOS Screenshot Shortcuts in Exact Native Order
@@ -352,7 +322,7 @@ struct SnapzyMockSystemSettingsWindow: View {
           isChecked: hasFullscreenConflict,
           hasConflict: hasFullscreenConflict
         ) {
-          withAnimation(.easeInOut(duration: 0.2)) {
+          withAnimation(.easeInOut(duration: 0.18)) {
             hasFullscreenConflict.toggle()
             notifyChanges()
           }
@@ -375,7 +345,7 @@ struct SnapzyMockSystemSettingsWindow: View {
           isChecked: hasAreaConflict,
           hasConflict: hasAreaConflict
         ) {
-          withAnimation(.easeInOut(duration: 0.2)) {
+          withAnimation(.easeInOut(duration: 0.18)) {
             hasAreaConflict.toggle()
             notifyChanges()
           }
@@ -398,13 +368,13 @@ struct SnapzyMockSystemSettingsWindow: View {
           isChecked: hasRecordingConflict,
           hasConflict: hasRecordingConflict
         ) {
-          withAnimation(.easeInOut(duration: 0.2)) {
+          withAnimation(.easeInOut(duration: 0.18)) {
             hasRecordingConflict.toggle()
             notifyChanges()
           }
         }
       }
-      .padding(.vertical, 3)
+      .padding(.vertical, 6)
 
       Spacer(minLength: 0)
     }
@@ -420,16 +390,16 @@ struct SnapzyMockSystemSettingsWindow: View {
     onToggle: @escaping () -> Void
   ) -> some View {
     Button(action: onToggle) {
-      HStack(spacing: 7) {
+      HStack(spacing: 8) {
         // Native macOS Checkbox
         ZStack {
-          RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-            .fill(isChecked ? Color(red: 0.08, green: 0.46, blue: 0.96) : Color.white)
-            .frame(width: 13, height: 13)
+          Radius.rect(Radius.ornament)
+            .fill(isChecked ? SnapzyMockPalette.macBlue : Color.white)
+            .frame(width: 13.5, height: 13.5)
 
-          RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-            .strokeBorder(isChecked ? Color(red: 0.08, green: 0.46, blue: 0.96) : Color.black.opacity(0.30), lineWidth: 1)
-            .frame(width: 13, height: 13)
+          Radius.rect(Radius.ornament)
+            .strokeBorder(isChecked ? SnapzyMockPalette.macBlue : Color.black.opacity(0.28), lineWidth: 0.75)
+            .frame(width: 13.5, height: 13.5)
 
           if isChecked {
             Image(systemName: "checkmark")
@@ -441,38 +411,29 @@ struct SnapzyMockSystemSettingsWindow: View {
         // Shortcut Description
         Text(title)
           .font(.system(size: 9.5, weight: .regular))
-          .foregroundStyle(Color.black.opacity(0.85))
+          .foregroundStyle(SnapzyMockPalette.ink.opacity(0.90))
           .lineLimit(1)
 
-        Spacer(minLength: 4)
+        Spacer(minLength: 6)
 
-        // Conflict Pill
+        // Quiet dot marks conflicting macOS shortcuts without repeating loud orange pills
         if hasConflict {
-          Text(L10n.Onboarding.mockConflictBadge)
-            .font(.system(size: 7.5, weight: .bold))
-            .foregroundStyle(Color.orange)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 1.5)
-            .background(Capsule().fill(Color.orange.opacity(0.12)))
+          Circle()
+            .fill(Color.orange)
+            .frame(width: 5, height: 5)
         }
 
-        // Keys badge
+        // Native macOS right-aligned shortcut glyphs (clean, unboxed)
         Text(keys)
-          .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-          .foregroundStyle(Color.black.opacity(0.70))
-          .padding(.horizontal, 5)
-          .padding(.vertical, 1.5)
-          .background(
-            RoundedRectangle(cornerRadius: 3.5)
-              .fill(Color.black.opacity(0.05))
-              .overlay(RoundedRectangle(cornerRadius: 3.5).strokeBorder(Color.black.opacity(0.10), lineWidth: 0.5))
-          )
+          .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+          .foregroundStyle(hasConflict ? SnapzyMockPalette.ink.opacity(0.85) : Color.black.opacity(0.45))
+          .frame(minWidth: 34, alignment: .trailing)
       }
-      .padding(.horizontal, 9)
-      .padding(.vertical, 4)
+      .padding(.horizontal, 10)
+      .padding(.vertical, 5.5)
       .background(
-        RoundedRectangle(cornerRadius: 4)
-          .fill(hoveredRow == id ? Color.black.opacity(0.04) : Color.clear)
+        Radius.rect(Radius.ornament)
+          .fill(hoveredRow == id ? Color.black.opacity(0.045) : Color.clear)
       )
       .padding(.horizontal, 4)
     }
@@ -484,9 +445,9 @@ struct SnapzyMockSystemSettingsWindow: View {
 
   private var sheetFooterBar: some View {
     HStack(spacing: 8) {
-      // Restore Defaults Button (Simulates native button)
+      // Restore Defaults Button (Native macOS white push button)
       Button {
-        withAnimation(.easeInOut(duration: 0.2)) {
+        withAnimation(.easeInOut(duration: 0.18)) {
           hasFullscreenConflict = true
           hasAreaConflict = true
           hasRecordingConflict = true
@@ -495,12 +456,17 @@ struct SnapzyMockSystemSettingsWindow: View {
       } label: {
         Text(L10n.Onboarding.mockRestoreDefaults)
           .font(.system(size: 9.5, weight: .medium))
-          .foregroundStyle(Color.black.opacity(0.75))
-          .padding(.horizontal, 8)
-          .padding(.vertical, 3.5)
+          .foregroundStyle(SnapzyMockPalette.ink.opacity(0.86))
+          .padding(.horizontal, 9)
+          .padding(.vertical, 4)
           .background(
-            RoundedRectangle(cornerRadius: 4.5, style: .continuous)
-              .fill(isRestoreHovered ? Color.black.opacity(0.10) : Color.black.opacity(0.06))
+            Radius.rect(Radius.controlXS)
+              .fill(isRestoreHovered ? Color(white: 0.94) : Color.white)
+              .overlay(
+                Radius.rect(Radius.controlXS)
+                  .strokeBorder(Color.black.opacity(0.14), lineWidth: 0.5)
+              )
+              .shadow(color: Color.black.opacity(0.06), radius: 1, y: 0.5)
           )
       }
       .buttonStyle(.plain)
@@ -510,18 +476,18 @@ struct SnapzyMockSystemSettingsWindow: View {
       Button {
         onOpenRealSettings?()
       } label: {
-        HStack(spacing: 4) {
-          Image(systemName: "arrow.up.forward.app")
-            .font(.system(size: 8.5, weight: .bold))
+        HStack(spacing: 3.5) {
           Text(L10n.Onboarding.mockOpenSystemSettings)
             .font(.system(size: 9.5, weight: .medium))
+          Image(systemName: "arrow.up.right")
+            .font(.system(size: 7.5, weight: .semibold))
         }
-        .foregroundStyle(Color(red: 0.08, green: 0.46, blue: 0.96))
+        .foregroundStyle(SnapzyMockPalette.macBlue)
         .padding(.horizontal, 6)
-        .padding(.vertical, 3.5)
+        .padding(.vertical, 4)
         .background(
-          RoundedRectangle(cornerRadius: 4.5)
-            .fill(isOpenSettingsHovered ? Color(red: 0.08, green: 0.46, blue: 0.96).opacity(0.10) : Color.clear)
+          Radius.rect(Radius.controlXS)
+            .fill(isOpenSettingsHovered ? SnapzyMockPalette.macBlue.opacity(0.08) : Color.clear)
         )
       }
       .buttonStyle(.plain)
@@ -530,40 +496,9 @@ struct SnapzyMockSystemSettingsWindow: View {
 
       Spacer()
 
-      // Quick resolve on demo
-      if hasAnyConflict {
-        Button {
-          withAnimation(.easeInOut(duration: 0.2)) {
-            hasFullscreenConflict = false
-            hasAreaConflict = false
-            hasRecordingConflict = false
-            notifyChanges()
-          }
-        } label: {
-          Text(L10n.Onboarding.mockUncheckToResolve)
-            .font(.system(size: 9.5, weight: .semibold))
-            .foregroundStyle(Color.orange)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3.5)
-            .background(
-              RoundedRectangle(cornerRadius: 4.5)
-                .fill(Color.orange.opacity(0.12))
-            )
-        }
-        .buttonStyle(.plain)
-      } else {
-        HStack(spacing: 3) {
-          Image(systemName: "checkmark")
-            .font(.system(size: 8, weight: .bold))
-          Text(L10n.Onboarding.mockShortcutsReady)
-            .font(.system(size: 9.5, weight: .medium))
-        }
-        .foregroundStyle(Color.green)
-      }
-
-      // Standard Done button (Apple Blue)
+      // Standard Done button (Apple Blue default push button — also resolves conflicts cleanly)
       Button {
-        withAnimation {
+        withAnimation(.easeInOut(duration: 0.18)) {
           hasFullscreenConflict = false
           hasAreaConflict = false
           hasRecordingConflict = false
@@ -573,18 +508,19 @@ struct SnapzyMockSystemSettingsWindow: View {
         Text(L10n.Onboarding.mockDone)
           .font(.system(size: 10, weight: .semibold))
           .foregroundStyle(Color.white)
-          .padding(.horizontal, 12)
-          .padding(.vertical, 3.5)
+          .padding(.horizontal, 14)
+          .padding(.vertical, 4)
           .background(
-            RoundedRectangle(cornerRadius: 5)
-              .fill(Color(red: 0.08, green: 0.46, blue: 0.96))
+            Radius.rect(Radius.controlXS)
+              .fill(SnapzyMockPalette.macBlue)
+              .shadow(color: Color.black.opacity(0.12), radius: 1, y: 0.5)
           )
       }
       .buttonStyle(.plain)
     }
-    .padding(.horizontal, 10)
-    .padding(.vertical, 5.5)
-    .background(Color(red: 0.950, green: 0.952, blue: 0.960))
+    .padding(.horizontal, 12)
+    .padding(.vertical, 7)
+    .background(Color(red: 0.955, green: 0.958, blue: 0.965))
   }
 
   // MARK: - Helpers
