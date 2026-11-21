@@ -46,7 +46,7 @@ Run commands one at a time: the app serves one capture at a time and answers `bu
 Useful options on every `capture`:
 
 - `-o PATH` — a file, a directory (trailing `/` or existing dir), or `-` for raw image bytes on stdout. An existing file fails with exit 2 unless `--force`.
-- `--format png|jpg|webp` — defaults to the `-o` extension, else png. `--quality 0…1` for JPEG.
+- `--format png|jpg|webp|heic|avif` — defaults to the `-o` extension, else png. `--quality 0…1` for JPEG, HEIC and AVIF. AVIF needs a macOS with an AVIF encoder.
 - `--max-dimension PX` — downscale so the longest edge is ≤ PX.
 - `--no-shadow` (window only), `--cursor` to include the pointer.
 

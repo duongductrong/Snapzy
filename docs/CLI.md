@@ -70,8 +70,8 @@ App matching (`--app`): exact bundle ID, else exact name, else name prefix — c
 | Option | Applies to | Meaning |
 | --- | --- | --- |
 | `-o, --output PATH` | capture | File path (`name-1.ext`, `name-2.ext`… for several displays), directory (trailing `/` or existing dir: keeps staging names), or `-` for stdout (single file only). Without it the file stays in staging. An existing single-file target fails **before** capturing unless `--force`; directory and multi-display collisions are found after capturing, and the error names the staged file. With `-`, image bytes go to stdout and the JSON metadata goes to stderr only with `--json` |
-| `--format png\|jpg\|webp` | capture | Defaults to the `--output` extension, else png. A conflicting extension is an error |
-| `--quality 0…1` | capture | JPEG only; default 0.9 |
+| `--format png\|jpg\|webp\|heic\|avif` | capture | Defaults to the `--output` extension (`.heif` maps to heic), else png. A conflicting extension is an error. `avif` fails with `invalidArguments` on a macOS without an AVIF encoder |
+| `--quality 0…1` | capture | JPEG, HEIC and AVIF; default 0.9 |
 | `--max-dimension PX` | capture | Downscale so the longest edge is at most PX (never upscales) — e.g. `1568` for vision models |
 | `--cursor` | capture | Include the pointer |
 | `--force` | capture | Overwrite `--output` |
@@ -104,7 +104,7 @@ Stdout is JSON when it is not a terminal (or with `--json`); a terminal gets one
 
 - `scale` is pixels per point of the written file (lower than the display scale after `--max-dimension`).
 - Window captures add `window` (`id`, `title`, `app {name, bundleID, pid}`, `frame`, `displayID`, `isOnScreen`, `isActive`) and `matchedCandidates`.
-- `format` is `png`, `jpeg` (for `--format jpg`), or `webp`.
+- `format` is `png`, `jpeg` (for `--format jpg`), `webp`, `heic`, or `avif`.
 - Errors: `{"error":{"code":"targetNotFound","message":"…","hint":"…"}}`.
 
 `snapzy measure` prints one object. Spans come first (in `--at` order), then boxes (in `--box` order); every measurement has `points` and `pixels`, each with `width`, `height` (`null` on an axis a single-axis span did not measure) and the measured `rect` from the image's top-left. A terminal gets one line per measurement, such as `span @120,80  240 × 32 pt  (480 × 64 px)`.

@@ -734,7 +734,7 @@ struct CaptureSettingsPreview: View {
     case .general:
       return showMagnifier ? [(MagnifierSizeOption(rawValue: magnifierSize) ?? .defaultValue).displayName] : []
     case .screenshot:
-      return [screenshotFormat.uppercased(), CaptureDelayOption.resolve(delayedCaptureSeconds).displayName]
+      return [ImageFormatOption.resolved(rawValue: screenshotFormat).rawValue.uppercased(), CaptureDelayOption.resolve(delayedCaptureSeconds).displayName]
     case .recording:
       return [
         recordingFormat.uppercased(),

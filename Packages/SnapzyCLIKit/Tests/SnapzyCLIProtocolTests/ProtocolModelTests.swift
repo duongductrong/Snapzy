@@ -59,6 +59,10 @@ final class ProtocolModelTests: XCTestCase {
     XCTAssertEqual(CLIImageFormat(fileExtension: "JPG"), .jpeg)
     XCTAssertEqual(CLIImageFormat(fileExtension: "jpeg"), .jpeg)
     XCTAssertEqual(CLIImageFormat(fileExtension: "webp"), .webp)
+    XCTAssertEqual(CLIImageFormat(fileExtension: "HEIC"), .heic)
+    XCTAssertEqual(CLIImageFormat(fileExtension: "heif"), .heic)
+    XCTAssertEqual(CLIImageFormat(fileExtension: "avif"), .avif)
+    XCTAssertEqual(CLIImageFormat.heic.fileExtension, "heic")
     XCTAssertNil(CLIImageFormat(fileExtension: "gif"))
     XCTAssertEqual(CLIImageFormat.jpeg.fileExtension, "jpg")
   }

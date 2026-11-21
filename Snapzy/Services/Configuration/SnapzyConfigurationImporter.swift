@@ -207,9 +207,13 @@ enum SnapzyConfigurationImporter {
       defaults.set($0, forKey: PreferencesKeys.recordingFileNameTemplate)
     }
     if let format = reader.string("capture", "screenshot", "format") {
-      guard ImageFormatOption(rawValue: format) != nil else {
-        reader.error("capture.screenshot.format must be png, jpeg, or webp")
+      guard let option = ImageFormatOption(rawValue: format) else {
+        reader.error("capture.screenshot.format must be png, jpeg, webp, heic, or avif")
         return
+      }
+      if !option.isEncoderAvailable {
+        // Keep the value so a config synced from a newer Mac round-trips; captures fall back to PNG here.
+        reader.warning("capture.screenshot.format \(format) can't be encoded on this macOS; screenshots save as PNG")
       }
       mutations.append { defaults.set(format, forKey: PreferencesKeys.screenshotFormat) }
     }

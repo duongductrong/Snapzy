@@ -12,7 +12,7 @@ final class CombineImagesCoordinator {
     panel.title = L10n.Combine.pickerTitle
     panel.message = L10n.Combine.pickerMessage
     panel.prompt = L10n.Combine.pickerConfirm
-    panel.allowedContentTypes = [.png, .jpeg, .webP, .gif, .tiff, .heic]
+    panel.allowedContentTypes = [.png, .jpeg, .webP, .gif, .tiff, .heic, .snapzyAVIF]
     panel.allowsMultipleSelection = true
     panel.canChooseDirectories = false
 

@@ -3728,6 +3728,22 @@ nonisolated enum L10n {
       defaultValue: "WebP encoding is slower than other formats. For faster capture speed, consider using PNG or JPEG.",
       comment: "Warning shown when WebP screenshot format is selected"
     )
+    static func imageFormatUnavailableOption(_ format: String) -> String {
+      L10n.format(
+        "preferences-capture.image-format-unavailable-option",
+        defaultValue: "%@ (not supported on this Mac)",
+        comment: "Screenshot format menu item for a format this macOS cannot encode. %@ is the format name, e.g. AVIF.",
+        format
+      )
+    }
+    static func imageFormatUnavailableNote(_ format: String) -> String {
+      L10n.format(
+        "preferences-capture.image-format-unavailable-note",
+        defaultValue: "This version of macOS can't encode %@ images. Snapzy saves screenshots as PNG until you choose another format.",
+        comment: "Warning shown when the saved screenshot format cannot be encoded on this macOS. %@ is the format name, e.g. AVIF.",
+        format
+      )
+    }
     static let jpegCutoutNote = string(
       "preferences-capture.jpeg-cutout-note",
       defaultValue: "Object cutout captures require transparency. Snapzy will save them as PNG even when JPEG is selected.",

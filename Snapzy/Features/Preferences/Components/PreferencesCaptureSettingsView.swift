@@ -351,11 +351,31 @@ struct CaptureSettingsView: View {
             ) {
               Picker("", selection: $screenshotFormat) {
                 ForEach(ImageFormatOption.allCases, id: \.self) { option in
-                  Text(option.displayName).tag(option.rawValue)
+                  if option.isEncoderAvailable {
+                    Text(option.displayName).tag(option.rawValue)
+                  } else {
+                    Text(L10n.PreferencesCapture.imageFormatUnavailableOption(option.displayName))
+                      .tag(option.rawValue)
+                      .disabled(true)
+                  }
                 }
               }
               .labelsHidden()
               .pickerStyle(.menu)
+            }
+
+            if let storedFormat = ImageFormatOption(rawValue: screenshotFormat), !storedFormat.isEncoderAvailable {
+              HStack(alignment: .top, spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                  .foregroundColor(.orange)
+                  .font(.system(size: 12))
+                  .padding(.top, 1)
+                Text(L10n.PreferencesCapture.imageFormatUnavailableNote(storedFormat.displayName))
+                  .font(.system(size: 11))
+                  .foregroundColor(.orange)
+                  .fixedSize(horizontal: false, vertical: true)
+              }
+              .padding(.vertical, 4)
             }
 
             if screenshotFormat == ImageFormatOption.webp.rawValue {
@@ -931,7 +951,7 @@ struct CaptureSettingsView: View {
   }
 
   private var screenshotFileExtension: String {
-    ImageFormatOption(rawValue: screenshotFormat)?.format.fileExtension ?? "png"
+    ImageFormatOption.resolved(rawValue: screenshotFormat).format.fileExtension
   }
 
   private var recordingFileExtension: String {
