@@ -43,7 +43,7 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 
 ## Tools & Shortcuts
 
-`AnnotationToolType` (`Models/AnnotateAnnotationToolType.swift`) — 18 tools, single-key defaults, all rebindable via `AnnotateShortcutManager`:
+`AnnotationToolType` (`Models/AnnotateAnnotationToolType.swift`) — 19 tools, single-key defaults, all rebindable via `AnnotateShortcutManager`:
 
 | Tool | Key | Tool | Key | Tool | Key |
 | --- | --- | --- | --- | --- | --- |
@@ -53,6 +53,7 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 | rectangle | `r` | highlighter | `h` | watermark | `w` |
 | filledRectangle | `f` | pencil | `p` | mockup | `m` |
 | oval | `o` | measure | `u` | magnifier | `z` |
+| stamp | `g` | | | | |
 
 - `drawableTools` shared with inline overlay so surfaces stay in sync; `supportsQuickPropertiesBar` false for selection/crop/cutOut/mockup.
 - While a drawing tool is active, clicking an existing annotation's edge (a shape's outline, an arrow or line, a text box, a counter) selects it without leaving the tool; the quick properties bar then edits that item, and dragging its edge or handles moves or resizes it. Drags that start anywhere else — including inside an existing shape, on the item just drawn (until it is clicked or otherwise selected), or in the margin outside the image — draw a new annotation. A click inside an opaque item (filled rectangle, blur, combined image) never selects what lies beneath it. Hold Option to always draw, even on a selected item's resize handle. Combined images are never selected by drawing tools.
@@ -119,6 +120,16 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 - Quick properties bar: border color and width, **Zoom** menu (1.5, 2, 3, 4, 6, 8×), **Shape**, **Shadow** and **Connector** toggles, plus a gesture hint. With magnifiers selected the controls restyle them as one undo step; otherwise they set the style for new lenses, persisted as JSON in `annotate.magnifierStyle`.
 - Sidecar: kind `magnifier` with `PersistedMagnifierGeometry` (`sourceCenter`, `zoom`, optional `shape`, `showsConnector`, `showsShadow`); schemaVersion stays 1. Builds before the Magnifier skip the item (unknown kind) and load the rest.
 
+## Stamp
+
+- Tool `.stamp` (`g`, icon `face.smiling`), in `drawableTools` so it is also in inline ⇧⌘7. **Click** places the current stamp at the default size, centered on the click; **drag** sizes it (content fit into the dragged box, pinned to the corner the drag started from). Clicking an existing stamp selects it (like Counter); hold Option to place on top of one.
+- Item: `AnnotationType.stamp(StampAnnotation)` (`Models/AnnotateStamp.swift`): `content` = `.sticker(StampSticker)` | `.emoji(String)` | `.image(StampImage)` plus `isStickerStyle`. Size lives in `bounds` (content aspect-fit inside, so a free resize never distorts it), opacity in `properties.opacity`, rotation in `rotationDegrees` (rotatable like shapes). Moves, resizes, rotates, copies/pastes, duplicates, undoes and arranges like other markup.
+- Stickers: 10 text badges (APPROVED, REJECTED, LGTM, NEW, BETA, HOT, TODO, WIP, BUG, FIXED) and 14 round icon stickers (thumbs up, heart, star, check, cross, warning, question, idea, sparkles, pin, 4 arrows), all vector: gradient body, soft gloss, inner hairline, SF Symbol + SF Pro Rounded heavy label. Badge labels stay English on purpose (shared reviewer vocabulary; a placed stamp renders the same everywhere); names/tooltips are localized. Raw ids are persisted — never rename one.
+- Image stamps: any image file (NSOpenPanel), rasterized to ≤1024 px PNG with alpha (`AnnotateStampStore.makeStampImage`). The bytes travel inside the item (copy/paste, undo, sidecar), not the embedded-image asset store, so rotate/flip/cut-out treat it like any rotatable item.
+- Rendering (`Services/AnnotateStampRenderer.swift`, from `AnnotationRenderer.draw`, so canvas, drag preview and every export match): one transparency layer with the item opacity. Sticker style adds a white die-cut outline (vector stroke for badges; the content silhouette stamped in a ring for emoji and images) and a soft drop shadow whose offset/blur are scaled by the CTM, so zoom and export resolution do not change it. Emoji, symbols and decoded images are rasterized at device pixel size in power-of-two buckets (32–1024 px) and cached in a thread-safe `NSCache` (`StampRasterCache`). `renderBounds` grows by the shadow overhang for redraw and crop culling.
+- Picker (`Components/AnnotateStampPicker.swift`): quick properties bar (full editor and inline overlay) shows the current stamp button → popover with **Stickers** (Recent, Badges, Icons), **Emoji** (search by Unicode name, Recent, Popular, All — every single-codepoint emoji the system emoji font can draw, `AnnotateEmojiCatalog`) and **Image** (Choose Image…). Next to it: Size (long side, 24–480 pt), Opacity (20–100%) and a Sticker toggle (outline + shadow). With stamps selected the controls edit them (each slider drag is one undo step); with nothing selected they set tool defaults. While the Stamp tool is active they do both, and picking a stamp only changes what the next click places, so the auto-selected stamp just placed is never swapped. Under the Selection tool, picking a stamp swaps the selected stamps' content, keeping center and size. A free resize snaps the box to the content aspect, anchored on the edges that did not move.
+- Tool defaults are app-wide (`AnnotateStampStore.shared`, UserDefaults `annotate.stamp.current|recents|size|opacity|stickerStyle`); recents keep the last 16 stickers/emoji. Image stamps are never stored in preferences.
+
 ## Cut Out (Remove / Add a Strip)
 
 Toolbar `scissors` button or `x` (`Services/AnnotateCutOutTransform.swift`, pure). From issue #653: remove a full-crossing horizontal band (image shrinks vertically) or vertical band (shrinks horizontally) and join the halves — Snagit Cut Out parity.
@@ -131,7 +142,7 @@ Toolbar `scissors` button or `x` (`Services/AnnotateCutOutTransform.swift`, pure
 
 ## Annotation Rotation
 
-- Rotatable types (`AnnotationType.supportsRotation`): text, embedded image, rectangle, filled rectangle, oval. Each turns rigidly around its bounds center. Arrows, lines and strokes already set their own direction; blur, spotlight and counter stay axis-aligned. Watermark keeps its own ±45° rotation.
+- Rotatable types (`AnnotationType.supportsRotation`): text, embedded image, rectangle, filled rectangle, oval, stamp. Each turns rigidly around its bounds center. Arrows, lines and strokes already set their own direction; blur, spotlight and counter stay axis-aligned. Watermark keeps its own ±45° rotation.
 - Stored in the existing `AnnotationProperties.rotationDegrees` with no schema change. `AnnotationType.clampedRotationDegrees` wraps rotatable types into -180…180° and keeps the ±45° clamp for everything else. Older sidecars load at 0°.
 - Rendering, hit-testing, edge bands and occlusion map through `AnnotationItem.rotationTransform`, drawing or testing the item's unrotated local frame (`unrotatedLocalItem`). `selectionBounds` is the axis-aligned box around the rotated shape. Export uses the same renderer.
 - Rotation handle: shown only for a single selected item (`AnnotateState.canUserRotate`). It is a round grip 22 screen points beyond the middle of the local top edge, joined to the frame by a stem.
@@ -227,6 +238,7 @@ source image.
 - The manifest also carries `sourceLogicalSize` — the authoring-time point-space size of the source image, i.e. the coordinate space annotations live in. Session restores apply it verbatim (`AnnotateWindowController.restoredSessionImage`), so native-density (1×) captures reopen with matching annotation positions on any display arrangement; sidecars written before the field existed fall back to the legacy main-screen scale heuristic. Optional key, schemaVersion stays 1.
 - File opens without a sidecar (`AnnotateState.loadImageWithCorrectScale`) derive density from the file's own DPI metadata (`fileDensityScaleFactor`, DPI ÷ 72 — Snapzy writes `scale × 72` on save); only files without usable DPI (e.g. WebP) fall back to the legacy main-screen heuristic.
 - `.translation` items persist as kind `translation` with `PersistedTranslatedTextBlock`; `excludesTranslationsFromExport` is an optional manifest key (schemaVersion stays 1).
+- `.stamp` items persist as kind `stamp` with `PersistedStamp` (`content` = sticker/emoji/image, sticker id or emoji, inline base64 PNG + pixel size for image stamps, `isStickerStyle`). Builds before the Stamp tool skip these items; an unknown sticker id drops only that item.
 - Unknown `type.kind` values (written by a newer Snapzy) decode as `.unknown` and the item is skipped, so the rest of the session still loads. Builds before Measure dropped the whole sidecar on an unknown kind, so sessions with measurements need this version or later.
 - Commit-based writes only: save, save-and-close, copy&close, successful drag-to-app, cloud upload/re-upload, inline annotate finish, default-preset auto-apply. NO draft autosave; unsaved windows keep the normal unsaved-change prompt.
 - Restore order: QuickAccess in-memory session cache → sidecar → flattened file.
@@ -283,7 +295,7 @@ flowchart TD
 | `Esc` | Cancel | `N` | Counter |
 | `Space` (hold) | Move selection | `W` | Watermark |
 | `V`/`R`/`F`/`O` | Selection / Rect / Filled / Oval | `P` | Pencil |
-| `A`/`L`/`T`/`H` | Arrow / Line / Text / Highlighter | `U` / `Z` | Measure / Magnifier |
+| `A`/`L`/`T`/`H` | Arrow / Line / Text / Highlighter | `U` / `Z` / `G` | Measure / Magnifier / Stamp |
 | `⌘K` | Ask AI (prompt) | `⇧⌘T` / `⌥⌘T` | Auto Translate / Translate Area |
 | `⌥` (hold) | Peek at text under translations | | |
 

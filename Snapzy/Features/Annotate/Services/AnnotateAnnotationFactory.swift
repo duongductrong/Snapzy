@@ -23,6 +23,12 @@ enum AnnotationFactory {
     var activeAnnotationBounds: CGRect
     var counterArrowMinimumDragDistance: CGFloat = 4
     var magnifierStyle = MagnifierStyle()
+    /// Stamp tool: what to place, its default long side, and how far a press must travel
+    /// before it sizes the stamp instead of placing it at the default size.
+    var stamp: StampAnnotation?
+    var stampSize: CGFloat = AnnotateStampStore.defaultSize
+    var stampOpacity: CGFloat = 1
+    var stampMinimumDragDistance: CGFloat = 8
   }
 
   static func createAnnotation(
@@ -50,7 +56,11 @@ enum AnnotationFactory {
         watermarkText: state.watermarkText,
         activeAnnotationBounds: state.activeAnnotationBounds,
         counterArrowMinimumDragDistance: counterArrowMinimumDragDistance,
-        magnifierStyle: state.magnifierStyle
+        magnifierStyle: state.magnifierStyle,
+        stamp: tool == .stamp ? state.stampForNewAnnotation : nil,
+        stampSize: state.stampDefaultSize,
+        stampOpacity: state.stampDefaultOpacity,
+        stampMinimumDragDistance: counterArrowMinimumDragDistance * 2
       )
     )
   }
@@ -141,6 +151,11 @@ enum AnnotationFactory {
       )
       magnifierLens = creation.lens
       type = .magnifier(creation.geometry)
+    case .stamp:
+      guard let stamp = context.stamp else { return nil }
+      properties.opacity = context.stampOpacity
+      properties.rotationDegrees = 0
+      type = .stamp(stamp)
 
     // Measure items come from a pixel scan (`AnnotateMeasureMapper`), not from drag geometry.
     case .selection, .crop, .cutOut, .text, .measure, .mockup:
@@ -174,6 +189,14 @@ enum AnnotationFactory {
       )
     case .magnifier:
       bounds = magnifierLens ?? .zero
+    case .stamp(let stamp):
+      bounds = stampBounds(
+        for: stamp.content,
+        from: start,
+        to: end,
+        defaultSize: context.stampSize,
+        minimumDragDistance: context.stampMinimumDragDistance
+      )
     case .highlight(let points):
       bounds = pathBounds(containing: points) ?? normalizedBounds(CGRect(
         x: min(start.x, end.x),
@@ -221,6 +244,33 @@ enum AnnotationFactory {
         context: segmentContext
       )
     }
+  }
+
+  /// A click places the stamp at its default size, centered on the click. A drag sizes it:
+  /// the content is fit into the dragged box and pinned to the corner the drag started from.
+  static func stampBounds(
+    for content: StampContent,
+    from start: CGPoint,
+    to end: CGPoint,
+    defaultSize: CGFloat,
+    minimumDragDistance: CGFloat
+  ) -> CGRect {
+    guard hypot(end.x - start.x, end.y - start.y) >= minimumDragDistance else {
+      return AnnotateStampRenderer.bounds(for: content, size: defaultSize, centeredAt: start)
+    }
+    let dragged = CGRect(
+      x: min(start.x, end.x),
+      y: min(start.y, end.y),
+      width: max(abs(end.x - start.x), 1),
+      height: max(abs(end.y - start.y), 1)
+    )
+    let fitted = AnnotateStampRenderer.aspectFit(aspectRatio: content.aspectRatio, in: dragged)
+    return CGRect(
+      x: end.x >= start.x ? start.x : start.x - fitted.width,
+      y: end.y >= start.y ? start.y : start.y - fitted.height,
+      width: fitted.width,
+      height: fitted.height
+    )
   }
 
   private static func watermarkBounds(

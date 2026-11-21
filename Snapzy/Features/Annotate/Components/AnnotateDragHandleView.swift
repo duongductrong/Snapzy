@@ -590,6 +590,14 @@ private struct DragFallbackSignature: Equatable {
       return "magnifier|\(pointSignature(geometry.sourceCenter))|\(geometry.zoom)|\(geometry.shape.rawValue)|\(geometry.showsConnector)|\(geometry.showsShadow)"
     case .translation(let block):
       return "translation|\(block.translatedText)|\(block.cover.rawValue)|\(block.alignment.rawValue)|\(block.isBold)"
+    case .stamp(let stamp):
+      let content: String
+      switch stamp.content {
+      case .sticker(let sticker): content = "sticker|\(sticker.rawValue)"
+      case .emoji(let emoji): content = "emoji|\(emoji)"
+      case .image(let image): content = "image|\(image.id.uuidString)"
+      }
+      return "stamp|\(content)|\(stamp.isStickerStyle)"
     }
   }
 
