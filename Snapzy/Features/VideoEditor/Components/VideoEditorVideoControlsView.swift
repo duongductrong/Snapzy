@@ -122,7 +122,7 @@ private enum VideoControlsLayoutStyle {
 }
 
 private enum VideoControlsPart: Hashable {
-  case left, center, status, zoom
+  case left, center, status, zoom, trailingFrame
 }
 
 private struct VideoControlsPartWidthKey: PreferenceKey {
@@ -202,6 +202,7 @@ struct VideoControlsView: View {
 
       rightActions(showsStatus: showsStatus)
         .frame(maxWidth: .infinity, alignment: .trailing)
+        .measureVideoControlsPart(.trailingFrame)
     }
     .onPreferenceChange(VideoControlsPartWidthKey.self) { widths in
       if partWidths != widths { partWidths = widths }
