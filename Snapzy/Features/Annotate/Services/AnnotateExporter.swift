@@ -590,7 +590,9 @@ final class AnnotateExporter {
       },
       embeddedCGImageProvider: { assetId in
         snapshot.embeddedCGImages[assetId]
-      }
+      },
+      sourceImageOrigin: CGPoint(x: destX - effectiveBounds.minX, y: destY - effectiveBounds.minY),
+      magnifierBlurItems: snapshot.annotations.filter { if case .blur = $0.type { true } else { false } }
     )
     for annotation in snapshot.annotations.renderOrdered {
       if case .spotlight = annotation.type { continue }
@@ -1017,7 +1019,9 @@ final class AnnotateExporter {
       },
       embeddedCGImageProvider: { assetId in
         snapshot.embeddedCGImages[assetId]
-      }
+      },
+      sourceImageOrigin: CGPoint(x: -effectiveBounds.minX, y: -effectiveBounds.minY),
+      magnifierBlurItems: snapshot.annotations.filter { if case .blur = $0.type { true } else { false } }
     )
     for annotation in snapshot.annotations.renderOrdered {
       if let cropRect = snapshot.cropRect {

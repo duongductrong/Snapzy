@@ -528,7 +528,7 @@ final class AnnotateState: ObservableObject {
       rect = annotation.bounds
     case .highlight:
       rect = annotation.selectionDecorationBounds
-    case .rectangle, .oval, .line, .path, .measurement:
+    case .rectangle, .oval, .line, .path, .measurement, .magnifier:
       rect = annotation.resizeBounds.insetBy(dx: -strokeWidth / 2, dy: -strokeWidth / 2)
     case .arrow:
       // Matches the arrowhead width used by AnnotationItem.containsPoint.
@@ -1847,6 +1847,12 @@ final class AnnotateState: ObservableObject {
   /// Edge tolerance, shared with Screen Ruler.
   var measureTolerance: Int { ScreenRulerPreferences(defaults: defaults).edgeTolerance }
 
+  // MARK: - Magnifier State
+
+  /// Style for new magnifiers (persisted). Editing it with magnifiers selected restyles them too
+  /// (see `updateMagnifierStyle`).
+  @Published private(set) var magnifierStyle = MagnifierStyle()
+
   // MARK: - Cut Out State
 
   /// Whether cut-out mode is actively editing (a strip can be drawn/committed).
@@ -1959,6 +1965,7 @@ final class AnnotateState: ObservableObject {
     self.isHighlighterTextSnappingEnabled =
       defaults.object(forKey: PreferencesKeys.annotateHighlighterTextSnappingEnabled) as? Bool ?? true
     self.measureAxis = defaults.string(forKey: PreferencesKeys.annotateMeasureAxis).flatMap(MeasureAxis.init(rawValue:)) ?? .both
+    self.magnifierStyle = Self.loadMagnifierStyle(from: defaults)
     self.measureUnit = defaults.string(forKey: PreferencesKeys.annotateMeasureUnit).flatMap(MeasureUnit.init(rawValue:)) ?? .points
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
@@ -1988,6 +1995,7 @@ final class AnnotateState: ObservableObject {
     self.isHighlighterTextSnappingEnabled =
       defaults.object(forKey: PreferencesKeys.annotateHighlighterTextSnappingEnabled) as? Bool ?? true
     self.measureAxis = defaults.string(forKey: PreferencesKeys.annotateMeasureAxis).flatMap(MeasureAxis.init(rawValue:)) ?? .both
+    self.magnifierStyle = Self.loadMagnifierStyle(from: defaults)
     self.measureUnit = defaults.string(forKey: PreferencesKeys.annotateMeasureUnit).flatMap(MeasureUnit.init(rawValue:)) ?? .points
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
@@ -3524,6 +3532,12 @@ final class AnnotateState: ObservableObject {
         AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
       })
 
+    case .magnifier(let geometry):
+      // The lens is the rotated `bounds` above; the source turns with the pixels.
+      rotated.type = .magnifier(geometry.movingSource {
+        AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
+      })
+
     case .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight:
       // Bounds-only annotations: the rotated `bounds` above is the full transform we need.
       // Watermark `rotationDegrees` is user-controlled and clamped to ±45°, so we leave it
@@ -3625,6 +3639,9 @@ final class AnnotateState: ObservableObject {
 
     case .measurement(let geometry):
       flipped.type = .measurement(geometry.mirrored(flipPoint))
+
+    case .magnifier(let geometry):
+      flipped.type = .magnifier(geometry.movingSource(flipPoint))
 
     case .text, .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight, .translation:
       // Bounds-only annotations: the mirrored `bounds` above is the full transform we need.
@@ -4029,6 +4046,10 @@ final class AnnotateState: ObservableObject {
           dy: shiftedBounds.minY - item.bounds.minY
         ))
         moved.bounds = CGRect(origin: shiftedBounds.origin, size: item.bounds.size)
+      case .magnifier(let geometry):
+        // The lens follows its half; the source follows the pixels under it.
+        moved.type = .magnifier(geometry.movingSource(shiftPoint))
+        moved.bounds = shiftRect(item.bounds)
       case .rectangle, .filledRectangle, .oval, .blur, .embeddedImage, .spotlight, .watermark, .translation:
         moved.bounds = shiftRect(item.bounds)
       }
@@ -4157,6 +4178,58 @@ final class AnnotateState: ObservableObject {
     annotations.append(item)
     hasUnsavedChanges = true
     return item
+  }
+
+  // MARK: - Magnifier
+
+  private static func loadMagnifierStyle(from defaults: UserDefaults) -> MagnifierStyle {
+    guard let data = defaults.data(forKey: PreferencesKeys.annotateMagnifierStyle),
+          var style = try? JSONDecoder().decode(MagnifierStyle.self, from: data) else { return MagnifierStyle() }
+    style.zoom = MagnifierGeometry.clampedZoom(style.zoom)
+    return style
+  }
+
+  /// Changes the magnifier style for new items, and for the selected magnifiers as one undo step.
+  func updateMagnifierStyle(_ change: (inout MagnifierStyle) -> Void) {
+    let targets = selectedAnnotationIds
+    let indices = annotations.indices.filter { index in
+      guard targets.contains(annotations[index].id), case .magnifier = annotations[index].type else { return false }
+      return true
+    }
+    if indices.isEmpty {
+      change(&magnifierStyle)
+      magnifierStyle.zoom = MagnifierGeometry.clampedZoom(magnifierStyle.zoom)
+      if let data = try? JSONEncoder().encode(magnifierStyle) {
+        defaults.set(data, forKey: PreferencesKeys.annotateMagnifierStyle)
+      }
+      return
+    }
+    var updated: [(Int, MagnifierGeometry)] = []
+    for index in indices {
+      guard case .magnifier(var geometry) = annotations[index].type else { continue }
+      var style = geometry.style
+      change(&style)
+      geometry.style = style
+      if geometry != (annotations[index].type.magnifierGeometry) {
+        updated.append((index, geometry))
+      }
+    }
+    guard !updated.isEmpty else { return }
+    saveState()
+    for (index, geometry) in updated {
+      annotations[index].type = .magnifier(geometry)
+    }
+    hasUnsavedChanges = true
+  }
+
+  /// Moves a magnifier's source area. Gestures checkpoint undo themselves.
+  func updateMagnifierSource(id: UUID, center: CGPoint) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }),
+          case .magnifier(var geometry) = annotations[index].type,
+          geometry.sourceCenter != center else { return }
+    geometry.sourceCenter = center
+    annotations[index].type = .magnifier(geometry)
+    hasUnsavedChanges = true
   }
 
   /// Kick off content-border detection for the current image unless a profile
@@ -6751,6 +6824,18 @@ final class AnnotateState: ObservableObject {
       },
       set: { [weak self] unit in self?.setMeasureUnit(unit) }
     )
+  }
+
+  var quickPropertiesSupportsMagnifier: Bool {
+    quickPropertiesTool == .magnifier
+  }
+
+  /// The first selected magnifier's style when one is selected, otherwise the tool's.
+  var quickMagnifierStyle: MagnifierStyle {
+    for annotation in quickPropertiesSelectionTargets {
+      if let geometry = annotation.type.magnifierGeometry { return geometry.style }
+    }
+    return magnifierStyle
   }
 
   var quickHighlighterTextSnappingBinding: Binding<Bool> {

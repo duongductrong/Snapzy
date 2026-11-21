@@ -37,7 +37,7 @@ final class AnnotateShortcutManagerTests: XCTestCase {
   }
 
   func testToolForKey_returnsNilForUnmappedKey() {
-    XCTAssertNil(manager.tool(for: "z"))
+    XCTAssertNil(manager.tool(for: "q"))
   }
 
   func testShortcutForTool_returnsSetValue() {
@@ -68,9 +68,9 @@ final class AnnotateShortcutManagerTests: XCTestCase {
   // MARK: - Conflicts
 
   func testConflictingTool_findsConflict() {
-    manager.setShortcut("z", for: .rectangle)
-    manager.setShortcut("z", for: .oval)
-    XCTAssertEqual(manager.conflictingTool(for: "z", excluding: .oval), .rectangle)
+    manager.setShortcut("q", for: .rectangle)
+    manager.setShortcut("q", for: .oval)
+    XCTAssertEqual(manager.conflictingTool(for: "q", excluding: .oval), .rectangle)
   }
 
   func testConflictingTool_findsNumericConflict() {
@@ -80,21 +80,21 @@ final class AnnotateShortcutManagerTests: XCTestCase {
   }
 
   func testConflictingTool_excludesSelf() {
-    manager.setShortcut("z", for: .rectangle)
-    XCTAssertNil(manager.conflictingTool(for: "z", excluding: .rectangle))
+    manager.setShortcut("q", for: .rectangle)
+    XCTAssertNil(manager.conflictingTool(for: "q", excluding: .rectangle))
   }
 
   func testConflictingTool_ignoresDisabledTools() {
-    manager.setShortcut("z", for: .rectangle)
+    manager.setShortcut("q", for: .rectangle)
     manager.setShortcutEnabled(false, for: .rectangle)
-    manager.setShortcut("z", for: .oval)
-    XCTAssertNil(manager.conflictingTool(for: "z", excluding: .oval))
+    manager.setShortcut("q", for: .oval)
+    XCTAssertNil(manager.conflictingTool(for: "q", excluding: .oval))
   }
 
   // MARK: - Reset
 
   func testResetToDefaults_restoresDefaults() {
-    manager.setShortcut("z", for: .rectangle)
+    manager.setShortcut("q", for: .rectangle)
     manager.setShortcutEnabled(false, for: .rectangle)
     manager.resetToDefaults()
     XCTAssertEqual(manager.shortcut(for: .rectangle), AnnotationToolType.rectangle.defaultShortcut)

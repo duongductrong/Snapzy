@@ -219,6 +219,8 @@ enum ResizeHandle: Equatable {
   case arrowControl
   case textCalloutTail
   case counterArrowTip
+  /// Center of a magnifier's source area.
+  case magnifierSource
   case rotation
 }
 
@@ -902,6 +904,10 @@ final class DrawingCanvasNSView: NSView {
         let point = coordinateSpace == .canvas ? imageToDisplay(geometry.end) : geometry.end
         handles.append((.counterArrowTip, handleRect(at: point, in: coordinateSpace)))
       }
+      if let geometry = annotation.type.magnifierGeometry {
+        let point = coordinateSpace == .canvas ? imageToDisplay(geometry.sourceCenter) : geometry.sourceCenter
+        handles.append((.magnifierSource, handleRect(at: point, in: coordinateSpace)))
+      }
       handles.append(contentsOf: cornerHandleRects(for: annotation, in: coordinateSpace))
       return handles
     }
@@ -1148,7 +1154,8 @@ final class DrawingCanvasNSView: NSView {
         counterValue: drawingCounterValue ?? 1,
         watermarkText: state.watermarkText,
         activeAnnotationBounds: state.activeAnnotationBounds,
-        counterArrowMinimumDragDistance: counterArrowMinimumDragDistance
+        counterArrowMinimumDragDistance: counterArrowMinimumDragDistance,
+        magnifierStyle: state.magnifierStyle
       )
     )
   }
@@ -1775,6 +1782,14 @@ final class DrawingCanvasNSView: NSView {
       gestureLocalItems[resizeId] = item
       noteGestureMutation(original: original, updated: item)
 
+    case .magnifierSource:
+      var item = original
+      guard case .magnifier(var geometry) = item.type else { return }
+      geometry.sourceCenter = imagePoint
+      item.type = .magnifier(geometry)
+      gestureLocalItems[resizeId] = item
+      noteGestureMutation(original: original, updated: item)
+
     case .textCalloutTail:
       var item = original
       guard case .text = item.type,
@@ -1900,6 +1915,10 @@ final class DrawingCanvasNSView: NSView {
         case .textCalloutTail:
           if let lastPoint = gestureLastPoint {
             state.updateTextCalloutTail(id: resizeId, target: lastPoint)
+          }
+        case .magnifierSource:
+          if let geometry = gestureLocalItems[resizeId]?.type.magnifierGeometry {
+            state.updateMagnifierSource(id: resizeId, center: geometry.sourceCenter)
           }
         case .rotation:
           // The gesture already checkpointed undo on its first change.
@@ -2340,8 +2359,20 @@ final class DrawingCanvasNSView: NSView {
       },
       embeddedCGImageProvider: { [state] assetId in
         state.embeddedCGImage(for: assetId)
-      }
+      },
+      magnifierBlurItems: magnifierBlurItems()
     )
+  }
+
+  /// Blurs a magnifier must not reveal: committed ones, with in-gesture copies in their place.
+  private func magnifierBlurItems() -> [AnnotationItem] {
+    guard state.annotations.contains(where: { if case .magnifier = $0.type { true } else { false } })
+      || state.selectedTool == .magnifier else { return [] }
+    return state.annotations.compactMap { item in
+      let current = gestureLocalItems[item.id] ?? item
+      if case .blur = current.type { return current }
+      return nil
+    }
   }
 
   // MARK: Layer draw bodies (invoked by CanvasLayerView, on that view's context)
@@ -2567,6 +2598,24 @@ final class DrawingCanvasNSView: NSView {
         )
       )
       if let item { renderer.draw(item) }
+    } else if state.selectedTool == .magnifier {
+      let item = AnnotationFactory.createAnnotation(
+        tool: .magnifier,
+        from: start,
+        to: currentPath.last ?? start,
+        path: [],
+        context: AnnotationFactory.CreationContext(
+          properties: state.annotationCreationProperties(for: .magnifier),
+          arrowStyle: .straight,
+          blurType: state.blurType,
+          counterValue: 1,
+          watermarkText: state.watermarkText,
+          activeAnnotationBounds: state.activeAnnotationBounds,
+          counterArrowMinimumDragDistance: counterArrowMinimumDragDistance,
+          magnifierStyle: state.magnifierStyle
+        )
+      )
+      if let item { renderer.draw(item) }
     } else if state.selectedTool == .blur, let lastPoint = currentPath.last {
       renderer.drawBlurPreview(
         start: start,
@@ -2680,6 +2729,9 @@ final class DrawingCanvasNSView: NSView {
        geometry.style != .straight {
       drawArrowControlGuides(for: geometry, in: context)
     }
+    if let geometry = annotation.type.magnifierGeometry {
+      drawMagnifierSourceGuide(for: geometry, lens: annotation.bounds, in: context)
+    }
     drawResizeHandles(for: annotation, in: context)
   }
 
@@ -2696,6 +2748,20 @@ final class DrawingCanvasNSView: NSView {
     context.addLine(to: controlPoint)
     context.move(to: geometry.end)
     context.addLine(to: controlPoint)
+    context.strokePath()
+    context.restoreGState()
+  }
+
+  /// Dashed outline of the area a selected magnifier shows, so it can be found and moved
+  /// even with the connector off.
+  private func drawMagnifierSourceGuide(for geometry: MagnifierGeometry, lens: CGRect, in context: CGContext) {
+    let source = geometry.sourceRect(forLens: lens)
+    let dashLength = selectionChromeMetrics.imageLength(forScreenPoints: 4)
+    context.saveGState()
+    context.setStrokeColor(NSColor.systemBlue.withAlphaComponent(0.8).cgColor)
+    context.setLineWidth(selectionChromeMetrics.imageLength(forScreenPoints: 1))
+    context.setLineDash(phase: 0, lengths: [dashLength, dashLength])
+    context.addPath(MagnifierGeometry.path(for: geometry.shape, in: source))
     context.strokePath()
     context.restoreGState()
   }
@@ -2779,7 +2845,7 @@ final class DrawingCanvasNSView: NSView {
         context.strokePath()
         context.fillEllipse(in: rect)
         context.strokeEllipse(in: rect)
-      case .lineStart, .lineEnd, .arrowControl, .counterArrowTip:
+      case .lineStart, .lineEnd, .arrowControl, .counterArrowTip, .magnifierSource:
         // Circular grips for line/arrow endpoint and Bezier control editing.
         context.fillEllipse(in: rect)
         context.strokeEllipse(in: rect)
@@ -3028,6 +3094,8 @@ final class DrawingCanvasNSView: NSView {
     switch handle {
     case .topLeft, .bottomRight, .lineStart, .lineEnd, .arrowControl, .textCalloutTail, .counterArrowTip:
       NSCursor.crosshair.set()
+    case .magnifierSource:
+      NSCursor.openHand.set()
     case .topRight, .bottomLeft:
       NSCursor.crosshair.set()
     case .top, .bottom:

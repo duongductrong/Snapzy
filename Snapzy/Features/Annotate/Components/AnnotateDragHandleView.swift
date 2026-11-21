@@ -594,6 +594,8 @@ private struct DragFallbackSignature: Equatable {
       return "spotlight"
     case .measurement(let geometry):
       return "measurement|\(geometry.kind.rawValue)|\(geometry.axis.rawValue)|\(pointSignature(geometry.origin))|\(geometry.unit.rawValue)"
+    case .magnifier(let geometry):
+      return "magnifier|\(pointSignature(geometry.sourceCenter))|\(geometry.zoom)|\(geometry.shape.rawValue)|\(geometry.showsConnector)|\(geometry.showsShadow)"
     case .translation(let block):
       return "translation|\(block.translatedText)|\(block.cover.rawValue)|\(block.alignment.rawValue)|\(block.isBold)"
     }

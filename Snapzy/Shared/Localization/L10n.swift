@@ -6546,6 +6546,41 @@ nonisolated enum L10n {
       defaultValue: "Pixels",
       comment: "Measure unit option: image pixels"
     )
+    static let magnifierGestureHint = string(
+      "annotate.magnifier-gesture-hint",
+      defaultValue: "Click to magnify · Drag to place the lens",
+      comment: "Hint for the Magnifier tool: press on the spot to magnify; dragging places the zoomed lens elsewhere"
+    )
+    static let magnifierZoom = string(
+      "annotate.magnifier-zoom",
+      defaultValue: "Zoom",
+      comment: "Quick properties group title: how much the Magnifier lens enlarges"
+    )
+    static let magnifierShape = string(
+      "annotate.magnifier-shape",
+      defaultValue: "Shape",
+      comment: "Quick properties group title: shape of the Magnifier lens"
+    )
+    static let magnifierShapeCircle = string(
+      "annotate.magnifier-shape.circle",
+      defaultValue: "Circle",
+      comment: "Magnifier lens shape option"
+    )
+    static let magnifierShapeRoundedRect = string(
+      "annotate.magnifier-shape.rounded-rect",
+      defaultValue: "Rounded Rectangle",
+      comment: "Magnifier lens shape option"
+    )
+    static let magnifierShadow = string(
+      "annotate.magnifier-shadow",
+      defaultValue: "Shadow",
+      comment: "Magnifier toggle: draw a drop shadow under the lens"
+    )
+    static let magnifierConnector = string(
+      "annotate.magnifier-connector",
+      defaultValue: "Connector",
+      comment: "Magnifier toggle: outline the magnified area and connect it to the lens with a line"
+    )
     static let counterGestureHint = string(
       "annotate.counter-gesture-hint",
       defaultValue: "Click to place · Drag to point",
@@ -9053,6 +9088,11 @@ nonisolated enum L10n {
       "annotate.tool.measure",
       defaultValue: "Measure",
       comment: "Annotation tool display name: measures distances and sizes in the image"
+    )
+    static let magnifierTool = string(
+      "annotate.tool.magnifier",
+      defaultValue: "Magnifier",
+      comment: "Annotation tool display name: a loupe that shows a zoomed-in copy of part of the image"
     )
     static let watermarkTool = string(
       "annotate.tool.watermark",

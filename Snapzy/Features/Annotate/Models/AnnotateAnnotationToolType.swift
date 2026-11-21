@@ -25,6 +25,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
   case watermark
   case pencil
   case measure
+  case magnifier
   case mockup
 
   var id: String { rawValue }
@@ -34,7 +35,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
   /// two surfaces stay in sync when tools are added.
   static let drawableTools: [AnnotationToolType] = [
     .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter,
-    .blur, .spotlight, .counter, .measure, .watermark, .pencil
+    .blur, .spotlight, .counter, .measure, .magnifier, .watermark, .pencil
   ]
 
   static let inlineAnnotateTools: [AnnotationToolType] = [.selection] + drawableTools
@@ -67,6 +68,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     case .watermark: return "seal"
     case .pencil: return "pencil"
     case .measure: return "ruler"
+    case .magnifier: return "plus.magnifyingglass"
     case .mockup: return "cube.transparent"
     }
   }
@@ -90,6 +92,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     case .watermark: return "w"
     case .pencil: return "p"
     case .measure: return "u"
+    case .magnifier: return "z"
     case .mockup: return "m"
     }
   }
@@ -113,13 +116,14 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     case .watermark: return L10n.Annotate.watermarkTool
     case .pencil: return L10n.Annotate.pencilTool
     case .measure: return L10n.Annotate.measureTool
+    case .magnifier: return L10n.Annotate.magnifierTool
     case .mockup: return L10n.Annotate.mockupTool
     }
   }
 
   var supportsQuickPropertiesBar: Bool {
     switch self {
-    case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .blur, .spotlight, .counter, .measure, .watermark, .pencil:
+    case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .blur, .spotlight, .counter, .measure, .magnifier, .watermark, .pencil:
       return true
     case .selection, .crop, .cutOut, .mockup:
       return false
@@ -127,20 +131,20 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
   }
 
   /// Drawable tools that should only commit a new blank-canvas item after a
-  /// drag intent. Counter and Measure stay click-to-place, text keeps its click-to-edit
+  /// drag intent. Counter, Measure and Magnifier stay click-to-place, text keeps its click-to-edit
   /// flow, and freehand tools keep their existing path-count behavior.
   var requiresDragToCreateAnnotation: Bool {
     switch self {
     case .rectangle, .filledRectangle, .oval, .arrow, .line, .blur, .spotlight, .watermark:
       return true
-    case .selection, .crop, .cutOut, .text, .highlighter, .counter, .measure, .pencil, .mockup:
+    case .selection, .crop, .cutOut, .text, .highlighter, .counter, .measure, .magnifier, .pencil, .mockup:
       return false
     }
   }
 
   var supportsQuickStrokeColor: Bool {
     switch self {
-    case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .spotlight, .counter, .measure, .watermark, .pencil:
+    case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .spotlight, .counter, .measure, .magnifier, .watermark, .pencil:
       return true
     case .selection, .crop, .cutOut, .blur, .mockup:
       return false
@@ -153,7 +157,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
 
   var supportsQuickStrokeWidth: Bool {
     switch self {
-    case .rectangle, .filledRectangle, .oval, .arrow, .line, .highlighter, .blur, .spotlight, .counter, .pencil:
+    case .rectangle, .filledRectangle, .oval, .arrow, .line, .highlighter, .blur, .spotlight, .counter, .magnifier, .pencil:
       return true
     case .selection, .crop, .cutOut, .text, .measure, .watermark, .mockup:
       return false
@@ -164,7 +168,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .rectangle, .filledRectangle, .text, .spotlight:
       return true
-    case .selection, .crop, .cutOut, .oval, .arrow, .line, .highlighter, .blur, .counter, .measure, .watermark, .pencil, .mockup:
+    case .selection, .crop, .cutOut, .oval, .arrow, .line, .highlighter, .blur, .counter, .measure, .magnifier, .watermark, .pencil, .mockup:
       return false
     }
   }
@@ -173,7 +177,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .rectangle, .filledRectangle, .oval, .arrow, .line, .spotlight:
       return true
-    case .selection, .crop, .cutOut, .text, .highlighter, .blur, .counter, .measure, .watermark, .pencil, .mockup:
+    case .selection, .crop, .cutOut, .text, .highlighter, .blur, .counter, .measure, .magnifier, .watermark, .pencil, .mockup:
       return false
     }
   }

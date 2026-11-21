@@ -118,7 +118,7 @@ Hover a Quick Access card, press the key, the card runs that action. Every `Quic
 
 `AnnotateShortcutManager` (`Snapzy/Features/Annotate/Services/AnnotateShortcutManager.swift`):
 
-- 15 tool single-key shortcuts (`AnnotationToolType.defaultShortcut`, remappable): crop, selection, rectangle, filledRectangle, oval, arrow, line, text, highlighter, blur, spotlight, counter, measure (`u`), watermark, pencil. (`mockup` excluded — internal only.)
+- 16 tool single-key shortcuts (`AnnotationToolType.defaultShortcut`, remappable): crop, selection, rectangle, filledRectangle, oval, arrow, line, text, highlighter, blur, spotlight, counter, measure (`u`), magnifier (`z`), watermark, pencil. (`mockup` excluded — internal only.)
 - Tool keys stored per-tool under prefix `annotate.shortcut.`; per-tool disable set `shortcuts.disabledAnnotateToolShortcuts`.
 - Action shortcuts (`AnnotateActionShortcutKind`, modifier combos as `ShortcutConfig`):
 
