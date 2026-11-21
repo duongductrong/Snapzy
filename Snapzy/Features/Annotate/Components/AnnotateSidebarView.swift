@@ -37,6 +37,9 @@ private struct AnnotateSidebarSnapshot: Equatable {
   let isCombineMode: Bool
   let combineMode: CombineImagesMode
   let combineGap: CGFloat
+  let canAdjustImage: Bool
+  let imageAdjustments: ImageAdjustments
+  let imageFilterPresetThumbnailIDs: [ImageFilterPreset: ObjectIdentifier]
 
   init(state: AnnotateState) {
     editorMode = state.editorMode
@@ -59,6 +62,9 @@ private struct AnnotateSidebarSnapshot: Equatable {
     isCombineMode = state.isCombineMode
     combineMode = state.combineMode
     combineGap = state.combineGap
+    canAdjustImage = state.canAdjustImage
+    imageAdjustments = state.imageAdjustments
+    imageFilterPresetThumbnailIDs = state.imageFilterPresetThumbnails.mapValues(ObjectIdentifier.init)
   }
 }
 
@@ -107,6 +113,16 @@ struct AnnotateSidebarView: View, Equatable {
         // Alignment section
         if !state.isCombineMode {
           alignmentSection
+        }
+
+        // Image adjustments (tone sliders + filter presets)
+        if snapshot.canAdjustImage {
+          Divider().background(Color(nsColor: .separatorColor))
+          AnnotateImageAdjustmentsSection(
+            state: state,
+            adjustments: snapshot.imageAdjustments,
+            thumbnails: state.imageFilterPresetThumbnails
+          )
         }
 
         // Mockup section (shown when mockup mode is active)
