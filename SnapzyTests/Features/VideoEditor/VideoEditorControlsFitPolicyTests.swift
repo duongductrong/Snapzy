@@ -91,6 +91,7 @@ final class VideoEditorControlsFitPolicyTests: XCTestCase {
     }
   }
 }
+
 /// Measures the row's division, the overlap it has to prevent, and the badge decision on a
 /// structural twin of the controls row: `.fixedSize()` clusters in an `HStack` with 12 pt spacing,
 /// the side clusters inside `.frame(maxWidth: .infinity, alignment:)` wrappers, and the status
@@ -159,15 +160,100 @@ final class VideoControlsLayoutLawTests: XCTestCase {
     XCTAssertLessThan(transportFrame.midX, container / 2, "the transport has given up its centring")
   }
 
+  /// The end-to-end guarantee, in the order the row really works: it appears with the badges on,
+  /// measures the frame it was given, decides from that measurement, and lays out again. The
+  /// second layout must not overlap, and re-deciding from it must not change anything — otherwise
+  /// the row would flicker between two configurations every pass.
+  func testMeasuredDecisionConvergesAndNeverOverlaps() {
+    for width in [CGFloat(340), 386, 420, 480, 530, 620, 700, 920, 1200] {
+      let first = laidOutFrames(showsStatus: true, container: width)
+      let shows = decide(from: first)
+      let second = laidOutFrames(showsStatus: shows, container: width)
+
+      assertNoVisibleOverlap(in: second, showsStatus: shows, at: width)
+      XCTAssertEqual(
+        decide(from: second),
+        shows,
+        "at \(width) pt the decision changed between two passes over the same configuration"
+      )
+    }
+  }
+
+  /// The reason for reading the frame instead of deriving it: an oversized leading cluster takes
+  /// width the derived share would have promised to the trailing side, and the decision follows
+  /// the frame that is actually left.
+  func testOversizedLeadingSide_shrinksTheFrameAndTheDecisionFollows() throws {
+    let frames = laidOutFrames(showsStatus: true, container: 700, leadingWidth: 300)
+    let trailingFrame = try XCTUnwrap(frames["trailingFrame"])
+    let derivedHalf = (700 - transport - 2 * outerSpacing) / 2
+
+    XCTAssertLessThan(trailingFrame.width, derivedHalf, "the leading cluster took more than its half")
+    XCTAssertEqual(
+      decide(from: frames),
+      VideoControlsFitPolicy.showsStatus(
+        trailingWidth: trailingFrame.width,
+        zoomWidth: zoom,
+        statusWidth: status,
+        badgeSpacing: badgeSpacing
+      )
+    )
+    assertNoVisibleOverlap(in: laidOutFrames(showsStatus: decide(from: frames), container: 700, leadingWidth: 300),
+                           showsStatus: decide(from: frames), at: 700)
+  }
+
+  /// What the view computes from a laid-out row: the widths the row measured for itself.
+  private func decide(from frames: [String: CGRect]) -> Bool {
+    VideoControlsFitPolicy.showsStatus(
+      trailingWidth: frames["trailingFrame"]?.width ?? 0,
+      zoomWidth: frames["zoom"]?.width ?? 0,
+      statusWidth: frames["status"]?.width ?? 0,
+      badgeSpacing: badgeSpacing
+    )
+  }
+
+  /// No two clusters the user can see may end up on top of each other. The measuring copy of the
+  /// badges is excluded while they are hidden — it is `.hidden()` and inert in production too.
+  private func assertNoVisibleOverlap(
+    in frames: [String: CGRect],
+    showsStatus: Bool,
+    at width: CGFloat,
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
+    var visible: [(name: String, rect: CGRect)] = []
+    for name in ["leading", "transport", "zoom"] + (showsStatus ? ["status"] : []) {
+      guard let rect = frames[name] else {
+        XCTFail("\(name) was not measured at \(width) pt", file: file, line: line)
+        return
+      }
+      visible.append((name, rect))
+    }
+    for first in 0 ..< visible.count {
+      for second in (first + 1) ..< visible.count {
+        let overlap = visible[first].rect.intersection(visible[second].rect)
+        XCTAssertLessThanOrEqual(
+          overlap.width,
+          0.5,
+          "at \(width) pt (badges \(showsStatus ? "shown" : "hidden")) "
+            + "\(visible[first].name) lies on \(visible[second].name) by \(overlap.width) pt",
+          file: file,
+          line: line
+        )
+      }
+    }
+  }
+
   private func laidOutFrames(
     showsStatus: Bool,
-    statusCountedInRowMinimum: Bool = false
+    statusCountedInRowMinimum: Bool = false,
+    container: CGFloat = 530,
+    leadingWidth: CGFloat? = nil
   ) -> [String: CGRect] {
     var collected: [String: CGRect] = [:]
     let host = NSHostingView(
       rootView: MirroredControlsRow(
         containerWidth: container,
-        leadingWidth: leading,
+        leadingWidth: leadingWidth ?? leading,
         transportWidth: transport,
         zoomWidth: zoom,
         statusWidth: status,
