@@ -912,6 +912,7 @@ private struct QuickAccessContextMenuPresenter: NSViewRepresentable {
       menu.autoenablesItems = false
 
       populate(menu, with: entries)
+      MenuBarItemImage.enableIcons(in: menu)
       menu.update()
 
       let screenPoint = window.convertPoint(toScreen: event.locationInWindow)
@@ -930,13 +931,13 @@ private struct QuickAccessContextMenuPresenter: NSViewRepresentable {
           let item = NSMenuItem(title: title, action: #selector(performMenuAction(_:)), keyEquivalent: "")
           item.target = self
           item.isEnabled = isEnabled
-          item.image = NSImage(systemSymbolName: systemImage, accessibilityDescription: title)
+          item.image = MenuBarItemImage.symbol(systemImage, accessibilityDescription: title)
           item.representedObject = QuickAccessContextMenuAction(action)
 
           menu.addItem(item)
         case .submenu(let title, let systemImage, let isEnabled, let makeEntries):
           let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-          item.image = NSImage(systemSymbolName: systemImage, accessibilityDescription: title)
+          item.image = MenuBarItemImage.symbol(systemImage, accessibilityDescription: title)
           let children = isEnabled ? makeEntries() : []
           item.isEnabled = isEnabled && !children.isEmpty
           if item.isEnabled {
