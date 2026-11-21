@@ -292,6 +292,10 @@ struct VideoEditorFrameSettings: Equatable {
 /// Playback state changes frequently, so it stays isolated from the broader editor model.
 @MainActor
 final class VideoEditorPlaybackState: ObservableObject {
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   @Published private(set) var currentTime: CMTime = .zero
   @Published private(set) var isPlaying: Bool = false
   @Published private(set) var isScrubbing: Bool = false
