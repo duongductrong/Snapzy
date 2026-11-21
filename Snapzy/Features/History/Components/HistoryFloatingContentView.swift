@@ -26,7 +26,8 @@ struct HistoryFloatingContentView: View {
   @State private var compactSelectionRevealTrigger = 0
   @State private var isExpandedGridReady = false
   @State private var expandedGridWarmupTask: Task<Void, Never>?
-  @StateObject private var scrollController = HistoryScrollController()
+  // Only the scrollbar observes offsets; scrolling must not invalidate the capture grid.
+  @State private var scrollController = HistoryScrollController()
   @StateObject private var searchViewModel: HistorySearchViewModel
 
   init(manager: HistoryFloatingManager) {
@@ -521,6 +522,7 @@ struct HistoryFloatingContentView: View {
           proxy.scrollTo(id)
         }
       }
+      .clipped()
     }
     .overlay(
       HistoryFloatingScrollbar(controller: scrollController, scale: resolvedPanelScale)
@@ -563,6 +565,7 @@ struct HistoryFloatingContentView: View {
       .padding(.top, 4)
       .padding(.bottom, 14)
     }
+    .clipped()
   }
 
   private var expandedColumns: [GridItem] {

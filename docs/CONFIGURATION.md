@@ -52,7 +52,7 @@ The TOML file covers portable app preferences:
 - After-capture actions for screenshot and recording: `save`, `quick_access`, `copy_file`, and `open_annotate` under `[capture.after.screenshot]` / `[capture.after.recording]`. Cloud upload is not part of this matrix — it is manual-only from Quick Access, Annotate, Video Editor, and History surfaces.
 - Recording settings: format, quality, FPS, audio, microphone device id, cursor, click highlights, keystroke overlay, live annotation shortcuts, video editor zoom transition duration.
 - Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, pinned image zoom mode (`pin_zoom_mode`: `fixedViewport` by default or `windowFollowsImage`), swipe left/right actions, hide card when window open, animation style, open in Finder after saving (`[quick_access] open_in_finder_after_save`, default `true`), action order, enabled actions, card slots, hover-activated card action shortcuts.
-- History: retention, maximum count, floating panel layout and filter.
+- History: retention, maximum count, panel layout and filter, the History presentation style (`[history] display_style`: `"traditional"` (default) or `"hanging"`), and the traditional panel's top-edge reveal (`[history.floating] reveal_at_top_edge`, default `false`).
 - Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, share link style (`[cloud] share_link_style`: `"descriptive"` or `"short"`, default `"descriptive"`, S3 and R2 only), and upload window position.
 - Annotate preferences.
 - Global, overlay, Annotate tool, Annotate action, and Video Editor action shortcuts.
@@ -219,6 +219,7 @@ enabled_actions = ["copy", "delete", "dismiss", "edit", "pinToScreen", "saveOrOp
 enabled = true
 retention_days = 30
 max_count = 500
+display_style = "traditional" # "traditional" | "hanging"
 
 [annotate]
 clipboard_image_open_behavior = "ask"

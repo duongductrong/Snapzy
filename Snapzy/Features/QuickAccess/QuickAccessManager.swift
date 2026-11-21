@@ -1027,7 +1027,7 @@ final class QuickAccessManager: ObservableObject {
       VideoEditorManager.shared.clearSessionData(for: item.id)
       VideoEditorManager.shared.clearSessionData(for: item.url)
     }
-    pinWindowManager.closeAll()
+    pinWindowManager.closeAll(owner: .quickAccess)
     items.removeAll()
     editingItemIds.removeAll()
     activityHoldItemIds.removeAll()

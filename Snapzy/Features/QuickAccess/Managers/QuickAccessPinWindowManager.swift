@@ -12,12 +12,17 @@ import SwiftUI
 final class QuickAccessPinWindowManager {
   static let shared = QuickAccessPinWindowManager()
 
+  enum Owner {
+    case quickAccess
+    case history
+  }
+
   private var controllers: [UUID: QuickAccessPinWindowController] = [:]
 
   private init() {}
 
   @discardableResult
-  func show(item: QuickAccessItem, onUserClose: @escaping (UUID) -> Void) -> Bool {
+  func show(item: QuickAccessItem, owner: Owner = .quickAccess, onUserClose: @escaping (UUID) -> Void) -> Bool {
     guard !item.isVideo else { return false }
 
     if let controller = controllers[item.id] {
@@ -26,7 +31,7 @@ final class QuickAccessPinWindowManager {
       return true
     }
 
-    let controller = QuickAccessPinWindowController(item: item)
+    let controller = QuickAccessPinWindowController(item: item, owner: owner)
     controller.onUserClose = { [weak self] id in
       self?.controllers[id] = nil
       onUserClose(id)
@@ -48,11 +53,9 @@ final class QuickAccessPinWindowManager {
     controllers.removeValue(forKey: id)?.close()
   }
 
-  func closeAll() {
-    for controller in controllers.values {
-      controller.close()
-    }
-    controllers.removeAll()
+  func closeAll(owner: Owner) {
+    let ids = controllers.compactMap { $0.value.owner == owner ? $0.key : nil }
+    for id in ids { close(id: id) }
   }
 
   func suspendAllMouseMonitors() {
@@ -76,7 +79,10 @@ private final class QuickAccessPinWindowController {
   private let state: QuickAccessPinWindowState
   private let window: QuickAccessPinWindow
 
-  init(item: QuickAccessItem) {
+  let owner: QuickAccessPinWindowManager.Owner
+
+  init(item: QuickAccessItem, owner: QuickAccessPinWindowManager.Owner) {
+    self.owner = owner
     id = item.id
 
     let image = Self.loadImage(for: item)

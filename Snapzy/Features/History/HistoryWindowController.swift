@@ -83,7 +83,11 @@ final class HistoryWindowController {
 
   func showWindow() {
     DiagnosticLogger.shared.log(.info, .history, "History window requested")
-    HistoryFloatingManager.shared.showExpanded()
+    if HistoryFloatingManager.shared.displayStyle == .hanging {
+      HistoryHangingManager.shared.show()
+    } else {
+      HistoryFloatingManager.shared.showExpanded()
+    }
     NSApp.activate(ignoringOtherApps: true)
   }
 

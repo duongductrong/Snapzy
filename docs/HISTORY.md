@@ -1,6 +1,6 @@
 # Capture History
 
-Persistent history of screenshots, videos, and GIFs backed by GRDB SQLite, surfaced through a floating panel (compact carousel + expanded grid) and a restore-to-Quick-Access flow that reopens captures in Annotate or Video Editor with editable sessions. Code: `Snapzy/Features/History/` + `Snapzy/Services/History/`.
+Persistent history of screenshots, videos, and GIFs backed by GRDB SQLite, with Traditional and Hanging presentations of the same records. Both use the restore-to-Quick-Access flow to reopen captures in Annotate or Video Editor with editable sessions. Code: `Snapzy/Features/History/` + `Snapzy/Services/History/`.
 
 ## Entry Points
 
@@ -14,6 +14,19 @@ Persistent history of screenshots, videos, and GIFs backed by GRDB SQLite, surfa
 - `HistoryFloatingPanel` keyboard: unmodified Left/Right moves the compact carousel focus one card at a time; expanded-grid arrows move within the four-column grid without wrapping. With one expanded card selected and focused, an unmodified arrow moves both selection and focus; with zero or multiple cards selected, or when a singleton selection differs from focus, it moves focus only. Shift-click and Shift+arrows share a reversible selected range, including after a singleton focus move. Enter opens the focused card even during multi-selection. ⌘C copies selected records (or the focused card when none are selected), ⌘A selects all, ⌘P toggles pin, and ⌫ deletes selected records. Search-field caret movement remains native; arrow and panel shortcuts are suppressed while text input is active.
 - Compact: type filter pills + horizontal `HistoryCompactCarouselView` cards + trailing controls (Open Full History, Pin, Close).
 - Expanded: type pills + filename search (150ms debounce, `HistorySearchViewModel`) + time filters all / 24H / 7D / 30D (`HistoryFloatingTimeFilter`) + 4-column grid + multi-select + selection bar + custom `HistoryFloatingScrollbar` + trailing controls (Collapse, Pin, Close).
+
+## Hanging History
+
+Select **Settings → History → Display style → Hanging** to enable the top-edge shelf. Traditional remains the default; switching styles does not copy or delete captures.
+
+- Move the pointer to the physical top edge of a display and pause briefly to reveal the shelf. Moving away hides it after a short delay; **Keep Open** holds it in place.
+- The cable spans the display's top corners. The row shows the newest matching captures that fit, up to the configured maximum, without horizontal scrolling. A displaced card falls and fades out when a new capture arrives; its History record remains available.
+- Hover over a card for a larger preview. Screenshot cards support independent image pins. Open, copy, drag-out, and context-menu actions reuse the existing History flow; **Browse All** opens the traditional expanded browser.
+- Selection overlays and still captures temporarily hide the shelf and its preview. An already-open shelf returns afterward with its Keep Open state intact. Dismissing it or switching styles during selection cancels restoration.
+- Recording controls do not block the shelf: top-edge reveal remains available while recording or paused. Hanging windows follow the existing **Include Snapzy** capture preferences; they are excluded by default.
+- Reduce Motion disables card transitions. Large previews decode at most 1200 pixels on their longest side, use a bounded memory cache, and do not write preview files to disk.
+
+`HistoryHangingManager` owns the shelf, cable, and capture suspension. `HistoryHangingLayout` contains screen geometry, row capacity, and hover timing; `HistoryHangingPreviewController` manages passive preview windows.
 
 ## Card Actions
 
