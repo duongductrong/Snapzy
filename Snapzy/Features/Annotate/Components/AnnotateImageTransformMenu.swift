@@ -112,11 +112,10 @@ struct AnnotateImageTransformToolbarButton: View {
         action.perform(state)
       }
       item.keyEquivalentModifierMask = action.modifiers
-      item.image = MenuBarItemImage.symbol(action.symbol)
+      item.image = NSImage(systemSymbolName: action.symbol, accessibilityDescription: nil)
       item.isEnabled = state.canRotateImage
       menu.addItem(item)
     }
-    MenuBarItemImage.enableIcons(in: menu)
 
     isMenuOpen = true
     // Drop just below the button's leading edge, like a native toolbar pull-down.

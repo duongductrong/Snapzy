@@ -845,20 +845,20 @@ private struct AnnotateAIDockTranslateSection: View {
       let cancel = ClosureMenuItem(title: L10n.Common.cancel, keyEquivalent: "") { [weak state] in
         state?.cancelAutoTranslate()
       }
-      cancel.image = MenuBarItemImage.symbol("stop.circle")
+      cancel.image = symbol("stop.circle")
       menu.addItem(cancel)
       menu.addItem(.separator())
     }
 
     let engine = NSMenuItem(title: engineDescription, action: nil, keyEquivalent: "")
-    engine.image = MenuBarItemImage.symbol(isRemoteEngine ? "network" : "lock.laptopcomputer")
+    engine.image = symbol(isRemoteEngine ? "network" : "lock.laptopcomputer")
     engine.isEnabled = false
     menu.addItem(engine)
 
     let settings = ClosureMenuItem(title: L10n.Translate.openSettings, keyEquivalent: "") {
       AnnotateState.openTranslationSettings()
     }
-    settings.image = MenuBarItemImage.symbol("gearshape")
+    settings.image = symbol("gearshape")
     menu.addItem(settings)
 
     menu.addItem(.separator())
@@ -867,18 +867,21 @@ private struct AnnotateAIDockTranslateSection: View {
       guard let state else { return }
       state.setIncludesTranslationsInExport(!state.includesTranslationsInExport)
     }
-    export.image = MenuBarItemImage.symbol("square.and.arrow.up")
+    export.image = symbol("square.and.arrow.up")
     export.state = state.includesTranslationsInExport ? .on : .off
     menu.addItem(export)
 
     let remove = ClosureMenuItem(title: L10n.AnnotateTranslate.removeTranslations, keyEquivalent: "") { [weak state] in
       state?.removeAllTranslations()
     }
-    remove.image = MenuBarItemImage.symbol("trash")
+    remove.image = symbol("trash")
     remove.isEnabled = state.translationAnnotationCount > 0 && !state.isAutoTranslateRunning
     menu.addItem(remove)
-    MenuBarItemImage.enableIcons(in: menu)
     return menu
+  }
+
+  private func symbol(_ name: String) -> NSImage? {
+    NSImage(systemSymbolName: name, accessibilityDescription: nil)
   }
 
   private var isRemoteEngine: Bool {
@@ -951,15 +954,14 @@ enum AnnotateAIDockProviderMenu {
     let newConversation = ClosureMenuItem(title: L10n.AnnotateAI.newConversation, keyEquivalent: "") {
       onNewConversation()
     }
-    newConversation.image = MenuBarItemImage.symbol("plus.bubble")
+    newConversation.image = NSImage(systemSymbolName: "plus.bubble", accessibilityDescription: nil)
     newConversation.isEnabled = hasConversation && !isRunning
     menu.addItem(newConversation)
     let settings = ClosureMenuItem(title: L10n.AnnotateAI.settings, keyEquivalent: "") {
       AnnotateAgentAISettings.open()
     }
-    settings.image = MenuBarItemImage.symbol("gearshape")
+    settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
     menu.addItem(settings)
-    MenuBarItemImage.enableIcons(in: menu)
     return menu
   }
 
