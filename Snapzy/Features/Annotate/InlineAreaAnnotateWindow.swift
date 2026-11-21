@@ -1965,6 +1965,7 @@ private struct InlineAreaDivider: View {
 
 private struct InlineAreaPropertiesBar: View {
   @ObservedObject var state: AnnotateState
+  @ObservedObject private var stampStore = AnnotateStampStore.shared
   let maxWidth: CGFloat
   let popoverEdge: Edge
   let onContentWidthChange: (CGFloat) -> Void
@@ -2128,6 +2129,40 @@ private struct InlineAreaPropertiesBar: View {
 
           if state.quickPropertiesSupportsLineStyle {
             InlineAreaLineStylePicker(selection: state.quickLineStyleBinding)
+          }
+
+          if state.quickPropertiesSupportsStamp {
+            InlineAreaPropertyGroup(title: L10n.Annotate.stampTool) {
+              AnnotateStampPickerButton(
+                state: state,
+                height: InlineAreaChrome.propertyControlHeight,
+                openPanelLevel: NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1),
+                popoverEdge: popoverEdge,
+                usesGlassChrome: false
+              )
+            }
+
+            InlineAreaSliderControl(
+              title: L10n.Common.size,
+              icon: "arrow.up.left.and.arrow.down.right",
+              value: state.quickStampSizeBinding,
+              range: AnnotateStampStore.sizeRange,
+              step: 1,
+              displayText: "\(Int(state.quickStampSize.rounded()))",
+              onEditingChanged: state.setQuickStampSliderEditing
+            )
+
+            InlineAreaSliderControl(
+              title: L10n.AnnotateStamp.opacity,
+              icon: "circle.lefthalf.filled",
+              value: state.quickStampOpacityBinding,
+              range: AnnotateStampStore.opacityRange,
+              step: 0.01,
+              displayText: "\(Int((state.quickStampOpacity * 100).rounded()))%",
+              onEditingChanged: state.setQuickStampSliderEditing
+            )
+
+            AnnotateStampStyleToggle(state: state)
           }
 
           if state.quickPropertiesSupportsWatermark {

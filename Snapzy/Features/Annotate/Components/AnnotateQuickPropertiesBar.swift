@@ -521,6 +521,19 @@ struct AnnotateQuickPropertiesBar: View {
       }
 
       activePropertySlot(
+        isVisible: state.quickPropertiesSupportsStamp,
+        isEnabled: true,
+        showsLeadingDivider: showAnnotationRotation,
+        width: nil
+      ) {
+        AnnotateStampQuickControls(
+          state: state,
+          sliderWidth: density.sliderWidth,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
         isVisible: showTextSnap,
         isEnabled: true,
         showsLeadingDivider: hasBeforeTextSnap,
@@ -561,6 +574,13 @@ struct AnnotateQuickPropertiesBar: View {
 
       if includesCounterHint, state.quickPropertiesMode == .toolDefaults, state.selectedTool == .measure {
         Text(L10n.AnnotateUI.measureGestureHint)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .fixedSize()
+      }
+
+      if includesCounterHint, state.quickPropertiesMode == .toolDefaults, state.selectedTool == .stamp {
+        Text(L10n.AnnotateStamp.gestureHint)
           .font(.caption)
           .foregroundStyle(.secondary)
           .fixedSize()

@@ -145,6 +145,7 @@ struct PersistedAnnotationType: Codable, Equatable {
     case path, rectangle, filledRectangle, oval, arrow, line, text, highlight, blur, counter, watermark, embeddedImage, spotlight
     case measurement
     case translation
+    case stamp
     /// A kind written by a newer Snapzy. The item is skipped instead of failing the whole
     /// manifest, so a session keeps everything this build can draw.
     case unknown
@@ -166,6 +167,7 @@ struct PersistedAnnotationType: Codable, Equatable {
   var embeddedImageAssetId: UUID?
   var measure: PersistedMeasureGeometry?
   var translation: PersistedTranslatedTextBlock?
+  var stamp: PersistedStamp?
 
   init(annotationType: AnnotationType) {
     switch annotationType {
@@ -211,6 +213,9 @@ struct PersistedAnnotationType: Codable, Equatable {
     case .translation(let block):
       kind = .translation
       translation = PersistedTranslatedTextBlock(block: block)
+    case .stamp(let value):
+      kind = .stamp
+      stamp = PersistedStamp(stamp: value)
     }
   }
 
@@ -248,6 +253,8 @@ struct PersistedAnnotationType: Codable, Equatable {
       return measure?.measureGeometry.map { .measurement($0) }
     case .translation:
       return translation.map { .translation($0.block) }
+    case .stamp:
+      return stamp?.stampAnnotation.map { .stamp($0) }
     case .unknown:
       return nil
     }
