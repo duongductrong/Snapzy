@@ -118,7 +118,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
   - Sao chép, chỉnh sửa, kéo thả hoặc tải lên ảnh chụp ngay từ thẻ Truy cập nhanh nổi; ghim ảnh chụp màn hình lên màn hình.
   - Tìm ảnh chụp màn hình, video và GIF theo tên file, loại hoặc thời gian, rồi mở lại trong trình chỉnh sửa.
 - **Tải lên cloud**
-  - Tải lên thủ công từ Truy cập nhanh, Chú thích (Annotate), Trình sửa video (Video Editor) hoặc Lịch sử tới AWS S3, Cloudflare R2 hoặc Google Drive.
+  - Tải lên thủ công từ Truy cập nhanh, Chú thích (Annotate), Trình sửa video (Video Editor) hoặc Lịch sử tới AWS S3, Cloudflare R2, Google Drive hoặc imgbb. Liên kết imgbb là công khai, ai có liên kết cũng xem được (chỉ ảnh, tối đa 32 MB).
   - File được tải thẳng lên nhà cung cấp bạn chọn. Snapzy không tự động tải lên sau khi chụp và không chuyển file qua máy chủ của Snapzy.
 - **Ngôn ngữ ứng dụng**: hỗ trợ chọn ngôn ngữ riêng cho từng ứng dụng theo cơ chế native của macOS, với 10 ngôn ngữ: tiếng Anh, tiếng Việt, tiếng Trung giản thể, tiếng Trung phồn thể, tiếng Tây Ban Nha, tiếng Nhật, tiếng Hàn, tiếng Nga, tiếng Pháp và tiếng Đức.
 

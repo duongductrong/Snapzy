@@ -103,6 +103,21 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     XCTAssertNil(googleDrive.value(at: "cloud", "share_link_style"))
   }
 
+  func testExportForImgbbKeepsAPIKeyOut() throws {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(CloudProviderType.imgbb.rawValue, forKey: PreferencesKeys.cloudProviderType)
+    defaults.set(CloudExpireTime.day3.rawValue, forKey: PreferencesKeys.cloudExpireTime)
+
+    let source = SnapzyConfigurationExporter.exportTOML(defaults: defaults)
+    let document = try SimpleTOMLParser.parse(source)
+
+    XCTAssertEqual(document.value(at: "cloud", "provider")?.stringValue, "imgbb")
+    XCTAssertEqual(document.value(at: "cloud", "expire_time")?.stringValue, "3d")
+    XCTAssertNil(document.value(at: "cloud", "share_link_style"))
+    XCTAssertNil(document.value(at: "cloud", "bucket"))
+    XCTAssertFalse(source.lowercased().contains("api_key"))
+  }
+
   func testDefaultDocumentIncludesQuickAccessSoundSetting() throws {
     let document = try SimpleTOMLParser.parse(SnapzyConfigurationDefaultDocument.toml())
 

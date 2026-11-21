@@ -16,6 +16,7 @@ enum CloudKeychainItem {
   case googleRefreshToken
   case googleClientId
   case googleClientSecret
+  case imgbbAPIKey
 
   var account: String {
     switch self {
@@ -31,6 +32,8 @@ enum CloudKeychainItem {
       return "com.trongduong.snapzy.cloud.google.clientId"
     case .googleClientSecret:
       return "com.trongduong.snapzy.cloud.google.clientSecret"
+    case .imgbbAPIKey:
+      return "com.trongduong.snapzy.cloud.imgbb.apiKey"
     }
   }
 
@@ -40,7 +43,7 @@ enum CloudKeychainItem {
       return ["com.snapzy.cloud.accessKey"]
     case .secretKey:
       return ["com.snapzy.cloud.secretKey"]
-    case .passwordHash, .googleRefreshToken, .googleClientId, .googleClientSecret:
+    case .passwordHash, .googleRefreshToken, .googleClientId, .googleClientSecret, .imgbbAPIKey:
       return []
     }
   }
@@ -402,6 +405,8 @@ struct CloudKeychainStore {
       return "googleClientId"
     case .googleClientSecret:
       return "googleClientSecret"
+    case .imgbbAPIKey:
+      return "imgbbAPIKey"
     }
   }
 }

@@ -598,7 +598,7 @@ extension PreferencesSearchEntry {
     let uploadsWindow = L10n.CloudSettings.uploadsWindowSection
     return [
       .init(.cloud, section: provider, title: L10n.CloudSettings.provider,
-            keywords: ["s3", "r2", "google drive", "aws"]),
+            keywords: ["s3", "r2", "google drive", "aws", "imgbb"]),
       .init(.cloud, section: provider, title: L10n.CloudSettings.edit,
             keywords: ["cloud settings", "credentials"], anchored: false),
       .init(.cloud, section: provider, title: L10n.CloudSettings.reset,
@@ -631,6 +631,9 @@ extension PreferencesSearchEntry {
             detail: L10n.CloudSettings.googleSetupGuide, keywords: ["google drive", "oauth"], anchored: false),
       .init(.cloud, section: googleCredentials, title: L10n.CloudSettings.googleClientSecret,
             keywords: ["google drive", "oauth"], anchored: false),
+      .init(.cloud, section: L10n.CloudSettings.imgbbCredentialsSection, title: L10n.CloudSettings.imgbbAPIKey,
+            detail: L10n.CloudSettings.imgbbPublicWarning, keywords: ["imgbb", "image host", "public link"],
+            anchored: false),
       .init(.cloud, section: googleFolder, title: L10n.CloudSettings.googleFolderName,
             detail: L10n.CloudSettings.googleFolderDescription, keywords: ["google drive"], anchored: false),
       .init(.cloud, section: shareLinks, title: L10n.CloudSettings.shareLinkStyleTitle,

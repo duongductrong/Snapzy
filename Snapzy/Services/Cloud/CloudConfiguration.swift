@@ -97,6 +97,9 @@ struct CloudConfiguration: Codable, Equatable {
       // googleDrive doesn't require bucket/region/endpoint fields to be validated here,
       // and default folder name "Snapzy" is used if bucket is empty.
       return true
+    case .imgbb:
+      // imgbb needs only the API key, which lives in the Keychain.
+      return true
     }
   }
 }

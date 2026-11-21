@@ -263,7 +263,9 @@ enum CloudCredentialTransferService {
     guard
       payload.configuration.isValid,
       !payload.accessKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-      !payload.secretKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      // imgbb has a single API key, carried in `accessKey`.
+      payload.configuration.providerType == .imgbb
+        || !payload.secretKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     else {
       DiagnosticLogger.shared.log(.warning, .cloud, "Cloud credential archive payload validation failed")
       throw CloudCredentialTransferError.invalidArchive

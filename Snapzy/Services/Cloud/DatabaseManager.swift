@@ -235,6 +235,12 @@ final class DatabaseManager: @unchecked Sendable {
       )
     }
 
+    migrator.registerMigration("v3_addCloudUploadDeleteURL") { db in
+      try db.alter(table: "cloudUploadRecord") { t in
+        t.add(column: "deleteURL", .text)
+      }
+    }
+
     return migrator
   }
 

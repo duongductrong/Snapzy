@@ -995,6 +995,77 @@
         }
       }
     },
+    "cloud-operation.file-too-large": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Datei ist zu groß für %1$@. Erlaubt sind Dateien bis %2$@."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This file is too large for %1$@, which accepts files up to %2$@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este archivo es demasiado grande para %1$@, que acepta archivos de hasta %2$@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce fichier est trop volumineux pour %1$@, qui accepte des fichiers jusqu’à %2$@."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקובץ גדול מדי עבור %1$@, שמקבל קבצים עד %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このファイルは %1$@ には大きすぎます。上限は %2$@ です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 파일은 %1$@에 비해 너무 큽니다. 최대 %2$@까지 업로드할 수 있습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Файл слишком большой для %1$@: допускаются файлы до %2$@."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tệp này quá lớn với %1$@, chỉ nhận tệp tối đa %2$@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该文件超出 %1$@ 的限制，最大支持 %2$@。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此檔案超出 %1$@ 的限制，最大支援 %2$@。"
+          }
+        }
+      }
+    },
     "cloud-operation.get-lifecycle-config-failed": {
       "extractionState": "stale",
       "localizations": {
@@ -1847,6 +1918,77 @@
         }
       }
     },
+    "cloud-operation.unsupported-file-type": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ akzeptiert nur Bilder. Videos können dort nicht hochgeladen werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ only accepts images. Videos can't be uploaded there."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ solo acepta imágenes. No se pueden subir videos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ n’accepte que les images. Les vidéos ne peuvent pas y être envoyées."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‏%@ מקבל רק תמונות. אי אפשר להעלות לשם סרטונים."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ は画像のみ対応しています。動画はアップロードできません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@은(는) 이미지만 지원합니다. 동영상은 업로드할 수 없습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ принимает только изображения. Видео туда загрузить нельзя."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ chỉ nhận hình ảnh. Không thể tải video lên đó."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 只接受图片，无法上传视频。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 只接受圖片，無法上傳影片。"
+          }
+        }
+      }
+    },
     "cloud-operation.upload-failed": {
       "extractionState": "stale",
       "localizations": {
@@ -2411,6 +2553,77 @@
           "stringUnit": {
             "state": "translated",
             "value": "Google Drive"
+          }
+        }
+      }
+    },
+    "cloud-provider.imgbb": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb"
           }
         }
       }
@@ -5107,6 +5320,503 @@
           "stringUnit": {
             "state": "translated",
             "value": "將截圖上傳到你自己的儲存空間，並透過連結分享。"
+          }
+        }
+      }
+    },
+    "cloud-settings.imgbb-api-key": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-Schlüssel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API Key"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clave de API"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé d’API"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מפתח API"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API キー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 키"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-ключ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khóa API"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 密钥"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 金鑰"
+          }
+        }
+      }
+    },
+    "cloud-settings.imgbb-api-key-tooltip": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein imgbb-API-Schlüssel. Snapzy speichert ihn nur im macOS-Schlüsselbund."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your imgbb API key. Snapzy stores it only in the macOS Keychain."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu clave de API de imgbb. Snapzy la guarda solo en el llavero de macOS."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre clé d’API imgbb. Snapzy la stocke uniquement dans le trousseau macOS."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מפתח ה-API שלך ב-imgbb. ‏Snapzy שומר אותו רק במחזיק המפתחות של macOS."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb の API キーです。Snapzy は macOS のキーチェーンにのみ保存します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb API 키입니다. Snapzy는 macOS 키체인에만 저장합니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваш API-ключ imgbb. Snapzy хранит его только в связке ключей macOS."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khóa API imgbb của bạn. Snapzy chỉ lưu nó trong Chuỗi khóa macOS."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 imgbb API 密钥。Snapzy 只把它存放在 macOS 钥匙串中。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 imgbb API 金鑰。Snapzy 只會將其存放在 macOS 鑰匙圈中。"
+          }
+        }
+      }
+    },
+    "cloud-settings.imgbb-credentials-section": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb-API-Schlüssel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb API Key"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clave de API de imgbb"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé d’API imgbb"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מפתח API של imgbb"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb API キー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb API 키"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-ключ imgbb"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khóa API imgbb"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb API 密钥"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb API 金鑰"
+          }
+        }
+      }
+    },
+    "cloud-settings.imgbb-delete-info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb bietet keine Lösch-API. Wenn du einen Upload in Snapzy löschst, öffnet sich die imgbb-Löschseite im Browser. imgbb akzeptiert Bilder bis 32 MB, keine Videos."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb has no delete API. Deleting an upload in Snapzy opens its imgbb delete page in your browser. imgbb accepts images up to 32 MB, not videos."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb no tiene API de eliminación. Al eliminar una subida en Snapzy se abre su página de eliminación de imgbb en el navegador. imgbb acepta imágenes de hasta 32 MB, no videos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb n’a pas d’API de suppression. Supprimer un envoi dans Snapzy ouvre sa page de suppression imgbb dans le navigateur. imgbb accepte les images jusqu’à 32 Mo, pas les vidéos."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ל-imgbb אין API למחיקה. מחיקת העלאה ב-Snapzy פותחת את דף המחיקה שלה ב-imgbb בדפדפן. ‏imgbb מקבל תמונות עד 32MB, לא סרטונים."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb には削除 API がありません。Snapzy でアップロードを削除すると、ブラウザで imgbb の削除ページが開きます。imgbb は 32 MB までの画像に対応し、動画には対応していません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb에는 삭제 API가 없습니다. Snapzy에서 업로드를 삭제하면 브라우저에서 imgbb 삭제 페이지가 열립니다. imgbb는 32MB 이하의 이미지만 지원하며 동영상은 지원하지 않습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "У imgbb нет API для удаления. При удалении загрузки в Snapzy в браузере откроется страница удаления imgbb. imgbb принимает изображения до 32 МБ, но не видео."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb không có API xóa. Khi xóa một tệp đã tải lên trong Snapzy, trang xóa của imgbb sẽ mở trong trình duyệt. imgbb nhận ảnh tối đa 32 MB, không nhận video."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb 没有删除 API。在 Snapzy 中删除上传会在浏览器中打开 imgbb 的删除页面。imgbb 支持最大 32 MB 的图片，不支持视频。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb 沒有刪除 API。在 Snapzy 中刪除上傳會在瀏覽器中開啟 imgbb 的刪除頁面。imgbb 支援最大 32 MB 的圖片，不支援影片。"
+          }
+        }
+      }
+    },
+    "cloud-settings.imgbb-expiration-info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb löscht jedes Bild nach dem gewählten Zeitraum. Bei „Dauerhaft“ bleiben Bilder erhalten, bis du sie löschst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb deletes each image after the selected period. Permanent keeps images until you delete them."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb elimina cada imagen tras el periodo elegido. Con Permanente, las imágenes se conservan hasta que las elimines."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb supprime chaque image après la durée choisie. Avec Permanent, les images restent jusqu’à ce que vous les supprimiez."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‏imgbb מוחק כל תמונה בתום התקופה שנבחרה. ‏'קבוע' שומר תמונות עד שתמחקו אותן."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb は選択した期間が過ぎると画像を削除します。「無期限」を選ぶと、削除するまで画像が残ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb는 선택한 기간이 지나면 이미지를 삭제합니다. 영구를 선택하면 직접 삭제할 때까지 유지됩니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb удаляет каждое изображение по истечении выбранного срока. «Бессрочно» хранит изображения, пока вы их не удалите."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb xóa mỗi ảnh sau khoảng thời gian đã chọn. Vĩnh viễn sẽ giữ ảnh cho đến khi bạn xóa."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb 会在所选时间后删除每张图片。选择“永久”则保留到你手动删除。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb 會在所選時間後刪除每張圖片。選擇「永久」則保留到你手動刪除。"
+          }
+        }
+      }
+    },
+    "cloud-settings.imgbb-get-api-key": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-Schlüssel erhalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get an API key"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtener una clave de API"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtenir une clé d’API"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קבלת מפתח API"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API キーを取得"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 키 받기"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Получить API-ключ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lấy khóa API"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "获取 API 密钥"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取得 API 金鑰"
+          }
+        }
+      }
+    },
+    "cloud-settings.imgbb-public-warning": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb-Links sind öffentlich. Jeder mit dem Link kann das Bild sehen. Lade also nichts Privates hoch."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb links are public. Anyone with the link can view the image, so don't upload anything private."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los enlaces de imgbb son públicos. Cualquiera con el enlace puede ver la imagen, así que no subas nada privado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les liens imgbb sont publics. Toute personne disposant du lien peut voir l’image : n’envoyez rien de privé."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קישורי imgbb הם ציבוריים. כל מי שיש לו את הקישור יכול לראות את התמונה, לכן אל תעלו שום דבר פרטי."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb のリンクは公開されます。リンクを知っている人は誰でも画像を閲覧できるため、非公開にしたいものはアップロードしないでください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb 링크는 공개됩니다. 링크가 있는 누구나 이미지를 볼 수 있으니 비공개 자료는 업로드하지 마세요."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ссылки imgbb публичны. Любой, у кого есть ссылка, может открыть изображение, поэтому не загружайте ничего личного."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liên kết imgbb là công khai. Ai có liên kết cũng xem được ảnh, vì vậy đừng tải lên nội dung riêng tư."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb 链接是公开的。任何拿到链接的人都能查看图片，请勿上传私密内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "imgbb 連結是公開的。任何取得連結的人都能檢視圖片，請勿上傳私密內容。"
           }
         }
       }
