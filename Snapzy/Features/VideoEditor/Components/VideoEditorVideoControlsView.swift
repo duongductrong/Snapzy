@@ -122,7 +122,7 @@ private enum VideoControlsLayoutStyle {
 }
 
 private enum VideoControlsPart: Hashable {
-  case left, center, status, zoom, trailingFrame
+  case status, zoom, trailingFrame
 }
 
 /// The one rule the status badges are shown under: their group has to fit the width the trailing
@@ -224,12 +224,10 @@ struct VideoControlsView: View {
       leftActions
         .disabled(aiChrome.isRunning)
         .fixedSize(horizontal: true, vertical: false)
-        .measureVideoControlsPart(.left)
         .frame(maxWidth: .infinity, alignment: .leading)
 
       centerTransport
         .fixedSize(horizontal: true, vertical: false)
-        .measureVideoControlsPart(.center)
 
       rightActions(showsStatus: showsStatus)
         .frame(maxWidth: .infinity, alignment: .trailing)
