@@ -1,0 +1,1123 @@
+//
+//  SnapzyOnboardingWelcome.swift
+//  Snapzy
+//
+//  Arc-inspired opening beat re-themed to Snapzy's electric cobalt & white brand palette:
+//  a seamless liquid-aurora orb awakens in a midnight-cobalt void and unfolds edge-to-edge into
+//  a living 4x4 fluid cobalt-and-white aurora finished with clean photographic film grain, holds
+//  the crisp white Snapzy mark in a solo beat, pulls the headline into focus word by word with a
+//  trailing period spark, and reveals a magnetic Liquid Glass cobalt-jewel arrow button.
+//
+
+import AppKit
+import CoreGraphics
+import SwiftUI
+
+// MARK: - Brand Palette (Snapzy Electric Cobalt & Luminous White)
+
+/// Derived directly from `Snapzy/SnapzyIcon.icon/icon.json` (`#1138FF` → `#3A5FFF`) paired with
+/// glacial white highlights. Kept local to the welcome canvas because app-wide tokens model dark
+/// glass chrome rather than a full-bleed luminous aurora.
+private struct WelcomeRGB {
+  var r: Double
+  var g: Double
+  var b: Double
+
+  var color: Color {
+    Color(red: r, green: g, blue: b)
+  }
+
+  static func mix(_ a: WelcomeRGB, _ b: WelcomeRGB, _ t: Double) -> WelcomeRGB {
+    WelcomeRGB(
+      r: a.r + (b.r - a.r) * t,
+      g: a.g + (b.g - a.g) * t,
+      b: a.b + (b.b - a.b) * t
+    )
+  }
+}
+
+private enum SnapzyWelcomePalette {
+  /// Luminous silk-white cloud peak (clean, never muddy gray).
+  static let pureLight = WelcomeRGB(r: 0.976, g: 0.986, b: 1.000)
+  /// Glacial sky-white pocket — bright and airy, cooled to Snapzy blue.
+  static let icePocket = WelcomeRGB(r: 0.855, g: 0.916, b: 1.000)
+  /// Crystalline mist blue bridging white clouds into electric cobalt without desaturation.
+  static let mistBlue = WelcomeRGB(r: 0.665, g: 0.795, b: 1.000)
+  /// Vivid luminous sky-azure mid-tone.
+  static let skyAzure = WelcomeRGB(r: 0.355, g: 0.525, b: 1.000)
+  /// Exact bottom stop of Snapzy's app icon (`#395FFF`).
+  static let brandAzure = WelcomeRGB(r: 0.224, g: 0.373, b: 1.000)
+  /// Exact top stop of Snapzy's app icon (`#1138FF`).
+  static let brandCobalt = WelcomeRGB(r: 0.067, g: 0.220, b: 1.000)
+  /// Deep ultramarine velvet for rich depth and effortless white-type contrast.
+  static let deepCobalt = WelcomeRGB(r: 0.039, g: 0.135, b: 0.790)
+
+  /// Midnight-cobalt void for the opening bloom.
+  static let voidDark = Color(red: 0.010, green: 0.022, blue: 0.068)
+
+  /// Atmospheric cobalt shadow tint (keeps white text luminous instead of muddy black).
+  static let cobaltShadow = Color(red: 0.024, green: 0.090, blue: 0.470)
+
+  /// Crisp velvety hover & press cobalt fills for the arrow button (flat, editorial, zero gloss).
+  static let buttonHoverFill = Color(red: 0.043, green: 0.145, blue: 0.785)
+  static let buttonPressFill = Color(red: 0.031, green: 0.110, blue: 0.640)
+}
+
+// MARK: - Main Welcome View
+
+struct SnapzyOnboardingWelcome: View {
+  var onStart: () -> Void
+  var onClose: () -> Void
+
+  @Environment(\.accessibilityReduceMotion) private var envReduceMotion
+
+  @State private var hasStarted = false
+  /// Continuous portal expansion driving the orb → full-bleed aurora transition:
+  /// `0.0` = void, `0.27` = breathing liquid orb, `1.0` = full-bleed window edge-to-edge.
+  @State private var portalProgress: CGFloat = 0
+  @State private var isFlooded = false
+  @State private var markIn = false
+  @State private var markBreathing = false
+  @State private var markOut = false
+  @State private var revealedWordCount = 0
+  @State private var periodRevealed = false
+  @State private var subtitleIn = false
+  @State private var ctaIn = false
+  @State private var isExiting = false
+
+  private var reduceMotion: Bool {
+    SnapzyMotionPreferences.shared.reduceMotion || envReduceMotion
+  }
+
+  private func phaseAnimation(_ base: Animation) -> Animation? {
+    reduceMotion ? nil : base
+  }
+
+  private var headlineTokens: WelcomeHeadlineTokens {
+    WelcomeHeadlineTokens(headline: L10n.Onboarding.welcomeHeadline)
+  }
+
+  var body: some View {
+    ZStack {
+      // Base midnight-cobalt void for the opening bloom
+      SnapzyWelcomePalette.voidDark
+
+      // Soft ambient cobalt aura warming the void around the awakening orb
+      if !isFlooded {
+        WelcomeOrbAmbientAura(progress: portalProgress, drifts: !reduceMotion)
+          .allowsHitTesting(false)
+      }
+
+      // Living 60fps white-and-cobalt aurora + clean photographic film grain
+      ZStack {
+        WelcomeAuroraBackdrop(drifts: !reduceMotion)
+        WelcomeFilmGrainOverlay()
+          .allowsHitTesting(false)
+
+        if !isFlooded {
+          WelcomeOrbSwirlCore(progress: portalProgress, drifts: !reduceMotion)
+            .allowsHitTesting(false)
+        }
+      }
+      .modifier(WelcomeLiquidPortalModifier(
+        progress: portalProgress,
+        isFullyOpen: isFlooded,
+        drifts: !reduceMotion
+      ))
+
+      // Solo crisp white Snapzy mark beat
+      mark
+
+      // Arc focus-pull wave headline + airy subtitle + clean editorial arrow pill button
+      welcomeContent
+        .opacity(isExiting ? 0 : 1)
+        .blur(radius: isExiting && !reduceMotion ? 14 : 0)
+        .scaleEffect(isExiting && !reduceMotion ? 1.055 : 1.0)
+        .animation(phaseAnimation(.easeIn(duration: 0.30)), value: isExiting)
+
+      // Top-right adaptive close button
+      closeButton
+    }
+    .clipShape(Radius.rect(SnapzyRadius.window))
+    .overlay {
+      Radius.rect(SnapzyRadius.window)
+        .strokeBorder(
+          LinearGradient(
+            colors: [
+              Color.white.opacity(isFlooded ? 0.34 : 0.14),
+              Color.white.opacity(isFlooded ? 0.10 : 0.05),
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          ),
+          lineWidth: LiquidGlassTokens.specularLineWidth
+        )
+        .animation(phaseAnimation(.easeInOut(duration: 0.8)), value: isFlooded)
+        .allowsHitTesting(false)
+    }
+    .task {
+      await playTimeline()
+    }
+    .onDisappear {
+      SnapzyOnboardingWelcomeAudio.shared.stopAmbient(fadeDuration: 1.25)
+    }
+  }
+
+  // MARK: - Solo Brand Mark Beat
+
+  private var mark: some View {
+    Image("WelcomeMark")
+      .resizable()
+      .interpolation(.high)
+      .aspectRatio(contentMode: .fit)
+      .frame(width: 84, height: 84)
+      .shadow(color: SnapzyWelcomePalette.cobaltShadow.opacity(0.30), radius: 22, y: 10)
+      .shadow(color: Color.white.opacity(0.28), radius: 10, y: 0)
+      .opacity(markIn && !markOut ? 1 : 0)
+      .blur(radius: reduceMotion ? 0 : (markOut ? 20 : (markIn ? 0 : 22)))
+      .scaleEffect(reduceMotion ? 1.0 : (markOut ? 1.10 : (markBreathing ? 1.035 : (markIn ? 1.0 : 0.86))))
+      .animation(phaseAnimation(.timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.86)), value: markIn)
+      .animation(phaseAnimation(.easeInOut(duration: 1.40)), value: markBreathing)
+      .animation(phaseAnimation(.easeInOut(duration: 0.50)), value: markOut)
+      .allowsHitTesting(false)
+  }
+
+  // MARK: - Hero Content (Arc Focus-Pull Wave + Subtitle + Jewel Arrow Button)
+
+  private var welcomeContent: some View {
+    VStack(spacing: 0) {
+      WelcomeFocusWaveHeadline(
+        tokens: headlineTokens,
+        revealedWordCount: revealedWordCount,
+        periodRevealed: periodRevealed,
+        reduceMotion: reduceMotion
+      )
+
+      Text(L10n.Onboarding.welcomeSubtitle)
+        .font(.system(size: 16.5, weight: .medium))
+        .tracking(-0.15)
+        .foregroundStyle(Color.white.opacity(0.90))
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: 460)
+        .shadow(color: SnapzyWelcomePalette.cobaltShadow.opacity(0.28), radius: 14, y: 3)
+        .padding(.top, 14)
+        .opacity(subtitleIn ? 1 : 0)
+        .blur(radius: reduceMotion ? 0 : (subtitleIn ? 0 : 12))
+        .offset(y: reduceMotion ? 0 : (subtitleIn ? 0 : 7))
+        .animation(phaseAnimation(.timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.72)), value: subtitleIn)
+
+      SnapzyWelcomeArrowButton(
+        isRevealed: ctaIn,
+        reduceMotion: reduceMotion,
+        action: triggerStart
+      )
+      .padding(.top, 30)
+    }
+    .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+  }
+
+  // MARK: - Adaptive Close Button
+
+  private var closeButton: some View {
+    VStack {
+      HStack {
+        Spacer()
+        WelcomeCloseButton(flooded: isFlooded, reduceMotion: reduceMotion, action: onClose)
+      }
+      Spacer()
+    }
+    .padding(.trailing, SnapzyOnboardingMetrics.gutter - 10)
+    .padding(.top, SnapzyOnboardingMetrics.gutter - 10)
+  }
+
+  // MARK: - Choreography Timeline
+
+  @MainActor
+  private func playTimeline() async {
+    guard !hasStarted else { return }
+    hasStarted = true
+
+    let tokenCount = headlineTokens.words.count
+
+    SnapzyOnboardingWelcomeAudio.shared.playWelcomeScore(reducedMotion: reduceMotion)
+
+    if reduceMotion {
+      portalProgress = 1.0
+      isFlooded = true
+      markIn = false
+      markOut = true
+      revealedWordCount = tokenCount
+      periodRevealed = true
+      subtitleIn = true
+      ctaIn = true
+      return
+    }
+
+    // Beat 1: Organic liquid-aurora orb blooms smoothly out of the midnight-cobalt void
+    withAnimation(.timingCurve(0.16, 1.0, 0.3, 1.0, duration: 1.25)) {
+      portalProgress = 0.27
+    }
+
+    // Brief calm hover beat so the liquid orb breathes smoothly
+    guard await sleepSeconds(1.45) else { return }
+
+    // Beat 2: The orb itself seamlessly unfolds and floods outward edge-to-edge into the window
+    withAnimation(.timingCurve(0.32, 0.04, 0.16, 1.0, duration: 1.35)) {
+      portalProgress = 1.0
+    }
+
+    // Beat 3: Solo white Snapzy mark pulls into focus as the flood nears the edges
+    guard await sleepSeconds(0.85) else { return }
+    markIn = true
+
+    guard await sleepSeconds(0.50) else { return }
+    isFlooded = true
+    markBreathing = true
+
+    // Hold calm solo mark beat, then dissolve gently out of focus
+    guard await sleepSeconds(1.15) else { return }
+    markOut = true
+
+    // Beat 4: Arc signature word-by-word optical focus-pull wave
+    guard await sleepSeconds(0.38) else { return }
+    for index in 1...max(tokenCount, 1) {
+      revealedWordCount = index
+      if index < tokenCount {
+        guard await sleepSeconds(0.14) else { return }
+      }
+    }
+
+    // Trailing period lands a crisp beat after the last word
+    if headlineTokens.trailingPunctuation != nil {
+      guard await sleepSeconds(0.18) else { return }
+      periodRevealed = true
+    }
+
+    // Beat 5: Subtitle focuses gently into place
+    guard await sleepSeconds(0.22) else { return }
+    subtitleIn = true
+
+    // Beat 6: Next-gen magnetic cobalt-jewel arrow button materializes
+    guard await sleepSeconds(0.30) else { return }
+    ctaIn = true
+  }
+
+  private func sleepSeconds(_ seconds: Double) async -> Bool {
+    do {
+      try await Task.sleep(for: .seconds(seconds))
+      return !Task.isCancelled
+    } catch {
+      return false
+    }
+  }
+
+  private func triggerStart() {
+    guard ctaIn, !isExiting else { return }
+    SnapzyOnboardingWelcomeAudio.shared.playConfirmChime()
+    if reduceMotion {
+      onStart()
+      return
+    }
+    isExiting = true
+    Task { @MainActor in
+      try? await Task.sleep(for: .milliseconds(240))
+      onStart()
+    }
+  }
+}
+
+// MARK: - Seamless Liquid Portal (Organic Morphing Orb → Full-Bleed Aurora)
+
+/// Reveals the living aurora through an organic, softly-blurred 3-lobe morphing silhouette
+/// (recreating Arc's asymmetric liquid cloud) that smoothly relaxes and expands past all four
+/// corners into the full-bleed window.
+private struct WelcomeLiquidPortalModifier: ViewModifier, Animatable {
+  var progress: CGFloat
+  let isFullyOpen: Bool
+  let drifts: Bool
+
+  var animatableData: CGFloat {
+    get { progress }
+    set { progress = newValue }
+  }
+
+  func body(content: Content) -> some View {
+    if isFullyOpen || progress >= 0.999 {
+      content
+    } else {
+      let clamped = max(0, min(1, progress))
+      let organicAmount = max(0, 1 - max(0, (clamped - 0.27) / 0.45))
+      let featherBlur = 38 * organicAmount
+
+      content.mask {
+        Group {
+          if drifts {
+            TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { context in
+              portalCanvas(at: context.date.timeIntervalSinceReferenceDate)
+            }
+          } else {
+            portalCanvas(at: 0)
+          }
+        }
+        .blur(radius: featherBlur)
+      }
+    }
+  }
+
+  private func portalCanvas(at time: TimeInterval) -> some View {
+    Canvas { context, size in
+      let clamped = max(0, min(1, progress))
+      guard clamped > 0.001 else { return }
+
+      let center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+      let maxDiagonal = hypot(size.width, size.height) * 0.65
+
+      // Gentle organic emergence up to 0.27, then sweeping liquid expansion across the whole window
+      let orbRadius: CGFloat = 136
+      let radius: CGFloat
+      if clamped <= 0.27 {
+        let localT = clamped / 0.27
+        radius = orbRadius * localT
+      } else {
+        let floodT = (clamped - 0.27) / 0.73
+        let eased = floodT * floodT * (3 - 2 * floodT)
+        radius = orbRadius + (maxDiagonal * 1.45 - orbRadius) * eased
+      }
+
+      let organicAmount = max(0, 1 - max(0, (clamped - 0.27) / 0.48))
+      let path = Self.organicBlobPath(
+        center: center,
+        radius: radius,
+        organicAmount: organicAmount,
+        time: drifts ? time : 0.8
+      )
+
+      context.fill(path, with: .color(.white))
+
+      // Smooth full-canvas seal as progress finishes so all four corners reach pure 1.0 opacity
+      if clamped > 0.72 {
+        let sealOpacity = Double((clamped - 0.72) / 0.28)
+        context.fill(
+          Path(CGRect(origin: .zero, size: size)),
+          with: .color(.white.opacity(sealOpacity))
+        )
+      }
+    }
+  }
+
+  /// Smooth closed spline perturbed by low-frequency polar harmonics — produces Arc's organic
+  /// softly-triangular liquid cloud silhouette instead of a rigid circle.
+  private static func organicBlobPath(
+    center: CGPoint,
+    radius: CGFloat,
+    organicAmount: CGFloat,
+    time: TimeInterval
+  ) -> Path {
+    let steps = 24
+    let t = Double(time)
+    var pts: [CGPoint] = []
+    pts.reserveCapacity(steps)
+
+    for i in 0..<steps {
+      let theta = (Double(i) / Double(steps)) * (.pi * 2.0)
+      let wave =
+        0.17 * sin(3.0 * theta + t * 0.90)
+        + 0.11 * cos(2.0 * theta - t * 0.68 + 0.9)
+        + 0.05 * sin(5.0 * theta + t * 1.25 + 2.1)
+      let r = radius * (1.0 + CGFloat(wave) * organicAmount)
+      pts.append(CGPoint(
+        x: center.x + CGFloat(cos(theta)) * r,
+        y: center.y + CGFloat(sin(theta)) * r
+      ))
+    }
+
+    var path = Path()
+    guard let last = pts.last, let first = pts.first else { return path }
+    let startMid = CGPoint(x: (last.x + first.x) * 0.5, y: (last.y + first.y) * 0.5)
+    path.move(to: startMid)
+
+    for i in 0..<steps {
+      let current = pts[i]
+      let next = pts[(i + 1) % steps]
+      let mid = CGPoint(x: (current.x + next.x) * 0.5, y: (current.y + next.y) * 0.5)
+      path.addQuadCurve(to: mid, control: current)
+    }
+    path.closeSubpath()
+    return path
+  }
+}
+
+/// Whisper-soft deep cobalt atmospheric veil behind the organic orb that recedes during flood.
+private struct WelcomeOrbAmbientAura: View, Animatable {
+  var progress: CGFloat
+  let drifts: Bool
+
+  var animatableData: CGFloat {
+    get { progress }
+    set { progress = newValue }
+  }
+
+  var body: some View {
+    let clamped = max(0, min(1, progress))
+    let fadeIn = min(1.0, clamped / 0.24)
+    let fadeOut = 1.0 - max(0, min(1, (clamped - 0.34) / 0.42))
+    let opacity = Double(fadeIn * fadeOut)
+
+    Circle()
+      .fill(
+        RadialGradient(
+          stops: [
+            .init(color: SnapzyWelcomePalette.brandCobalt.color.opacity(0.28 * opacity), location: 0.0),
+            .init(color: SnapzyWelcomePalette.deepCobalt.color.opacity(0.10 * opacity), location: 0.52),
+            .init(color: .clear, location: 1.0),
+          ],
+          center: .center,
+          startRadius: 0,
+          endRadius: 270
+        )
+      )
+      .frame(width: 540, height: 540)
+      .scaleEffect(0.88 + clamped * 1.2)
+  }
+}
+
+/// High-contrast swirling white-and-electric-cobalt fluid inside the opening organic orb, giving
+/// the blob bold sweeping bands of pure white and Snapzy cobalt (no pinpoint center dot). Smoothly
+/// dissolves into the full-window 4x4 aurora as the portal unfolds.
+private struct WelcomeOrbSwirlCore: View, Animatable {
+  var progress: CGFloat
+  let drifts: Bool
+
+  var animatableData: CGFloat {
+    get { progress }
+    set { progress = newValue }
+  }
+
+  var body: some View {
+    let clamped = max(0, min(1, progress))
+    let dissolve = 1.0 - max(0, min(1, (clamped - 0.28) / 0.36))
+    let expansionScale = 1.0 + max(0, clamped - 0.27) * 2.2
+
+    Group {
+      if drifts {
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { context in
+          swirlField(at: context.date.timeIntervalSinceReferenceDate)
+        }
+      } else {
+        swirlField(at: 0.8)
+      }
+    }
+    .frame(width: 440, height: 440)
+    .mask {
+      Circle()
+        .fill(
+          RadialGradient(
+            stops: [
+              .init(color: .white, location: 0.0),
+              .init(color: .white, location: 0.62),
+              .init(color: .clear, location: 1.0),
+            ],
+            center: .center,
+            startRadius: 0,
+            endRadius: 220
+          )
+        )
+    }
+    .scaleEffect(expansionScale)
+    .opacity(Double(dissolve))
+  }
+
+  @ViewBuilder
+  private func swirlField(at time: TimeInterval) -> some View {
+    if #available(macOS 15.0, *) {
+      let t = Float(time)
+      let cx = 0.5 + sin(t * 0.72) * 0.14
+      let cy = 0.5 + cos(t * 0.64 + 0.8) * 0.14
+      MeshGradient(
+        width: 3,
+        height: 3,
+        points: [
+          [0.0, 0.0], [0.5 + sin(t * 0.55) * 0.12, 0.0], [1.0, 0.0],
+          [0.0, 0.5 + cos(t * 0.48) * 0.12], [cx, cy], [1.0, 0.5 + sin(t * 0.52 + 1.7) * 0.12],
+          [0.0, 1.0], [0.5 + cos(t * 0.60 + 2.1) * 0.12, 1.0], [1.0, 1.0],
+        ],
+        colors: [
+          SnapzyWelcomePalette.pureLight.color,
+          SnapzyWelcomePalette.icePocket.color,
+          SnapzyWelcomePalette.brandCobalt.color,
+          SnapzyWelcomePalette.brandCobalt.color,
+          SnapzyWelcomePalette.brandAzure.color,
+          SnapzyWelcomePalette.pureLight.color,
+          SnapzyWelcomePalette.deepCobalt.color,
+          SnapzyWelcomePalette.icePocket.color,
+          SnapzyWelcomePalette.pureLight.color,
+        ],
+        smoothsColors: true
+      )
+      .rotationEffect(.degrees(time * 16))
+    } else {
+      AngularGradient(
+        colors: [
+          SnapzyWelcomePalette.pureLight.color,
+          SnapzyWelcomePalette.brandCobalt.color,
+          SnapzyWelcomePalette.icePocket.color,
+          SnapzyWelcomePalette.deepCobalt.color,
+          SnapzyWelcomePalette.pureLight.color,
+        ],
+        center: .center,
+        angle: .degrees(time * 18)
+      )
+      .blur(radius: 36)
+    }
+  }
+}
+
+// MARK: - Living 4x4 Fluid Aurora Backdrop (Zero Seams)
+
+/// Pure 4x4 MeshGradient on macOS 15+ (4 orbiting interior vertices + 8 gliding edge vertices +
+/// 4 pinned corners) with zero overlaid shapes or clipped ellipses — guaranteed streak-free.
+private struct WelcomeAuroraBackdrop: View {
+  var drifts: Bool
+
+  var body: some View {
+    if #available(macOS 15.0, *) {
+      WelcomeMesh4x4Backdrop(drifts: drifts)
+    } else {
+      WelcomeLegacyAuroraBackdrop(drifts: drifts)
+    }
+  }
+}
+
+@available(macOS 15.0, *)
+private struct WelcomeMesh4x4Backdrop: View {
+  var drifts: Bool
+
+  // Ordered Snapzy electric-cobalt → glacial-white ramp for coherent traveling silk ribbons.
+  private static let paletteRamp: [WelcomeRGB] = [
+    SnapzyWelcomePalette.deepCobalt,
+    SnapzyWelcomePalette.brandCobalt,
+    SnapzyWelcomePalette.brandAzure,
+    SnapzyWelcomePalette.skyAzure,
+    SnapzyWelcomePalette.mistBlue,
+    SnapzyWelcomePalette.icePocket,
+    SnapzyWelcomePalette.pureLight,
+  ]
+
+  private static let bases: [SIMD2<Float>] = [
+    [0.00, 0.00], [0.33, 0.00], [0.67, 0.00], [1.00, 0.00],
+    [0.00, 0.33], [0.33, 0.33], [0.67, 0.33], [1.00, 0.33],
+    [0.00, 0.67], [0.33, 0.67], [0.67, 0.67], [1.00, 0.67],
+    [0.00, 1.00], [0.33, 1.00], [0.67, 1.00], [1.00, 1.00],
+  ]
+
+  private static let driftAxes: [SIMD2<Float>] = [
+    [0, 0], [1, 0], [1, 0], [0, 0],
+    [0, 1], [1, 1], [1, 1], [0, 1],
+    [0, 1], [1, 1], [1, 1], [0, 1],
+    [0, 0], [1, 0], [1, 0], [0, 0],
+  ]
+
+  private static let pointClocks: [(speed: Float, phase: Float, sway: Float)] = [
+    (0.00, 0.0, 0.00), (0.48, 0.8, 0.15), (0.44, 2.3, 0.15), (0.00, 0.0, 0.00),
+    (0.46, 1.5, 0.15), (0.58, 0.4, 0.19), (0.54, 2.9, 0.19), (0.48, 4.1, 0.15),
+    (0.44, 3.6, 0.15), (0.52, 5.0, 0.19), (0.60, 1.2, 0.19), (0.46, 2.4, 0.15),
+    (0.00, 0.0, 0.00), (0.50, 4.7, 0.15), (0.42, 0.9, 0.15), (0.00, 0.0, 0.00),
+  ]
+
+  static func points(at time: TimeInterval) -> [SIMD2<Float>] {
+    let t = Float(time)
+    return zip(zip(bases, driftAxes), pointClocks).map { pair, clock in
+      let (base, axes) = pair
+      let dx = sin(t * clock.speed + clock.phase) * clock.sway * axes.x
+      let dy = cos(t * clock.speed * 0.83 + clock.phase * 1.31) * clock.sway * axes.y
+      return [
+        max(0, min(1, base.x + dx)),
+        max(0, min(1, base.y + dy)),
+      ]
+    }
+  }
+
+  /// Evaluates a coherent rotating two-wave silk field across the live vertex positions so bold
+  /// rivers of pure white and Snapzy electric cobalt visibly glide across the window like Arc.
+  static func colors(at time: TimeInterval, points: [SIMD2<Float>]) -> [Color] {
+    let t = time
+    let theta1 = t * 0.34
+    let cos1 = cos(theta1)
+    let sin1 = sin(theta1)
+
+    let theta2 = -t * 0.23 + 1.35
+    let cos2 = cos(theta2)
+    let sin2 = sin(theta2)
+
+    var result: [Color] = []
+    result.reserveCapacity(points.count)
+
+    for pt in points {
+      let dx = Double(pt.x) - 0.5
+      let dy = Double(pt.y) - 0.5
+
+      // Broad primary silk band rotating + traveling smoothly across the canvas
+      let u = dx * cos1 + dy * sin1
+      let wave1 = sin(u * 3.45 + t * 0.68)
+
+      // Counter-drifting secondary swell producing organic asymmetric cloud folds
+      let v = dx * cos2 + dy * sin2
+      let wave2 = cos(v * 2.65 - t * 0.48 + 0.9)
+
+      // Keep the center band slightly anchored in rich electric cobalt so white welcome typography
+      // remains crisp even as bright silk-white clouds sweep continuously across the corners.
+      let distSq = dx * dx + dy * dy
+      let centerCobaltBias = 0.24 * exp(-distSq * 4.6)
+
+      let raw = 0.52 + 0.38 * wave1 + 0.24 * wave2 - centerCobaltBias
+      let field = max(0.0, min(1.0, raw))
+      // Gentle S-curve lifts bright whites and deepens cobalt rivers for unmistakable motion
+      let shaped = field * field * (3.0 - 2.0 * field)
+      result.append(sampleRamp(at: shaped))
+    }
+    return result
+  }
+
+  private static func sampleRamp(at t: Double) -> Color {
+    let clamped = max(0.0, min(1.0, t))
+    let scaled = clamped * Double(paletteRamp.count - 1)
+    let index = min(Int(scaled), paletteRamp.count - 2)
+    let frac = scaled - Double(index)
+    return WelcomeRGB.mix(paletteRamp[index], paletteRamp[index + 1], frac).color
+  }
+
+  var body: some View {
+    if drifts {
+      TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { context in
+        mesh(at: context.date.timeIntervalSinceReferenceDate)
+      }
+    } else {
+      mesh(at: 2.1)
+    }
+  }
+
+  private func mesh(at time: TimeInterval) -> some View {
+    let livePoints = Self.points(at: time)
+    return MeshGradient(
+      width: 4,
+      height: 4,
+      points: livePoints,
+      colors: Self.colors(at: time, points: livePoints),
+      smoothsColors: true
+    )
+  }
+}
+
+/// Pre-MeshGradient fallback for macOS 13–14 with matching Snapzy electric-cobalt & white clouds.
+private struct WelcomeLegacyAuroraBackdrop: View {
+  var drifts: Bool
+
+  var body: some View {
+    GeometryReader { geo in
+      ZStack {
+        LinearGradient(
+          colors: [
+            SnapzyWelcomePalette.brandCobalt.color,
+            SnapzyWelcomePalette.brandAzure.color,
+            SnapzyWelcomePalette.deepCobalt.color,
+          ],
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+
+        if drifts {
+          TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { context in
+            clouds(at: context.date.timeIntervalSinceReferenceDate, size: geo.size)
+          }
+        } else {
+          clouds(at: 2.1, size: geo.size)
+        }
+      }
+      .frame(width: geo.size.width, height: geo.size.height)
+      .clipped()
+    }
+  }
+
+  private func clouds(at time: TimeInterval, size: CGSize) -> some View {
+    ZStack {
+      cloud(
+        SnapzyWelcomePalette.pureLight, 740,
+        anchor: CGPoint(x: 0.16, y: 0.18),
+        dx: sin(time * 0.46) * 240, dy: cos(time * 0.38 + 1.1) * 180, size: size
+      )
+      cloud(
+        SnapzyWelcomePalette.icePocket, 680,
+        anchor: CGPoint(x: 0.84, y: 0.82),
+        dx: cos(time * 0.42 + 2.4) * 250, dy: sin(time * 0.44 + 0.6) * 190, size: size
+      )
+      cloud(
+        SnapzyWelcomePalette.brandCobalt, 760,
+        anchor: CGPoint(x: 0.52, y: 0.50),
+        dx: sin(time * 0.36 + 3.2) * 160, dy: cos(time * 0.32 + 2.0) * 130, size: size
+      )
+      cloud(
+        SnapzyWelcomePalette.mistBlue, 620,
+        anchor: CGPoint(x: 0.82, y: 0.22),
+        dx: sin(time * 0.50 + 4.4) * 220, dy: cos(time * 0.40 + 1.8) * 160, size: size
+      )
+      cloud(
+        SnapzyWelcomePalette.skyAzure, 640,
+        anchor: CGPoint(x: 0.22, y: 0.80),
+        dx: cos(time * 0.44 + 0.9) * 220, dy: sin(time * 0.36 + 3.7) * 170, size: size
+      )
+    }
+  }
+
+  private func cloud(
+    _ rgb: WelcomeRGB,
+    _ diameter: CGFloat,
+    anchor: CGPoint,
+    dx: CGFloat,
+    dy: CGFloat,
+    size: CGSize
+  ) -> some View {
+    Circle()
+      .fill(
+        RadialGradient(
+          stops: [
+            .init(color: rgb.color.opacity(0.92), location: 0),
+            .init(color: rgb.color.opacity(0.45), location: 0.46),
+            .init(color: .clear, location: 1),
+          ],
+          center: .center,
+          startRadius: 0,
+          endRadius: diameter / 2
+        )
+      )
+      .frame(width: diameter, height: diameter)
+      .position(x: size.width * anchor.x + dx, y: size.height * anchor.y + dy)
+  }
+}
+
+// MARK: - Tactile Clean Photographic Film Grain
+
+/// Editorial monochromatic micro-grain generated once at init with a clean bell-curve distribution
+/// around neutral mid-gray (128 ± 72). Composited in `.softLight`, which naturally attenuates near
+/// pure white so bright clouds stay spotless while electric-cobalt gradients gain a velvety,
+/// tactile print texture with zero banding or dirty noise speckles.
+private struct WelcomeFilmGrainOverlay: View {
+  private static let tileImage: CGImage? = makeGrainTile(size: 256)
+
+  var body: some View {
+    if let cgImage = Self.tileImage {
+      Image(decorative: cgImage, scale: 1.5)
+        .resizable(resizingMode: .tile)
+        .blendMode(.softLight)
+        .opacity(0.56)
+    }
+  }
+
+  private static func makeGrainTile(size: Int) -> CGImage? {
+    var pixels = [UInt8](repeating: 128, count: size * size)
+    var state: UInt64 = 0x5A92_C0B4_17E3_9D11
+
+    @inline(__always)
+    func nextByte() -> Int {
+      state &+= 0x9E37_79B9_7F4A_7C15
+      var z = state
+      z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+      z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+      z = z ^ (z >> 31)
+      return Int(z & 0xFF)
+    }
+
+    // Triangular/Gaussian sum avoids harsh black/white outlier dust while staying visibly crisp
+    for i in 0..<pixels.count {
+      let sum = nextByte() + nextByte() + nextByte() // 0...765, mean 382.5
+      let centered = (sum - 382) * 86 / 382          // ±86 clean bell curve
+      pixels[i] = UInt8(clamping: 128 + centered)
+    }
+
+    let data = Data(pixels)
+    guard let provider = CGDataProvider(data: data as CFData) else { return nil }
+    return CGImage(
+      width: size,
+      height: size,
+      bitsPerComponent: 8,
+      bitsPerPixel: 8,
+      bytesPerRow: size,
+      space: CGColorSpaceCreateDeviceGray(),
+      bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
+      provider: provider,
+      decode: nil,
+      shouldInterpolate: false,
+      intent: .defaultIntent
+    )
+  }
+}
+
+// MARK: - Arc Signature Word-by-Word Focus-Pull Headline
+
+private struct WelcomeHeadlineTokens {
+  let words: [String]
+  let trailingPunctuation: String?
+
+  init(headline: String) {
+    let trimmed = headline.trimmingCharacters(in: .whitespacesAndNewlines)
+    let punctuationChars: Set<Character> = [".", "。", "!"]
+
+    let body: String
+    let trailing: String?
+    if let last = trimmed.last, punctuationChars.contains(last), trimmed.count > 1 {
+      body = String(trimmed.dropLast())
+      trailing = String(last)
+    } else {
+      body = trimmed
+      trailing = nil
+    }
+
+    let splitWords = body
+      .split(whereSeparator: \.isWhitespace)
+      .map(String.init)
+    self.words = splitWords.isEmpty ? [trimmed] : splitWords
+    self.trailingPunctuation = trailing
+  }
+}
+
+/// Pulls each word into optical focus left-to-right with crisp, natural inter-word spacing and a
+/// subtle calligraphic settle, then lands the trailing period a crisp beat later.
+private struct WelcomeFocusWaveHeadline: View {
+  let tokens: WelcomeHeadlineTokens
+  let revealedWordCount: Int
+  let periodRevealed: Bool
+  let reduceMotion: Bool
+
+  var body: some View {
+    HStack(alignment: .firstTextBaseline, spacing: 0) {
+      ForEach(Array(tokens.words.enumerated()), id: \.offset) { index, word in
+        let isShown = index < revealedWordCount
+
+        if index > 0 {
+          // Explicit optical word gap so tight negative letter-tracking never crams words together
+          Spacer()
+            .frame(width: 15)
+        }
+
+        Text(word)
+          .font(.system(size: 60, weight: .bold))
+          .tracking(-1.4)
+          .foregroundStyle(Color.white)
+          .opacity(isShown ? 1 : 0)
+          .blur(radius: reduceMotion ? 0 : (isShown ? 0 : 22))
+          .scaleEffect(reduceMotion ? 1.0 : (isShown ? 1.0 : 1.07))
+          .offset(y: reduceMotion ? 0 : (isShown ? 0 : 7))
+          .rotationEffect(.degrees(reduceMotion ? 0 : (isShown ? 0 : -1.5)))
+          .animation(
+            reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.78),
+            value: isShown
+          )
+      }
+
+      if let punctuation = tokens.trailingPunctuation {
+        Text(punctuation)
+          .font(.system(size: 60, weight: .bold))
+          .tracking(-1.4)
+          .foregroundStyle(Color.white)
+          .opacity(periodRevealed ? 1 : 0)
+          .blur(radius: reduceMotion ? 0 : (periodRevealed ? 0 : 14))
+          .scaleEffect(reduceMotion ? 1.0 : (periodRevealed ? 1.0 : 1.42))
+          .animation(
+            reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.56),
+            value: periodRevealed
+          )
+      }
+    }
+    .multilineTextAlignment(.center)
+    .shadow(color: SnapzyWelcomePalette.cobaltShadow.opacity(0.26), radius: 22, y: 5)
+    .shadow(color: SnapzyWelcomePalette.cobaltShadow.opacity(0.12), radius: 6, y: 1)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(L10n.Onboarding.welcomeHeadline)
+    .accessibilityAddTraits(.isHeader)
+  }
+}
+
+// MARK: - Editorial Arrow Button
+
+/// Clean, restrained macOS arrow pill matching Snapzy's white-and-cobalt identity:
+/// - Rest: pure solid white pill with Snapzy cobalt arrow and a quiet grounded shadow.
+/// - Hover: crisp inversion to deep velvety cobalt with pure white arrow gliding forward,
+///   subtle elevation, and zero glossy domes, spotlights, or outer neon halos.
+/// - Press: tight physical spring detent.
+private struct SnapzyWelcomeArrowButton: View {
+  let isRevealed: Bool
+  let reduceMotion: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Color.clear
+        .frame(width: 66, height: 38)
+    }
+    .buttonStyle(SnapzyWelcomeArrowPillStyle(reduceMotion: reduceMotion))
+    .accessibilityLabel(Text(L10n.Onboarding.letsDoIt))
+    .opacity(isRevealed ? 1 : 0)
+    .blur(radius: reduceMotion ? 0 : (isRevealed ? 0 : 14))
+    .scaleEffect(reduceMotion ? 1.0 : (isRevealed ? 1.0 : 0.88))
+    .offset(y: reduceMotion ? 0 : (isRevealed ? 0 : 8))
+    .animation(
+      reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.70),
+      value: isRevealed
+    )
+    .allowsHitTesting(isRevealed)
+  }
+}
+
+private struct SnapzyWelcomeArrowPillStyle: ButtonStyle {
+  let reduceMotion: Bool
+
+  func makeBody(configuration: Configuration) -> some View {
+    SnapzyWelcomeArrowPillSurface(
+      configuration: configuration,
+      reduceMotion: reduceMotion
+    )
+  }
+}
+
+private struct SnapzyWelcomeArrowPillSurface: View {
+  let configuration: ButtonStyleConfiguration
+  let reduceMotion: Bool
+
+  @State private var isHovered = false
+  @State private var didPushCursor = false
+
+  private static let buttonSize = CGSize(width: 66, height: 38)
+  private let shape = Capsule(style: .continuous)
+
+  private var isPressed: Bool {
+    configuration.isPressed
+  }
+
+  private var isActive: Bool {
+    isHovered || isPressed
+  }
+
+  private var fillColor: Color {
+    if isPressed {
+      return SnapzyWelcomePalette.buttonPressFill
+    }
+    return isHovered ? SnapzyWelcomePalette.buttonHoverFill : Color.white
+  }
+
+  private var arrowColor: Color {
+    isActive ? Color.white : SnapzyWelcomePalette.brandCobalt.color
+  }
+
+  private var scale: CGFloat {
+    guard !reduceMotion else { return 1.0 }
+    if isPressed { return 0.955 }
+    return isHovered ? 1.04 : 1.0
+  }
+
+  private var arrowOffset: CGFloat {
+    guard !reduceMotion else { return 0 }
+    if isPressed { return 4.0 }
+    return isHovered ? 2.5 : 0
+  }
+
+  var body: some View {
+    ZStack {
+      shape
+        .fill(fillColor)
+
+      Image(systemName: "arrow.right")
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundStyle(arrowColor)
+        .offset(x: arrowOffset)
+    }
+    .frame(width: Self.buttonSize.width, height: Self.buttonSize.height)
+    .overlay {
+      shape.strokeBorder(
+        isActive ? Color.white.opacity(0.14) : Color.black.opacity(0.06),
+        lineWidth: 0.5
+      )
+      .allowsHitTesting(false)
+    }
+    .contentShape(shape)
+    .shadow(
+      color: SnapzyWelcomePalette.cobaltShadow.opacity(isPressed ? 0.22 : (isHovered ? 0.30 : 0.18)),
+      radius: isPressed ? 5 : (isHovered ? 14 : 10),
+      y: isPressed ? 2 : (isHovered ? 6 : 4)
+    )
+    .scaleEffect(scale)
+    .animation(
+      reduceMotion ? .easeInOut(duration: 0.14) : .spring(response: 0.26, dampingFraction: 0.78),
+      value: isHovered
+    )
+    .animation(
+      reduceMotion ? .easeInOut(duration: 0.08) : .spring(response: 0.16, dampingFraction: 0.84),
+      value: isPressed
+    )
+    .onHover { hovering in
+      if hovering && !didPushCursor {
+        NSCursor.pointingHand.push()
+        didPushCursor = true
+      } else if !hovering && didPushCursor {
+        NSCursor.pop()
+        didPushCursor = false
+      }
+      if hovering && !isHovered {
+        SnapzyOnboardingWelcomeAudio.shared.playHoverTick()
+      }
+      isHovered = hovering
+    }
+    .onDisappear {
+      if didPushCursor {
+        NSCursor.pop()
+        didPushCursor = false
+      }
+    }
+  }
+}
+
+// MARK: - Adaptive Close Button
+
+/// Uses a subtle frosted deep-cobalt backing once the aurora floods in, so the close glyph stays
+/// crisp and AA-legible even when an ice-white cloud glides behind the top-right corner.
+private struct WelcomeCloseButton: View {
+  let flooded: Bool
+  let reduceMotion: Bool
+  let action: () -> Void
+
+  @State private var isHovered = false
+
+  private var shape: RoundedRectangle {
+    Radius.controlRect(forHeight: ControlMetrics.toolbarButton)
+  }
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: "xmark")
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(isHovered ? Color.white : Color.white.opacity(flooded ? 0.88 : 0.64))
+        .frame(width: ControlMetrics.toolbarButton, height: ControlMetrics.toolbarButton)
+        .background(
+          shape
+            .fill(
+              flooded
+                ? SnapzyWelcomePalette.cobaltShadow.opacity(isHovered ? 0.44 : 0.22)
+                : (isHovered ? SnapzyGlassInk.fillHover : SnapzyGlassInk.fillRaised)
+            )
+            .overlay(
+              shape.strokeBorder(
+                Color.white.opacity(isHovered ? 0.40 : (flooded ? 0.26 : 0.12)),
+                lineWidth: LiquidGlassTokens.specularLineWidth
+              )
+            )
+        )
+        .contentShape(shape)
+    }
+    .buttonStyle(.plain)
+    .scaleEffect(!reduceMotion && isHovered ? 1.06 : 1.0)
+    .animation(reduceMotion ? nil : SnapzyMotionPreferences.shared.spec(.hover).animation, value: isHovered)
+    .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: flooded)
+    .onHover { hovering in
+      isHovered = hovering
+    }
+    .accessibilityLabel(L10n.Onboarding.chromeCloseAccessibility)
+  }
+}
