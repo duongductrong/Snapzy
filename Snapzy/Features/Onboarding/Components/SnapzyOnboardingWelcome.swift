@@ -135,17 +135,17 @@ struct SnapzyOnboardingWelcome: View {
       // Arc focus-pull wave headline + airy subtitle + clean editorial arrow pill button
       welcomeContent
         .opacity(isExiting ? 0 : 1)
-        .blur(radius: isExiting && !reduceMotion ? 16 : 0)
-        .scaleEffect(isExiting && !reduceMotion ? 1.075 : 1.0)
+        .blur(radius: isExiting && !reduceMotion ? 18 : 0)
+        .scaleEffect(isExiting && !reduceMotion ? 1.09 : 1.0)
         .animation(
-          phaseAnimation(.timingCurve(0.22, 1.0, 0.36, 1.0, duration: 0.34)),
+          phaseAnimation(.timingCurve(0.22, 0.61, 0.36, 1.0, duration: 0.46)),
           value: isExiting
         )
 
       // Top-right adaptive close button
       closeButton
         .opacity(isExiting ? 0 : 1)
-        .animation(phaseAnimation(.easeOut(duration: 0.20)), value: isExiting)
+        .animation(phaseAnimation(.easeOut(duration: 0.30)), value: isExiting)
     }
     .clipShape(Radius.rect(SnapzyRadius.window))
     .overlay {
@@ -163,7 +163,7 @@ struct SnapzyOnboardingWelcome: View {
         )
         .opacity(isExiting ? 0 : 1)
         .animation(phaseAnimation(.easeInOut(duration: 0.8)), value: isFlooded)
-        .animation(phaseAnimation(.easeOut(duration: 0.30)), value: isExiting)
+        .animation(phaseAnimation(.easeOut(duration: 0.45)), value: isExiting)
         .allowsHitTesting(false)
     }
     .modifier(WelcomeExitApertureModifier(
@@ -334,37 +334,43 @@ struct SnapzyOnboardingWelcome: View {
     guard (ctaIn || allowEarly), !isExiting else { return }
     isExiting = true
     SnapzyOnboardingWelcomeAudio.shared.playConfirmChime()
-    onBeginTransition()
 
     if reduceMotion {
-      withAnimation(.easeOut(duration: 0.20)) {
+      onBeginTransition()
+      withAnimation(.easeOut(duration: 0.24)) {
         exitApertureProgress = 1.0
       }
       Task { @MainActor in
-        try? await Task.sleep(for: .milliseconds(210))
+        try? await Task.sleep(for: .milliseconds(250))
         onCompleteTransition()
       }
       return
     }
 
-    // Symmetrical liquid aperture opens directly from the arrow pill, parting the aurora smoothly
-    // while Step 1 rises into focus beneath it.
+    // 1. Pre-mount Step 1 silently behind the still-opaque aurora while the hero text focuses out,
+    //    so layout & glass sampling finish offscreen with zero frame drop when the aperture opens.
     Task { @MainActor in
-      try? await Task.sleep(for: .milliseconds(35))
-      withAnimation(.timingCurve(0.28, 0.02, 0.16, 1.0, duration: 0.78)) {
+      try? await Task.sleep(for: .milliseconds(60))
+      onBeginTransition()
+
+      // 2. Open the ultra-soft GPU radial aperture gracefully from the arrow pill over 1.18s
+      //    so the user clearly watches the cobalt aurora part smoothly into the Liquid Glass workspace.
+      try? await Task.sleep(for: .milliseconds(160))
+      withAnimation(.timingCurve(0.32, 0.0, 0.18, 1.0, duration: 1.18)) {
         exitApertureProgress = 1.0
       }
-      try? await Task.sleep(for: .milliseconds(800))
+
+      try? await Task.sleep(for: .milliseconds(1220))
       onCompleteTransition()
     }
   }
 }
 
-// MARK: - Symmetrical Liquid Exit Aperture (Welcome → Onboarding Steps)
+// MARK: - 120fps Hardware-Accelerated Soft Iris Aperture (Welcome → Onboarding Steps)
 
-/// Parts the living aurora from the arrow pill outward through a soft, organic 3-lobe aperture
-/// (mirroring the opening orb's geometry) so the Liquid Glass onboarding workspace emerges smoothly
-/// from within the aurora rather than cutting between two disconnected screens.
+/// Parts the living aurora from the arrow pill outward using a single-pass hardware RadialGradient
+/// alpha mask (zero offscreen `.blur` passes and zero structural `if/else` swaps), guaranteeing
+/// silky 60/120fps motion as the Liquid Glass onboarding workspace rises smoothly from beneath.
 private struct WelcomeExitApertureModifier: ViewModifier, Animatable {
   var progress: CGFloat
   let reduceMotion: Bool
@@ -375,48 +381,52 @@ private struct WelcomeExitApertureModifier: ViewModifier, Animatable {
   }
 
   func body(content: Content) -> some View {
-    if progress <= 0.0005 {
-      content
-    } else if reduceMotion {
-      content.opacity(Double(max(0, 1 - progress)))
-    } else {
-      let clamped = max(0, min(1, progress))
-      // Gentle forward depth drift as you pass through the aurora threshold
-      let scale = 1.0 + clamped * 0.045
-      // Silky overall dissolve over the second half ensures corners evaporate seamlessly
-      let outerFade = 1.0 - max(0, (clamped - 0.42) / 0.58)
-      let outerOpacity = Double(outerFade * outerFade)
+    let clamped = max(0, min(1, progress))
+    let scale: CGFloat = reduceMotion ? 1.0 : (1.0 + clamped * 0.055)
+    let outerFade: CGFloat = reduceMotion
+      ? (1.0 - clamped)
+      : (1.0 - max(0, (clamped - 0.56) / 0.44))
+    let outerOpacity = Double(outerFade * outerFade)
 
-      content
-        .scaleEffect(scale)
-        .opacity(outerOpacity)
-        .mask {
-          Canvas { context, size in
-            let fullRect = CGRect(origin: .zero, size: size)
-            // Originate the opening right at the arrow button's visual center
-            let origin = CGPoint(x: size.width * 0.5, y: size.height * 0.575)
-            let maxRadius = hypot(size.width, size.height) * 0.88
+    content
+      .scaleEffect(scale)
+      .opacity(outerOpacity)
+      .mask {
+        if reduceMotion {
+          Color.white
+        } else {
+          GeometryReader { proxy in
+            let size = proxy.size
+            let maxDiag = hypot(size.width, size.height) * 0.96
+            // Smooth cubic ease starts gently at the arrow pill then sweeps gracefully to the corners
             let eased = clamped * clamped * (3.0 - 2.0 * clamped)
-            let apertureRadius = maxRadius * eased
+            let feather: CGFloat = 180 + clamped * 140
+            // Continuous alpha ramp at the aperture center (1.0 at progress=0 → 0.0 at progress=0.14)
+            // eliminates any first-frame pop or structural branch swap.
+            let holeAlpha = Double(max(0, 1.0 - clamped / 0.14))
+            let clearRadius = max(0, maxDiag * eased - feather * 0.50)
+            let solidRadius = max(1.0, maxDiag * eased + feather * 0.50)
 
-            var combined = Path()
-            combined.addRect(fullRect.insetBy(dx: -80, dy: -80))
-            if apertureRadius > 1 {
-              let organic = max(0, 1.0 - clamped * 0.72)
-              let hole = WelcomeLiquidPortalModifier.organicBlobPath(
-                center: origin,
-                radius: apertureRadius,
-                organicAmount: organic * 0.65,
-                time: Double(clamped) * 2.4 + 0.6
-              )
-              combined.addPath(hole)
-            }
+            let sClear = min(0.96, Double(clearRadius / solidRadius))
+            let sMid1 = min(0.975, Double((clearRadius + feather * 0.32) / solidRadius))
+            let sMid2 = min(0.99, Double((clearRadius + feather * 0.68) / solidRadius))
 
-            context.fill(combined, with: .color(.white), style: FillStyle(eoFill: true))
+            RadialGradient(
+              stops: [
+                .init(color: .white.opacity(holeAlpha), location: 0.0),
+                .init(color: .white.opacity(holeAlpha), location: sClear),
+                .init(color: .white.opacity(holeAlpha + (1.0 - holeAlpha) * 0.28), location: sMid1),
+                .init(color: .white.opacity(holeAlpha + (1.0 - holeAlpha) * 0.72), location: sMid2),
+                .init(color: .white, location: 1.0),
+              ],
+              center: UnitPoint(x: 0.5, y: 0.575),
+              startRadius: 0,
+              endRadius: solidRadius
+            )
+            .frame(width: size.width, height: size.height)
           }
-          .blur(radius: 42)
         }
-    }
+      }
   }
 }
 

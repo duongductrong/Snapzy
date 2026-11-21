@@ -106,7 +106,7 @@ final class SnapzyOnboardingWelcomeAudio {
   /// accompanied by a long, velvety curved fade-out of the ambient welcome music.
   func playConfirmChime() {
     guard soundsEnabled else { return }
-    stopAmbient(fadeDuration: 1.65)
+    stopAmbient(fadeDuration: 2.0)
 
     if let data = cachedConfirmChimeWAV {
       playOneShot(data: data, volume: 0.56)

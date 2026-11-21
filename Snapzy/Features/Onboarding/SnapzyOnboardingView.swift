@@ -44,9 +44,9 @@ struct SnapzyOnboardingView: View {
         VStack(spacing: 0) {
           header
             .opacity(isFlowSettled ? 1 : 0)
-            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : -12))
+            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : -14))
             .animation(
-              reduceMotion ? .easeOut(duration: 0.18) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.56).delay(0.14),
+              reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.82).delay(0.16),
               value: isFlowSettled
             )
 
@@ -56,9 +56,9 @@ struct SnapzyOnboardingView: View {
           // Liquid Glass Golden Rule: never animate `.opacity` on a view containing `.glassEffect`
           // (`SnapzyOnboardingActionBar`). Slide smoothly into place using geometry only.
           footer
-            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 18))
+            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 22))
             .animation(
-              reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.58).delay(0.18),
+              reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.84).delay(0.22),
               value: isFlowSettled
             )
         }
@@ -134,10 +134,10 @@ struct SnapzyOnboardingView: View {
       SnapzyOnboardingMockHost(state: state)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .opacity(isFlowSettled ? 1 : 0)
-        .scaleEffect(reduceMotion ? 1.0 : (isFlowSettled ? 1.0 : 0.935))
-        .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : 18), y: reduceMotion ? 0 : (isFlowSettled ? 0 : 8))
+        .scaleEffect(reduceMotion ? 1.0 : (isFlowSettled ? 1.0 : 0.925))
+        .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : 20), y: reduceMotion ? 0 : (isFlowSettled ? 0 : 12))
         .animation(
-          reduceMotion ? .easeOut(duration: 0.18) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.68).delay(0.08),
+          reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.92).delay(0.08),
           value: isFlowSettled
         )
     }
@@ -246,9 +246,15 @@ struct SnapzyOnboardingView: View {
   private func beginFlowReveal() {
     guard !isFlowMounted else { return }
     isFlowMounted = true
-    // Trigger the depth-arrival animation on the next run-loop tick so initial pre-settled states
-    // render before animating smoothly behind the expanding aurora aperture.
-    DispatchQueue.main.async {
+    if reduceMotion {
+      DispatchQueue.main.async {
+        isFlowSettled = true
+      }
+      return
+    }
+    // Let the mounted Step 1 hierarchy finish its offscreen layout pass behind the opaque aurora,
+    // then lift it into place right as the soft iris aperture opens across the window (~240ms later).
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
       isFlowSettled = true
     }
   }
