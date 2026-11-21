@@ -161,6 +161,11 @@ final class QuickAccessPinWindow: NSPanel {
 
   var onEscapeRequested: (() -> Void)?
 
+  /// While an entrance flight runs, the window is a transparent frame around content that is being
+  /// scaled along its path. It must not take the mouse, become key, or light hover chrome from a
+  /// cursor that is nowhere near where the pin will end up.
+  var isEntranceInFlight = false
+
   private weak var pinState: QuickAccessPinWindowState?
   private var localMouseMonitor: Any?
   private var globalMouseMonitor: Any?
@@ -273,6 +278,11 @@ final class QuickAccessPinWindow: NSPanel {
   }
 
   func updateMousePassthrough(at mouseLocation: NSPoint) {
+    if isEntranceInFlight {
+      ignoresMouseEvents = true
+      return
+    }
+
     guard let pinState else {
       ignoresMouseEvents = false
       return
@@ -490,7 +500,7 @@ final class QuickAccessPinWindow: NSPanel {
     // test their bounds directly.
     var stack: [NSView] = [contentView]
     while let view = stack.popLast() {
-      if let exclusion = view as? PinWindowDragExclusionView {
+      if let exclusion = view as? PinWindowDragExclusionView, !exclusion.isHidden {
         let exclusionRect = exclusion.convert(exclusion.bounds, to: contentView)
         if NSPointInRect(point, exclusionRect) {
           return true

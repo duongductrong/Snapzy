@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import QuartzCore
 import XCTest
 @testable import Snapzy
 
@@ -703,6 +704,182 @@ final class QuickAccessCoreTests: XCTestCase {
     XCTAssertEqual(constrainedFrame.minY, 24, accuracy: 0.001)
     XCTAssertEqual(constrainedFrame.width, 752, accuracy: 0.001)
     XCTAssertEqual(constrainedFrame.height, 552, accuracy: 0.001)
+  }
+
+  func testQuickAccessPinEntrance_flightRectCoversTheWholePathAndTheShadow() {
+    let resting = CGRect(x: 600, y: 400, width: 900, height: 600)
+    let card = CGRect(x: 1400, y: 120, width: 180, height: 112)
+
+    let flight = QuickAccessPinWindowSizing.flightRect(
+      resting: resting,
+      start: card,
+      shadowMargin: QuickAccessPinWindowSizing.entranceShadowMargin,
+      screenFrame: CGRect(x: 0, y: 0, width: 1680, height: 1050)
+    )
+    guard let flight else {
+      XCTFail("expected a flight window that holds both the card and the resting pin")
+      return
+    }
+
+    XCTAssertEqual(flight.minX, 560, accuracy: 0.001)
+    XCTAssertEqual(flight.minY, 80, accuracy: 0.001)
+    XCTAssertEqual(flight.maxX, 1620, accuracy: 0.001)
+    XCTAssertEqual(flight.maxY, 1040, accuracy: 0.001)
+    XCTAssertTrue(flight.contains(resting))
+    XCTAssertTrue(flight.contains(card))
+  }
+
+  func testQuickAccessPinEntrance_flightRectIsNilWhenThePathLeavesTheDisplay() {
+    // A start that the display cannot hold has nowhere to grow out of; the caller fades instead.
+    let flight = QuickAccessPinWindowSizing.flightRect(
+      resting: CGRect(x: 600, y: 400, width: 900, height: 600),
+      start: CGRect(x: 1500, y: 950, width: 300, height: 250),
+      shadowMargin: QuickAccessPinWindowSizing.entranceShadowMargin,
+      screenFrame: CGRect(x: 0, y: 0, width: 1680, height: 1050)
+    )
+
+    XCTAssertNil(flight)
+  }
+
+  func testQuickAccessPinEntrance_transformPutsTheLayerOnItsSourceForACornerAnchoredHost() {
+    let layerRect = CGRect(x: 200, y: 150, width: 400, height: 300)
+    let target = CGRect(x: 0, y: 0, width: 100, height: 75)
+
+    let transform = QuickAccessPinWindowSizing.entranceTransform(
+      targetRect: target,
+      layerRect: layerRect,
+      anchorPoint: CGPoint(x: 0, y: 0),
+      geometryFlipped: false
+    )
+
+    XCTAssertEqual(transform.m11, 0.25, accuracy: 0.001)
+    XCTAssertEqual(transform.m22, 0.25, accuracy: 0.001)
+    assertTransform(transform, movesLayer: layerRect, anchor: CGPoint(x: 0, y: 0), onto: target)
+  }
+
+  func testQuickAccessPinEntrance_transformCompensatesForACenterAnchoredHost() {
+    let layerRect = CGRect(x: 200, y: 150, width: 400, height: 300)
+    let target = CGRect(x: 0, y: 0, width: 100, height: 75)
+    let anchor = CGPoint(x: 0.5, y: 0.5)
+
+    let transform = QuickAccessPinWindowSizing.entranceTransform(
+      targetRect: target,
+      layerRect: layerRect,
+      anchorPoint: anchor,
+      geometryFlipped: false
+    )
+
+    // Scaling about the center drags the origin with it, so the translation carries the same
+    // offset the anchor introduces: anchor * size * (scale - 1).
+    XCTAssertEqual(transform.m41, -200 + anchor.x * 400 * (0.25 - 1), accuracy: 0.001)
+    XCTAssertEqual(transform.m42, -150 + anchor.y * 300 * (0.25 - 1), accuracy: 0.001)
+    assertTransform(transform, movesLayer: layerRect, anchor: anchor, onto: target)
+  }
+
+  func testQuickAccessPinEntrance_transformMeasuresFromTheTopEdgeOnFlippedLayers() {
+    let layerRect = CGRect(x: 200, y: 150, width: 400, height: 300)
+    let target = CGRect(x: 0, y: 0, width: 100, height: 75)
+
+    let flipped = QuickAccessPinWindowSizing.entranceTransform(
+      targetRect: target,
+      layerRect: layerRect,
+      anchorPoint: CGPoint(x: 0, y: 0),
+      geometryFlipped: true
+    )
+    let unflipped = QuickAccessPinWindowSizing.entranceTransform(
+      targetRect: target,
+      layerRect: layerRect,
+      anchorPoint: CGPoint(x: 0, y: 0),
+      geometryFlipped: false
+    )
+
+    // A flipped host counts down from the top, so aligning top edges is what keeps the rect on
+    // target; the x component is unaffected either way.
+    XCTAssertEqual(flipped.m41, unflipped.m41, accuracy: 0.001)
+    XCTAssertNotEqual(flipped.m42, unflipped.m42, accuracy: 0.001)
+    XCTAssertEqual(flipped.m42, layerRect.maxY - target.maxY, accuracy: 0.001)
+  }
+
+  func testQuickAccessPinEntrance_transformStaysInsideTheScaleBand() {
+    let layerRect = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    // A capture larger than the pin it produces would shrink into place from a size that reads as a
+    // different image, so the start is capped just above the resting size.
+    let larger = QuickAccessPinWindowSizing.entranceTransform(
+      targetRect: CGRect(x: 0, y: 0, width: 3000, height: 2000),
+      layerRect: layerRect,
+      anchorPoint: .zero,
+      geometryFlipped: false
+    )
+    XCTAssertEqual(larger.m11, QuickAccessPinWindowSizing.maximumEntranceScale, accuracy: 0.001)
+    XCTAssertEqual(larger.m22, QuickAccessPinWindowSizing.maximumEntranceScale, accuracy: 0.001)
+
+    // A hairline selection would otherwise start from a sub-pixel speck.
+    let hairline = QuickAccessPinWindowSizing.entranceTransform(
+      targetRect: CGRect(x: 100, y: 100, width: 2, height: 2),
+      layerRect: layerRect,
+      anchorPoint: .zero,
+      geometryFlipped: false
+    )
+    XCTAssertEqual(hairline.m11, QuickAccessPinWindowSizing.minimumEntranceScale, accuracy: 0.001)
+    XCTAssertEqual(hairline.m22, QuickAccessPinWindowSizing.minimumEntranceScale, accuracy: 0.001)
+  }
+
+  func testQuickAccessPinEntrance_transformIsIdentityWhenItCannotBeDefined() {
+    let identity = CATransform3DIdentity
+
+    for target in [
+      CGRect.zero,
+      CGRect(x: 0, y: 0, width: 100, height: 0),
+    ] {
+      let transform = QuickAccessPinWindowSizing.entranceTransform(
+        targetRect: target,
+        layerRect: CGRect(x: 0, y: 0, width: 400, height: 300),
+        anchorPoint: .zero,
+        geometryFlipped: false
+      )
+      XCTAssertEqual(transform.m11, identity.m11, accuracy: 0.001)
+      XCTAssertEqual(transform.m41, identity.m41, accuracy: 0.001)
+      XCTAssertEqual(transform.m42, identity.m42, accuracy: 0.001)
+    }
+
+    let emptyLayer = QuickAccessPinWindowSizing.entranceTransform(
+      targetRect: CGRect(x: 0, y: 0, width: 100, height: 100),
+      layerRect: .zero,
+      anchorPoint: .zero,
+      geometryFlipped: false
+    )
+    XCTAssertEqual(emptyLayer.m11, identity.m11, accuracy: 0.001)
+    XCTAssertEqual(emptyLayer.m41, identity.m41, accuracy: 0.001)
+  }
+
+  /// Applies the flight transform the way AppKit composites a layer-backed view — around the anchor
+  /// point the layer sits at — and checks that the layer's own bounds land exactly on `target`.
+  private func assertTransform(
+    _ transform: CATransform3D,
+    movesLayer layerRect: CGRect,
+    anchor: CGPoint,
+    onto target: CGRect,
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
+    func drawn(_ local: CGPoint) -> CGPoint {
+      let relativeToAnchor = CGPoint(
+        x: local.x - anchor.x * layerRect.width,
+        y: local.y - anchor.y * layerRect.height
+      )
+      return CGPoint(
+        x: layerRect.minX + anchor.x * layerRect.width + transform.m11 * relativeToAnchor.x + transform.m41,
+        y: layerRect.minY + anchor.y * layerRect.height + transform.m22 * relativeToAnchor.y + transform.m42
+      )
+    }
+
+    let origin = drawn(.zero)
+    let farCorner = drawn(CGPoint(x: layerRect.width, y: layerRect.height))
+    XCTAssertEqual(origin.x, target.minX, accuracy: 0.001, file: file, line: line)
+    XCTAssertEqual(origin.y, target.minY, accuracy: 0.001, file: file, line: line)
+    XCTAssertEqual(farCorner.x, target.maxX, accuracy: 0.001, file: file, line: line)
+    XCTAssertEqual(farCorner.y, target.maxY, accuracy: 0.001, file: file, line: line)
   }
 
   func testQuickAccessPinWindowSizing_preservesCenterWhenPinResizes() {

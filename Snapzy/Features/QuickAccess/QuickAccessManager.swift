@@ -624,7 +624,9 @@ final class QuickAccessManager: ObservableObject {
   }
 
   /// Toggle pin state for an item. Pinned items bypass auto-dismiss.
-  func togglePin(id: UUID) {
+  /// - Parameter entranceFrom: Screen rect of the card the gesture came from, so the pinned window
+  ///   can grow out of it instead of appearing in place.
+  func togglePin(id: UUID, entranceFrom: NSRect? = nil) {
     guard let index = items.firstIndex(where: { $0.id == id }) else {
       DiagnosticLogger.shared.log(
         .warning,
@@ -635,7 +637,7 @@ final class QuickAccessManager: ObservableObject {
       return
     }
 
-    setPinState(id: id, isPinned: !items[index].isPinned, closePinWindow: true)
+    setPinState(id: id, isPinned: !items[index].isPinned, closePinWindow: true, entranceFrom: entranceFrom)
   }
 
   /// Pin a screenshot item without toggling it back off.
@@ -703,7 +705,7 @@ final class QuickAccessManager: ObservableObject {
     }
   }
 
-  private func setPinState(id: UUID, isPinned: Bool, closePinWindow: Bool) {
+  private func setPinState(id: UUID, isPinned: Bool, closePinWindow: Bool, entranceFrom: NSRect? = nil) {
     guard let index = items.firstIndex(where: { $0.id == id }) else {
       if closePinWindow {
         pinWindowManager.close(id: id)
@@ -720,7 +722,7 @@ final class QuickAccessManager: ObservableObject {
     items[index].isPinned = isPinned
 
     if isPinned {
-      let didShowWindow = pinWindowManager.show(item: items[index]) { [weak self] closedId in
+      let didShowWindow = pinWindowManager.show(item: items[index], entranceFrom: entranceFrom) { [weak self] closedId in
         self?.handlePinWindowClosed(id: closedId)
       }
 
