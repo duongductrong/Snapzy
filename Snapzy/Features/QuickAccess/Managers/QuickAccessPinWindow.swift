@@ -161,10 +161,10 @@ final class QuickAccessPinWindow: NSPanel {
 
   var onEscapeRequested: (() -> Void)?
 
-  /// While an entrance flight runs, the window is a transparent frame around content that is being
-  /// scaled along its path. It must not take the mouse, become key, or light hover chrome from a
-  /// cursor that is nowhere near where the pin will end up.
-  var isEntranceInFlight = false
+  /// While a flight runs, the window is a transparent frame around content that is being scaled along
+  /// its path. It must not take the mouse, become key, or light hover chrome from a cursor that is
+  /// nowhere near where the pin will end up.
+  var isInFlight = false
 
   private weak var pinState: QuickAccessPinWindowState?
   private var localMouseMonitor: Any?
@@ -278,7 +278,7 @@ final class QuickAccessPinWindow: NSPanel {
   }
 
   func updateMousePassthrough(at mouseLocation: NSPoint) {
-    if isEntranceInFlight {
+    if isInFlight {
       ignoresMouseEvents = true
       return
     }

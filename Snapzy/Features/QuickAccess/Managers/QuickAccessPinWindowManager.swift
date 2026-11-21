@@ -78,11 +78,12 @@ final class QuickAccessPinWindowManager {
 
 @MainActor
 private final class QuickAccessPinWindowController {
-  /// Replaced rather than stacked, in case a pin is re-shown while its first entrance is running.
-  private static let entranceMotionKey = "quickAccess.pin.entrance"
+  /// Both directions of the flight share one key, so a pin re-shown while its first flight is still
+  /// running replaces the animation instead of stacking on it.
+  private static let flightMotionKey = "quickAccess.pin.flight"
 
-  /// One entrance, precomputed: see `makeEntrance()`.
-  private struct Entrance {
+  /// One flight, precomputed: see `makeFlight()`.
+  private struct Flight {
     let flightFrame: NSRect
     let restingFrame: NSRect
     let containerFrame: NSRect
@@ -97,18 +98,23 @@ private final class QuickAccessPinWindowController {
   /// Fills the window, so the frame change AppKit performs on every `setFrame` lands here instead of
   /// on the view that holds the laid-out content.
   private let contentHost = NSView(frame: .zero)
-  /// Host for the SwiftUI content, sized by the sizing policy once at the resting frame and moved by
-  /// nothing else but this controller. The entrance scales this view's layer, so the content is never
-  /// re-flowed mid-flight.
+  /// Host for the SwiftUI content, sized by the sizing policy once at its resting frame and moved by
+  /// nothing else but this controller. The flight scales this view's layer, so the content is never
+  /// re-flowed mid-travel.
   private let contentContainer = NSView(frame: .zero)
-  /// The entrance currently in flight, cleared when the pin lands. Its frames are the only truth
-  /// about where the window is allowed to be while the spring runs.
-  private var activeEntrance: Entrance?
-  /// Backup landing, in case the spring's completion block never reaches the main thread.
-  private var entranceLanding: Timer?
-  /// The region the entrance flies out of. The card the gesture came from wins over the captured
-  /// region: a pin whose resting size matches its capture has nowhere to travel, while the card sits
-  /// in a corner and always gives the flight somewhere to come from.
+  /// The flight currently in progress, cleared when it completes. Its frames are the only truth about
+  /// where the window is allowed to be while a spring runs.
+  private var activeFlight: Flight?
+  /// Where the flight is going: a leaving pin closes its window instead of landing in place.
+  private var isLeaving = false
+  /// Backup completion, in case the spring's completion block never reaches the main thread.
+  private var flightLanding: Timer?
+  /// A flight outlives the manager's reference to this controller — closing a pin drops it from the
+  /// dictionary immediately — so the flight holds the controller itself until it completes.
+  private var flightLease: QuickAccessPinWindowController?
+  /// The region the flight grows out of and returns to. The card the gesture came from wins over the
+  /// captured region: a pin whose resting size matches its capture has nowhere to travel, while the
+  /// card sits in a corner and always gives the flight somewhere to come from.
   private let entranceOrigin: CGRect?
 
   init(item: QuickAccessItem, entranceFrom: NSRect? = nil) {
@@ -150,13 +156,13 @@ private final class QuickAccessPinWindowController {
   }
 
   func show() {
-    guard let entrance = makeEntrance() else {
+    guard let flight = makeFlight() else {
       window.alphaValue = 0
       orderFront()
       fadeIn()
       return
     }
-    playEntrance(entrance)
+    runFlight(flight, leaving: false)
   }
 
   func orderFront() {
@@ -164,10 +170,10 @@ private final class QuickAccessPinWindowController {
     window.updateMousePassthrough()
   }
 
-  /// Everything the flight needs, decided before the window is shown: the wide frame it travels
-  /// inside, where the content sits in it, and the transform that puts the content on its source
-  /// region. `nil` when there is nothing to fly from, or the path cannot be shown.
-  private func makeEntrance() -> Entrance? {
+  /// Everything a flight needs, decided from where the window sits right now: the wide frame it
+  /// travels inside, where the content sits in it, and the transform that puts the content on its
+  /// source region. `nil` when there is nothing to fly to or from, or the path cannot be shown.
+  private func makeFlight() -> Flight? {
     guard !SnapzyMotionPreferences.shared.reduceMotion, let entranceOrigin,
           let layer = contentContainer.layer
     else { return nil }
@@ -199,7 +205,7 @@ private final class QuickAccessPinWindowController {
       return nil
     }
 
-    return Entrance(
+    return Flight(
       flightFrame: flightFrame,
       restingFrame: restingFrame,
       containerFrame: containerFrame,
@@ -208,44 +214,67 @@ private final class QuickAccessPinWindowController {
   }
 
   /// The content is laid out once, at its resting size, and the compositor scales it along the path;
-  /// the window only shrinks back to the resting frame when the spring has settled, which moves the
-  /// content by nothing at all.
-  private func playEntrance(_ entrance: Entrance) {
-    activeEntrance = entrance
-    window.setFrame(entrance.flightFrame, display: false)
-    contentContainer.frame = entrance.containerFrame
-    window.isEntranceInFlight = true
+  /// the window only changes frame at the ends of the travel, which moves the content by nothing at
+  /// all. Entering, the pin starts scaled onto its source region and relaxes to identity; leaving runs
+  /// the same spring backwards and closes when it settles. One path, one mechanism, both directions.
+  private func runFlight(_ flight: Flight, leaving: Bool) {
+    isLeaving = leaving
+    activeFlight = flight
+    // The manager drops a closing pin from its dictionary right away, so a flight has to keep its own
+    // controller alive or the window it is still drawing would be deallocated.
+    flightLease = self
+    window.setFrame(flight.flightFrame, display: false)
+    contentContainer.frame = flight.containerFrame
+    window.isInFlight = true
     // The flight window is far larger than the pin, and its native shadow is drawn from the window
     // frame — which would put a soft rectangle around the whole path. The content carries its own
-    // shadow inside the margin, so the window goes without one until it lands.
+    // shadow inside the margin, so the window goes without one until the flight is over.
     window.hasShadow = false
-    window.alphaValue = 0
+    window.alphaValue = leaving ? 1 : 0
     window.orderFrontRegardless()
 
     guard let layer = contentContainer.layer else {
-      finishEntrance()
-      fadeIn()
+      completeFlight()
+      if !leaving { fadeIn() }
       return
     }
 
-    layer.removeAnimation(forKey: Self.entranceMotionKey)
+    layer.removeAnimation(forKey: Self.flightMotionKey)
     let spring = CASpringAnimation(keyPath: "transform")
     spring.mass = 1
-    spring.stiffness = 340
-    spring.damping = 32
-    spring.fromValue = NSValue(caTransform3D: entrance.transform)
-    spring.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+    // The repo's motion vocabulary: springs open at 340/32 and close at the shorter, harder 420/42.
+    spring.stiffness = leaving ? 420 : 340
+    spring.damping = leaving ? 42 : 32
+    let destination = leaving ? flight.transform : CATransform3DIdentity
+    spring.fromValue = NSValue(caTransform3D: leaving ? CATransform3DIdentity : flight.transform)
+    spring.toValue = NSValue(caTransform3D: destination)
     spring.duration = spring.settlingDuration
 
     CATransaction.begin()
     CATransaction.setCompletionBlock { [weak self] in
-      MainActor.assumeIsolated { self?.finishEntrance() }
+      MainActor.assumeIsolated { self?.completeFlight() }
     }
-    layer.add(spring, forKey: Self.entranceMotionKey)
+    // A settled spring is taken off the layer, which hands the drawing back to the layer's own
+    // transform. Leaving that at identity made an exit spend its last frames redrawing the pin full
+    // size again before the window closed.
+    layer.transform = destination
+    layer.add(spring, forKey: Self.flightMotionKey)
     CATransaction.commit()
     scheduleLanding(after: spring.settlingDuration)
 
-    fadeIn()
+    if leaving {
+      // A pin that fades the whole way dissolves instead of leaving, so opacity only drops once the
+      // travel is nearly done and the picture is small inside the region it disappears into.
+      let hold = max(0, spring.settlingDuration - 0.14)
+      DispatchQueue.main.asyncAfter(deadline: .now() + hold) { [weak self] in
+        MainActor.assumeIsolated {
+          guard self?.isLeaving == true else { return }
+          self?.fadeOut()
+        }
+      }
+    } else {
+      fadeIn()
+    }
   }
 
   /// A timer registered in the common run-loop modes still fires while a menu is tracking, so a pin
@@ -253,26 +282,33 @@ private final class QuickAccessPinWindowController {
   /// compositor's completion block is dropped.
   private func scheduleLanding(after seconds: TimeInterval) {
     let timer = Timer(timeInterval: seconds + 0.35, repeats: false) { [weak self] _ in
-      MainActor.assumeIsolated { self?.finishEntrance() }
+      MainActor.assumeIsolated { self?.completeFlight() }
     }
     RunLoop.main.add(timer, forMode: .common)
-    entranceLanding = timer
+    flightLanding = timer
   }
 
-  /// Land the pin: back to the resting frame with the content filling it. Anything that measures the
-  /// window — a resize, a zoom-mode change — has to do this first, because mid-flight the window is
-  /// a wide transparent frame rather than the pin.
-  func finishEntrance() {
-    guard let entrance = activeEntrance else { return }
-    activeEntrance = nil
-    entranceLanding?.invalidate()
-    entranceLanding = nil
-    contentContainer.layer?.removeAnimation(forKey: Self.entranceMotionKey)
-    window.isEntranceInFlight = false
-    window.hasShadow = true
-    window.setFrame(entrance.restingFrame, display: true)
-    contentContainer.frame = NSRect(origin: .zero, size: entrance.restingFrame.size)
-    window.updateMousePassthrough()
+  /// Resolve a flight: a leaving pin closes, an arriving one lands back at its resting frame with the
+  /// content filling it. Anything that measures the window — a resize, a zoom-mode change — has to do
+  /// this first, because mid-flight the window is a wide transparent frame rather than the pin.
+  func completeFlight() {
+    guard let flight = activeFlight else { return }
+    let wasLeaving = isLeaving
+    activeFlight = nil
+    isLeaving = false
+    flightLanding?.invalidate()
+    flightLanding = nil
+    contentContainer.layer?.removeAnimation(forKey: Self.flightMotionKey)
+    window.isInFlight = false
+    if wasLeaving {
+      window.close()
+    } else {
+      window.hasShadow = true
+      window.setFrame(flight.restingFrame, display: true)
+      contentContainer.frame = NSRect(origin: .zero, size: flight.restingFrame.size)
+      window.updateMousePassthrough()
+    }
+    flightLease = nil
   }
 
   func update(item: QuickAccessItem, imageOverride: NSImage? = nil) {
@@ -288,10 +324,34 @@ private final class QuickAccessPinWindowController {
     resize(to: newSize, animated: false)
   }
 
+  /// Dismiss the pin along the path it came from. A close that arrives mid-entrance lands the pin
+  /// first, so the exit always starts from the resting frame rather than from somewhere inside the
+  /// travel.
   func close() {
-    entranceLanding?.invalidate()
-    entranceLanding = nil
-    window.close()
+    // A second close while a pin is already on its way out would land it and send it off again, which
+    // is exactly the flicker a mashed Esc or a double click on the close button would show.
+    guard !isLeaving else { return }
+    completeFlight()
+    flightLease = self
+    guard let flight = makeFlight() else {
+      fadeOutAndClose()
+      return
+    }
+    runFlight(flight, leaving: true)
+  }
+
+  /// The fallback for a pin with nowhere to fly back to, which includes Reduce Motion: fade in place
+  /// on the real frame, then close.
+  private func fadeOutAndClose() {
+    NSAnimationContext.runAnimationGroup({ context in
+      context.duration = SnapzyMotionPreferences.shared.reduceMotion ? 0.18 : 0.14
+      context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+      window.animator().alphaValue = 0
+    }, completionHandler: { [weak self] in
+      guard let self else { return }
+      self.window.close()
+      self.flightLease = nil
+    })
   }
 
   func suspendMouseMonitors() {
@@ -310,7 +370,7 @@ private final class QuickAccessPinWindowController {
     let restingBounds = NSRect(origin: .zero, size: state.displaySize)
     contentHost.frame = restingBounds
     contentHost.wantsLayer = true
-    // Layer-backed so the entrance can scale this view's own layer instead of resizing the window.
+    // Layer-backed so a flight can scale this view's own layer instead of resizing the window.
     contentContainer.frame = restingBounds
     contentContainer.wantsLayer = true
     // The window resizes its content view on every frame change; the container has to keep its
@@ -330,6 +390,16 @@ private final class QuickAccessPinWindowController {
       context.duration = SnapzyMotionPreferences.shared.reduceMotion ? 0.18 : 0.14
       context.timingFunction = CAMediaTimingFunction(name: .easeOut)
       window.animator().alphaValue = 1
+    }
+  }
+
+  /// The tail of a leaving flight, started once the pin has nearly reached the region it vanishes
+  /// into. Fading the whole way would read as a dissolve instead of the pin going home.
+  private func fadeOut() {
+    NSAnimationContext.runAnimationGroup { context in
+      context.duration = 0.14
+      context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+      window.animator().alphaValue = 0
     }
   }
 
@@ -355,7 +425,7 @@ private final class QuickAccessPinWindowController {
   }
 
   private func resize(to size: CGSize, animated: Bool) {
-    finishEntrance()
+    completeFlight()
     let currentFrame = window.frame
     let center = CGPoint(x: currentFrame.midX, y: currentFrame.midY)
     let proposedFrame = NSRect(
@@ -372,7 +442,7 @@ private final class QuickAccessPinWindowController {
   }
 
   func setZoomMode(_ mode: QuickAccessPinZoomMode) {
-    finishEntrance()
+    completeFlight()
     let screen = window.screen ?? ScreenUtility.activeScreen()
     let size = QuickAccessPinWindowSizing.size(for: state.image.size, visibleSize: screen.visibleFrame.size, mode: mode)
     guard state.setZoomMode(mode, baseSize: size) else { return }
@@ -387,7 +457,7 @@ private final class QuickAccessPinWindowController {
   }
 
   private func resize(to size: CGSize, preservingAnchorFraction fraction: CGPoint, animated: Bool) {
-    finishEntrance()
+    completeFlight()
     let oldFrame = window.frame
     let frame = QuickAccessPinWindowSizing.resizedFrame(
       oldFrame,
