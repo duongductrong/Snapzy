@@ -2,19 +2,15 @@
 //  SnapzyMockDesktopCanvas.swift
 //  Snapzy
 //
-//  Faithful macOS desktop canvas: layered wallpaper, authentic menu bar with camera notch.
+//  Faithful macOS desktop canvas: studio ambient wallpaper with per-step monospaced watermark
+//  grid and authentic Apple Silicon menu bar with flush camera notch.
 //
 
-import AppKit
-import ImageIO
 import SwiftUI
 
 // MARK: - Mock Scene
 
 /// Which application the simulated desktop is dressed as.
-///
-/// Each onboarding step pairs its simulated macOS app with one of Snapzy's bundled macOS
-/// wallpapers from `Snapzy/Resources/Wallpapers` so every step feels like a real Mac desktop.
 enum SnapzyMockApp: String, Equatable {
   case notes
   case finder
@@ -36,14 +32,44 @@ enum SnapzyMockApp: String, Equatable {
     }
   }
 
-  /// Bundled wallpaper filename (without extension) from `Snapzy/Resources/Wallpapers`.
-  var wallpaperResourceName: String {
+  var watermarks: [SnapzyWatermark] {
     switch self {
-    case .notes: "default-tahoe-light"
-    case .finder: "default-helios-dark"
-    case .settings: "default-macbook-pro-blue"
+    case .notes:
+      return [
+        .init(text: "t For style"),
+        .init(text: "Snapzy"),
+        .init(text: "4 . . . 1 . . . 1", size: 30, weight: .heavy, opacity: 0.040),
+        .init(text: "Notes"),
+        .init(text: "Studio", opacity: 0.040),
+        .init(text: "Mac 26"),
+      ]
+    case .finder:
+      return [
+        .init(text: "t For style"),
+        .init(text: "Finder"),
+        .init(text: "Snapzy", size: 30, weight: .heavy, opacity: 0.040),
+        .init(text: "Mac 26"),
+        .init(text: "Studio", opacity: 0.040),
+        .init(text: "Capture", opacity: 0.040),
+      ]
+    case .settings:
+      return [
+        .init(text: "Settings"),
+        .init(text: "Shortcuts"),
+        .init(text: "Snapzy", size: 30, weight: .heavy, opacity: 0.040),
+        .init(text: "Keyboard"),
+        .init(text: "macOS 26", opacity: 0.040),
+        .init(text: "Screenshots", opacity: 0.040),
+      ]
     }
   }
+}
+
+struct SnapzyWatermark {
+  var text: String
+  var size: CGFloat = 36
+  var weight: Font.Weight = .black
+  var opacity: Double = 0.045
 }
 
 // MARK: - Palette
@@ -81,78 +107,43 @@ enum SnapzyMockPalette {
   static let toggleAccent = Color(red: 0.16, green: 0.50, blue: 0.98)
 }
 
-// MARK: - Bundled Wallpaper Loader & View
-
-private enum SnapzyMockWallpaperLoader {
-  private static let cache = NSCache<NSString, NSImage>()
-  private static let subdirectories = [nil, "Wallpapers", "Resources/Wallpapers"]
-
-  static func image(named resourceName: String) -> NSImage? {
-    let key = resourceName as NSString
-    if let cached = cache.object(forKey: key) {
-      return cached
-    }
-
-    guard let url = resolveURL(for: resourceName),
-          let image = downsampleImage(at: url, maxPixelSize: 1440) else {
-      return nil
-    }
-
-    cache.setObject(image, forKey: key)
-    return image
-  }
-
-  private static func resolveURL(for resourceName: String) -> URL? {
-    for subdirectory in subdirectories {
-      if let url = Bundle.main.url(
-        forResource: resourceName,
-        withExtension: "jpg",
-        subdirectory: subdirectory
-      ) {
-        return url
-      }
-    }
-    return nil
-  }
-
-  private static func downsampleImage(at url: URL, maxPixelSize: CGFloat) -> NSImage? {
-    let sourceOptions: [CFString: Any] = [kCGImageSourceShouldCache: false]
-    guard let source = CGImageSourceCreateWithURL(url as CFURL, sourceOptions as CFDictionary) else {
-      return nil
-    }
-
-    let options: [CFString: Any] = [
-      kCGImageSourceCreateThumbnailFromImageAlways: true,
-      kCGImageSourceShouldCacheImmediately: true,
-      kCGImageSourceCreateThumbnailWithTransform: true,
-      kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
-    ]
-    guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
-      return NSImage(contentsOf: url)
-    }
-
-    return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
-  }
-}
+// MARK: - Studio Watermark Wallpaper
 
 struct SnapzyMockWallpaper: View, Equatable {
   var app: SnapzyMockApp = .notes
 
   var body: some View {
-    GeometryReader { proxy in
-      let size = proxy.size
-      if let nsImage = SnapzyMockWallpaperLoader.image(named: app.wallpaperResourceName) {
-        Image(nsImage: nsImage)
-          .resizable()
-          .interpolation(.high)
-          .aspectRatio(contentMode: .fill)
-          .frame(width: size.width, height: size.height)
-          .clipped()
-      } else {
-        Color(red: 0.08, green: 0.10, blue: 0.14)
-          .frame(width: size.width, height: size.height)
+    ZStack {
+      // Soft studio ambient gradient wallpaper
+      LinearGradient(
+        colors: [
+          Color(red: 0.945, green: 0.950, blue: 0.960),
+          Color(red: 0.885, green: 0.895, blue: 0.915),
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+      )
+
+      GeometryReader { proxy in
+        VStack(alignment: .leading, spacing: 38) {
+          ForEach(0..<8, id: \.self) { row in
+            HStack(spacing: 44) {
+              ForEach(0..<6, id: \.self) { col in
+                let mark = app.watermarks[(row * 3 + col) % app.watermarks.count]
+                Text(mark.text)
+                  .font(.system(size: mark.size, weight: mark.weight, design: .monospaced))
+                  .foregroundStyle(Color.black.opacity(mark.opacity))
+                  .rotationEffect(.degrees(-14))
+              }
+            }
+          }
+        }
+        .frame(width: proxy.size.width * 1.8, height: proxy.size.height * 1.8)
+        .offset(x: -80, y: -60)
       }
+      .clipped()
     }
+    .compositingGroup()
     .accessibilityHidden(true)
   }
 }
@@ -217,16 +208,10 @@ struct SnapzyMockMenuBar: View, Equatable {
 
   var body: some View {
     ZStack(alignment: .top) {
-      // Authentic translucent macOS menu bar letting the bundled wallpaper shine through
+      // Translucent light macOS menu bar over the studio wallpaper
       ZStack {
-        LinearGradient(
-          colors: [
-            Color.black.opacity(0.24),
-            Color.black.opacity(0.16),
-          ],
-          startPoint: .top,
-          endPoint: .bottom
-        )
+        Rectangle()
+          .fill(Color.white.opacity(0.80))
 
         HStack(spacing: 0) {
           leadingCluster
@@ -241,7 +226,7 @@ struct SnapzyMockMenuBar: View, Equatable {
       .frame(height: Self.barHeight)
       .overlay(alignment: .bottom) {
         Rectangle()
-          .fill(Color.white.opacity(0.12))
+          .fill(Color.black.opacity(0.08))
           .frame(height: 0.5)
       }
 
@@ -268,8 +253,7 @@ struct SnapzyMockMenuBar: View, Equatable {
     }
     // Sized so the cluster always clears the centred notch cleanly at every onboarding window width.
     .font(.system(size: 10.5, weight: .medium))
-    .foregroundStyle(Color.white.opacity(0.95))
-    .shadow(color: Color.black.opacity(0.30), radius: 1.5, y: 0.5)
+    .foregroundStyle(SnapzyMockPalette.ink.opacity(0.88))
     .fixedSize()
   }
 
@@ -294,8 +278,7 @@ struct SnapzyMockMenuBar: View, Equatable {
         .font(.system(size: 10, weight: .medium))
         .monospacedDigit()
     }
-    .foregroundStyle(Color.white.opacity(0.95))
-    .shadow(color: Color.black.opacity(0.30), radius: 1.5, y: 0.5)
+    .foregroundStyle(SnapzyMockPalette.ink.opacity(0.88))
     .fixedSize()
   }
 
