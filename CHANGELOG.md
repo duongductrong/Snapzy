@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.4] - 2026-11-21
+
+### Features
+- rotate individual annotations (#772) (ad995855)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.3.0-beta.3] - 2026-11-20
 
 ### Features
