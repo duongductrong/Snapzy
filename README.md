@@ -105,6 +105,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 - **Annotate and edit**
   - Add arrows, shapes, text, watermarks, blur, and pixelation. Detect and redact sensitive data on-device.
   - Measure distances and sizes in the image with the Measure tool (`U`): editable measurements that export with it.
+  - Drop stamps with the Stamp tool (`G`): designed sticker badges like Approved, LGTM or Bug, emoji, or your own image, with a sticker outline and soft shadow.
   - Crop images, remove backgrounds, and create 3D mockups. Trim clips, add zoom or speed segments, and use Follow Mouse to keep the cursor in view.
 - **Quick Access and History**
   - Copy, edit, drag, or upload captures from their floating Quick Access cards; pin screenshots on screen.

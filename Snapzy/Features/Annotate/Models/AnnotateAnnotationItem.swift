@@ -1342,6 +1342,17 @@ extension AnnotationItem {
         let dy = normalizedBounds.minY - oldBounds.minY
         copy = translatedBy(dx: dx, dy: dy)
       }
+    case .stamp(let stamp):
+      // Keep the box tight around the aspect-fit content, anchored on the edges that stayed put.
+      let fitted = AnnotateStampRenderer.fittedRect(for: stamp.content, in: normalizedBounds)
+      let anchorsRight = abs(normalizedBounds.maxX - oldBounds.maxX) < abs(normalizedBounds.minX - oldBounds.minX)
+      let anchorsTop = abs(normalizedBounds.maxY - oldBounds.maxY) < abs(normalizedBounds.minY - oldBounds.minY)
+      copy.bounds = CGRect(
+        x: anchorsRight ? normalizedBounds.maxX - fitted.width : normalizedBounds.minX,
+        y: anchorsTop ? normalizedBounds.maxY - fitted.height : normalizedBounds.minY,
+        width: fitted.width,
+        height: fitted.height
+      )
     default:
       break
     }
@@ -1418,6 +1429,8 @@ nonisolated enum AnnotationType: Equatable {
   case measurement(MeasureGeometry)
   /// Auto Translate overlay: cover + translated text over a source text block.
   case translation(TranslatedTextBlock)
+  /// Sticker badge, emoji or image stamp.
+  case stamp(StampAnnotation)
 
   /// Corresponding toolbar tool type for this annotation
   var toolType: AnnotationToolType {
@@ -1437,6 +1450,7 @@ nonisolated enum AnnotationType: Equatable {
     case .spotlight: .spotlight
     case .measurement: .measure
     case .translation: .selection
+    case .stamp: .stamp
     }
   }
 
@@ -1604,7 +1618,7 @@ extension AnnotationType {
   /// keeps its own in-bounds rotation and is not part of this.
   nonisolated var supportsRotation: Bool {
     switch self {
-    case .text, .embeddedImage, .rectangle, .filledRectangle, .oval:
+    case .text, .embeddedImage, .rectangle, .filledRectangle, .oval, .stamp:
       true
     default:
       false
@@ -1753,6 +1767,10 @@ extension AnnotationItem {
   /// the measured extent. Used for redraw culling, export culling and hit-test quick rejects;
   /// selection geometry (paste/duplicate clamping) keeps `selectionBounds`.
   var renderBounds: CGRect {
+    if case .stamp(let stamp) = type, stamp.isStickerStyle {
+      let overhang = AnnotateStampRenderer.shadowOverhang(for: bounds)
+      return selectionBounds.insetBy(dx: -overhang, dy: -overhang)
+    }
     guard let label = AnnotateMeasureRenderer.labelRect(for: self) else { return selectionBounds }
     return selectionBounds.union(label.insetBy(dx: -2, dy: -2))
   }
@@ -1778,7 +1796,7 @@ extension AnnotationItem {
     let tolerance = baseTolerance + properties.strokeWidth / 2
 
     switch type {
-    case .rectangle, .filledRectangle, .blur(_), .watermark, .embeddedImage, .spotlight, .translation:
+    case .rectangle, .filledRectangle, .blur(_), .watermark, .embeddedImage, .spotlight, .translation, .stamp:
       return bounds.contains(point)
 
     case .oval:
@@ -1898,7 +1916,7 @@ extension AnnotationItem {
     case .embeddedImage:
       return false
 
-    case .arrow, .line, .path, .highlight, .text, .counter, .measurement, .translation:
+    case .arrow, .line, .path, .highlight, .text, .counter, .measurement, .translation, .stamp:
       return containsPoint(point, baseTolerance: baseTolerance)
     }
   }

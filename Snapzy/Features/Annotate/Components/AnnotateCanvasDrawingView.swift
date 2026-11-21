@@ -1374,7 +1374,7 @@ final class DrawingCanvasNSView: NSView {
     switch tool {
     case .text:
       return .selectNow(item: edgeHit, editTextOnClick: isTextHit)
-    case .counter:
+    case .counter, .stamp:
       return .selectNow(item: edgeHit, editTextOnClick: false)
     default:
       return .drawThenMaybeSelect(candidate: edgeHit)
@@ -2197,6 +2197,7 @@ final class DrawingCanvasNSView: NSView {
     if let item {
       state.saveState()
       state.annotations.append(item)
+      state.noteStampPlaced(item)
       if case .highlight = item.type {
         state.deselectAnnotation()
       } else {
@@ -2565,6 +2566,16 @@ final class DrawingCanvasNSView: NSView {
           activeAnnotationBounds: state.activeAnnotationBounds,
           counterArrowMinimumDragDistance: counterArrowMinimumDragDistance
         )
+      )
+      if let item { renderer.draw(item) }
+    } else if state.selectedTool == .stamp {
+      let item = AnnotationFactory.createAnnotation(
+        tool: .stamp,
+        from: start,
+        to: currentPath.last ?? start,
+        path: [],
+        state: state,
+        counterArrowMinimumDragDistance: counterArrowMinimumDragDistance
       )
       if let item { renderer.draw(item) }
     } else if state.selectedTool == .blur, let lastPoint = currentPath.last {

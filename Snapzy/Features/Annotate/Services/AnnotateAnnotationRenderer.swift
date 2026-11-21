@@ -141,6 +141,9 @@ nonisolated struct AnnotationRenderer {
 
     case .translation(let block):
       drawTranslation(block, annotation: annotation)
+
+    case .stamp(let stamp):
+      AnnotateStampRenderer.draw(stamp, in: annotation.bounds, opacity: annotation.properties.opacity, context: context)
     }
   }
 

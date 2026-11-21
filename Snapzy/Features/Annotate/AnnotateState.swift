@@ -3507,7 +3507,7 @@ final class AnnotateState: ObservableObject {
         AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
       })
 
-    case .text, .translation:
+    case .text, .translation, .stamp:
       rotated.bounds = AnnotateImageRotation.rotateLayoutRectPreservingSize(
         annotation.bounds,
         oldSize: oldSize,
@@ -3626,7 +3626,7 @@ final class AnnotateState: ObservableObject {
     case .measurement(let geometry):
       flipped.type = .measurement(geometry.mirrored(flipPoint))
 
-    case .text, .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight, .translation:
+    case .text, .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight, .translation, .stamp:
       // Bounds-only annotations: the mirrored `bounds` above is the full transform we need.
       // Embedded image bitmaps were mirrored with the assets above.
       break
@@ -4029,7 +4029,7 @@ final class AnnotateState: ObservableObject {
           dy: shiftedBounds.minY - item.bounds.minY
         ))
         moved.bounds = CGRect(origin: shiftedBounds.origin, size: item.bounds.size)
-      case .rectangle, .filledRectangle, .oval, .blur, .embeddedImage, .spotlight, .watermark, .translation:
+      case .rectangle, .filledRectangle, .oval, .blur, .embeddedImage, .spotlight, .watermark, .translation, .stamp:
         moved.bounds = shiftRect(item.bounds)
       }
 
