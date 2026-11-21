@@ -85,16 +85,22 @@ final class CloudManager: ObservableObject {
     )
 
     let isGoogle = config.providerType == .googleDrive
-    let accessItem: CloudKeychainItem = isGoogle ? .googleClientId : .accessKey
-    let secretItem: CloudKeychainItem = isGoogle ? .googleClientSecret : .secretKey
+    let usesObjectStorage = config.providerType.usesObjectStorage
+    let items = Self.credentialItems(for: config.providerType)
+    let accessItem = items.access
+    let secretItem = items.secret
 
     let accessKeySnapshot = snapshotCredential(item: accessItem, context: "saveConfiguration.snapshot.accessKey")
-    let secretKeySnapshot = snapshotCredential(item: secretItem, context: "saveConfiguration.snapshot.secretKey")
+    let secretKeySnapshot = secretItem.map {
+      snapshotCredential(item: $0, context: "saveConfiguration.snapshot.secretKey")
+    }
     let googleRefreshTokenSnapshot = isGoogle ? snapshotCredential(item: .googleRefreshToken, context: "saveConfiguration.snapshot.googleRefreshToken") : nil
 
     do {
       try saveToKeychain(item: accessItem, value: accessKey)
-      try saveToKeychain(item: secretItem, value: secretKey)
+      if let secretItem {
+        try saveToKeychain(item: secretItem, value: secretKey)
+      }
       if isGoogle, let refreshToken = googleRefreshToken {
         try saveToKeychain(item: .googleRefreshToken, value: refreshToken)
       }
@@ -118,11 +124,12 @@ final class CloudManager: ObservableObject {
     let defaults = UserDefaults.standard
     defaults.set(config.providerType.rawValue, forKey: PreferencesKeys.cloudProviderType)
     let finalExpireTime = isGoogle ? CloudExpireTime.permanent : config.expireTime
-    
-    defaults.set(config.bucket, forKey: PreferencesKeys.cloudBucket)
-    defaults.set(isGoogle ? "" : config.region, forKey: PreferencesKeys.cloudRegion)
-    defaults.set(isGoogle ? "" : (config.endpoint ?? ""), forKey: PreferencesKeys.cloudEndpoint)
-    defaults.set(isGoogle ? "" : (config.customDomain ?? ""), forKey: PreferencesKeys.cloudCustomDomain)
+    let finalBucket = config.providerType == .imgbb ? "" : config.bucket
+
+    defaults.set(finalBucket, forKey: PreferencesKeys.cloudBucket)
+    defaults.set(usesObjectStorage ? config.region : "", forKey: PreferencesKeys.cloudRegion)
+    defaults.set(usesObjectStorage ? (config.endpoint ?? "") : "", forKey: PreferencesKeys.cloudEndpoint)
+    defaults.set(usesObjectStorage ? (config.customDomain ?? "") : "", forKey: PreferencesKeys.cloudCustomDomain)
     defaults.set(finalExpireTime.rawValue, forKey: PreferencesKeys.cloudExpireTime)
     defaults.set(true, forKey: PreferencesKeys.cloudConfigured)
 
@@ -132,10 +139,10 @@ final class CloudManager: ObservableObject {
     
     let finalConfig = CloudConfiguration(
       providerType: config.providerType,
-      bucket: config.bucket,
-      region: isGoogle ? "" : config.region,
-      endpoint: isGoogle ? nil : config.endpoint,
-      customDomain: isGoogle ? nil : config.customDomain,
+      bucket: finalBucket,
+      region: usesObjectStorage ? config.region : "",
+      endpoint: usesObjectStorage ? config.endpoint : nil,
+      customDomain: usesObjectStorage ? config.customDomain : nil,
       expireTime: finalExpireTime
     )
     cachedConfiguration = finalConfig
@@ -159,6 +166,9 @@ final class CloudManager: ObservableObject {
     accessKey: String,
     secretKey: String
   ) async throws {
+    // imgbb sends expiration with each upload and Google Drive has none: no bucket rule to write.
+    guard config.providerType.usesObjectStorage else { return }
+
     if config.expireTime.isPermanent {
       guard let previous = loadConfiguration(), !previous.expireTime.isPermanent else {
         logger.info("Skipping lifecycle rule — expiration is permanent")
@@ -236,7 +246,8 @@ final class CloudManager: ObservableObject {
 
   /// Load masked access key for display (e.g. "AKIA••••WXYZ")
   func maskedAccessKey() -> String {
-    guard let key = loadFromKeychain(item: .accessKey, context: "maskedAccessKey") else {
+    let item = Self.credentialItems(for: providerType ?? .awsS3).access
+    guard let key = loadFromKeychain(item: item, context: "maskedAccessKey") else {
       return isConfigured ? DisplayStrings.storedSecurely : DisplayStrings.hidden
     }
     return accessKeySummary(for: key)
@@ -297,6 +308,11 @@ final class CloudManager: ObservableObject {
     loadFromKeychain(item: .secretKey, context: "loadSecretKey") ?? ""
   }
 
+  /// Load the imgbb API key (for edit mode)
+  func loadImgbbAPIKey() -> String {
+    loadFromKeychain(item: .imgbbAPIKey, context: "loadImgbbAPIKey") ?? ""
+  }
+
   /// Load the Google Drive refresh token
   func loadGoogleRefreshToken() -> String? {
     loadFromKeychain(item: .googleRefreshToken, context: "loadGoogleRefreshToken")
@@ -345,7 +361,7 @@ final class CloudManager: ObservableObject {
       googleClientId: googleClientId,
       googleClientSecret: googleClientSecret,
       googleRefreshToken: googleRefreshToken,
-      shareLinkStyle: isGoogle ? nil : CloudShareLinkStyle.stored().rawValue
+      shareLinkStyle: configuration.providerType.usesObjectStorage ? CloudShareLinkStyle.stored().rawValue : nil
     )
   }
 
@@ -356,6 +372,7 @@ final class CloudManager: ObservableObject {
     deleteFromKeychain(item: .googleClientId)
     deleteFromKeychain(item: .googleClientSecret)
     deleteFromKeychain(item: .googleRefreshToken)
+    deleteFromKeychain(item: .imgbbAPIKey)
 
     CloudPasswordService.shared.removePassword()
 
@@ -430,20 +447,36 @@ final class CloudManager: ObservableObject {
         refreshToken: refreshToken,
         folderName: config.bucket
       )
+    case .imgbb:
+      return ImgbbCloudProvider(apiKey: accessKey)
+    }
+  }
+
+  /// Keychain items holding a provider's credentials. imgbb has a single API key, so no secret item.
+  static func credentialItems(
+    for providerType: CloudProviderType
+  ) -> (access: CloudKeychainItem, secret: CloudKeychainItem?) {
+    switch providerType {
+    case .awsS3, .cloudflareR2:
+      return (.accessKey, .secretKey)
+    case .googleDrive:
+      return (.googleClientId, .googleClientSecret)
+    case .imgbb:
+      return (.imgbbAPIKey, nil)
     }
   }
 
   private func loadCredentialPair(context: String) -> (accessKey: String, secretKey: String)? {
-    let providerRaw = UserDefaults.standard.string(forKey: PreferencesKeys.cloudProviderType)
-    let isGoogle = providerRaw == CloudProviderType.googleDrive.rawValue
-
-    let accessItem: CloudKeychainItem = isGoogle ? .googleClientId : .accessKey
-    let secretItem: CloudKeychainItem = isGoogle ? .googleClientSecret : .secretKey
+    let providerType = UserDefaults.standard.string(forKey: PreferencesKeys.cloudProviderType)
+      .flatMap(CloudProviderType.init(rawValue:)) ?? .awsS3
+    let items = Self.credentialItems(for: providerType)
 
     let accessContext = "\(context).accessKey"
     let secretContext = "\(context).secretKey"
-    let accessOutcome = CloudKeychainStore.read(item: accessItem, context: accessContext)
-    let secretOutcome = CloudKeychainStore.read(item: secretItem, context: secretContext)
+    let accessOutcome = CloudKeychainStore.read(item: items.access, context: accessContext)
+    // A provider with a single key reads as an empty secret, so "missing" means the key is missing.
+    let secretOutcome = items.secret.map { CloudKeychainStore.read(item: $0, context: secretContext) }
+      ?? (isItemNotFound(accessOutcome) ? .itemNotFound : .success(""))
 
     if case .itemNotFound = accessOutcome,
       case .itemNotFound = secretOutcome,
@@ -466,6 +499,11 @@ final class CloudManager: ObservableObject {
       let secretKey = value(from: secretOutcome, context: secretContext)
     else { return nil }
     return (accessKey, secretKey)
+  }
+
+  private func isItemNotFound(_ outcome: CloudKeychainReadOutcome) -> Bool {
+    if case .itemNotFound = outcome { return true }
+    return false
   }
 
   private func accessKeySummary(for accessKey: String) -> String {
@@ -513,13 +551,15 @@ final class CloudManager: ObservableObject {
 
   private func rollbackCredentialWrite(
     accessItem: CloudKeychainItem,
-    secretItem: CloudKeychainItem,
+    secretItem: CloudKeychainItem?,
     accessKeySnapshot: CredentialSnapshotState,
-    secretKeySnapshot: CredentialSnapshotState,
+    secretKeySnapshot: CredentialSnapshotState?,
     googleRefreshTokenSnapshot: CredentialSnapshotState?
   ) {
     restoreCredential(item: accessItem, snapshot: accessKeySnapshot, context: "saveConfiguration.rollback.accessKey")
-    restoreCredential(item: secretItem, snapshot: secretKeySnapshot, context: "saveConfiguration.rollback.secretKey")
+    if let secretItem, let secretKeySnapshot {
+      restoreCredential(item: secretItem, snapshot: secretKeySnapshot, context: "saveConfiguration.rollback.secretKey")
+    }
     if let googleRefreshTokenSnapshot = googleRefreshTokenSnapshot {
       restoreCredential(item: .googleRefreshToken, snapshot: googleRefreshTokenSnapshot, context: "saveConfiguration.rollback.googleRefreshToken")
     }
@@ -659,7 +699,8 @@ final class CloudManager: ObservableObject {
         uploadedAt: result.uploadedAt,
         providerType: provider.providerType,
         expireTime: config.expireTime,
-        contentType: contentType
+        contentType: contentType,
+        deleteURL: result.deleteURL
       )
       CloudUploadHistoryStore.shared.add(record)
 
@@ -708,6 +749,11 @@ final class CloudManager: ObservableObject {
 
   /// Delete a single object from cloud storage and remove local record.
   func deleteFromCloud(record: CloudUploadRecord) async throws {
+    if record.providerType == .imgbb {
+      removeImgbbRecord(record)
+      return
+    }
+
     guard let provider = createProvider() else {
       DiagnosticLogger.shared.log(.warning, .cloud, "Cloud delete requested while provider is not configured")
       throw CloudError.notConfigured
@@ -753,6 +799,12 @@ final class CloudManager: ObservableObject {
       DiagnosticLogger.shared.log(.warning, .cloud, "Cloud delete-by-key requested while provider is not configured")
       throw CloudError.notConfigured
     }
+    // imgbb can't delete through its API, so the old image stays online after a re-upload.
+    // Keep its history row: it holds the only link to the image's delete page.
+    guard provider.providerType != .imgbb else {
+      DiagnosticLogger.shared.log(.info, .cloud, "Cloud delete-by-key skipped for imgbb; history kept")
+      return
+    }
     do {
       try await provider.delete(key: key)
       CloudUploadHistoryStore.shared.removeByKey(key)
@@ -781,6 +833,8 @@ final class CloudManager: ObservableObject {
     var lastError: Error?
     var failedCount = 0
     for record in records {
+      // imgbb has no delete API; opening one delete page per record would flood the browser.
+      guard record.providerType != .imgbb else { continue }
       do {
         try await provider.delete(key: record.key)
       } catch {
@@ -810,6 +864,22 @@ final class CloudManager: ObservableObject {
     if let lastError = lastError {
       throw lastError
     }
+  }
+
+  /// imgbb can only delete through the web page it returned at upload. Open that page so the
+  /// user can confirm there, and drop the local record.
+  private func removeImgbbRecord(_ record: CloudUploadRecord) {
+    if let deleteURL = record.deleteURL {
+      NSWorkspace.shared.open(deleteURL)
+    }
+    CloudUploadHistoryStore.shared.remove(id: record.id)
+    cleanupThumbnail(recordId: record.id)
+    DiagnosticLogger.shared.log(
+      .info,
+      .cloud,
+      "imgbb record removed; delete page opened in browser",
+      context: ["hasDeleteURL": record.deleteURL == nil ? "false" : "true"]
+    )
   }
 
   // MARK: - MIME Type
@@ -1068,6 +1138,8 @@ final class CloudManager: ObservableObject {
       return "googleClientId"
     case .googleClientSecret:
       return "googleClientSecret"
+    case .imgbbAPIKey:
+      return "imgbbAPIKey"
     }
   }
 }

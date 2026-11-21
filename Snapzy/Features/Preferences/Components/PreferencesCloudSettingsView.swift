@@ -194,6 +194,15 @@ struct CloudSettingsView: View {
             LabeledContent(L10n.CloudSettings.credentialsSection) {
               Text(L10n.CloudSettings.storedSecurelyInKeychain)
             }
+          } else if config.providerType == .imgbb {
+            LabeledContent(L10n.CloudSettings.imgbbAPIKey) {
+              Text(verbatim: cloudManager.cachedMaskedAccessKey)
+                .font(.system(.body, design: .monospaced))
+            }
+            LabeledContent(L10n.CloudSettings.expireTime) {
+              Text(config.expireTime.displayName)
+            }
+            ImgbbPublicLinkNotice()
           } else {
             LabeledContent(L10n.CloudSettings.accessKey) {
               Text(verbatim: cloudManager.cachedMaskedAccessKey)
@@ -228,7 +237,7 @@ struct CloudSettingsView: View {
           }
         }
 
-        if config.providerType != .googleDrive {
+        if config.providerType.usesObjectStorage {
           cloudStatsSection
           shareLinksSection
         }
@@ -597,14 +606,51 @@ private struct CloudProviderSummaryRow: View {
     case .awsS3: return "externaldrive.fill"
     case .cloudflareR2: return "cloud.fill"
     case .googleDrive: return "folder.fill"
+    case .imgbb: return "photo.on.rectangle.angled"
     }
   }
 
   private var subtitle: String {
-    if config.providerType == .googleDrive {
+    switch config.providerType {
+    case .googleDrive:
       return config.bucket.isEmpty ? "Snapzy" : config.bucket
+    case .imgbb:
+      return "imgbb.com"
+    case .awsS3, .cloudflareR2:
+      return config.bucket
     }
-    return config.bucket
+  }
+}
+
+// MARK: - imgbb Notice
+
+/// Tells the user imgbb links are public and how deleting works there.
+private struct ImgbbPublicLinkNotice: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(alignment: .top, spacing: 6) {
+        Image(systemName: "globe")
+          .foregroundColor(.orange)
+          .font(.system(size: 12))
+          .padding(.top, 1)
+        Text(L10n.CloudSettings.imgbbPublicWarning)
+          .font(.system(size: 11, weight: .medium))
+          .foregroundColor(.orange)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      HStack(alignment: .top, spacing: 6) {
+        Image(systemName: "info.circle")
+          .foregroundColor(.secondary)
+          .font(.system(size: 12))
+          .padding(.top, 1)
+        Text(L10n.CloudSettings.imgbbDeleteInfo)
+          .font(.system(size: 11))
+          .foregroundColor(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+    }
+    .padding(.vertical, 4)
+    .accessibilityElement(children: .combine)
   }
 }
 
@@ -864,6 +910,9 @@ private struct CloudCredentialFormView: View {
   @State private var googleRefreshToken = ""
   @State private var googleUserEmail = ""
 
+  // imgbb
+  @State private var imgbbAPIKey = ""
+
   // Password fields
   @State private var protectionPassword = ""
   @State private var confirmProtectionPassword = ""
@@ -1002,6 +1051,57 @@ private struct CloudCredentialFormView: View {
             .font(.system(size: 11))
             .foregroundColor(.secondary)
             .padding(.vertical, 4)
+        }
+      } else if providerType == .imgbb {
+        Section(L10n.CloudSettings.imgbbCredentialsSection) {
+          SettingRow(
+            title: L10n.CloudSettings.imgbbAPIKey,
+            description: nil,
+            tooltip: L10n.CloudSettings.imgbbAPIKeyTooltip
+          ) {
+            HStack(spacing: 6) {
+              if showSecretKey {
+                TextField("", text: $imgbbAPIKey)
+                  .textFieldStyle(.roundedBorder)
+                  .frame(width: 210)
+              } else {
+                SecureField("", text: $imgbbAPIKey)
+                  .textFieldStyle(.roundedBorder)
+                  .frame(width: 210)
+              }
+              Button(action: { showSecretKey.toggle() }) {
+                Image(systemName: showSecretKey ? "eye.slash" : "eye")
+                  .font(.system(size: 12))
+                  .foregroundColor(.secondary)
+              }
+              .buttonStyle(.plain)
+            }
+          }
+
+          Link(L10n.CloudSettings.imgbbGetAPIKey, destination: URL(string: "https://api.imgbb.com/")!)
+            .font(.system(size: 11))
+
+          ImgbbPublicLinkNotice()
+        }
+
+        Section(L10n.CloudSettings.fileExpirationSection) {
+          Picker(L10n.CloudSettings.expireTime, selection: $expireTime) {
+            ForEach(CloudExpireTime.allCases, id: \.self) { time in
+              Text(time.displayName).tag(time)
+            }
+          }
+
+          HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "info.circle")
+              .foregroundColor(.secondary)
+              .font(.system(size: 12))
+              .padding(.top, 1)
+            Text(L10n.CloudSettings.imgbbExpirationInfo)
+              .font(.system(size: 11))
+              .foregroundColor(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+          .padding(.vertical, 4)
         }
       } else {
         Section(L10n.CloudSettings.credentialsSection) {
@@ -1258,6 +1358,9 @@ private struct CloudCredentialFormView: View {
         && !googleClientSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         && authorizationSuccess
     }
+    if providerType == .imgbb {
+      return !imgbbAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
     return !accessKey.trimmingCharacters(in: .whitespaces).isEmpty
       && !secretKey.trimmingCharacters(in: .whitespaces).isEmpty
       && !bucket.trimmingCharacters(in: .whitespaces).isEmpty
@@ -1325,19 +1428,36 @@ private struct CloudCredentialFormView: View {
     isValidating = true
 
     let isGoogle = providerType == .googleDrive
+    let isImgbb = providerType == .imgbb
+    let usesObjectStorage = providerType.usesObjectStorage
+    let trimmedEndpoint = endpoint.trimmingCharacters(in: .whitespaces)
+    let trimmedCustomDomain = customDomain.trimmingCharacters(in: .whitespaces)
 
     let config = CloudConfiguration(
       providerType: providerType,
-      bucket: isGoogle ? googleFolderName.trimmingCharacters(in: .whitespaces) : bucket.trimmingCharacters(in: .whitespaces),
-      region: isGoogle ? "" : region.trimmingCharacters(in: .whitespaces),
-      endpoint: isGoogle ? nil : (endpoint.trimmingCharacters(in: .whitespaces).isEmpty ? nil : endpoint.trimmingCharacters(in: .whitespaces)),
-      customDomain: isGoogle ? nil : (customDomain.trimmingCharacters(in: .whitespaces).isEmpty ? nil : customDomain.trimmingCharacters(in: .whitespaces)),
+      bucket: isGoogle
+        ? googleFolderName.trimmingCharacters(in: .whitespaces)
+        : (isImgbb ? "" : bucket.trimmingCharacters(in: .whitespaces)),
+      region: usesObjectStorage ? region.trimmingCharacters(in: .whitespaces) : "",
+      endpoint: usesObjectStorage && !trimmedEndpoint.isEmpty ? trimmedEndpoint : nil,
+      customDomain: usesObjectStorage && !trimmedCustomDomain.isEmpty ? trimmedCustomDomain : nil,
       expireTime: isGoogle ? .permanent : expireTime
     )
 
     Task {
-      let trimmedAccessKey = isGoogle ? googleClientId.trimmingCharacters(in: .whitespacesAndNewlines) : accessKey.trimmingCharacters(in: .whitespacesAndNewlines)
-      let trimmedSecretKey = isGoogle ? googleClientSecret.trimmingCharacters(in: .whitespacesAndNewlines) : secretKey.trimmingCharacters(in: .whitespacesAndNewlines)
+      let trimmedAccessKey: String
+      let trimmedSecretKey: String
+      switch providerType {
+      case .googleDrive:
+        trimmedAccessKey = googleClientId.trimmingCharacters(in: .whitespacesAndNewlines)
+        trimmedSecretKey = googleClientSecret.trimmingCharacters(in: .whitespacesAndNewlines)
+      case .imgbb:
+        trimmedAccessKey = imgbbAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        trimmedSecretKey = ""
+      case .awsS3, .cloudflareR2:
+        trimmedAccessKey = accessKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        trimmedSecretKey = secretKey.trimmingCharacters(in: .whitespacesAndNewlines)
+      }
       let refreshToken = isGoogle ? googleRefreshToken : nil
 
       do {
@@ -1348,7 +1468,7 @@ private struct CloudCredentialFormView: View {
           googleRefreshToken: refreshToken
         )
 
-        if !isGoogle {
+        if usesObjectStorage {
           do {
             try await cloudManager.applyLifecycleRule(
               config: config,
@@ -1374,7 +1494,7 @@ private struct CloudCredentialFormView: View {
         )
 
         // An imported archive carries its share link style; apply it only once the config is saved.
-        if !isGoogle, let style = importedPayload?.resolvedShareLinkStyle {
+        if usesObjectStorage, let style = importedPayload?.resolvedShareLinkStyle {
           UserDefaults.standard.set(style.rawValue, forKey: PreferencesKeys.cloudShareLinkStyle)
         }
 
@@ -1414,6 +1534,12 @@ private struct CloudCredentialFormView: View {
     endpoint = config.endpoint ?? ""
     customDomain = config.customDomain ?? ""
     expireTime = config.expireTime
+
+    if config.providerType == .imgbb {
+      imgbbAPIKey = cloudManager.loadImgbbAPIKey()
+      return
+    }
+
     accessKey = cloudManager.loadAccessKey()
     secretKey = cloudManager.loadSecretKey()
 
@@ -1449,6 +1575,12 @@ private struct CloudCredentialFormView: View {
     expireTime = payload.configuration.expireTime
     accessKey = payload.accessKey
     secretKey = payload.secretKey
+
+    if payload.configuration.providerType == .imgbb {
+      imgbbAPIKey = payload.accessKey
+      accessKey = ""
+      secretKey = ""
+    }
 
     if payload.configuration.providerType == .googleDrive {
       googleClientId = payload.googleClientId ?? payload.accessKey

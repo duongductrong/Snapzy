@@ -211,6 +211,9 @@ enum SnapzyConfigurationExporter {
 
     if providerRaw == CloudProviderType.googleDrive.rawValue {
       writer.value("folder_name", defaults.string(forKey: PreferencesKeys.cloudBucket) ?? "Snapzy")
+    } else if providerRaw == CloudProviderType.imgbb.rawValue {
+      // The imgbb API key stays in the Keychain; only the expiration is portable.
+      writer.value("expire_time", defaults.string(forKey: PreferencesKeys.cloudExpireTime) ?? CloudExpireTime.day7.rawValue)
     } else {
       writer.value("bucket", defaults.string(forKey: PreferencesKeys.cloudBucket) ?? "")
       writer.value("region", defaults.string(forKey: PreferencesKeys.cloudRegion) ?? "us-east-1")

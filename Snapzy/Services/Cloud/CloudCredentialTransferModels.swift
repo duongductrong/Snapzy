@@ -22,10 +22,10 @@ struct CloudCredentialTransferPayload: Codable, Equatable {
     configuration.providerType.displayName
   }
 
-  /// The share link style to apply on import. Nil for Google Drive, which doesn't use object keys,
-  /// and for archives that don't carry a known style.
+  /// The share link style to apply on import. Nil for Google Drive and imgbb, which don't use
+  /// object keys, and for archives that don't carry a known style.
   var resolvedShareLinkStyle: CloudShareLinkStyle? {
-    guard configuration.providerType != .googleDrive, let shareLinkStyle else { return nil }
+    guard configuration.providerType.usesObjectStorage, let shareLinkStyle else { return nil }
     return CloudShareLinkStyle(rawValue: shareLinkStyle)
   }
 }
