@@ -188,11 +188,13 @@ enum SnapzyConfigurationExporter {
     writer.value("enabled", defaults.boolValue(PreferencesKeys.historyEnabled, default: true))
     writer.value("retention_days", defaults.integerValue(PreferencesKeys.historyRetentionDays, default: 30))
     writer.value("max_count", defaults.integerValue(PreferencesKeys.historyMaxCount, default: 500))
+    writer.value("display_style", manager.displayStyle.rawValue)
     writer.value("background_style", HistoryBackgroundStyle.currentStoredStyle(userDefaults: defaults).rawValue)
     writer.value("open_on_launch", defaults.boolValue(PreferencesKeys.historyOpenOnLaunch, default: false))
 
     writer.section("history.floating")
     writer.value("enabled", manager.isEnabled)
+    writer.value("reveal_at_top_edge", manager.isEdgeRevealEnabled)
     writer.value("position", manager.position.rawValue)
     writer.value("default_filter", manager.defaultFilter?.rawValue ?? "all")
     writer.value("max_displayed_items", manager.maxDisplayedItems)

@@ -488,6 +488,9 @@ enum SnapzyConfigurationImporter {
     collectInt(&reader, "history", "max_count", range: 0...1000, mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.historyMaxCount)
     }
+    collectEnumString(&reader, "history", "display_style", allowed: HistoryDisplayStyle.allCases.map(\.rawValue), mutations: &mutations) {
+      HistoryFloatingManager.shared.displayStyle = HistoryDisplayStyle(rawValue: $0) ?? .traditional
+    }
     collectEnumString(&reader, "history", "background_style", allowed: HistoryBackgroundStyle.allCases.map(\.rawValue), mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.historyBackgroundStyle)
     }
@@ -497,6 +500,9 @@ enum SnapzyConfigurationImporter {
 
     let manager = HistoryFloatingManager.shared
     collectBool(&reader, "history", "floating", "enabled", mutations: &mutations) { manager.isEnabled = $0 }
+    collectBool(&reader, "history", "floating", "reveal_at_top_edge", mutations: &mutations) {
+      manager.isEdgeRevealEnabled = $0
+    }
     collectEnumString(&reader, "history", "floating", "position", allowed: ["topCenter", "bottomCenter", "center"], mutations: &mutations) {
       manager.position = HistoryPanelPosition(rawValue: $0) ?? .topCenter
     }
