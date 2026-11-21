@@ -104,6 +104,8 @@ private final class QuickAccessPinWindowController {
   /// The entrance currently in flight, cleared when the pin lands. Its frames are the only truth
   /// about where the window is allowed to be while the spring runs.
   private var activeEntrance: Entrance?
+  /// Backup landing, in case the spring's completion block never reaches the main thread.
+  private var entranceLanding: Timer?
   /// The region the entrance flies out of. The card the gesture came from wins over the captured
   /// region: a pin whose resting size matches its capture has nowhere to travel, while the card sits
   /// in a corner and always gives the flight somewhere to come from.
@@ -213,6 +215,10 @@ private final class QuickAccessPinWindowController {
     window.setFrame(entrance.flightFrame, display: false)
     contentContainer.frame = entrance.containerFrame
     window.isEntranceInFlight = true
+    // The flight window is far larger than the pin, and its native shadow is drawn from the window
+    // frame — which would put a soft rectangle around the whole path. The content carries its own
+    // shadow inside the margin, so the window goes without one until it lands.
+    window.hasShadow = false
     window.alphaValue = 0
     window.orderFrontRegardless()
 
@@ -237,8 +243,20 @@ private final class QuickAccessPinWindowController {
     }
     layer.add(spring, forKey: Self.entranceMotionKey)
     CATransaction.commit()
+    scheduleLanding(after: spring.settlingDuration)
 
     fadeIn()
+  }
+
+  /// A timer registered in the common run-loop modes still fires while a menu is tracking, so a pin
+  /// gestured from the Quick Access menu cannot be left stranded in its flight frame if the
+  /// compositor's completion block is dropped.
+  private func scheduleLanding(after seconds: TimeInterval) {
+    let timer = Timer(timeInterval: seconds + 0.35, repeats: false) { [weak self] _ in
+      MainActor.assumeIsolated { self?.finishEntrance() }
+    }
+    RunLoop.main.add(timer, forMode: .common)
+    entranceLanding = timer
   }
 
   /// Land the pin: back to the resting frame with the content filling it. Anything that measures the
@@ -247,7 +265,11 @@ private final class QuickAccessPinWindowController {
   func finishEntrance() {
     guard let entrance = activeEntrance else { return }
     activeEntrance = nil
+    entranceLanding?.invalidate()
+    entranceLanding = nil
+    contentContainer.layer?.removeAnimation(forKey: Self.entranceMotionKey)
     window.isEntranceInFlight = false
+    window.hasShadow = true
     window.setFrame(entrance.restingFrame, display: true)
     contentContainer.frame = NSRect(origin: .zero, size: entrance.restingFrame.size)
     window.updateMousePassthrough()
@@ -267,6 +289,8 @@ private final class QuickAccessPinWindowController {
   }
 
   func close() {
+    entranceLanding?.invalidate()
+    entranceLanding = nil
     window.close()
   }
 
