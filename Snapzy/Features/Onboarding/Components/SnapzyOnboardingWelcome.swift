@@ -495,8 +495,9 @@ private struct WelcomeOrbSwirlCore: View, Animatable {
 
   var body: some View {
     let clamped = max(0, min(1, progress))
-    let dissolve = 1.0 - max(0, min(1, (clamped - 0.28) / 0.36))
-    let expansionScale = 1.0 + max(0, clamped - 0.27) * 2.2
+    // Dissolve completely before the portal reaches half-screen so no circular halo ever lingers
+    let dissolve = 1.0 - max(0, min(1, (clamped - 0.26) / 0.22))
+    let expansionScale = 1.0 + max(0, clamped - 0.27) * 1.8
 
     Group {
       if drifts {
@@ -514,7 +515,7 @@ private struct WelcomeOrbSwirlCore: View, Animatable {
           RadialGradient(
             stops: [
               .init(color: .white, location: 0.0),
-              .init(color: .white, location: 0.62),
+              .init(color: .white.opacity(0.85), location: 0.42),
               .init(color: .clear, location: 1.0),
             ],
             center: .center,
@@ -524,22 +525,23 @@ private struct WelcomeOrbSwirlCore: View, Animatable {
         )
     }
     .scaleEffect(expansionScale)
-    .opacity(Double(dissolve))
+    .opacity(Double(dissolve * dissolve))
   }
 
   @ViewBuilder
   private func swirlField(at time: TimeInterval) -> some View {
     if #available(macOS 15.0, *) {
       let t = Float(time)
-      let cx = 0.5 + sin(t * 0.72) * 0.14
-      let cy = 0.5 + cos(t * 0.64 + 0.8) * 0.14
+      // Strict fold-free sway (< 0.08 on a 0.5 grid) so the 3x3 Coons mesh never creases
+      let cx = 0.5 + sin(t * 0.72) * 0.07
+      let cy = 0.5 + cos(t * 0.64 + 0.8) * 0.07
       MeshGradient(
         width: 3,
         height: 3,
         points: [
-          [0.0, 0.0], [0.5 + sin(t * 0.55) * 0.12, 0.0], [1.0, 0.0],
-          [0.0, 0.5 + cos(t * 0.48) * 0.12], [cx, cy], [1.0, 0.5 + sin(t * 0.52 + 1.7) * 0.12],
-          [0.0, 1.0], [0.5 + cos(t * 0.60 + 2.1) * 0.12, 1.0], [1.0, 1.0],
+          [0.0, 0.0], [0.5 + sin(t * 0.55) * 0.06, 0.0], [1.0, 0.0],
+          [0.0, 0.5 + cos(t * 0.48) * 0.06], [cx, cy], [1.0, 0.5 + sin(t * 0.52 + 1.7) * 0.06],
+          [0.0, 1.0], [0.5 + cos(t * 0.60 + 2.1) * 0.06, 1.0], [1.0, 1.0],
         ],
         colors: [
           SnapzyWelcomePalette.pureLight.color,
@@ -572,16 +574,17 @@ private struct WelcomeOrbSwirlCore: View, Animatable {
   }
 }
 
-// MARK: - Living 4x4 Fluid Aurora Backdrop (Zero Seams)
+// MARK: - Living 5x5 Fold-Free Fluid Aurora Backdrop (Zero Seams, Zero Creases)
 
-/// Pure 4x4 MeshGradient on macOS 15+ (4 orbiting interior vertices + 8 gliding edge vertices +
-/// 4 pinned corners) with zero overlaid shapes or clipped ellipses — guaranteed streak-free.
+/// Pure 5x5 MeshGradient on macOS 15+ using a strictly monotonic, non-folding vertex grid
+/// (maximum vertex sway 0.032 on 0.25 spacing → guaranteed minimum spacing ≥ 0.186 so Coons
+/// patches can NEVER fold or form a hard dividing crease at any timestamp).
 private struct WelcomeAuroraBackdrop: View {
   var drifts: Bool
 
   var body: some View {
     if #available(macOS 15.0, *) {
-      WelcomeMesh4x4Backdrop(drifts: drifts)
+      WelcomeMesh5x5Backdrop(drifts: drifts)
     } else {
       WelcomeLegacyAuroraBackdrop(drifts: drifts)
     }
@@ -589,10 +592,10 @@ private struct WelcomeAuroraBackdrop: View {
 }
 
 @available(macOS 15.0, *)
-private struct WelcomeMesh4x4Backdrop: View {
+private struct WelcomeMesh5x5Backdrop: View {
   var drifts: Bool
 
-  // Ordered Snapzy electric-cobalt → glacial-white ramp for coherent traveling silk ribbons.
+  // Ordered Snapzy electric-cobalt → glacial-white ramp for seamless silk blending.
   private static let paletteRamp: [WelcomeRGB] = [
     SnapzyWelcomePalette.deepCobalt,
     SnapzyWelcomePalette.brandCobalt,
@@ -603,49 +606,51 @@ private struct WelcomeMesh4x4Backdrop: View {
     SnapzyWelcomePalette.pureLight,
   ]
 
-  private static let bases: [SIMD2<Float>] = [
-    [0.00, 0.00], [0.33, 0.00], [0.67, 0.00], [1.00, 0.00],
-    [0.00, 0.33], [0.33, 0.33], [0.67, 0.33], [1.00, 0.33],
-    [0.00, 0.67], [0.33, 0.67], [0.67, 0.67], [1.00, 0.67],
-    [0.00, 1.00], [0.33, 1.00], [0.67, 1.00], [1.00, 1.00],
-  ]
+  // Uniform 5×5 base lattice (row-major, step = 0.25).
+  private static let bases: [SIMD2<Float>] = {
+    var grid: [SIMD2<Float>] = []
+    grid.reserveCapacity(25)
+    for row in 0..<5 {
+      for col in 0..<5 {
+        grid.append(SIMD2<Float>(Float(col) * 0.25, Float(row) * 0.25))
+      }
+    }
+    return grid
+  }()
 
-  private static let driftAxes: [SIMD2<Float>] = [
-    [0, 0], [1, 0], [1, 0], [0, 0],
-    [0, 1], [1, 1], [1, 1], [0, 1],
-    [0, 1], [1, 1], [1, 1], [0, 1],
-    [0, 0], [1, 0], [1, 0], [0, 0],
-  ]
-
-  private static let pointClocks: [(speed: Float, phase: Float, sway: Float)] = [
-    (0.00, 0.0, 0.00), (0.48, 0.8, 0.15), (0.44, 2.3, 0.15), (0.00, 0.0, 0.00),
-    (0.46, 1.5, 0.15), (0.58, 0.4, 0.19), (0.54, 2.9, 0.19), (0.48, 4.1, 0.15),
-    (0.44, 3.6, 0.15), (0.52, 5.0, 0.19), (0.60, 1.2, 0.19), (0.46, 2.4, 0.15),
-    (0.00, 0.0, 0.00), (0.50, 4.7, 0.15), (0.42, 0.9, 0.15), (0.00, 0.0, 0.00),
-  ]
-
+  // Strictly bounded gentle vertex motion (≤ 0.032 on a 0.25 cell) guarantees the bicubic
+  // surface remains 100% diffeomorphic (no creases, no folds, no dividing lines ever).
   static func points(at time: TimeInterval) -> [SIMD2<Float>] {
     let t = Float(time)
-    return zip(zip(bases, driftAxes), pointClocks).map { pair, clock in
-      let (base, axes) = pair
-      let dx = sin(t * clock.speed + clock.phase) * clock.sway * axes.x
-      let dy = cos(t * clock.speed * 0.83 + clock.phase * 1.31) * clock.sway * axes.y
-      return [
-        max(0, min(1, base.x + dx)),
-        max(0, min(1, base.y + dy)),
-      ]
+    var result: [SIMD2<Float>] = []
+    result.reserveCapacity(25)
+
+    for row in 0..<5 {
+      for col in 0..<5 {
+        let base = bases[row * 5 + col]
+        let isLeftOrRightEdge = (col == 0 || col == 4)
+        let isTopOrBottomEdge = (row == 0 || row == 4)
+
+        let phase = Float(row * 5 + col) * 0.73
+        let dx: Float = isLeftOrRightEdge ? 0 : sin(t * 0.42 + phase) * 0.030
+        let dy: Float = isTopOrBottomEdge ? 0 : cos(t * 0.37 + phase * 1.29) * 0.030
+
+        result.append([base.x + dx, base.y + dy])
+      }
     }
+    return result
   }
 
-  /// Evaluates a coherent rotating two-wave silk field across the live vertex positions so bold
-  /// rivers of pure white and Snapzy electric cobalt visibly glide across the window like Arc.
+  /// Evaluates a smooth rotating two-wave silk field across the 5×5 lattice so luminous white
+  /// clouds and Snapzy cobalt rivers glide continuously and blend organically with zero seams,
+  /// while keeping a gentle cobalt shelter behind the center headline for crisp white-text contrast.
   static func colors(at time: TimeInterval, points: [SIMD2<Float>]) -> [Color] {
     let t = time
-    let theta1 = t * 0.34
+    let theta1 = t * 0.28
     let cos1 = cos(theta1)
     let sin1 = sin(theta1)
 
-    let theta2 = -t * 0.23 + 1.35
+    let theta2 = -t * 0.19 + 1.4
     let cos2 = cos(theta2)
     let sin2 = sin(theta2)
 
@@ -656,24 +661,29 @@ private struct WelcomeMesh4x4Backdrop: View {
       let dx = Double(pt.x) - 0.5
       let dy = Double(pt.y) - 0.5
 
-      // Broad primary silk band rotating + traveling smoothly across the canvas
+      // Broad, low-frequency primary cloud wave (lower spatial frequency = softer, smoother blend)
       let u = dx * cos1 + dy * sin1
-      let wave1 = sin(u * 3.45 + t * 0.68)
+      let wave1 = sin(u * 2.35 + t * 0.52)
 
-      // Counter-drifting secondary swell producing organic asymmetric cloud folds
+      // Gentle counter-drifting harmonic swell creating dreamy curved cloud pockets
       let v = dx * cos2 + dy * sin2
-      let wave2 = cos(v * 2.65 - t * 0.48 + 0.9)
+      let wave2 = cos(v * 1.85 - t * 0.38 + 0.7)
 
-      // Keep the center band slightly anchored in rich electric cobalt so white welcome typography
-      // remains crisp even as bright silk-white clouds sweep continuously across the corners.
-      let distSq = dx * dx + dy * dy
-      let centerCobaltBias = 0.24 * exp(-distSq * 4.6)
+      let raw = 0.50 + 0.34 * wave1 + 0.20 * wave2
+      var field = max(0.0, min(1.0, raw))
 
-      let raw = 0.52 + 0.38 * wave1 + 0.24 * wave2 - centerCobaltBias
-      let field = max(0.0, min(1.0, raw))
-      // Gentle S-curve lifts bright whites and deepens cobalt rivers for unmistakable motion
-      let shaped = field * field * (3.0 - 2.0 * field)
-      result.append(sampleRamp(at: shaped))
+      // Smooth elliptical cobalt shelter around the center typography zone so white text always
+      // reads effortlessly while silk-white clouds sweep freely across all four edges and corners.
+      let nx = dx / 0.36
+      let ny = dy / 0.26
+      let centerProximity = exp(-(nx * nx + ny * ny) * 1.15)
+      let maxCenterField = 0.52
+      if field > maxCenterField {
+        field -= (field - maxCenterField) * centerProximity * 0.88
+      }
+
+      // Linear ramp sampling (no aggressive S-curve) keeps white-to-cobalt transitions completely soft
+      result.append(sampleRamp(at: field))
     }
     return result
   }
@@ -699,8 +709,8 @@ private struct WelcomeMesh4x4Backdrop: View {
   private func mesh(at time: TimeInterval) -> some View {
     let livePoints = Self.points(at: time)
     return MeshGradient(
-      width: 4,
-      height: 4,
+      width: 5,
+      height: 5,
       points: livePoints,
       colors: Self.colors(at: time, points: livePoints),
       smoothsColors: true
