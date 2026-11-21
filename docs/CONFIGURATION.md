@@ -46,7 +46,7 @@ step and grant access later from Settings -> Advanced.
 The TOML file covers portable app preferences:
 
 - General settings: language, appearance, sounds, URL scheme integration, `snapzy` command line access (`cli_enabled`, default `true`), show menu bar icon, login item, export folder path.
-- Menu bar customization: icon style, item order, hidden items (`[menu_bar]`). The custom icon PNG file itself is not portable — `icon_style = "custom"` falls back to `default` on a Mac without a locally imported custom icon.
+- Menu bar customization: icon style, item order, hidden items, and the macOS 27 "Show icons in menus" opt-in (`[menu_bar] show_item_icons`, default `false`; ignored on earlier macOS versions, which always show menu icons). The custom icon PNG file itself is not portable — `icon_style = "custom"` falls back to `default` on a Mac without a locally imported custom icon.
 - Updates: automatic check/download and the Sparkle update channel (`stable` or `beta`).
 - Capture settings: naming templates, screenshot format, clipboard content for copied images (`[capture.screenshot] clipboard_content`: `"image_and_file"` (default) or `"image_only"`, which drops the file reference for Citrix/RDP/terminal paste targets), cursor/app inclusion, freeze area, Delayed Capture countdown (`[capture.screenshot] delayed_capture_seconds`: `3`, `5`, or `10`, default `3`; shared by delayed area and delayed fullscreen), show selection area overlay, magnifier preferences (`[capture.screenshot] reverse_magnifier_zoom_direction`, `show_magnifier_by_default`, `show_magnifier_color_panel`, `magnifier_size`: `"small"`, `"medium"`, or `"large"`, default `"medium"`), window shadow in Application Capture (`[capture.screenshot] include_window_shadow`, default `true`), scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR provider selection (`[capture.ocr] selected_model`: `"builtin"` or `"custom:<uuid>"`), and custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), object cutout auto-crop.
 - After-capture actions for screenshot and recording: `save`, `quick_access`, `copy_file`, and `open_annotate` under `[capture.after.screenshot]` / `[capture.after.recording]`. Cloud upload is not part of this matrix — it is manual-only from Quick Access, Annotate, Video Editor, and History surfaces.
@@ -143,6 +143,7 @@ channel = "stable" # "stable" | "beta" — invalid values are rejected on import
 
 [menu_bar]
 icon_style = "default" # "default" | "cameraViewfinder" | "cameraFill" | "scissors" | "photoOnRectangle" | "custom"
+show_item_icons = false # macOS 27+: show icons next to Snapzy menu items
 item_order = ["captureArea", "captureAreaAnnotate", "captureApplication", "captureFullscreen", "captureActiveWindow", "scrollingCapture", "captureOCR", "captureSmartElement", "captureObjectCutout", "recordScreen", "recordApplication", "openAnnotate", "combineImages", "editVideo", "cloudUploads", "openHistory", "shortcutList"]
 hidden_items = []
 

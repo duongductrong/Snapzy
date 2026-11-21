@@ -163,9 +163,11 @@ final class MenuBarCustomizationStoreTests: XCTestCase {
     store.applyConfiguration(
       order: [.shortcutList, .captureOCR],
       hiddenItems: [.captureOCR],
-      iconStyle: .cameraFill
+      iconStyle: .cameraFill,
+      showItemIcons: true
     )
 
+    XCTAssertTrue(store.showItemIcons)
     XCTAssertEqual(store.orderedItems(for: .tools).first, .shortcutList)
     XCTAssertEqual(store.orderedItems(for: .capture).first, .captureOCR)
     XCTAssertTrue(store.isHidden(.captureOCR))

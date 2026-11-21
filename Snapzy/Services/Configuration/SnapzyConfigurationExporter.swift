@@ -62,6 +62,7 @@ enum SnapzyConfigurationExporter {
 
     writer.section("menu_bar")
     writer.value("icon_style", store.iconStyle.rawValue)
+    writer.value("show_item_icons", store.showItemIcons)
     writer.stringArray("item_order", store.itemOrder.map(\.rawValue))
     writer.stringArray("hidden_items", store.hiddenItems.map(\.rawValue).sorted())
   }

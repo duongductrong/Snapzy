@@ -112,7 +112,8 @@ final class MenuBarCustomizationStore: ObservableObject {
   func applyConfiguration(
     order: [MenuBarItemKind]?,
     hiddenItems: Set<MenuBarItemKind>?,
-    iconStyle: MenuBarIconStyle?
+    iconStyle: MenuBarIconStyle?,
+    showItemIcons: Bool?
   ) {
     if let order {
       itemOrder = Self.normalizedOrder(from: order.map(\.rawValue))
@@ -122,6 +123,9 @@ final class MenuBarCustomizationStore: ObservableObject {
     }
     if let iconStyle {
       self.iconStyle = iconStyle
+    }
+    if let showItemIcons {
+      self.showItemIcons = showItemIcons
     }
     save()
   }
