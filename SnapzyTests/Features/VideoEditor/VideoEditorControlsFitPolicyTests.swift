@@ -92,6 +92,66 @@ final class VideoEditorControlsFitPolicyTests: XCTestCase {
   }
 }
 
+/// Renders the production row itself twice — once with badges to show, once with a state that has
+/// none — and compares the pixels. At a narrow container the two must be the same image, which is
+/// the only statement about #780 that does not depend on any model of the row: the badges are not
+/// painted over the duration readout.
+///
+/// The roomy container is the control. There the badges do fit, so the two renders must differ; if
+/// they do not, this machine's offscreen rendering cannot tell the two states apart and the narrow
+/// comparison would be proving nothing, so the test says so instead of passing for free.
+@MainActor
+final class VideoEditorControlsRowRenderingTests: XCTestCase {
+  private var tempDirectory: URL!
+
+  override func setUp() {
+    super.setUp()
+    tempDirectory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("SnapzyTests_780Rendering_\(UUID().uuidString)", isDirectory: true)
+    try? FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+  }
+
+  override func tearDown() {
+    try? FileManager.default.removeItem(at: tempDirectory)
+    tempDirectory = nil
+    super.tearDown()
+  }
+
+  func testBadgesAreNotPaintedOnceTheTrailingFrameCannotHoldThem() async throws {
+    let withBadges = try await VideoEditorActivityFixture.makeState(in: tempDirectory)
+    _ = withBadges.addZoom(at: 1)
+    withBadges.hasUnsavedChanges = true
+    XCTAssertFalse(withBadges.zoomSegments.isEmpty)
+    let withoutBadges = try await VideoEditorActivityFixture.makeState(in: tempDirectory)
+
+    let roomy = render(withBadges, width: 1200)
+    let roomyWithoutBadges = render(withoutBadges, width: 1200)
+    try XCTSkipIf(
+      roomy == roomyWithoutBadges,
+      "offscreen rendering here cannot distinguish the badge group; the narrow comparison would prove nothing"
+    )
+
+    XCTAssertEqual(
+      render(withBadges, width: 530),
+      render(withoutBadges, width: 530),
+      "at a 530 pt container the row must render exactly as if it had no badges at all"
+    )
+  }
+
+  private func render(_ state: VideoEditorState, width: CGFloat) -> Data {
+    let host = NSHostingView(rootView: VideoControlsView(state: state).frame(width: width, height: 60))
+    host.frame = NSRect(x: 0, y: 0, width: width, height: 60)
+    host.layoutSubtreeIfNeeded()
+    // The badge decision lands on the pass after the measurements arrive, so let the row settle.
+    RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.3))
+    host.layoutSubtreeIfNeeded()
+    let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds)
+    guard let rep else { return Data() }
+    host.cacheDisplay(in: host.bounds, to: rep)
+    return rep.representation(using: .tiff, properties: [:]) ?? Data()
+  }
+}
+
 /// Measures the row's division, the overlap it has to prevent, and the badge decision on a
 /// structural twin of the controls row: `.fixedSize()` clusters in an `HStack` with 12 pt spacing,
 /// the side clusters inside `.frame(maxWidth: .infinity, alignment:)` wrappers, and the status
