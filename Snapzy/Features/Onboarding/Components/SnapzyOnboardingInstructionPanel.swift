@@ -9,6 +9,9 @@ import SwiftUI
 
 struct SnapzyOnboardingInstructionPanel: View {
   @ObservedObject var state: SnapzyOnboardingState
+  /// Allows pre-warming the panel behind the Welcome screen and firing its staggered entrance
+  /// at the exact moment the Welcome aurora glides aside to reveal the left column.
+  var isRevealed: Bool = true
 
   /// Drives the entrance. The root view re-identifies the panel per step, so this returns to
   /// false and the page arrives in a short stagger every time the step changes.
@@ -50,7 +53,16 @@ struct SnapzyOnboardingInstructionPanel: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .onAppear { hasAppeared = true }
+    .onAppear {
+      if isRevealed {
+        hasAppeared = true
+      }
+    }
+    .onChange(of: isRevealed) { revealed in
+      if revealed {
+        hasAppeared = true
+      }
+    }
   }
 
   // MARK: - Headline

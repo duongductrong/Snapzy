@@ -46,7 +46,7 @@ struct SnapzyOnboardingView: View {
             .opacity(isFlowSettled ? 1 : 0)
             .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : -14))
             .animation(
-              reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.82).delay(0.16),
+              reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.76),
               value: isFlowSettled
             )
 
@@ -54,11 +54,12 @@ struct SnapzyOnboardingView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
           // Liquid Glass Golden Rule: never animate `.opacity` on a view containing `.glassEffect`
-          // (`SnapzyOnboardingActionBar`). Slide smoothly into place using geometry only.
+          // (`SnapzyOnboardingActionBar`). Keep it cleanly tucked beneath the window's bottom clip
+          // during prewarm and slide smoothly into place as the aurora glides aside.
           footer
-            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 22))
+            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 72))
             .animation(
-              reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.84).delay(0.22),
+              reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.78).delay(0.08),
               value: isFlowSettled
             )
         }
@@ -70,6 +71,7 @@ struct SnapzyOnboardingView: View {
       if isShowingWelcome {
         SnapzyOnboardingWelcome(
           externalStartTrigger: welcomeStartTrigger,
+          onReadyForPrewarm: prewarmFlow,
           onBeginTransition: beginFlowReveal,
           onCompleteTransition: completeFlowReveal,
           onClose: finish
@@ -121,23 +123,26 @@ struct SnapzyOnboardingView: View {
 
   private var stepColumns: some View {
     HStack(alignment: .top, spacing: SnapzyOnboardingMetrics.columnGap) {
-      SnapzyOnboardingInstructionPanel(state: state)
+      SnapzyOnboardingInstructionPanel(state: state, isRevealed: isFlowSettled)
         .frame(width: SnapzyOnboardingMetrics.railWidth, alignment: .topLeading)
+        .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : -22))
+        .animation(
+          reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.78),
+          value: isFlowSettled
+        )
         // Re-identified per step: the page is a document that gets replaced, and the fresh
         // identity is what lets its own staged entrance replay instead of firing once ever. The
         // replacement travels with the flow's direction, not always the same way.
         .id(state.currentStep)
         .transition(stepTransition)
 
-      // The stage deliberately keeps one identity across steps. Its scenes run their own stage
-      // machines, and tearing the host down between steps would drop a simulation halfway through.
+      // The stage stays anchored at its exact final frame so the morphing Welcome aurora locks
+      // onto it pixel-for-pixel and dissolves cleanly to reveal the live macOS desktop inside.
       SnapzyOnboardingMockHost(state: state)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .opacity(isFlowSettled ? 1 : 0)
-        .scaleEffect(reduceMotion ? 1.0 : (isFlowSettled ? 1.0 : 0.925))
-        .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : 20), y: reduceMotion ? 0 : (isFlowSettled ? 0 : 12))
         .animation(
-          reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.92).delay(0.08),
+          reduceMotion ? .easeOut(duration: 0.20) : .easeOut(duration: 0.35).delay(0.22),
           value: isFlowSettled
         )
     }
@@ -243,20 +248,18 @@ struct SnapzyOnboardingView: View {
     welcomeStartTrigger += 1
   }
 
-  private func beginFlowReveal() {
+  /// Silently mounts Step 1 behind the opaque Welcome aurora once the CTA is ready so layout,
+  /// Liquid Glass sampling, and Metal pipelines are warm before the user clicks — zero click stall.
+  private func prewarmFlow() {
     guard !isFlowMounted else { return }
     isFlowMounted = true
-    if reduceMotion {
-      DispatchQueue.main.async {
-        isFlowSettled = true
-      }
-      return
+  }
+
+  private func beginFlowReveal() {
+    if !isFlowMounted {
+      isFlowMounted = true
     }
-    // Let the mounted Step 1 hierarchy finish its offscreen layout pass behind the opaque aurora,
-    // then lift it into place right as the soft iris aperture opens across the window (~240ms later).
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
-      isFlowSettled = true
-    }
+    isFlowSettled = true
   }
 
   private func completeFlowReveal() {

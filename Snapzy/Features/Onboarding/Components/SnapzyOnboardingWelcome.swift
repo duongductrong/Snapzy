@@ -67,6 +67,9 @@ private enum SnapzyWelcomePalette {
 
 struct SnapzyOnboardingWelcome: View {
   var externalStartTrigger: Int = 0
+  /// Called once the welcome CTA is visible so the host can silently pre-warm Step 1 offscreen
+  /// behind the opaque aurora — eliminating any frame drop on the click frame.
+  var onReadyForPrewarm: () -> Void = {}
   var onBeginTransition: () -> Void
   var onCompleteTransition: () -> Void
   var onClose: () -> Void
@@ -86,8 +89,11 @@ struct SnapzyOnboardingWelcome: View {
   @State private var subtitleIn = false
   @State private var ctaIn = false
   @State private var isExiting = false
-  /// Symmetrical liquid aperture opening from the arrow pill (0.0 → 1.0) to reveal Step 1.
-  @State private var exitApertureProgress: CGFloat = 0
+  /// Drives the signature Viewfinder Portal Morph (0.0 = full window aurora → 1.0 = locked onto
+  /// the right-hand macOS desktop stage frame, pixel-perfect).
+  @State private var stageMorphProgress: CGFloat = 0
+  /// Smooth cross-dissolve of the morphed aurora once it settles onto the macOS desktop stage.
+  @State private var stageDissolveOpacity: Double = 1.0
 
   private var reduceMotion: Bool {
     SnapzyMotionPreferences.shared.reduceMotion || envReduceMotion
@@ -102,74 +108,55 @@ struct SnapzyOnboardingWelcome: View {
   }
 
   var body: some View {
-    ZStack {
-      // Base midnight-cobalt void for the opening bloom
-      SnapzyWelcomePalette.voidDark
-
-      // Soft ambient cobalt aura warming the void around the awakening orb
-      if !isFlooded {
-        WelcomeOrbAmbientAura(progress: portalProgress, drifts: !reduceMotion)
-          .allowsHitTesting(false)
-      }
-
-      // Living 60fps white-and-cobalt aurora + clean photographic film grain
-      ZStack {
-        WelcomeAuroraBackdrop(drifts: !reduceMotion)
-        WelcomeFilmGrainOverlay()
-          .allowsHitTesting(false)
-
+    GeometryReader { proxy in
+      let size = proxy.size
+      ZStack(alignment: .topLeading) {
+        // Opening midnight-cobalt void (fades away once flooded so Liquid Glass shows beneath
+        // the morphing aurora frame during exit).
         if !isFlooded {
-          WelcomeOrbSwirlCore(progress: portalProgress, drifts: !reduceMotion)
+          SnapzyWelcomePalette.voidDark
+            .frame(width: size.width, height: size.height)
+            .clipShape(Radius.rect(SnapzyRadius.window))
+        }
+
+        // Soft ambient cobalt aura warming the void around the awakening orb
+        if !isFlooded {
+          WelcomeOrbAmbientAura(progress: portalProgress, drifts: !reduceMotion)
+            .position(x: size.width * 0.5, y: size.height * 0.5)
             .allowsHitTesting(false)
         }
+
+        // Morphing Living Aurora Portal:
+        // - During opening: fills the full window through the organic 3-lobe liquid orb portal.
+        // - On arrow click: morphs smoothly into the exact right-column macOS stage rectangle with
+        //   crisp Snapzy viewfinder corner brackets, then dissolves like developing film to reveal
+        //   the real macOS desktop stage right inside the same frame.
+        morphingAuroraSurface(in: size)
+
+        // Solo crisp white Snapzy mark beat
+        mark
+          .frame(width: size.width, height: size.height)
+
+        // Arc focus-pull wave headline + airy subtitle + clean editorial arrow pill button
+        welcomeContent
+          .frame(width: size.width, height: size.height)
+          .opacity(isExiting ? 0 : 1)
+          .blur(radius: isExiting && !reduceMotion ? 14 : 0)
+          .scaleEffect(isExiting && !reduceMotion ? 0.94 : 1.0)
+          .offset(y: isExiting && !reduceMotion ? -14 : 0)
+          .animation(
+            phaseAnimation(.timingCurve(0.22, 1.0, 0.36, 1.0, duration: 0.34)),
+            value: isExiting
+          )
+
+        // Top-right adaptive close button
+        closeButton
+          .frame(width: size.width, height: size.height)
+          .opacity(isExiting ? 0 : 1)
+          .animation(phaseAnimation(.easeOut(duration: 0.22)), value: isExiting)
       }
-      .modifier(WelcomeLiquidPortalModifier(
-        progress: portalProgress,
-        isFullyOpen: isFlooded,
-        drifts: !reduceMotion
-      ))
-
-      // Solo crisp white Snapzy mark beat
-      mark
-
-      // Arc focus-pull wave headline + airy subtitle + clean editorial arrow pill button
-      welcomeContent
-        .opacity(isExiting ? 0 : 1)
-        .blur(radius: isExiting && !reduceMotion ? 18 : 0)
-        .scaleEffect(isExiting && !reduceMotion ? 1.09 : 1.0)
-        .animation(
-          phaseAnimation(.timingCurve(0.22, 0.61, 0.36, 1.0, duration: 0.46)),
-          value: isExiting
-        )
-
-      // Top-right adaptive close button
-      closeButton
-        .opacity(isExiting ? 0 : 1)
-        .animation(phaseAnimation(.easeOut(duration: 0.30)), value: isExiting)
+      .frame(width: size.width, height: size.height)
     }
-    .clipShape(Radius.rect(SnapzyRadius.window))
-    .overlay {
-      Radius.rect(SnapzyRadius.window)
-        .strokeBorder(
-          LinearGradient(
-            colors: [
-              Color.white.opacity(isFlooded ? 0.34 : 0.14),
-              Color.white.opacity(isFlooded ? 0.10 : 0.05),
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-          ),
-          lineWidth: LiquidGlassTokens.specularLineWidth
-        )
-        .opacity(isExiting ? 0 : 1)
-        .animation(phaseAnimation(.easeInOut(duration: 0.8)), value: isFlooded)
-        .animation(phaseAnimation(.easeOut(duration: 0.45)), value: isExiting)
-        .allowsHitTesting(false)
-    }
-    .modifier(WelcomeExitApertureModifier(
-      progress: exitApertureProgress,
-      reduceMotion: reduceMotion
-    ))
     .allowsHitTesting(!isExiting)
     .task {
       await playTimeline()
@@ -180,6 +167,34 @@ struct SnapzyOnboardingWelcome: View {
     .onDisappear {
       SnapzyOnboardingWelcomeAudio.shared.stopAmbient(fadeDuration: 1.25)
     }
+  }
+
+  /// Renders the living aurora inside an animatable Viewfinder Portal frame that smoothly morphs
+  /// from the full onboarding window into the exact `SnapzyOnboardingMockHost` rectangle.
+  private func morphingAuroraSurface(in windowSize: CGSize) -> some View {
+    ZStack {
+      WelcomeAuroraBackdrop(drifts: !reduceMotion)
+      WelcomeFilmGrainOverlay()
+        .allowsHitTesting(false)
+
+      if !isFlooded {
+        WelcomeOrbSwirlCore(progress: portalProgress, drifts: !reduceMotion)
+          .allowsHitTesting(false)
+      }
+    }
+    .modifier(WelcomeLiquidPortalModifier(
+      progress: portalProgress,
+      isFullyOpen: isFlooded,
+      drifts: !reduceMotion
+    ))
+    .modifier(WelcomeViewfinderMorphModifier(
+      progress: stageMorphProgress,
+      windowSize: windowSize,
+      isFlooded: isFlooded,
+      isExiting: isExiting,
+      reduceMotion: reduceMotion
+    ))
+    .opacity(stageDissolveOpacity)
   }
 
   // MARK: - Solo Brand Mark Beat
@@ -269,6 +284,7 @@ struct SnapzyOnboardingWelcome: View {
       periodRevealed = true
       subtitleIn = true
       ctaIn = true
+      onReadyForPrewarm()
       return
     }
 
@@ -316,9 +332,10 @@ struct SnapzyOnboardingWelcome: View {
     guard await sleepSeconds(0.22) else { return }
     subtitleIn = true
 
-    // Beat 6: Next-gen magnetic cobalt-jewel arrow button materializes
+    // Beat 6: Editorial arrow button materializes + quietly pre-warm Step 1 behind the aurora
     guard await sleepSeconds(0.30) else { return }
     ctaIn = true
+    onReadyForPrewarm()
   }
 
   private func sleepSeconds(_ seconds: Double) async -> Bool {
@@ -333,12 +350,16 @@ struct SnapzyOnboardingWelcome: View {
   private func triggerStart(allowEarly: Bool = false) {
     guard (ctaIn || allowEarly), !isExiting else { return }
     isExiting = true
+    // Ensure the opening portal is fully open if the user triggered early via Return/Esc
+    portalProgress = 1.0
+    isFlooded = true
     SnapzyOnboardingWelcomeAudio.shared.playConfirmChime()
 
     if reduceMotion {
+      onReadyForPrewarm()
       onBeginTransition()
       withAnimation(.easeOut(duration: 0.24)) {
-        exitApertureProgress = 1.0
+        stageDissolveOpacity = 0.0
       }
       Task { @MainActor in
         try? await Task.sleep(for: .milliseconds(250))
@@ -347,32 +368,45 @@ struct SnapzyOnboardingWelcome: View {
       return
     }
 
-    // 1. Pre-mount Step 1 silently behind the still-opaque aurora while the hero text focuses out,
-    //    so layout & glass sampling finish offscreen with zero frame drop when the aperture opens.
-    Task { @MainActor in
-      try? await Task.sleep(for: .milliseconds(60))
-      onBeginTransition()
+    onReadyForPrewarm()
 
-      // 2. Open the ultra-soft GPU radial aperture gracefully from the arrow pill over 1.18s
-      //    so the user clearly watches the cobalt aurora part smoothly into the Liquid Glass workspace.
-      try? await Task.sleep(for: .milliseconds(160))
-      withAnimation(.timingCurve(0.32, 0.0, 0.18, 1.0, duration: 1.18)) {
-        exitApertureProgress = 1.0
+    Task { @MainActor in
+      // Beat 1: Brief optical release of headline & arrow button, then glide the entire living
+      // aurora directly into the right-column macOS desktop stage rectangle like a Snapzy frame.
+      try? await Task.sleep(for: .milliseconds(55))
+      withAnimation(.timingCurve(0.22, 0.04, 0.14, 1.0, duration: 1.05)) {
+        stageMorphProgress = 1.0
       }
 
-      try? await Task.sleep(for: .milliseconds(1220))
+      // Beat 2: As the aurora glides right and unveils the Liquid Glass workspace on the left,
+      // lift the header, left instruction column, and footer into place in counter-motion.
+      try? await Task.sleep(for: .milliseconds(220))
+      onBeginTransition()
+
+      // Beat 3: As the aurora locks seamlessly onto the macOS stage frame, dissolve it like
+      // developing film to reveal the live macOS Notes desktop right inside the exact same frame.
+      try? await Task.sleep(for: .milliseconds(420))
+      withAnimation(.timingCurve(0.25, 0.0, 0.20, 1.0, duration: 0.56)) {
+        stageDissolveOpacity = 0.0
+      }
+
+      try? await Task.sleep(for: .milliseconds(600))
       onCompleteTransition()
     }
   }
 }
 
-// MARK: - 120fps Hardware-Accelerated Soft Iris Aperture (Welcome → Onboarding Steps)
+// MARK: - Viewfinder Portal Morph (Full Window Aurora → Right macOS Stage Frame)
 
-/// Parts the living aurora from the arrow pill outward using a single-pass hardware RadialGradient
-/// alpha mask (zero offscreen `.blur` passes and zero structural `if/else` swaps), guaranteeing
-/// silky 60/120fps motion as the Liquid Glass onboarding workspace rises smoothly from beneath.
-private struct WelcomeExitApertureModifier: ViewModifier, Animatable {
+/// Morphs the full-window living aurora smoothly into the exact pixel coordinates and corner radius
+/// of `SnapzyOnboardingMockHost`, accompanied by crisp Leica-style Snapzy viewfinder corner
+/// brackets that embrace and lock onto the stage frame. Pure GPU frame/position/clip transforms
+/// guarantee locked 120fps motion with zero offscreen blur passes.
+private struct WelcomeViewfinderMorphModifier: ViewModifier, Animatable {
   var progress: CGFloat
+  let windowSize: CGSize
+  let isFlooded: Bool
+  let isExiting: Bool
   let reduceMotion: Bool
 
   var animatableData: CGFloat {
@@ -381,52 +415,106 @@ private struct WelcomeExitApertureModifier: ViewModifier, Animatable {
   }
 
   func body(content: Content) -> some View {
-    let clamped = max(0, min(1, progress))
-    let scale: CGFloat = reduceMotion ? 1.0 : (1.0 + clamped * 0.055)
-    let outerFade: CGFloat = reduceMotion
-      ? (1.0 - clamped)
-      : (1.0 - max(0, (clamped - 0.56) / 0.44))
-    let outerOpacity = Double(outerFade * outerFade)
+    let t = reduceMotion ? 0 : max(0, min(1, progress))
+
+    // Exact target geometry of SnapzyOnboardingMockHost inside SnapzyOnboardingView
+    let gutter = SnapzyOnboardingMetrics.gutter
+    let topPad = gutter - 10
+    let bottomPad = gutter - 12
+    let targetX = gutter + SnapzyOnboardingMetrics.railWidth + SnapzyOnboardingMetrics.columnGap
+    let targetY = topPad + SnapzyOnboardingMetrics.headerHeight + SnapzySpace.lg
+    let targetW = max(120, windowSize.width - targetX - gutter)
+    let targetH = max(120, windowSize.height - targetY - (bottomPad + SnapzyOnboardingMetrics.footerHeight + SnapzySpace.lg))
+
+    let currentW = windowSize.width + (targetW - windowSize.width) * t
+    let currentH = windowSize.height + (targetH - windowSize.height) * t
+    let startMidX = windowSize.width * 0.5
+    let startMidY = windowSize.height * 0.5
+    let targetMidX = targetX + targetW * 0.5
+    let targetMidY = targetY + targetH * 0.5
+    let currentMidX = startMidX + (targetMidX - startMidX) * t
+    let currentMidY = startMidY + (targetMidY - startMidY) * t
+
+    let currentRadius = SnapzyRadius.window + (SnapzyOnboardingMetrics.stageRadius - SnapzyRadius.window) * t
+    let shape = RoundedRectangle(cornerRadius: currentRadius, style: .continuous) // radius-lint:allow — continuous interpolation between Radius.window and Radius.panel
+
+    // Crisp Snapzy viewfinder brackets appear gracefully mid-flight and lock cleanly onto corners
+    let bracketFadeIn = min(1.0, max(0.0, (t - 0.06) / 0.22))
+    let bracketFadeOut = min(1.0, max(0.0, (1.0 - t) / 0.18))
+    let bracketOpacity = Double(bracketFadeIn * (0.45 + 0.55 * bracketFadeOut))
 
     content
-      .scaleEffect(scale)
-      .opacity(outerOpacity)
-      .mask {
-        if reduceMotion {
-          Color.white
-        } else {
-          GeometryReader { proxy in
-            let size = proxy.size
-            let maxDiag = hypot(size.width, size.height) * 0.96
-            // Smooth cubic ease starts gently at the arrow pill then sweeps gracefully to the corners
-            let eased = clamped * clamped * (3.0 - 2.0 * clamped)
-            let feather: CGFloat = 180 + clamped * 140
-            // Continuous alpha ramp at the aperture center (1.0 at progress=0 → 0.0 at progress=0.14)
-            // eliminates any first-frame pop or structural branch swap.
-            let holeAlpha = Double(max(0, 1.0 - clamped / 0.14))
-            let clearRadius = max(0, maxDiag * eased - feather * 0.50)
-            let solidRadius = max(1.0, maxDiag * eased + feather * 0.50)
-
-            let sClear = min(0.96, Double(clearRadius / solidRadius))
-            let sMid1 = min(0.975, Double((clearRadius + feather * 0.32) / solidRadius))
-            let sMid2 = min(0.99, Double((clearRadius + feather * 0.68) / solidRadius))
-
-            RadialGradient(
-              stops: [
-                .init(color: .white.opacity(holeAlpha), location: 0.0),
-                .init(color: .white.opacity(holeAlpha), location: sClear),
-                .init(color: .white.opacity(holeAlpha + (1.0 - holeAlpha) * 0.28), location: sMid1),
-                .init(color: .white.opacity(holeAlpha + (1.0 - holeAlpha) * 0.72), location: sMid2),
-                .init(color: .white, location: 1.0),
-              ],
-              center: UnitPoint(x: 0.5, y: 0.575),
-              startRadius: 0,
-              endRadius: solidRadius
+      .frame(width: currentW, height: currentH)
+      .clipShape(shape)
+      .overlay {
+        shape.strokeBorder(
+          LinearGradient(
+            colors: [
+              Color.white.opacity(isFlooded ? (0.34 - 0.10 * Double(t)) : 0.14),
+              Color.white.opacity(isFlooded ? (0.10 - 0.04 * Double(t)) : 0.05),
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          ),
+          lineWidth: LiquidGlassTokens.specularLineWidth
+        )
+        .allowsHitTesting(false)
+      }
+      .overlay {
+        if t > 0.01 {
+          WelcomeViewfinderBrackets(cornerRadius: currentRadius)
+            .stroke(
+              Color.white.opacity(0.88 * bracketOpacity),
+              style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
             )
-            .frame(width: size.width, height: size.height)
-          }
+            .padding(10 - 4 * t)
+            .allowsHitTesting(false)
         }
       }
+      .shadow(
+        color: Color.black.opacity(0.34 * Double(t)),
+        radius: 28 * t,
+        x: -4 * t,
+        y: 14 * t
+      )
+      .position(x: currentMidX, y: currentMidY)
+  }
+}
+
+/// Minimalist Leica-inspired 4-corner capture viewfinder brackets — pure vector geometry, zero glow.
+private struct WelcomeViewfinderBrackets: Shape {
+  var cornerRadius: CGFloat
+
+  func path(in rect: CGRect) -> Path {
+    let arm: CGFloat = 20
+    let r = max(4, min(cornerRadius - 4, 14))
+    var path = Path()
+
+    // Top-leading corner
+    path.move(to: CGPoint(x: rect.minX, y: rect.minY + arm))
+    path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + r))
+    path.addQuadCurve(to: CGPoint(x: rect.minX + r, y: rect.minY), control: CGPoint(x: rect.minX, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.minX + arm, y: rect.minY))
+
+    // Top-trailing corner
+    path.move(to: CGPoint(x: rect.maxX - arm, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.maxX - r, y: rect.minY))
+    path.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY + r), control: CGPoint(x: rect.maxX, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + arm))
+
+    // Bottom-trailing corner
+    path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - arm))
+    path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - r))
+    path.addQuadCurve(to: CGPoint(x: rect.maxX - r, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
+    path.addLine(to: CGPoint(x: rect.maxX - arm, y: rect.maxY))
+
+    // Bottom-leading corner
+    path.move(to: CGPoint(x: rect.minX + arm, y: rect.maxY))
+    path.addLine(to: CGPoint(x: rect.minX + r, y: rect.maxY))
+    path.addQuadCurve(to: CGPoint(x: rect.minX, y: rect.maxY - r), control: CGPoint(x: rect.minX, y: rect.maxY))
+    path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - arm))
+
+    return path
   }
 }
 
