@@ -206,6 +206,7 @@ pause_countdown_on_hover = true
 overlay_scale = 1.0
 drag_drop = true
 two_finger_swipe_to_dismiss = true
+swipe_toward_edge_collapses = false
 trackpad_swipe_mode = "inverted"
 pin_zoom_mode = "fixedViewport"
 swipe_left_action = "dismiss"
@@ -296,8 +297,9 @@ key = "delete"
 modifiers = ["command"]
 ```
 
-`card_actions` covers all seven Quick Access card actions (`copy`, `save_or_open`,
-`dismiss`, `delete`, `edit`, `upload_to_cloud`, `pin_to_screen`). Each entry needs
+`card_actions` covers every Quick Access card action (`copy`, `save_or_open`,
+`dismiss`, `delete`, `edit`, `upload_to_cloud`, `pin_to_screen`, `optimize`,
+`collapse_to_edge`). Each entry needs
 `⌘`, `⌥`, or `⌃` in `modifiers` — bare and shift-only combos are rejected on import,
 as is `fn`. `key = ""` clears a binding. Named keys accept either the exported symbol
 or a readable word (`"delete"`/`"⌫"`, `"return"`/`"↩"`, `"esc"`/`"⎋"`, `"tab"`, arrows).

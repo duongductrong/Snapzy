@@ -410,6 +410,7 @@ enum SnapzyConfigurationImporter {
     collectDouble(&reader, "quick_access", "overlay_scale", range: 0.75...1.5, mutations: &mutations) { manager.overlayScale = $0 }
     collectBool(&reader, "quick_access", "drag_drop", mutations: &mutations) { manager.dragDropEnabled = $0 }
     collectBool(&reader, "quick_access", "two_finger_swipe_to_dismiss", mutations: &mutations) { manager.twoFingerSwipeToDismissEnabled = $0 }
+    collectBool(&reader, "quick_access", "swipe_toward_edge_collapses", mutations: &mutations) { manager.swipeTowardEdgeCollapses = $0 }
     collectDouble(&reader, "quick_access", "swipe_sensitivity", range: 0.5...3.0, mutations: &mutations) { manager.swipeSensitivity = $0 }
 
     if let swipeModeStr = reader.string("quick_access", "trackpad_swipe_mode") {

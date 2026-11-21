@@ -169,6 +169,7 @@ enum SnapzyConfigurationExporter {
     writer.value("overlay_scale", manager.overlayScale)
     writer.value("drag_drop", manager.dragDropEnabled)
     writer.value("two_finger_swipe_to_dismiss", manager.twoFingerSwipeToDismissEnabled)
+    writer.value("swipe_toward_edge_collapses", manager.swipeTowardEdgeCollapses)
     writer.value("swipe_sensitivity", manager.swipeSensitivity)
     writer.value("trackpad_swipe_mode", QuickAccessTrackpadSwipeModeStore.shared.mode.rawValue)
     writer.value("pin_zoom_mode", QuickAccessPinZoomModeStore.shared.mode.rawValue)

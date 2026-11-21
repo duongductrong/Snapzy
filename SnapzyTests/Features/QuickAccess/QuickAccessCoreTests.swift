@@ -1830,10 +1830,10 @@ final class QuickAccessCoreTests: XCTestCase {
 
     XCTAssertEqual(
       store.actionOrder,
-      [.delete, .copy, .saveOrOpen, .dismiss, .edit, .uploadToCloud, .pinToScreen, .optimize]
+      [.delete, .copy, .saveOrOpen, .dismiss, .edit, .uploadToCloud, .pinToScreen, .optimize, .collapseToEdge]
     )
-    // Optimize postdates this saved list, so it arrives enabled rather than disabled.
-    XCTAssertEqual(store.orderedActions(includeDisabled: false), [.copy, .optimize])
+    // Optimize and collapse-to-edge postdate this saved list, so they arrive enabled.
+    XCTAssertEqual(store.orderedActions(includeDisabled: false), [.copy, .optimize, .collapseToEdge])
   }
 
   func testQuickAccessActionConfigurationStore_preservesExplicitPinToScreenDisable() {
@@ -1889,7 +1889,7 @@ final class QuickAccessCoreTests: XCTestCase {
     XCTAssertFalse(store.isEnabled(.uploadToCloud))
     XCTAssertEqual(
       store.actionOrder,
-      [.saveOrOpen, .dismiss, .copy, .delete, .edit, .uploadToCloud, .pinToScreen, .optimize]
+      [.saveOrOpen, .dismiss, .copy, .delete, .edit, .uploadToCloud, .pinToScreen, .optimize, .collapseToEdge]
     )
     XCTAssertEqual(store.slotAssignments, QuickAccessActionSlot.defaultAssignments)
 

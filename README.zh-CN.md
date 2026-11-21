@@ -162,6 +162,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | 将截图固定到屏幕 | `⌘P` |
 | 删除 | `⌘⌫` |
 | 关闭 | `⌘W` |
+| 收起到屏幕边缘 | `⌥H` |
 
 <a id="command-line-tools"></a>
 

@@ -201,6 +201,7 @@ extension QuickAccessActionKind {
     case .uploadToCloud: return "upload_to_cloud"
     case .pinToScreen: return "pin_to_screen"
     case .optimize: return "optimize"
+    case .collapseToEdge: return "collapse_to_edge"
     }
   }
 }

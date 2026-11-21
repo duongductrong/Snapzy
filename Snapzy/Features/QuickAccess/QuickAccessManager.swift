@@ -41,6 +41,7 @@ final class QuickAccessManager: ObservableObject {
     didSet {
       refreshPanelInteractionMetrics()
       invalidateHoverIfItemGone()
+      syncEdgePeeks()
     }
   }
 
@@ -48,6 +49,7 @@ final class QuickAccessManager: ObservableObject {
     didSet {
       UserDefaults.standard.set(position.rawValue, forKey: Keys.position)
       panelController.updatePosition(position)
+      syncEdgePeeks()
     }
   }
 
@@ -93,6 +95,7 @@ final class QuickAccessManager: ObservableObject {
         panelController.updateSize(calculateMaxPanelSize())
       }
       refreshPanelInteractionMetrics()
+      syncEdgePeeks()
     }
   }
 
@@ -117,6 +120,15 @@ final class QuickAccessManager: ObservableObject {
   @Published var pauseCountdownOnHover: Bool = true {
     didSet {
       UserDefaults.standard.set(pauseCountdownOnHover, forKey: Keys.pauseCountdownOnHover)
+    }
+  }
+
+  /// When on, swiping a card toward the panel's screen edge tucks it into the
+  /// edge instead of running that direction's swipe action (#591). Off by
+  /// default so existing swipe-to-dismiss behavior is unchanged.
+  @Published var swipeTowardEdgeCollapses: Bool = false {
+    didSet {
+      UserDefaults.standard.set(swipeTowardEdgeCollapses, forKey: Keys.swipeTowardEdgeCollapses)
     }
   }
 
@@ -159,6 +171,8 @@ final class QuickAccessManager: ObservableObject {
   // MARK: - Private
 
   private let panelController = QuickAccessPanelController()
+  private let edgePeekController = QuickAccessEdgePeekController()
+  private var screenParametersObserver: NSObjectProtocol?
   private let pinWindowManager = QuickAccessPinWindowManager.shared
   private let fileAccessManager = SandboxFileAccessManager.shared
   private let tempCaptureManager = TempCaptureManager.shared
@@ -189,6 +203,7 @@ final class QuickAccessManager: ObservableObject {
     static let twoFingerSwipeToDismissEnabled = "floatingScreenshot.twoFingerSwipeToDismissEnabled"
     static let swipeSensitivity = "floatingScreenshot.swipeSensitivity"
     static let pauseCountdownOnHover = "floatingScreenshot.pauseCountdownOnHover"
+    static let swipeTowardEdgeCollapses = "quickAccess.swipeTowardEdgeCollapses"
     static let openEditorShortcut = "quickAccess.openEditorShortcut"
     static let openEditorShortcutEnabled = "quickAccess.openEditorShortcutEnabled"
   }
@@ -201,6 +216,19 @@ final class QuickAccessManager: ObservableObject {
     loadSettings()
     hoverShortcutRegistry.onTrigger = { [weak self] action in
       self?.handleCardShortcut(action)
+    }
+    edgePeekController.onRestore = { [weak self] id in
+      self?.restoreCollapsedItem(id: id)
+    }
+    // Display unplugged, resolution or Dock change: keep peek strips on the edge.
+    screenParametersObserver = NotificationCenter.default.addObserver(
+      forName: NSApplication.didChangeScreenParametersNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.syncEdgePeeks()
+      }
     }
   }
 
@@ -234,6 +262,8 @@ final class QuickAccessManager: ObservableObject {
       UserDefaults.standard.object(forKey: Keys.swipeSensitivity) as? Double ?? 1.0
     pauseCountdownOnHover =
       UserDefaults.standard.object(forKey: Keys.pauseCountdownOnHover) as? Bool ?? true
+    swipeTowardEdgeCollapses =
+      UserDefaults.standard.object(forKey: Keys.swipeTowardEdgeCollapses) as? Bool ?? false
     openEditorShortcutEnabled =
       UserDefaults.standard.object(forKey: Keys.openEditorShortcutEnabled) as? Bool ?? false
     loadOpenEditorShortcut()
@@ -479,7 +509,10 @@ final class QuickAccessManager: ObservableObject {
   /// editor caches like `removeItem(id:)`, but keeps the file: a new capture
   /// must never delete an older unsaved one (launch-time cleanup reclaims it).
   private func trimOldestItemIfNeeded(logMessage: String) {
-    guard items.count >= maxVisibleItems, let oldest = items.last else { return }
+    // Prefer evicting a card still in the stack: a collapsed card was parked
+    // on purpose (#591). Falls back to the oldest when every card is collapsed.
+    guard items.count >= maxVisibleItems,
+          let oldest = items.last(where: { !$0.isCollapsed }) ?? items.last else { return }
     cancelDismissTimer(for: oldest.id)
     pinWindowManager.close(id: oldest.id)
     activityHoldItemIds.remove(oldest.id)
@@ -489,7 +522,7 @@ final class QuickAccessManager: ObservableObject {
       VideoEditorManager.shared.clearSessionData(for: oldest.id)
       VideoEditorManager.shared.clearSessionData(for: oldest.url)
     }
-    items.removeLast()
+    items.removeAll { $0.id == oldest.id }
     DiagnosticLogger.shared.log(
       .debug,
       .ui,
@@ -703,6 +736,60 @@ final class QuickAccessManager: ObservableObject {
         panelController.reinstallMouseMonitors()
       }
     }
+  }
+
+  // MARK: - Edge Peek (#591)
+
+  /// Tuck a card into the screen edge. It stays an active item: its countdown
+  /// is held and it comes back with `restoreCollapsedItem(id:)`.
+  func collapseItem(id: UUID) {
+    guard let index = items.firstIndex(where: { $0.id == id }), !items[index].isCollapsed else { return }
+
+    dismissTimers[id]?.pause()
+    if hoveredItemID == id {
+      clearHoveredItem()
+    }
+    withAnimation(QuickAccessAnimations.cardRemove) {
+      items[index].isCollapsed = true
+    }
+    DiagnosticLogger.shared.log(
+      .info,
+      .action,
+      "Quick access card collapsed to edge",
+      context: ["itemId": id.uuidString]
+    )
+  }
+
+  /// Bring a collapsed card back into the stack.
+  func restoreCollapsedItem(id: UUID) {
+    guard let index = items.firstIndex(where: { $0.id == id }), items[index].isCollapsed else { return }
+
+    withAnimation(QuickAccessAnimations.cardInsert) {
+      items[index].isCollapsed = false
+    }
+    // The panel outlives collapsed-only stacks, but heal a dismissed one anyway.
+    if !panelController.isVisible || panelController.isDismissing {
+      showPanel()
+    }
+    if !isItemCountdownHeld(id) {
+      dismissTimers[id]?.resume()
+    }
+    DiagnosticLogger.shared.log(
+      .info,
+      .action,
+      "Quick access card restored from edge",
+      context: ["itemId": id.uuidString]
+    )
+  }
+
+  private func syncEdgePeeks() {
+    guard items.contains(where: \.isCollapsed) || !edgePeekController.collapsedIDs.isEmpty else { return }
+    edgePeekController.sync(
+      items: items,
+      position: position,
+      scale: CGFloat(overlayScale),
+      screen: panelController.anchoredScreen
+    )
   }
 
   private func setPinState(id: UUID, isPinned: Bool, closePinWindow: Bool, entranceFrom: NSRect? = nil) {
@@ -1313,6 +1400,7 @@ final class QuickAccessManager: ObservableObject {
   /// capture happened on. A panel already sliding out is not reusable — it would
   /// finish closing and swallow the new card — so that case gets a fresh show.
   private func showPanelIfNeeded() {
+    defer { syncEdgePeeks() }
     guard panelController.isVisible, !panelController.isDismissing else {
       showPanel()
       return
@@ -1328,7 +1416,8 @@ final class QuickAccessManager: ObservableObject {
 
   @discardableResult
   func openEditorForNewestItem() -> Bool {
-    guard isEnabled, panelController.isVisible, let item = items.first else { return false }
+    guard isEnabled, panelController.isVisible,
+          let item = items.first(where: { !$0.isCollapsed }) else { return false }
     if item.isVideo {
       VideoEditorManager.shared.openEditor(for: item)
     } else {
@@ -1427,7 +1516,9 @@ final class QuickAccessManager: ObservableObject {
   }
 
   private var visiblePanelItemCount: Int {
-    let actuallyVisibleItems = items.filter { !(hideCardWhenWindowOpen && $0.isWindowOpen) }
+    let actuallyVisibleItems = items.filter {
+      $0.isShownInPanel(hideCardWhenWindowOpen: hideCardWhenWindowOpen)
+    }
     return min(actuallyVisibleItems.count, maxVisibleItems)
   }
 
@@ -1525,7 +1616,11 @@ final class QuickAccessManager: ObservableObject {
   }
 
   private func isItemCountdownHeld(_ id: UUID) -> Bool {
-    activityHoldItemIds.contains(id) || isItemPausedByEditing(id)
+    activityHoldItemIds.contains(id) || isItemPausedByEditing(id) || isItemCollapsed(id)
+  }
+
+  private func isItemCollapsed(_ id: UUID) -> Bool {
+    items.first(where: { $0.id == id })?.isCollapsed == true
   }
 
   /// Check if an item should remain paused because of an active editing session.

@@ -79,6 +79,7 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
   case uploadToCloud
   case pinToScreen
   case optimize
+  case collapseToEdge
 
   var id: String { rawValue }
 
@@ -91,6 +92,7 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
     .uploadToCloud,
     .pinToScreen,
     .optimize,
+    .collapseToEdge,
   ]
 
   static let defaultEnabledActions = Set(defaultOrder)
@@ -106,7 +108,7 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
     switch self {
     case .copy, .saveOrOpen:
       return .primary
-    case .dismiss, .delete, .edit, .uploadToCloud, .pinToScreen, .optimize:
+    case .dismiss, .delete, .edit, .uploadToCloud, .pinToScreen, .optimize, .collapseToEdge:
       return .corner
     }
   }
@@ -129,6 +131,8 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
       return L10n.PreferencesQuickAccess.pinToScreenAction
     case .optimize:
       return L10n.PreferencesQuickAccess.optimizeAction
+    case .collapseToEdge:
+      return L10n.QuickAccess.collapseToEdge
     }
   }
 
@@ -145,7 +149,7 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
     switch self {
     case .dismiss, .delete:
       return true
-    case .copy, .saveOrOpen, .edit, .uploadToCloud, .pinToScreen, .optimize:
+    case .copy, .saveOrOpen, .edit, .uploadToCloud, .pinToScreen, .optimize, .collapseToEdge:
       return false
     }
   }
@@ -174,6 +178,8 @@ enum QuickAccessActionKind: String, CaseIterable, Codable, Hashable, Identifiabl
       return "pin"
     case .optimize:
       return "wand.and.stars"
+    case .collapseToEdge:
+      return "arrow.right.to.line"
     }
   }
 }
