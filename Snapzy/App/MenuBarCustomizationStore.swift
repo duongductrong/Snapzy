@@ -32,6 +32,17 @@ final class MenuBarCustomizationStore: ObservableObject {
 
   // MARK: - Queries
 
+  /// Whether menus should draw their row icons on this system.
+  ///
+  /// macOS 27 hides them and the setting decides; below 27 Apple still draws them and the
+  /// setting is not offered, so the answer is fixed.
+  var drawsItemIcons: Bool {
+    if #available(macOS 27.0, *) {
+      return showItemIcons
+    }
+    return true
+  }
+
   /// Visible items for a group in the user's configured order.
   func orderedVisibleItems(for group: MenuBarItemGroup) -> [MenuBarItemKind] {
     orderedItems(for: group).filter { !hiddenItems.contains($0) }

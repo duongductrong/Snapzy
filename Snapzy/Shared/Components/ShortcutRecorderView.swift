@@ -190,6 +190,7 @@ struct ShortcutOptionsMenuButton: View {
   let isDefault: Bool
   let isBusy: Bool
   let onReset: () -> Void
+  @ObservedObject private var menuBar = MenuBarCustomizationStore.shared
 
   var body: some View {
     Menu {
@@ -201,6 +202,7 @@ struct ShortcutOptionsMenuButton: View {
         onReset()
       } label: {
         Label(L10n.Common.resetToDefault, systemImage: "arrow.counterclockwise")
+          .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
       }
       .disabled(isDefault)
     } label: {

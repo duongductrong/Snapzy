@@ -244,10 +244,7 @@ struct MenuBarSettingsPreview: View {
   /// AppKit collapses the image column when it hides menu images on macOS 27, so the
   /// preview drops the glyph entirely rather than reserving its slot.
   private var showsMenuIcons: Bool {
-    if #available(macOS 27.0, *) {
-      return store.showItemIcons
-    }
-    return true
+    store.drawsItemIcons
   }
 
   // MARK: - Content Mapping

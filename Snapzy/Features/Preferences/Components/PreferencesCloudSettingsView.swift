@@ -37,6 +37,7 @@ private struct ImportArchiveSelection: Identifiable {
 struct CloudSettingsView: View {
   @ObservedObject private var cloudManager = CloudManager.shared
   @ObservedObject private var usageService = CloudUsageService.shared
+  @ObservedObject private var menuBar = MenuBarCustomizationStore.shared
   @AppStorage(PreferencesKeys.cloudUploadsFloatingPosition)
   private var uploadsWindowPosition: CloudUploadFloatingPosition = .defaultPosition
   @AppStorage(PreferencesKeys.cloudShareLinkStyle)
@@ -244,9 +245,11 @@ struct CloudSettingsView: View {
       Menu {
         Button(action: handleImportTapped) {
           Label(L10n.Common.importAction, systemImage: "square.and.arrow.down")
+            .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
         }
         Button(action: handleExportTapped) {
           Label(L10n.Common.exportAction, systemImage: "square.and.arrow.up")
+            .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
         }
       } label: {
         Label(L10n.CloudSettings.transferSection, systemImage: "arrow.up.arrow.down")

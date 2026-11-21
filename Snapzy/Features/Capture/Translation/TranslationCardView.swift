@@ -413,6 +413,7 @@ struct TranslationCardView: View {
 private struct TranslationLanguageMenu: View {
   let selection: TranslationLanguage?
   let onSelect: (TranslationLanguage) -> Void
+  @ObservedObject private var menuBar = MenuBarCustomizationStore.shared
 
   var body: some View {
     Menu {
@@ -422,6 +423,7 @@ private struct TranslationLanguageMenu: View {
         } label: {
           if language == selection {
             Label(language.displayName, systemImage: "checkmark")
+              .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
           } else {
             Text(language.displayName)
           }

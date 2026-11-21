@@ -21,6 +21,7 @@ struct VideoEditorClipStripView: View, Equatable {
   let state: VideoEditorState
   @StateObject private var observation: VideoEditorTimelineObservation
   @ObservedObject var thumbnailCache: VideoEditorClipThumbnailCache
+  @ObservedObject private var menuBar = MenuBarCustomizationStore.shared
 
   let timelineWidth: CGFloat
   let trackHeight: CGFloat
@@ -496,6 +497,7 @@ struct VideoEditorClipStripView: View, Equatable {
       state.splitAtPlayhead()
     } label: {
       Label(L10n.VideoEditor.splitAtPlayhead, systemImage: "scissors")
+        .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
     }
     .disabled(!state.canSplitAtPlayhead)
 
@@ -505,6 +507,7 @@ struct VideoEditorClipStripView: View, Equatable {
       state.moveClip(id: placement.clip.id, by: -1)
     } label: {
       Label(L10n.VideoEditor.moveClipLeft, systemImage: "arrow.left")
+        .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
     }
     .disabled(placement.index == 0)
 
@@ -512,6 +515,7 @@ struct VideoEditorClipStripView: View, Equatable {
       state.moveClip(id: placement.clip.id, by: 1)
     } label: {
       Label(L10n.VideoEditor.moveClipRight, systemImage: "arrow.right")
+        .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
     }
     .disabled(placement.index >= state.clips.count - 1)
 
@@ -521,6 +525,7 @@ struct VideoEditorClipStripView: View, Equatable {
       state.removeClip(id: placement.clip.id)
     } label: {
       Label(L10n.VideoEditor.removeClip, systemImage: "trash")
+        .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
     }
     .disabled(state.clips.count <= 1)
   }

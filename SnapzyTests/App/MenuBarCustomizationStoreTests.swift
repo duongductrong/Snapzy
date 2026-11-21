@@ -217,6 +217,21 @@ final class MenuBarCustomizationStoreTests: XCTestCase {
     XCTAssertFalse(store.showItemIcons)
   }
 
+  func testStore_drawsItemIconsFollowsTheSettingOnlyOnMacOS27() {
+    let store = makeStore(defaults: makeIsolatedDefaults())
+
+    if #available(macOS 27.0, *) {
+      XCTAssertFalse(store.drawsItemIcons, "icons are opt-in where Apple hides them")
+      store.setShowItemIcons(true)
+      XCTAssertTrue(store.drawsItemIcons)
+    } else {
+      store.setShowItemIcons(true)
+      XCTAssertTrue(store.drawsItemIcons, "below 27 the system draws icons whatever the setting says")
+      store.setShowItemIcons(false)
+      XCTAssertTrue(store.drawsItemIcons)
+    }
+  }
+
   // MARK: - Helpers
 
   private func makeIsolatedDefaults() -> UserDefaults {

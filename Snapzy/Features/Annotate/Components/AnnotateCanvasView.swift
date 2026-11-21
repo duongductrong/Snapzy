@@ -67,6 +67,7 @@ struct AnnotateCanvasView: View {
   @State private var showDropError = false
   @State private var dropErrorMessage = ""
   @StateObject private var canvasInteractionBridge = CanvasInteractionBridge()
+  @ObservedObject private var menuBar = MenuBarCustomizationStore.shared
 
   /// Supported image types for drag-drop
   static let supportedImageTypes: [UTType] = [
@@ -467,6 +468,7 @@ struct AnnotateCanvasView: View {
         state.extractText()
       } label: {
         Label(L10n.AnnotateUI.extractText, systemImage: "text.viewfinder")
+          .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
       }
       .disabled(!state.canExtractText)
 

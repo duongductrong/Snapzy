@@ -59,6 +59,7 @@ struct AnnotateImageTransformAction: Identifiable {
 /// SwiftUI items for the canvas `.contextMenu`.
 struct AnnotateImageTransformMenuItems: View {
   @ObservedObject var state: AnnotateState
+  @ObservedObject private var menuBar = MenuBarCustomizationStore.shared
 
   var body: some View {
     ForEach(AnnotateImageTransformAction.all) { action in
@@ -69,6 +70,7 @@ struct AnnotateImageTransformMenuItems: View {
         action.perform(state)
       } label: {
         Label(action.title, systemImage: action.symbol)
+          .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
       }
       .keyboardShortcut(KeyEquivalent(action.key), modifiers: action.swiftUIModifiers)
     }

@@ -10,6 +10,7 @@ import SwiftUI
 struct HistoryContextMenu: View {
   let record: CaptureHistoryRecord
   @ObservedObject private var manager = HistoryFloatingManager.shared
+  @ObservedObject private var menuBar = MenuBarCustomizationStore.shared
 
   var body: some View {
     Button(L10n.Common.openInFinder) {
@@ -29,6 +30,7 @@ struct HistoryContextMenu: View {
         manager.uploadToCloud(record)
       } label: {
         Label(uploadMenuTitle, systemImage: uploadMenuIcon)
+          .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
       }
       .disabled(manager.cloudUploadState(for: record) != nil)
     }

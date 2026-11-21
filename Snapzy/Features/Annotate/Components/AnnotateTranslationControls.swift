@@ -9,6 +9,7 @@ import SwiftUI
 
 struct QuickTranslationControl: View {
   @ObservedObject var state: AnnotateState
+  @ObservedObject private var menuBar = MenuBarCustomizationStore.shared
   let buttonWidth: CGFloat
   let groupSpacing: CGFloat
 
@@ -94,6 +95,7 @@ struct QuickTranslationControl: View {
         } label: {
           if style == current {
             Label(title(for: style), systemImage: "checkmark")
+              .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
           } else {
             Text(title(for: style))
           }

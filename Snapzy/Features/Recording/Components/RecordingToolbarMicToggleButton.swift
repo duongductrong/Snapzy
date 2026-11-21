@@ -11,6 +11,7 @@ import SwiftUI
 
 struct ToolbarMicToggleButton: View {
   @ObservedObject var state: RecordingToolbarState
+  @ObservedObject private var menuBar = MenuBarCustomizationStore.shared
   @State private var isHovered = false
   @State private var showPermissionDeniedAlert = false
 
@@ -91,6 +92,7 @@ struct ToolbarMicToggleButton: View {
   private func menuItemLabel(title: String, isSelected: Bool) -> some View {
     if isSelected {
       Label(title, systemImage: "checkmark")
+        .menuBarRowIcon(showsIcon: menuBar.drawsItemIcons)
     } else {
       Text(title)
     }

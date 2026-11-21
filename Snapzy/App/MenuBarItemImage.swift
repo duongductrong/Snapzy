@@ -33,7 +33,7 @@ enum MenuBarItemImage {
   /// `NSMenu` has no menu-wide switch, so the property is set per item. Separators and
   /// imageless entries are skipped: they render the same either way.
   static func enableIcons(in menu: NSMenu?) {
-    guard MenuBarCustomizationStore.shared.showItemIcons else { return }
+    guard MenuBarCustomizationStore.shared.drawsItemIcons else { return }
     for item in menu?.items ?? [] {
       if !item.isSeparatorItem, item.image != nil {
         item.preferImageVisible()
