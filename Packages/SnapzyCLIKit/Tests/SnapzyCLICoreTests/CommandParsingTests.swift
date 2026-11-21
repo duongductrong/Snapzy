@@ -92,6 +92,11 @@ final class CommandParsingTests: XCTestCase {
     XCTAssertEqual(try directory.output.resolvedFormat(), .png)
     XCTAssertEqual(try stdout.output.resolvedFormat(), .png)
     XCTAssertEqual(try explicit.output.resolvedFormat(), .webp)
+
+    let heic = try parse(ScreenCommand.self, ["capture", "screen", "-o", "shot.heic"])
+    let avif = try parse(ScreenCommand.self, ["capture", "screen", "-o", "shot.avif"])
+    XCTAssertEqual(try heic.output.resolvedFormat(), .heic)
+    XCTAssertEqual(try avif.output.resolvedFormat(), .avif)
   }
 
   func testFormat_conflictWithExtensionIsRejected() {
@@ -108,7 +113,11 @@ final class CommandParsingTests: XCTestCase {
       CaptureOptions(format: .jpeg, quality: 0.7, maxDimension: 1568, showCursor: true)
     )
 
+    let avif = try parse(ScreenCommand.self, ["capture", "screen", "-o", "shot.avif", "--quality", "0.6"])
+    XCTAssertEqual(try avif.output.captureOptions(), CaptureOptions(format: .avif, quality: 0.6))
+
     assertUsageError(["capture", "screen", "--quality", "0.7"])
+    assertUsageError(["capture", "screen", "--format", "webp", "--quality", "0.7"])
     assertUsageError(["capture", "screen", "--format", "jpg", "--quality", "1.5"])
     assertUsageError(["capture", "screen", "--max-dimension", "0"])
   }

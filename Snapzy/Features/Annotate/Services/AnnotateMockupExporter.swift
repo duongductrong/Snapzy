@@ -34,7 +34,7 @@ struct MockupExporter {
         let preferredFormat = preferredImageFormat()
 
         let savePanel = NSSavePanel()
-        savePanel.allowedContentTypes = [.png, .jpeg, .webP]
+        savePanel.allowedContentTypes = ImageFormatOption.savePanelContentTypes
         savePanel.nameFieldStringValue = generateFilename(format: preferredFormat)
         savePanel.canCreateDirectories = true
 
@@ -80,11 +80,7 @@ struct MockupExporter {
 
     /// Read the user's preferred screenshot format from UserDefaults
     private static func preferredImageFormat() -> ImageFormatOption {
-        if let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
-           let format = ImageFormatOption(rawValue: raw) {
-            return format
-        }
-        return .png
+        ImageFormatOption.current
     }
 }
 

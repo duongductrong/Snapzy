@@ -70,7 +70,7 @@ struct AnnotateCanvasView: View {
 
   /// Supported image types for drag-drop
   static let supportedImageTypes: [UTType] = [
-    .png, .jpeg, .gif, .tiff, .bmp, .heic
+    .png, .jpeg, .gif, .tiff, .bmp, .heic, .snapzyAVIF
   ]
 
   /// Check if any mockup transforms have been applied

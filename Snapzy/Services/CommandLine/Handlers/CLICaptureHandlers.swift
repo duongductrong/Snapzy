@@ -84,10 +84,22 @@ enum CLICaptureBridge {
       throw CLIError(.invalidArguments, "maxDimension must be greater than 0")
     }
 
+    let quality = CGFloat(options.quality ?? Double(ImageEncoderSupport.defaultLossyQuality))
     let format: ImageFormat = switch options.format {
     case .png: .png
-    case .jpeg: .jpeg(quality: CGFloat(options.quality ?? 0.9))
+    case .jpeg: .jpeg(quality: quality)
     case .webp: .webp
+    case .heic: .heic(quality: quality)
+    case .avif: .avif(quality: quality)
+    }
+    // The caller asked for this exact format (often via the -o extension), so
+    // fail clearly instead of writing a different format under that name.
+    guard format.isEncoderAvailable else {
+      throw CLIError(
+        .invalidArguments,
+        "This version of macOS cannot encode \(format.fileExtension.uppercased()) images",
+        hint: "Use png, jpg, webp or heic"
+      )
     }
     return HeadlessCaptureRequest.Options(
       format: format,

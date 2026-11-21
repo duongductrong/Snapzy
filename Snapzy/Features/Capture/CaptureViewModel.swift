@@ -8,6 +8,7 @@
 import AppKit
 import Combine
 import Foundation
+import UniformTypeIdentifiers
 
 // MARK: - Image Format Option
 
@@ -15,12 +16,16 @@ enum ImageFormatOption: String, CaseIterable {
   case png
   case jpeg
   case webp
+  case heic
+  case avif
 
   var format: ImageFormat {
     switch self {
     case .png: .png
-    case .jpeg: .jpeg(quality: 0.9)
+    case .jpeg: .jpeg(quality: ImageEncoderSupport.defaultLossyQuality)
     case .webp: .webp
+    case .heic: .heic(quality: ImageEncoderSupport.defaultLossyQuality)
+    case .avif: .avif(quality: ImageEncoderSupport.defaultLossyQuality)
     }
   }
 
@@ -29,8 +34,48 @@ enum ImageFormatOption: String, CaseIterable {
     case .png: "PNG"
     case .jpeg: "JPEG"
     case .webp: "WebP"
+    case .heic: "HEIC"
+    case .avif: "AVIF"
     }
   }
+
+  /// Whether this Mac can encode the format. AVIF needs a macOS release with
+  /// an ImageIO AVIF encoder; older systems can only read it.
+  var isEncoderAvailable: Bool { format.isEncoderAvailable }
+
+  /// The saved screenshot format, or PNG when it is missing, unknown, or cannot
+  /// be encoded on this Mac (for example AVIF from a config made on a newer macOS).
+  static func resolved(rawValue: String?) -> ImageFormatOption {
+    guard let rawValue, let option = ImageFormatOption(rawValue: rawValue), option.isEncoderAvailable else {
+      return .png
+    }
+    return option
+  }
+
+  /// The user's screenshot format preference, resolved with `resolved(rawValue:)`.
+  static var current: ImageFormatOption {
+    resolved(rawValue: UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat))
+  }
+
+  var utType: UTType {
+    switch self {
+    case .png: .png
+    case .jpeg: .jpeg
+    case .webp: .webP
+    case .heic: .heic
+    case .avif: .snapzyAVIF
+    }
+  }
+
+  /// Types offered by image save panels: every format this Mac can encode.
+  static var savePanelContentTypes: [UTType] {
+    allCases.filter(\.isEncoderAvailable).map(\.utType)
+  }
+}
+
+extension UTType {
+  /// `public.avif`. The SDK has no `UTType.avif` constant; the system declares the type.
+  static let snapzyAVIF = UTType(importedAs: ImageEncoderSupport.avifType)
 }
 
 // MARK: - ViewModel
@@ -84,12 +129,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
   init() {
     // Initialize format from saved preference
-    if let savedFormat = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
-       let format = ImageFormatOption(rawValue: savedFormat) {
-      selectedFormat = format
-    } else {
-      selectedFormat = .png
-    }
+    selectedFormat = ImageFormatOption.current
 
     fileAccessManager.ensureExportLocationInitialized()
     saveDirectory = fileAccessManager.resolvedExportDirectoryURL()
@@ -153,11 +193,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
   /// Always read format from UserDefaults to stay in sync with Settings @AppStorage
   private var resolvedFormat: ImageFormat {
-    if let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
-       let option = ImageFormatOption(rawValue: raw) {
-      return option.format
-    }
-    return .png
+    ImageFormatOption.current.format
   }
 
   private var preferredScreenshotOutputScaleFactor: CGFloat {
@@ -3117,18 +3153,12 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   }
 
   private func resolvedCutoutOutputFormat() -> (format: ImageFormat, didOverrideFromJPEG: Bool) {
-    guard let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
-          let option = ImageFormatOption(rawValue: raw) else {
-      return (.png, false)
-    }
-
-    switch option {
-    case .png:
-      return (.png, false)
-    case .webp:
-      return (.webp, false)
+    switch ImageFormatOption.current {
     case .jpeg:
+      // JPEG has no alpha; keep the cutout transparent.
       return (.png, true)
+    case let option:
+      return (option.format, false)
     }
   }
 

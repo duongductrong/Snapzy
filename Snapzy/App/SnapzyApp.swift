@@ -422,8 +422,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   /// Finder's "Open With" submenu, by double-clicking a file whose default
   /// app is Snapzy, or by drag-dropping files onto the app icon in the Dock.
   ///
-  /// Files declared in `CFBundleDocumentTypes` (PNG/JPEG/HEIC/HEIF/TIFF/GIF/
-  /// WebP/BMP) are routed straight into the annotation editor.
+  /// Files declared in `CFBundleDocumentTypes` (PNG/JPEG/HEIC/HEIF/AVIF/TIFF/
+  /// GIF/WebP/BMP) are routed straight into the annotation editor.
   ///
   /// Note: macOS 13+ prefers `application(_:open:)` over the legacy
   /// `application(_:openFiles:)`, and the latter is silently skipped on
