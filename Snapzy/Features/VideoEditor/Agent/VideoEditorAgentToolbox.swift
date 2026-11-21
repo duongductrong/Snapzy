@@ -50,6 +50,10 @@ nonisolated enum VideoEditorAgentToolError: Error, Equatable {
 
 @MainActor
 final class VideoEditorAgentToolbox {
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   static let maximumChangesPerRun = 80
 
   nonisolated static let silenceDefaults = (minDuration: 1.0, padding: 0.25)
