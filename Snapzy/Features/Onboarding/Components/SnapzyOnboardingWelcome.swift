@@ -595,15 +595,16 @@ private struct WelcomeAuroraBackdrop: View {
 private struct WelcomeMesh5x5Backdrop: View {
   var drifts: Bool
 
-  // Ordered Snapzy electric-cobalt → glacial-white ramp for seamless silk blending.
+  // High-chroma Snapzy electric-cobalt → pure silk-white ramp: anchors deep cobalt richness
+  // alongside bright pure-white clouds without washing out into pale pastel midtones.
   private static let paletteRamp: [WelcomeRGB] = [
-    SnapzyWelcomePalette.deepCobalt,
-    SnapzyWelcomePalette.brandCobalt,
-    SnapzyWelcomePalette.brandAzure,
-    SnapzyWelcomePalette.skyAzure,
-    SnapzyWelcomePalette.mistBlue,
-    SnapzyWelcomePalette.icePocket,
-    SnapzyWelcomePalette.pureLight,
+    WelcomeRGB(r: 0.028, g: 0.098, b: 0.760), // deep electric ultramarine
+    SnapzyWelcomePalette.brandCobalt,         // #1138FF (Snapzy icon top)
+    SnapzyWelcomePalette.brandCobalt,         // extended electric-cobalt body
+    SnapzyWelcomePalette.brandAzure,          // #395FFF (Snapzy icon bottom)
+    SnapzyWelcomePalette.skyAzure,            // vivid bridge azure
+    SnapzyWelcomePalette.icePocket,           // crisp ice mist
+    SnapzyWelcomePalette.pureLight,           // pure silk white peak
   ]
 
   // Uniform 5×5 base lattice (row-major, step = 0.25).
@@ -618,7 +619,7 @@ private struct WelcomeMesh5x5Backdrop: View {
     return grid
   }()
 
-  // Strictly bounded gentle vertex motion (≤ 0.032 on a 0.25 cell) guarantees the bicubic
+  // Strictly bounded gentle vertex motion (≤ 0.030 on a 0.25 cell) guarantees the bicubic
   // surface remains 100% diffeomorphic (no creases, no folds, no dividing lines ever).
   static func points(at time: TimeInterval) -> [SIMD2<Float>] {
     let t = Float(time)
@@ -632,8 +633,8 @@ private struct WelcomeMesh5x5Backdrop: View {
         let isTopOrBottomEdge = (row == 0 || row == 4)
 
         let phase = Float(row * 5 + col) * 0.73
-        let dx: Float = isLeftOrRightEdge ? 0 : sin(t * 0.42 + phase) * 0.030
-        let dy: Float = isTopOrBottomEdge ? 0 : cos(t * 0.37 + phase * 1.29) * 0.030
+        let dx: Float = isLeftOrRightEdge ? 0 : sin(t * 0.85 + phase) * 0.030
+        let dy: Float = isTopOrBottomEdge ? 0 : cos(t * 0.74 + phase * 1.29) * 0.030
 
         result.append([base.x + dx, base.y + dy])
       }
@@ -641,16 +642,16 @@ private struct WelcomeMesh5x5Backdrop: View {
     return result
   }
 
-  /// Evaluates a smooth rotating two-wave silk field across the 5×5 lattice so luminous white
-  /// clouds and Snapzy cobalt rivers glide continuously and blend organically with zero seams,
-  /// while keeping a gentle cobalt shelter behind the center headline for crisp white-text contrast.
+  /// Evaluates a vivid, briskly-flowing rotating two-wave silk field across the fold-free 5×5
+  /// lattice so bold pure-white clouds and rich Snapzy electric-cobalt rivers sweep continuously
+  /// and blend seamlessly with zero seams, while keeping vivid cobalt contrast behind center text.
   static func colors(at time: TimeInterval, points: [SIMD2<Float>]) -> [Color] {
     let t = time
-    let theta1 = t * 0.28
+    let theta1 = t * 0.56
     let cos1 = cos(theta1)
     let sin1 = sin(theta1)
 
-    let theta2 = -t * 0.19 + 1.4
+    let theta2 = -t * 0.40 + 1.4
     let cos2 = cos(theta2)
     let sin2 = sin(theta2)
 
@@ -661,28 +662,28 @@ private struct WelcomeMesh5x5Backdrop: View {
       let dx = Double(pt.x) - 0.5
       let dy = Double(pt.y) - 0.5
 
-      // Broad, low-frequency primary cloud wave (lower spatial frequency = softer, smoother blend)
+      // Brisk, sweeping primary silk ribbon
       let u = dx * cos1 + dy * sin1
-      let wave1 = sin(u * 2.35 + t * 0.52)
+      let wave1 = sin(u * 2.55 + t * 1.15)
 
-      // Gentle counter-drifting harmonic swell creating dreamy curved cloud pockets
+      // Counter-flowing harmonic swell creating organic luminous white pockets
       let v = dx * cos2 + dy * sin2
-      let wave2 = cos(v * 1.85 - t * 0.38 + 0.7)
+      let wave2 = cos(v * 2.05 - t * 0.85 + 0.7)
 
-      let raw = 0.50 + 0.34 * wave1 + 0.20 * wave2
+      // Full-range amplitude reaches both deep electric cobalt (0.0) and luminous silk white (1.0)
+      let raw = 0.46 + 0.46 * wave1 + 0.28 * wave2
       var field = max(0.0, min(1.0, raw))
 
-      // Smooth elliptical cobalt shelter around the center typography zone so white text always
-      // reads effortlessly while silk-white clouds sweep freely across all four edges and corners.
-      let nx = dx / 0.36
-      let ny = dy / 0.26
-      let centerProximity = exp(-(nx * nx + ny * ny) * 1.15)
-      let maxCenterField = 0.52
+      // Keep the center typography zone anchored in vivid electric cobalt (≤ 0.46) so white text
+      // stays crisp while bright silk-white clouds sweep boldly around all four flanks and corners.
+      let nx = dx / 0.34
+      let ny = dy / 0.24
+      let centerProximity = exp(-(nx * nx + ny * ny) * 1.25)
+      let maxCenterField = 0.44
       if field > maxCenterField {
-        field -= (field - maxCenterField) * centerProximity * 0.88
+        field -= (field - maxCenterField) * centerProximity * 0.90
       }
 
-      // Linear ramp sampling (no aggressive S-curve) keeps white-to-cobalt transitions completely soft
       result.append(sampleRamp(at: field))
     }
     return result
