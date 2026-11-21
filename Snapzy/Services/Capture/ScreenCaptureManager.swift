@@ -2712,6 +2712,14 @@ final class ScreenCaptureManager: ObservableObject {
       return nil
     }
 
+    // A capture blocked by app identity may follow the user fixing the cause
+    // (clearing quarantine, moving the app), so re-evaluate instead of serving
+    // the cached result. Only blocked users pay for this; they cannot capture
+    // until it passes anyway.
+    if Self.needsFreshIdentityCheck(permissionStatus) {
+      AppIdentityManager.shared.refresh(force: true)
+    }
+
     await checkPermission()
 
     switch permissionStatus {
@@ -2736,6 +2744,16 @@ final class ScreenCaptureManager: ObservableObject {
     systemGranted: Bool
   ) -> Bool {
     status == .granted && systemGranted
+  }
+
+  /// A capture blocked by app identity must not be answered from the cached
+  /// identity evaluation, or a fix the user just made would go unnoticed until
+  /// relaunch or a visit to Preferences.
+  nonisolated static func needsFreshIdentityCheck(_ status: ScreenRecordingPermissionStatus) -> Bool {
+    if case .grantedButUnavailableDueToAppIdentity = status {
+      return true
+    }
+    return false
   }
 
   private func updatePermissionStatus(systemGranted: Bool) {
