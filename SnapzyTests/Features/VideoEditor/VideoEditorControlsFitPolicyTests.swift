@@ -102,6 +102,14 @@ final class VideoEditorControlsFitPolicyTests: XCTestCase {
 /// comparison would be proving nothing, so the test says so instead of passing for free.
 @MainActor
 final class VideoEditorControlsRowRenderingTests: XCTestCase {
+  /// This case is about pixels, not lifecycle, so its fixtures outlive it: releasing a hosting view
+  /// here releases the `VideoEditorState` it captured, and on the macOS 15 runner that reaches the
+  /// graph's `@MainActor` members through `swift_task_deinitOnExecutorMainActorBackDeploy`, a
+  /// back-deployed shim that frees a pointer it never allocated and aborts the whole test job
+  /// (CI crash report Snapzy-2026-11-21-151932.ips: `VideoEditorState.deinit` →
+  /// `VideoEditorClickSoundPlayer.__deallocating_deinit` → `malloc_error_break`).
+  private static var liveFixtures: [AnyObject] = []
+
   private var tempDirectory: URL!
 
   override func setUp() {
@@ -123,6 +131,7 @@ final class VideoEditorControlsRowRenderingTests: XCTestCase {
     withBadges.hasUnsavedChanges = true
     XCTAssertFalse(withBadges.zoomSegments.isEmpty)
     let withoutBadges = try await VideoEditorActivityFixture.makeState(in: tempDirectory)
+    Self.liveFixtures.append(contentsOf: [withBadges, withoutBadges])
 
     let roomy = render(withBadges, width: 1200)
     let roomyWithoutBadges = render(withoutBadges, width: 1200)
@@ -140,6 +149,7 @@ final class VideoEditorControlsRowRenderingTests: XCTestCase {
 
   private func render(_ state: VideoEditorState, width: CGFloat) -> Data {
     let host = NSHostingView(rootView: VideoControlsView(state: state).frame(width: width, height: 60))
+    Self.liveFixtures.append(host)
     host.frame = NSRect(x: 0, y: 0, width: width, height: 60)
     host.layoutSubtreeIfNeeded()
     // The badge decision lands on the pass after the measurements arrive, so let the row settle.
