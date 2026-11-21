@@ -440,7 +440,7 @@ struct QuickAccessCardView: View {
       uploadToCloud()
     case .pinToScreen:
       guard !item.isVideo else { return }
-      manager.togglePin(id: item.id)
+      manager.togglePin(id: item.id, entranceFrom: cardAnchor.screenFrame)
     case .optimize:
       presentOptimizeMenu()
     }
@@ -549,7 +549,7 @@ struct QuickAccessCardView: View {
       .padding(6)
       .contentShape(Circle())
       .onTapGesture {
-        manager.togglePin(id: item.id)
+        manager.togglePin(id: item.id, entranceFrom: cardAnchor.screenFrame)
       }
       .help(item.isPinned ? L10n.PreferencesQuickAccess.unpinAction : L10n.PreferencesQuickAccess.pinToScreenAction)
   }

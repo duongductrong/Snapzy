@@ -1198,7 +1198,8 @@ final class ScreenCaptureManager: ObservableObject {
           format: format,
           scaleFactor: compositeResult.scaleFactor,
           emitCompletion: invocation.emitsCompletion,
-          context: context
+          context: context,
+          captureOrigin: rect
         )
       }
 
@@ -1226,7 +1227,8 @@ final class ScreenCaptureManager: ObservableObject {
         format: format,
         scaleFactor: captured.scaleFactor,
         emitCompletion: invocation.emitsCompletion,
-        context: context
+        context: context,
+        captureOrigin: rect
       )
 
     } catch {
@@ -1293,7 +1295,8 @@ final class ScreenCaptureManager: ObservableObject {
           format: format,
           scaleFactor: windowImage.scaleFactor,
           emitCompletion: invocation.emitsCompletion,
-          context: context
+          context: context,
+          captureOrigin: target.frame
         )
       } catch {
         DiagnosticLogger.shared.logError(
@@ -1315,7 +1318,8 @@ final class ScreenCaptureManager: ObservableObject {
         format: format,
         scaleFactor: immediateMenuBarPopoverCapture.scaleFactor,
         emitCompletion: invocation.emitsCompletion,
-        context: context
+        context: context,
+        captureOrigin: target.frame
       )
 
     case .coreGraphicsWindow:
@@ -1327,7 +1331,8 @@ final class ScreenCaptureManager: ObservableObject {
           format: format,
           scaleFactor: windowImage.scaleFactor,
           emitCompletion: invocation.emitsCompletion,
-          context: context
+          context: context,
+          captureOrigin: target.frame
         )
       }
       DiagnosticLogger.shared.log(
@@ -1393,6 +1398,9 @@ final class ScreenCaptureManager: ObservableObject {
   // MARK: - Image Saving
 
   /// Save a CGImage to disk with write verification
+  ///
+  /// - Parameter captureOrigin: the captured region in screen coordinates, remembered so a later
+  ///   pin can animate out of the place the shot was taken rather than out of the screen center.
   private func saveImage(
     _ image: CGImage,
     to directory: URL,
@@ -1400,7 +1408,8 @@ final class ScreenCaptureManager: ObservableObject {
     format: ImageFormat,
     scaleFactor: CGFloat? = nil,
     emitCompletion: Bool = true,
-    context: CaptureContext = .empty
+    context: CaptureContext = .empty,
+    captureOrigin: CGRect? = nil
   ) async -> CaptureResult {
     let directoryAccess = SandboxFileAccessManager.shared.beginAccessingURL(directory)
     defer { directoryAccess.stop() }
@@ -1474,6 +1483,9 @@ final class ScreenCaptureManager: ObservableObject {
 
     switch writeResult {
     case .success(let url):
+      if let captureOrigin {
+        CaptureOriginStore.shared.record(url: url, screenRect: captureOrigin)
+      }
       DiagnosticLogger.shared.log(.info, .capture, "Capture saved: \(url.lastPathComponent)")
       if emitCompletion {
         captureCompletedSubject.send(url)
