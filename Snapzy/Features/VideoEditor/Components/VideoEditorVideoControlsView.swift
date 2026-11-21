@@ -251,18 +251,20 @@ struct VideoControlsView: View {
     .onReceive(agent.chromePublisher) { aiChrome = $0 }
   }
 
-  /// Whether the status badges fit beside the zoom cluster without squeezing the row.
-  /// Unknown widths (first pass) show them, matching the previous layout.
+  /// Whether the status badges fit beside the zoom cluster inside the width the trailing side was
+  /// laid out in. See `VideoControlsFitPolicy` for why that measured frame, and not the row's
+  /// leftover space, is what the badges have to live in.
   private var showsStatus: Bool {
-    guard containerWidth > 0,
-          let left = partWidths[.left],
-          let center = partWidths[.center],
+    guard let trailing = partWidths[.trailingFrame],
           let zoom = partWidths[.zoom],
-          let status = partWidths[.status],
-          status > 0
+          let status = partWidths[.status]
     else { return true }
-    let available = containerWidth - left - center - zoom - 2 * controlsLayout.outerSpacing
-    return available >= status + controlsLayout.metadataSpacing
+    return VideoControlsFitPolicy.showsStatus(
+      trailingWidth: trailing,
+      zoomWidth: zoom,
+      statusWidth: status,
+      badgeSpacing: controlsLayout.metadataSpacing
+    )
   }
 
   private var controlsLayout: VideoControlsLayoutStyle {
