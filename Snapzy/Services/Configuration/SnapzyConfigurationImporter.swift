@@ -171,14 +171,18 @@ enum SnapzyConfigurationImporter {
       }
     }
 
+    // macOS 27 "Show icons in menus" opt-in; reader.bool reports a
+    // non-boolean value as an error, which rejects the whole import.
+    let showItemIcons = reader.bool("menu_bar", "show_item_icons")
     let order = reader.stringArray("menu_bar", "item_order")?.compactMap(MenuBarItemKind.init(rawValue:))
     let hidden = reader.stringArray("menu_bar", "hidden_items")?.compactMap(MenuBarItemKind.init(rawValue:))
-    if order != nil || hidden != nil {
+    if order != nil || hidden != nil || showItemIcons != nil {
       mutations.append {
         MenuBarCustomizationStore.shared.applyConfiguration(
           order: order,
           hiddenItems: hidden.map(Set.init),
-          iconStyle: nil
+          iconStyle: nil,
+          showItemIcons: showItemIcons
         )
       }
     }
