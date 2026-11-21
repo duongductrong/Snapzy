@@ -44,6 +44,9 @@ nonisolated struct PersistedAnnotationSession: Codable {
   /// Items still at that footprint were cut by the crop and never grow the canvas.
   /// Optional: older sidecars decode without it (every item then counts as cut).
   var cropBaselineFootprints: [String: CGRect]?
+  /// Non-destructive image adjustments. Optional and written only when not identity:
+  /// older sidecars decode without it (original pixels), schemaVersion stays 1.
+  var imageAdjustments: ImageAdjustments?
 }
 
 /// Persisted combine/stitch layout flags. Enum values stored as raw strings and read back
