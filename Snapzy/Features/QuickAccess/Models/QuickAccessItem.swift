@@ -48,6 +48,8 @@ struct QuickAccessItem: Identifiable, Equatable {
   var isPinned: Bool = false
   /// True if the item's corresponding Pin or Edit window is currently open
   var isWindowOpen: Bool = false
+  /// True while the card is tucked into the screen edge as a peek strip (#591)
+  var isCollapsed: Bool = false
 
   /// Initializer for screenshots (backward compatible)
   init(url: URL, thumbnail: NSImage) {
@@ -80,7 +82,7 @@ struct QuickAccessItem: Identifiable, Equatable {
   }
 
   /// Initializer with explicit id (used for thumbnail retry updates)
-  init(id: UUID, url: URL, thumbnail: NSImage, capturedAt: Date, itemType: QuickAccessItemType, duration: TimeInterval?, thumbnailVersion: UUID = UUID(), cloudURL: URL? = nil, cloudKey: String? = nil, isCloudStale: Bool = false, isPinned: Bool = false, isWindowOpen: Bool = false) {
+  init(id: UUID, url: URL, thumbnail: NSImage, capturedAt: Date, itemType: QuickAccessItemType, duration: TimeInterval?, thumbnailVersion: UUID = UUID(), cloudURL: URL? = nil, cloudKey: String? = nil, isCloudStale: Bool = false, isPinned: Bool = false, isWindowOpen: Bool = false, isCollapsed: Bool = false) {
     self.id = id
     self.url = url
     self.thumbnail = thumbnail
@@ -93,15 +95,23 @@ struct QuickAccessItem: Identifiable, Equatable {
     self.isCloudStale = isCloudStale
     self.isPinned = isPinned
     self.isWindowOpen = isWindowOpen
+    self.isCollapsed = isCollapsed
   }
 
   static func == (lhs: QuickAccessItem, rhs: QuickAccessItem) -> Bool {
-    lhs.id == rhs.id && lhs.processingState == rhs.processingState && lhs.thumbnailVersion == rhs.thumbnailVersion && lhs.cloudURL == rhs.cloudURL && lhs.isCloudStale == rhs.isCloudStale && lhs.isPinned == rhs.isPinned && lhs.isWindowOpen == rhs.isWindowOpen
+    lhs.id == rhs.id && lhs.processingState == rhs.processingState && lhs.thumbnailVersion == rhs.thumbnailVersion && lhs.cloudURL == rhs.cloudURL && lhs.isCloudStale == rhs.isCloudStale && lhs.isPinned == rhs.isPinned && lhs.isWindowOpen == rhs.isWindowOpen && lhs.isCollapsed == rhs.isCollapsed
   }
 
   /// Whether this item is a video
   var isVideo: Bool {
     itemType == .video
+  }
+
+  /// Whether the card belongs in the Quick Access stack right now. Single rule
+  /// shared by the stack view and the panel's click-through metrics. Collapsed
+  /// cards live in their edge peek window instead.
+  func isShownInPanel(hideCardWhenWindowOpen: Bool) -> Bool {
+    !isCollapsed && !(hideCardWhenWindowOpen && isWindowOpen)
   }
 
   /// Return a copy with a new thumbnail while preserving the item's session
@@ -128,7 +138,8 @@ struct QuickAccessItem: Identifiable, Equatable {
       cloudKey: cloudKey,
       isCloudStale: isCloudStale,
       isPinned: isPinned,
-      isWindowOpen: isWindowOpen
+      isWindowOpen: isWindowOpen,
+      isCollapsed: isCollapsed
     )
     updated.processingState = processingState
     return updated

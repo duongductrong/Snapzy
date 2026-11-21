@@ -3171,6 +3171,16 @@ nonisolated enum L10n {
       defaultValue: "Swipe horizontally on the preview to close it",
       comment: "Quick access preferences setting description"
     )
+    static let swipeTowardEdgeCollapsesTitle = string(
+      "preferences-quick-access.swipe-toward-edge-collapses-title",
+      defaultValue: "Swipe Toward Edge to Collapse",
+      comment: "Quick access preferences setting title"
+    )
+    static let swipeTowardEdgeCollapsesDescription = string(
+      "preferences-quick-access.swipe-toward-edge-collapses-description",
+      defaultValue: "Tuck the preview into the screen edge instead of running the swipe action for that side. Click the strip to bring it back.",
+      comment: "Quick access preferences setting description"
+    )
     static let swipeSensitivityTitle = string(
       "preferences-quick-access.swipe-sensitivity-title",
       defaultValue: "Swipe Sensitivity",
@@ -9062,6 +9072,16 @@ nonisolated enum L10n {
   }
 
   enum QuickAccess {
+    static let collapseToEdge = string(
+      "quick-access.collapse-to-edge",
+      defaultValue: "Collapse to Edge",
+      comment: "Quick Access card context menu item that tucks the card into the screen edge"
+    )
+    static let restoreCollapsedCard = string(
+      "quick-access.restore-collapsed-card",
+      defaultValue: "Click to restore",
+      comment: "Tooltip on a collapsed Quick Access card peeking out of the screen edge"
+    )
     static let optimizeMenuTitle = string(
       "quick-access.optimize.title",
       defaultValue: "Optimize",

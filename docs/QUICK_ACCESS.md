@@ -22,9 +22,9 @@ Floating post-capture card stack: appears after every screenshot/video/GIF when 
 
 ## Actions
 
-`QuickAccessActionKind` (7, all live): `copy`, `saveOrOpen`, `dismiss`, `delete`, `edit`, `uploadToCloud`, `pinToScreen`.
+`QuickAccessActionKind` (9, all live): `copy`, `saveOrOpen`, `dismiss`, `delete`, `edit`, `uploadToCloud`, `pinToScreen`, `optimize`, `collapseToEdge`.
 
-Default slots (`QuickAccessActionSlot.defaultAssignments`): centerTop copy, centerBottom saveOrOpen, topTrailing dismiss, topLeading delete, bottomLeading edit, bottomTrailing uploadToCloud. `pinToScreen` unassigned by default.
+Default slots (`QuickAccessActionSlot.defaultAssignments`): centerTop copy, centerBottom saveOrOpen, topTrailing dismiss, topLeading delete, bottomLeading edit, bottomTrailing uploadToCloud. `pinToScreen`, `optimize` and `collapseToEdge` unassigned by default.
 
 | Action | Behavior |
 | --- | --- |
@@ -35,8 +35,9 @@ Default slots (`QuickAccessActionSlot.defaultAssignments`): centerTop copy, cent
 | `edit` | Opens Annotate (screenshots) or Video Editor (video/GIF); pauses countdown. Video Editor restores its persisted cut/zoom/speed recipe when available. Editor Save commits to the current file and leaves a temporary card available for this card's later Save action |
 | `uploadToCloud` | Manual `CloudManager.upload`, copies public link, deletes old key on re-upload; gated by `CloudManager.isConfigured` |
 | `pinToScreen` | Opens always-on-top pin window (screenshots only) |
+| `collapseToEdge` | Tucks the card into the screen edge as a peek (see [Collapse to Edge](#collapse-to-edge-591)); non-destructive, also assignable as a swipe action (collapses from either direction) |
 
-Keyboard: hovering a card arms its action shortcuts (⌘C copy, ⌘S save/open, ⌘E edit, ⌘U upload, ⌘P pin, ⌘⌫ delete, ⌘W dismiss). Bindings are routed only while `QuickAccessManager.hoveredItemID` is set, matched against the full key code + modifier set, and exact matches route back into `performAction` so keyboard and click share one path. Unregistered combinations always pass through to the focused app. Full mechanics, teardown paths, and validation rules: [SHORTCUTS.md](SHORTCUTS.md).
+Keyboard: hovering a card arms its action shortcuts (⌘C copy, ⌘S save/open, ⌘E edit, ⌘U upload, ⌘P pin, ⌘O optimize, ⌘⌫ delete, ⌘W dismiss, ⌥H collapse to edge). Bindings are routed only while `QuickAccessManager.hoveredItemID` is set, matched against the full key code + modifier set, and exact matches route back into `performAction` so keyboard and click share one path. Unregistered combinations always pass through to the focused app. Full mechanics, teardown paths, and validation rules: [SHORTCUTS.md](SHORTCUTS.md).
 
 Customization: `QuickAccessActionConfigurationStore` — context-menu order (`quickAccess.actions.order.v1`), enabled set (`...enabled.v1`), slot assignments (`...slots.v1`). Settings → Quick Access preview card supports drag-to-slot + swipe zones + reset. Note: commit `dd4ccd5` removed only the after-capture auto-upload preference option; the manual `uploadToCloud` card action stays, additionally gated by `isEnabled(.uploadToCloud)`.
 
@@ -47,6 +48,18 @@ Customization: `QuickAccessActionConfigurationStore` — context-menu order (`qu
 - Mouse drag: 30pt direction threshold; drag toward panel edge = swipe-dismiss; drag away = drag-to-app file drag.
 - Two-finger trackpad swipe: `QuickAccessTrackpadSwipeHelpers`, dismiss at distance 80 / velocity 300, sensitivity 0.5–3.0 multiplier; mode natural/inverted (`quickAccess.trackpad.swipe.mode`, default inverted).
 - Per-direction action assignment via `QuickAccessSwipeActionStore` (`quickAccess.swipe.action.left/right`, both default dismiss).
+- End-of-swipe decision is the pure `QuickAccessSwipeResolver` (snap back / perform action / collapse), locked by `QuickAccessGestureCharacterizationTests`.
+- Two-finger move **down** that begins over a card collapses it to the edge (#591). `handleVerticalSwipe` claims the gesture only when the scroll began over the card and the first real movement is vertical-dominant (`QuickAccessVerticalSwipeHelpers`, ratio 1.35, precise deltas only); otherwise the horizontal path runs unchanged. Direction uses physical finger movement (`isDirectionInvertedFromDevice`), so it is the same with natural scrolling on or off. Commit at 60pt or a ≥450pt/s flick past 12pt (`QuickAccessCollapseSwipePolicy`); the card follows the fingers (scale to 0.9, drop 28pt, drift 24pt toward the edge) and springs back below threshold. Gated by the `collapseToEdge` action being enabled; independent of the two-finger swipe toggle.
+
+## Collapse to Edge (#591)
+
+A card can be tucked into the screen edge and stay an active item while it is out of the way.
+
+- **Collapse:** two-finger move down on a card, `collapseToEdge` action (⌥H hover shortcut, context menu, optional card slot or swipe action), or — when `quickAccess.swipeTowardEdgeCollapses` is on (default off) — a swipe toward the panel's edge instead of that direction's swipe action.
+- **Restore:** click the peek, two-finger move up on it, or a two-finger sideways swipe back out of the edge (`inwardDelta`); same thresholds as collapse.
+- **Model:** `QuickAccessItem.isCollapsed`; `isShownInPanel(hideCardWhenWindowOpen:)` drops collapsed cards from the stack and the panel's passthrough metrics. `QuickAccessManager.collapseItem(id:)` / `restoreCollapsedItem(id:)`. Collapsed cards hold their countdown (`isItemCountdownHeld`), are skipped by `openEditorForNewestItem`, and are evicted last when the stack is full.
+- **Peek windows:** `QuickAccessEdgePeekController` keeps one fixed-size borderless `.nonactivatingPanel` per collapsed card, flush with the anchored screen's `visibleFrame` edge (`QuickAccessEdgePeekLayout`), so the main panel geometry and click-through rules are untouched. Rest, hover (16→44pt revealed) and enter/exit only move the full-size card inside the window with one spring (`QuickAccessEdgePeekView.motion`); the window never resizes. Hover only previews — restoring needs an explicit click or swipe, so brushing the edge never pulls cards out. Hovered peeks are ordered front so the panel gutter cannot swallow their clicks. Re-synced on item, position, scale, capture-display and screen-parameter changes. Capture-excluded via `CaptureChromeWindowRegistry`.
+- **Look:** peek and stack card share `QuickAccessCardSurface` (clip, backdrop, cached shadow, stroke) and `QuickAccessCardThumbnail`, so a collapsed card is the same card. Crowded columns overlap like a deck instead of shrinking cards.
 
 ## Auto-Dismiss Countdown
 
@@ -98,7 +111,7 @@ flowchart TD
 
 ## Preferences Surface
 
-Settings → Quick Access: position (left/right), overlay size, sound effects, open in Finder after saving, auto-close delay + pause on hover, two-finger swipe (mode, sensitivity, per-direction actions), action customization. See [PREFERENCES.md](PREFERENCES.md).
+Settings → Quick Access: position (left/right), overlay size, sound effects, open in Finder after saving, auto-close delay + pause on hover, two-finger swipe (mode, sensitivity, per-direction actions), swipe toward edge to collapse, action customization. See [PREFERENCES.md](PREFERENCES.md).
 
 ## Related docs
 

@@ -162,6 +162,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | スクリーンショットを画面にピン留め | `⌘P` |
 | 削除 | `⌘⌫` |
 | 閉じる | `⌘W` |
+| 画面端にしまう | `⌥H` |
 
 <a id="command-line-tools"></a>
 

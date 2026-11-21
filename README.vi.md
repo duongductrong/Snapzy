@@ -162,6 +162,7 @@ Rê chuột lên một thẻ Truy cập nhanh rồi nhấn phím. Các phím nà
 | Ghim ảnh chụp lên màn hình | `⌘P` |
 | Xóa | `⌘⌫` |
 | Đóng | `⌘W` |
+| Thu vào cạnh màn hình | `⌥H` |
 
 <a id="command-line-tools"></a>
 

@@ -32,6 +32,8 @@ final class QuickAccessActionShortcutStore: ObservableObject {
     .optimize: ShortcutConfig(keyCode: UInt32(kVK_ANSI_O), modifiers: UInt32(cmdKey)),
     .delete: ShortcutConfig(keyCode: UInt32(kVK_Delete), modifiers: UInt32(cmdKey)),
     .dismiss: ShortcutConfig(keyCode: UInt32(kVK_ANSI_W), modifiers: UInt32(cmdKey)),
+    // ⌥H ("hide"): free among Snapzy's defaults; ⌘H would shadow the system Hide.
+    .collapseToEdge: ShortcutConfig(keyCode: UInt32(kVK_ANSI_H), modifiers: UInt32(optionKey)),
   ]
 
   @Published private(set) var shortcuts: [QuickAccessActionKind: ShortcutConfig]

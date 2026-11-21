@@ -150,6 +150,7 @@ Hover a Quick Access card, then press the key. Active only while the pointer is 
 | Pin screenshot to screen | `⌘P` |
 | Delete | `⌘⌫` |
 | Close | `⌘W` |
+| Collapse to screen edge | `⌥H` |
 
 ## Command line tools
 
