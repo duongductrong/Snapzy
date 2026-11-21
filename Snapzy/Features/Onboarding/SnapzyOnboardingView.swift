@@ -15,32 +15,65 @@ struct SnapzyOnboardingView: View {
   @StateObject private var state = SnapzyOnboardingState()
   @State private var isShowingCompletion = false
   /// The welcome bloom plays once for fresh starts; resuming a saved step skips straight into it.
-  @State private var isShowingWelcome = UserDefaults.standard.string(forKey: PreferencesKeys.onboardingActiveStep) == nil
+  @State private var isShowingWelcome: Bool
+  /// Mounted as soon as the user initiates entry from Welcome so the Liquid Glass workspace
+  /// rises synchronously behind the parting aurora aperture.
+  @State private var isFlowMounted: Bool
+  @State private var isFlowSettled: Bool
+  @State private var welcomeStartTrigger = 0
+  @Environment(\.accessibilityReduceMotion) private var envReduceMotion
   @EnvironmentObject private var onboardingLocalization: OnboardingLocalizationController
+
+  init(onDismiss: @escaping () -> Void) {
+    self.onDismiss = onDismiss
+    let freshStart = UserDefaults.standard.string(forKey: PreferencesKeys.onboardingActiveStep) == nil
+    _isShowingWelcome = State(initialValue: freshStart)
+    _isFlowMounted = State(initialValue: !freshStart)
+    _isFlowSettled = State(initialValue: !freshStart)
+  }
+
+  private var reduceMotion: Bool {
+    SnapzyMotionPreferences.shared.reduceMotion || envReduceMotion
+  }
 
   var body: some View {
     ZStack {
       SnapzyGlassWindowBackdrop()
 
-      if isShowingWelcome {
-        SnapzyOnboardingWelcome(onStart: startFlow, onClose: finish)
-          .transition(
-            SnapzyMotionPreferences.shared.reduceMotion
-              ? .opacity
-              : .opacity.combined(with: .scale(scale: 1.02))
-          )
-      } else {
+      if isFlowMounted {
         VStack(spacing: 0) {
           header
+            .opacity(isFlowSettled ? 1 : 0)
+            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : -12))
+            .animation(
+              reduceMotion ? .easeOut(duration: 0.18) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.56).delay(0.14),
+              value: isFlowSettled
+            )
 
           content
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
+          // Liquid Glass Golden Rule: never animate `.opacity` on a view containing `.glassEffect`
+          // (`SnapzyOnboardingActionBar`). Slide smoothly into place using geometry only.
           footer
+            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 18))
+            .animation(
+              reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.58).delay(0.18),
+              value: isFlowSettled
+            )
         }
         .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
         .padding(.top, SnapzyOnboardingMetrics.gutter - 10)
         .padding(.bottom, SnapzyOnboardingMetrics.gutter - 12)
+      }
+
+      if isShowingWelcome {
+        SnapzyOnboardingWelcome(
+          externalStartTrigger: welcomeStartTrigger,
+          onBeginTransition: beginFlowReveal,
+          onCompleteTransition: completeFlowReveal,
+          onClose: finish
+        )
       }
     }
     .frame(
@@ -53,7 +86,6 @@ struct SnapzyOnboardingView: View {
     .background(keyboardShortcuts)
     .animation(SnapzyMotionPreferences.shared.spec(.morph).animation, value: state.currentStep)
     .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: isShowingCompletion)
-    .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: isShowingWelcome)
   }
 
   // MARK: - Content
@@ -101,6 +133,13 @@ struct SnapzyOnboardingView: View {
       // machines, and tearing the host down between steps would drop a simulation halfway through.
       SnapzyOnboardingMockHost(state: state)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .opacity(isFlowSettled ? 1 : 0)
+        .scaleEffect(reduceMotion ? 1.0 : (isFlowSettled ? 1.0 : 0.935))
+        .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : 18), y: reduceMotion ? 0 : (isFlowSettled ? 0 : 8))
+        .animation(
+          reduceMotion ? .easeOut(duration: 0.18) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.68).delay(0.08),
+          value: isFlowSettled
+        )
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
@@ -198,13 +237,24 @@ struct SnapzyOnboardingView: View {
 
   // MARK: - Navigation
 
-  /// The welcome sheet owns the first beat: both navigation keys start the flow instead of
-  /// touching steps that are still hidden behind it.
+  /// The welcome sheet owns the first beat: both navigation keys trigger the same liquid aperture
+  /// transition as clicking the arrow pill so keyboard & pointer starts feel identical.
   private func startFlow() {
-    SnapzyOnboardingWelcomeAudio.shared.stopAmbient(fadeDuration: 1.65)
-    withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
-      isShowingWelcome = false
+    welcomeStartTrigger += 1
+  }
+
+  private func beginFlowReveal() {
+    guard !isFlowMounted else { return }
+    isFlowMounted = true
+    // Trigger the depth-arrival animation on the next run-loop tick so initial pre-settled states
+    // render before animating smoothly behind the expanding aurora aperture.
+    DispatchQueue.main.async {
+      isFlowSettled = true
     }
+  }
+
+  private func completeFlowReveal() {
+    isShowingWelcome = false
   }
 
   private func advance() {

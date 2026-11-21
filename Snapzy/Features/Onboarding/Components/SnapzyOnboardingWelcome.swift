@@ -66,7 +66,9 @@ private enum SnapzyWelcomePalette {
 // MARK: - Main Welcome View
 
 struct SnapzyOnboardingWelcome: View {
-  var onStart: () -> Void
+  var externalStartTrigger: Int = 0
+  var onBeginTransition: () -> Void
+  var onCompleteTransition: () -> Void
   var onClose: () -> Void
 
   @Environment(\.accessibilityReduceMotion) private var envReduceMotion
@@ -84,6 +86,8 @@ struct SnapzyOnboardingWelcome: View {
   @State private var subtitleIn = false
   @State private var ctaIn = false
   @State private var isExiting = false
+  /// Symmetrical liquid aperture opening from the arrow pill (0.0 → 1.0) to reveal Step 1.
+  @State private var exitApertureProgress: CGFloat = 0
 
   private var reduceMotion: Bool {
     SnapzyMotionPreferences.shared.reduceMotion || envReduceMotion
@@ -131,12 +135,17 @@ struct SnapzyOnboardingWelcome: View {
       // Arc focus-pull wave headline + airy subtitle + clean editorial arrow pill button
       welcomeContent
         .opacity(isExiting ? 0 : 1)
-        .blur(radius: isExiting && !reduceMotion ? 14 : 0)
-        .scaleEffect(isExiting && !reduceMotion ? 1.055 : 1.0)
-        .animation(phaseAnimation(.easeIn(duration: 0.30)), value: isExiting)
+        .blur(radius: isExiting && !reduceMotion ? 16 : 0)
+        .scaleEffect(isExiting && !reduceMotion ? 1.075 : 1.0)
+        .animation(
+          phaseAnimation(.timingCurve(0.22, 1.0, 0.36, 1.0, duration: 0.34)),
+          value: isExiting
+        )
 
       // Top-right adaptive close button
       closeButton
+        .opacity(isExiting ? 0 : 1)
+        .animation(phaseAnimation(.easeOut(duration: 0.20)), value: isExiting)
     }
     .clipShape(Radius.rect(SnapzyRadius.window))
     .overlay {
@@ -152,11 +161,21 @@ struct SnapzyOnboardingWelcome: View {
           ),
           lineWidth: LiquidGlassTokens.specularLineWidth
         )
+        .opacity(isExiting ? 0 : 1)
         .animation(phaseAnimation(.easeInOut(duration: 0.8)), value: isFlooded)
+        .animation(phaseAnimation(.easeOut(duration: 0.30)), value: isExiting)
         .allowsHitTesting(false)
     }
+    .modifier(WelcomeExitApertureModifier(
+      progress: exitApertureProgress,
+      reduceMotion: reduceMotion
+    ))
+    .allowsHitTesting(!isExiting)
     .task {
       await playTimeline()
+    }
+    .onChange(of: externalStartTrigger) { _ in
+      triggerStart(allowEarly: true)
     }
     .onDisappear {
       SnapzyOnboardingWelcomeAudio.shared.stopAmbient(fadeDuration: 1.25)
@@ -209,7 +228,7 @@ struct SnapzyOnboardingWelcome: View {
       SnapzyWelcomeArrowButton(
         isRevealed: ctaIn,
         reduceMotion: reduceMotion,
-        action: triggerStart
+        action: { triggerStart(allowEarly: false) }
       )
       .padding(.top, 30)
     }
@@ -311,17 +330,92 @@ struct SnapzyOnboardingWelcome: View {
     }
   }
 
-  private func triggerStart() {
-    guard ctaIn, !isExiting else { return }
+  private func triggerStart(allowEarly: Bool = false) {
+    guard (ctaIn || allowEarly), !isExiting else { return }
+    isExiting = true
     SnapzyOnboardingWelcomeAudio.shared.playConfirmChime()
+    onBeginTransition()
+
     if reduceMotion {
-      onStart()
+      withAnimation(.easeOut(duration: 0.20)) {
+        exitApertureProgress = 1.0
+      }
+      Task { @MainActor in
+        try? await Task.sleep(for: .milliseconds(210))
+        onCompleteTransition()
+      }
       return
     }
-    isExiting = true
+
+    // Symmetrical liquid aperture opens directly from the arrow pill, parting the aurora smoothly
+    // while Step 1 rises into focus beneath it.
     Task { @MainActor in
-      try? await Task.sleep(for: .milliseconds(240))
-      onStart()
+      try? await Task.sleep(for: .milliseconds(35))
+      withAnimation(.timingCurve(0.28, 0.02, 0.16, 1.0, duration: 0.78)) {
+        exitApertureProgress = 1.0
+      }
+      try? await Task.sleep(for: .milliseconds(800))
+      onCompleteTransition()
+    }
+  }
+}
+
+// MARK: - Symmetrical Liquid Exit Aperture (Welcome → Onboarding Steps)
+
+/// Parts the living aurora from the arrow pill outward through a soft, organic 3-lobe aperture
+/// (mirroring the opening orb's geometry) so the Liquid Glass onboarding workspace emerges smoothly
+/// from within the aurora rather than cutting between two disconnected screens.
+private struct WelcomeExitApertureModifier: ViewModifier, Animatable {
+  var progress: CGFloat
+  let reduceMotion: Bool
+
+  var animatableData: CGFloat {
+    get { progress }
+    set { progress = newValue }
+  }
+
+  func body(content: Content) -> some View {
+    if progress <= 0.0005 {
+      content
+    } else if reduceMotion {
+      content.opacity(Double(max(0, 1 - progress)))
+    } else {
+      let clamped = max(0, min(1, progress))
+      // Gentle forward depth drift as you pass through the aurora threshold
+      let scale = 1.0 + clamped * 0.045
+      // Silky overall dissolve over the second half ensures corners evaporate seamlessly
+      let outerFade = 1.0 - max(0, (clamped - 0.42) / 0.58)
+      let outerOpacity = Double(outerFade * outerFade)
+
+      content
+        .scaleEffect(scale)
+        .opacity(outerOpacity)
+        .mask {
+          Canvas { context, size in
+            let fullRect = CGRect(origin: .zero, size: size)
+            // Originate the opening right at the arrow button's visual center
+            let origin = CGPoint(x: size.width * 0.5, y: size.height * 0.575)
+            let maxRadius = hypot(size.width, size.height) * 0.88
+            let eased = clamped * clamped * (3.0 - 2.0 * clamped)
+            let apertureRadius = maxRadius * eased
+
+            var combined = Path()
+            combined.addRect(fullRect.insetBy(dx: -80, dy: -80))
+            if apertureRadius > 1 {
+              let organic = max(0, 1.0 - clamped * 0.72)
+              let hole = WelcomeLiquidPortalModifier.organicBlobPath(
+                center: origin,
+                radius: apertureRadius,
+                organicAmount: organic * 0.65,
+                time: Double(clamped) * 2.4 + 0.6
+              )
+              combined.addPath(hole)
+            }
+
+            context.fill(combined, with: .color(.white), style: FillStyle(eoFill: true))
+          }
+          .blur(radius: 42)
+        }
     }
   }
 }
@@ -407,7 +501,7 @@ private struct WelcomeLiquidPortalModifier: ViewModifier, Animatable {
 
   /// Smooth closed spline perturbed by low-frequency polar harmonics — produces Arc's organic
   /// softly-triangular liquid cloud silhouette instead of a rigid circle.
-  private static func organicBlobPath(
+  static func organicBlobPath(
     center: CGPoint,
     radius: CGFloat,
     organicAmount: CGFloat,
