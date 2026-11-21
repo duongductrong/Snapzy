@@ -67,9 +67,9 @@ final class AnnotationRotationTests: XCTestCase {
 
   @MainActor
   func testUpdateAnnotationProperties_rotatableTypeAcceptsAnglesBeyondWatermarkLimit() throws {
-    let state = AnnotateState(defaults: UserDefaultsFactory.make())
     let rectangle = item(.rectangle, rotation: 0)
-    state.annotations = [rectangle]
+    // makeState retains the instance: AnnotateState teardown crashes the test host.
+    let state = makeState(with: [rectangle])
 
     state.updateAnnotationProperties(id: rectangle.id, rotationDegrees: 120)
 
