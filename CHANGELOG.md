@@ -4,6 +4,17 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.6] - 2026-11-21
+
+### Bug Fixes
+- re-check app identity when a capture is blocked by it (#778) (2ee3e982)
+- stop re-checking app identity before every capture (#771) (876f8b13)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @williamcachamwri
+
 ## [2.3.0-beta.5] - 2026-11-21
 
 ### Features
