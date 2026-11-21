@@ -26,6 +26,10 @@ final class VideoEditorClickSoundPlayer {
   private var scheduled: Set<TimeInterval> = []
   private var lastTime: TimeInterval?
 
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   /// Structural timeline times of every audible click for `placements`.
   static func sequenceTimes(clickSourceTimes: [TimeInterval], placements: [TimelineSequence.Placement]) -> [TimeInterval] {
     var times: [TimeInterval] = []
