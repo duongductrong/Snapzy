@@ -15,13 +15,16 @@ private enum SnapzyOnboardingGlassAppearance {
 }
 
 struct SnapzyOnboardingActionBar: View {
-  var skipTitle: String? = nil
+  var skipTitle: String?
   var continueTitle: String
-  var continueKey: String? = nil
+  var continueKey: String?
   var isContinueEnabled: Bool = true
   var isBusy: Bool = false
-  var minWidth: CGFloat? = nil
-  var onSkip: (() -> Void)? = nil
+  /// Set once the current step's challenges are all done. The bar does not dance for it — the
+  /// Continue side simply gains a ring and a glow, and keeps them until the step changes.
+  var isHinted: Bool = false
+  var minWidth: CGFloat?
+  var onSkip: (() -> Void)?
   var onContinue: () -> Void
 
   private let barHeight: CGFloat = 40
@@ -59,6 +62,7 @@ struct SnapzyOnboardingActionBar: View {
         trailingKey: continueKey,
         isEnabled: isContinueEnabled,
         isBusy: isBusy,
+        isHinted: isHinted,
         action: onContinue
       )
     }
@@ -89,9 +93,24 @@ private struct SnapzyOnboardingBarSegment: View {
   var trailingKey: String?
   var isEnabled: Bool = true
   var isBusy: Bool = false
+  var isHinted: Bool = false
   var action: () -> Void
 
   @State private var isHovered = false
+
+  private var showsHint: Bool {
+    isHinted && isEnabled && !isBusy
+  }
+
+  private var labelInk: Color {
+    if !isEnabled {
+      return Color.white.opacity(0.30)
+    }
+    if showsHint {
+      return Color(red: 0.04, green: 0.08, blue: 0.22)
+    }
+    return isHovered ? SnapzyGlassInk.primary : SnapzyGlassInk.body
+  }
 
   var body: some View {
     Button(action: {
@@ -102,32 +121,47 @@ private struct SnapzyOnboardingBarSegment: View {
         if isBusy {
           ProgressView()
             .controlSize(.small)
-            .tint(SnapzyGlassInk.primary)
+            .tint(showsHint ? Color(red: 0.04, green: 0.08, blue: 0.22) : SnapzyGlassInk.primary)
         }
 
         Text(title)
           // Keep the label metrics stable while the pointer moves. Hover is expressed by the
           // glass plane, hairline and ink tint; changing weight here makes the label re-center.
           .font(.system(size: SnapzyOnboardingType.body + 1, weight: .medium))
-          .foregroundStyle(
-            !isEnabled
-              ? Color.white.opacity(0.30)
-              : (isHovered ? SnapzyGlassInk.primary : SnapzyGlassInk.body)
-          )
+          .foregroundStyle(labelInk)
 
         if let trailingKey, !isBusy {
-          SnapzyKeycapChip(label: trailingKey, emphasis: isHovered && isEnabled)
-            .opacity(isEnabled ? 1.0 : 0.35)
+          if showsHint {
+            Text(trailingKey)
+              .font(.system(size: SnapzyOnboardingType.keycap + 1, weight: .semibold, design: .rounded))
+              .foregroundStyle(Color(red: 0.04, green: 0.08, blue: 0.22).opacity(0.75))
+              .padding(.horizontal, 5.5)
+              .frame(minWidth: 19, minHeight: 19)
+              .background(
+                Radius.rect(Radius.ornament)
+                  .fill(Color(red: 0.04, green: 0.08, blue: 0.22).opacity(0.10))
+              )
+              .fixedSize()
+          } else {
+            SnapzyKeycapChip(label: trailingKey, emphasis: isHovered && isEnabled)
+              .opacity(isEnabled ? 1.0 : 0.35)
+          }
         }
       }
       .padding(.horizontal, SnapzySpace.xl + 1)
       .frame(maxHeight: .infinity)
+      .background {
+        if showsHint {
+          Capsule(style: .continuous)
+            .fill(isHovered ? Color(red: 0.90, green: 0.93, blue: 1.0) : Color.white)
+        }
+      }
       .liquidGlassSurface(
         shape: Capsule(style: .continuous),
         // Match Ruru's onboarding action bar: the group owns the resting surface, while a
         // button gets its own glass plane only while hovered. `isVisible` keeps the native
         // identity stable instead of inserting/removing an effect view on every pointer move.
-        isVisible: isHovered && isEnabled && !isBusy,
+        isVisible: !showsHint && isHovered && isEnabled && !isBusy,
         substrate: SnapzySurfaceGlass.controlSubstrateHover,
         tint: 0.10,
         // The hotter diagonal hairline is the hover affordance on both paths. Native glass gets
@@ -138,6 +172,7 @@ private struct SnapzyOnboardingBarSegment: View {
         nativeGlassTint: SnapzyOnboardingGlassAppearance.segmentActiveTint,
         nativeHighlight: .custom(top: 0.24, bottom: 0.08)
       )
+      .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: showsHint)
       .contentShape(Capsule(style: .continuous))
     }
     .buttonStyle(SnapzyInteractiveButtonStyle(isEnabled: isEnabled && !isBusy))

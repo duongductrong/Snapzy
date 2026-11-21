@@ -50,17 +50,17 @@ struct SnapzyMotionSpec: Equatable {
   var timingFunction: CAMediaTimingFunction? {
     switch curve {
     case .custom(let a, let b, let c, let d):
-      return CAMediaTimingFunction(controlPoints: Float(a), Float(b), Float(c), Float(d))
+      CAMediaTimingFunction(controlPoints: Float(a), Float(b), Float(c), Float(d))
     case .easeInOut:
-      return CAMediaTimingFunction(name: .easeInEaseOut)
+      CAMediaTimingFunction(name: .easeInEaseOut)
     case .easeOut:
-      return CAMediaTimingFunction(name: .easeOut)
+      CAMediaTimingFunction(name: .easeOut)
     case .easeIn:
-      return CAMediaTimingFunction(name: .easeIn)
+      CAMediaTimingFunction(name: .easeIn)
     case .linear:
-      return CAMediaTimingFunction(name: .linear)
+      CAMediaTimingFunction(name: .linear)
     case .spring:
-      return nil
+      nil
     }
   }
 
@@ -74,17 +74,37 @@ struct SnapzyMotionSpec: Equatable {
   static let hover = SnapzyMotionSpec(duration: 0.12, curve: .easeOut)
   static let settle = SnapzyMotionSpec(duration: 0.4, curve: .spring(bounce: 0.22))
   static let instant = SnapzyMotionSpec(duration: 0, curve: .linear)
+
+  /// Staged entrances: a strong ease-out that arrives quickly and lands softly, used for anything
+  /// that rises into place (headline, checklist rows, cards).
+  static let rise = SnapzyMotionSpec(duration: 0.26, curve: .custom(0.23, 1, 0.32, 1))
+  /// Marker state changes — a circle filling, a number becoming a check. Small enough that a
+  /// touch of bounce reads as physical instead of bouncy.
+  static let pop = SnapzyMotionSpec(duration: 0.3, curve: .spring(bounce: 0.3))
 }
 
 @MainActor
 final class SnapzyMotionPreferences {
   static let shared = SnapzyMotionPreferences()
 
+  /// Test hook, mirroring `LiquidGlassCapabilities.runtimeLegacyOverride`: forces the Reduce Motion
+  /// path on or off regardless of the system setting. `nil` (the default) defers to the system.
+  static var reduceMotionOverride: Bool?
+
   var reduceMotion: Bool {
-    NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    Self.reduceMotionOverride ?? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
   }
 
   func spec(_ base: SnapzyMotionSpec) -> SnapzyMotionSpec {
     base.respectingReduceMotion(reduceMotion)
+  }
+
+  /// Entrance delay for the `index`th item of a group, in seconds.
+  ///
+  /// A stagger exists to make a group feel like it arrives rather than being switched on. Under
+  /// Reduce Motion that is the whole point of the setting, so the delay collapses to zero and the
+  /// group appears in one beat.
+  func stagger(_ index: Int, step: Double = 0.035) -> Double {
+    reduceMotion ? 0 : Double(max(index, 0)) * step
   }
 }

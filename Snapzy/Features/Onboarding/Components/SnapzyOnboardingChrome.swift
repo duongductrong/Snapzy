@@ -8,22 +8,41 @@
 import AppKit
 import SwiftUI
 
-// MARK: - Overline
+// MARK: - Section Label
 
+/// A quiet label above a block of content.
+///
+/// This used to force `text.uppercased()` with 1.3pt tracking. Two problems: the string is
+/// localized into ten other scripts where capitalization does not exist, and the tracked-caps
+/// treatment is a magazine convention that onboarding applies to everything, which makes it
+/// decoration rather than hierarchy. Sentence case at the token tracking keeps the label a label.
 struct SnapzyOnboardingOverline: View {
   var text: String
   var tint: Color = SnapzyGlassInk.muted
+  /// Draw a short hairline before the text, for labels that sit inside a card.
+  var rule: Bool = false
 
-  init(_ text: String, tint: Color = SnapzyGlassInk.muted) {
+  init(_ text: String, tint: Color = SnapzyGlassInk.muted, rule: Bool = false) {
     self.text = text
     self.tint = tint
+    self.rule = rule
   }
 
   var body: some View {
-    Text(text.uppercased())
-      .font(.system(size: SnapzyOnboardingType.sectionLabel, weight: .semibold))
-      .tracking(1.3)
-      .foregroundStyle(tint)
+    HStack(spacing: SnapzySpace.md) {
+      if rule {
+        Rectangle()
+          .fill(tint.opacity(0.55))
+          .frame(width: 12, height: 0.5)
+      }
+
+      Text(text)
+        .font(.system(size: SnapzyOnboardingType.sectionLabel, weight: .semibold))
+        .tracking(SnapzyOnboardingType.sectionTracking)
+        .foregroundStyle(tint)
+    }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(text)
   }
 }
 
@@ -34,6 +53,12 @@ struct SnapzyOnboardingCloseButton: View {
 
   @State private var isHovered = false
 
+  /// The header is a toolbar, so its icon button takes the squircle ramp like every other
+  /// 28pt icon button in the app — the circle family is reserved for chrome over user content.
+  private var shape: RoundedRectangle {
+    Radius.controlRect(forHeight: 28)
+  }
+
   var body: some View {
     Button(action: action) {
       Image(systemName: "xmark")
@@ -41,9 +66,14 @@ struct SnapzyOnboardingCloseButton: View {
         .foregroundStyle(isHovered ? SnapzyGlassInk.primary : SnapzyGlassInk.muted)
         .frame(width: 28, height: 28)
         .background(
-          Circle()
-            .fill(Color.white.opacity(isHovered ? 0.16 : 0.08))
-            .overlay(Circle().strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5))
+          shape
+            .fill(isHovered ? SnapzyGlassInk.fillHover : SnapzyGlassInk.fillRaised)
+            .overlay(
+              shape.strokeBorder(
+                isHovered ? SnapzyGlassInk.hairlineStrong : SnapzyGlassInk.hairline,
+                lineWidth: SnapzySurfaceGlass.specularLineWidth
+              )
+            )
         )
     }
     .buttonStyle(.plain)
@@ -60,6 +90,8 @@ struct SnapzyOnboardingCloseButton: View {
 
 struct SnapzyOnboardingLanguagePicker: View {
   @EnvironmentObject private var onboardingLocalization: OnboardingLocalizationController
+
+  @State private var isHovered = false
 
   var body: some View {
     Menu {
@@ -106,19 +138,34 @@ struct SnapzyOnboardingLanguagePicker: View {
       .frame(height: 28)
       .background(
         Capsule(style: .continuous)
-          .fill(Color.white.opacity(0.08))
-          .overlay(Capsule(style: .continuous).strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5))
+          .fill(isHovered ? SnapzyGlassInk.fillHover : SnapzyGlassInk.fillRaised)
+          .overlay(
+            Capsule(style: .continuous)
+              .strokeBorder(
+                isHovered ? SnapzyGlassInk.hairlineStrong : SnapzyGlassInk.hairline,
+                lineWidth: SnapzySurfaceGlass.specularLineWidth
+              )
+          )
       )
+      .contentShape(Capsule(style: .continuous))
     }
     .menuStyle(.borderlessButton)
     .fixedSize()
+    .onHover { hovering in
+      withAnimation(SnapzyMotionPreferences.shared.spec(.hover).animation) {
+        isHovered = hovering
+      }
+    }
+    .accessibilityLabel(L10n.Onboarding.chromeLanguageLabel)
   }
 
   private var currentLanguageLabel: String {
     if onboardingLocalization.selectedLanguageIdentifier.isEmpty {
       return onboardingLocalization.systemResolvedOption?.displayName ?? L10n.Onboarding.chromeLanguageAuto
     }
-    return onboardingLocalization.availableOptions.first(where: { $0.identifier == onboardingLocalization.selectedLanguageIdentifier })?.displayName ?? L10n.Onboarding.chromeLanguageLabel
+    return onboardingLocalization.availableOptions
+      .first(where: { $0.identifier == onboardingLocalization.selectedLanguageIdentifier })?.displayName ?? L10n
+      .Onboarding.chromeLanguageLabel
   }
 }
 

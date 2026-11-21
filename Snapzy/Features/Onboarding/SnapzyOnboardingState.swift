@@ -59,9 +59,16 @@ enum Step2WorkflowStage: Equatable {
 
 @MainActor
 final class SnapzyOnboardingState: ObservableObject {
+  /// Which way the last step change travelled. Clicking back to an earlier step should slide the
+  /// page the other way than advancing, so the motion keeps telling the truth about direction.
+  enum NavigationDirection { case forward, backward }
+
   @Published var currentStep: SnapzyOnboardingStep = .meetSnapzy
   @Published var completedSteps: Set<SnapzyOnboardingStep> = []
   @Published var completedChallenges: Set<SnapzyOnboardingChallenge> = []
+  private(set) var navigationDirection: NavigationDirection = .forward
+  /// How many steps the last change jumped, so a long click-back travels further than an advance.
+  private(set) var navigationDistance: Int = 1
 
   init(restoreSavedStep: Bool = true) {
     if restoreSavedStep,
@@ -155,6 +162,8 @@ final class SnapzyOnboardingState: ObservableObject {
   }
 
   func transition(to step: SnapzyOnboardingStep) {
+    navigationDirection = step.stepNumber < currentStep.stepNumber ? .backward : .forward
+    navigationDistance = abs(step.stepNumber - currentStep.stepNumber)
     withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
       currentStep = step
       UserDefaults.standard.set(step.rawValue, forKey: PreferencesKeys.onboardingActiveStep)

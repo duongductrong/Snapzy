@@ -1453,6 +1453,11 @@ nonisolated enum L10n {
   }
 
   enum Onboarding {
+    static let welcomeHeadline = string(
+      "onboarding.welcome.headline",
+      defaultValue: "Meet Snapzy.",
+      comment: "Large headline on the welcome bloom screen that opens onboarding"
+    )
     static let welcomeSubtitle = string(
       "onboarding.welcome.subtitle",
       defaultValue: "A powerful screenshot & screen recording app for macOS",
@@ -2451,6 +2456,56 @@ nonisolated enum L10n {
       "onboarding.mock.done",
       defaultValue: "Done",
       comment: "Done button in mock system settings window"
+    )
+    static let mockToastCopied = string(
+      "onboarding.mock.toast-copied",
+      defaultValue: "Copied to Clipboard (⌘C)",
+      comment: "Feedback toast inside the onboarding capture mock"
+    )
+    static let mockToastSaved = string(
+      "onboarding.mock.toast-saved",
+      defaultValue: "Saved to Desktop (⌘S)",
+      comment: "Feedback toast inside the onboarding capture mock"
+    )
+    static let mockToastPinned = string(
+      "onboarding.mock.toast-pinned",
+      defaultValue: "Pinned on Screen (⌘P)",
+      comment: "Feedback toast inside the onboarding capture mock"
+    )
+    static let mockToastUnpinned = string(
+      "onboarding.mock.toast-unpinned",
+      defaultValue: "Unpinned",
+      comment: "Feedback toast inside the onboarding capture mock"
+    )
+    static let mockToastExported = string(
+      "onboarding.mock.toast-exported",
+      defaultValue: "Exported MP4 (⌘S)",
+      comment: "Feedback toast after exporting in the onboarding recording mock"
+    )
+    static let mockPressToRecord = string(
+      "onboarding.mock.press-to-record",
+      defaultValue: "Simulate ⇧⌘5 Area Selection",
+      comment: "Stage banner on Screen Recording mock screen"
+    )
+    static let mockOpenEditorHint = string(
+      "onboarding.mock.open-editor-hint",
+      defaultValue: "Click card to open Video Editor",
+      comment: "Hint arrow text pointing to the video quick access card"
+    )
+    static let mockModeArea = string(
+      "onboarding.mock.mode-area",
+      defaultValue: "Area",
+      comment: "Short HUD label for the area capture mode in mock"
+    )
+    static let mockModeFull = string(
+      "onboarding.mock.mode-full",
+      defaultValue: "Full",
+      comment: "Short HUD label for the fullscreen capture mode in mock"
+    )
+    static let mockModeRecord = string(
+      "onboarding.mock.mode-record",
+      defaultValue: "Record",
+      comment: "Short HUD label for the recording mode in mock"
     )
   }
 
