@@ -11,6 +11,10 @@ import XCTest
 
 @MainActor
 final class AnnotateStampTests: XCTestCase {
+  // Deinitializing AnnotateState crashes on the macOS 15 back-deployed concurrency runtime;
+  // keep each one alive like the other Annotate tests do.
+  private static var retainedStates: [AnnotateState] = []
+
   private func context(stamp: StampAnnotation, size: CGFloat = 100) -> AnnotationFactory.CreationContext {
     AnnotationFactory.CreationContext(
       properties: AnnotationProperties(),
@@ -167,7 +171,8 @@ final class AnnotateStampTests: XCTestCase {
   // MARK: - Quick edits
 
   func testResizingSelectedStampKeepsCenterInOneUndoStep() {
-    let state = AnnotateState()
+    let state = AnnotateState(defaults: UserDefaultsFactory.make())
+    Self.retainedStates.append(state)
     let item = AnnotationItem(
       type: .stamp(StampAnnotation(content: .emoji("🎯"))),
       bounds: CGRect(x: 100, y: 100, width: 50, height: 50),
