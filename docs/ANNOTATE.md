@@ -43,7 +43,7 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 
 ## Tools & Shortcuts
 
-`AnnotationToolType` (`Models/AnnotateAnnotationToolType.swift`) — 17 tools, single-key defaults, all rebindable via `AnnotateShortcutManager`:
+`AnnotationToolType` (`Models/AnnotateAnnotationToolType.swift`) — 18 tools, single-key defaults, all rebindable via `AnnotateShortcutManager`:
 
 | Tool | Key | Tool | Key | Tool | Key |
 | --- | --- | --- | --- | --- | --- |
@@ -52,7 +52,7 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 | cutOut | `x` | text | `t` | counter | `n` |
 | rectangle | `r` | highlighter | `h` | watermark | `w` |
 | filledRectangle | `f` | pencil | `p` | mockup | `m` |
-| oval | `o` | measure | `u` | | |
+| oval | `o` | measure | `u` | magnifier | `z` |
 
 - `drawableTools` shared with inline overlay so surfaces stay in sync; `supportsQuickPropertiesBar` false for selection/crop/cutOut/mockup.
 - While a drawing tool is active, clicking an existing annotation's edge (a shape's outline, an arrow or line, a text box, a counter) selects it without leaving the tool; the quick properties bar then edits that item, and dragging its edge or handles moves or resizes it. Drags that start anywhere else — including inside an existing shape, on the item just drawn (until it is clicked or otherwise selected), or in the margin outside the image — draw a new annotation. A click inside an opaque item (filled rectangle, blur, combined image) never selects what lies beneath it. Hold Option to always draw, even on a selected item's resize handle. Combined images are never selected by drawing tools.
@@ -106,6 +106,17 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 - Item: `AnnotationType.measurement(MeasureGeometry)` (`Models/AnnotateMeasureGeometry.swift`). The measured extent is the item's `bounds`; a span adds `origin` (where its lines cross) and `axis` (zero-thickness bounds on an unmeasured axis). `pixelScale` (source px/pt at measuring time) and `unit` make the label (`label(for:)`) independent of later crops and of the export path. Spans move but never resize (a pinned value stays true); boxes resize and their label follows. Rotation moves the origin and swaps axis/scale; flip moves the origin only; cut-out moves the item as one piece.
 - Drawing: `AnnotateMeasureRenderer` (from `AnnotationRenderer.draw`, so canvas, preview and every export match): lines with end ticks or a lightly filled box, plus a dark label capsule below-right of the span origin or under the box. Hit testing covers lines, the box edge and the label.
 - Quick properties bar: color, **Axis** (both / width / height; tool defaults only) and **Unit** (pt / px; converts selected measurements in one undo step), plus a gesture hint. Prefs `annotate.measureUnit`, `annotate.measureAxis` (TOML `measure_unit`, `measure_axis`); edge tolerance is shared with Screen Ruler (`screenRuler.edgeTolerance`).
+
+## Magnifier (Loupe)
+
+- Tool `.magnifier` (`z`, icon `plus.magnifyingglass`), in `drawableTools` so it is also in inline ⇧⌘7. Click-to-place like Counter: the **press** is the spot to magnify, the **release** is where the lens goes. A click (under 4 screen points of travel) puts the lens right over the spot; a drag pulls it out to the release point. New lenses are square, sized from the canvas (`MagnifierGeometry.defaultLensSize`, 72–220 pt) and nudged inside it.
+- Item: `AnnotationType.magnifier(MagnifierGeometry)` (`Models/AnnotateMagnifierGeometry.swift`). `bounds` is the lens; the geometry stores `sourceCenter` (image points), `zoom` (1.5–8×) and the style (`MagnifierStyle`: shape circle / rounded rect, connector, shadow). The source area is always lens size ÷ zoom around `sourceCenter`, so resizing the lens keeps the zoom and changes how much it shows. Border = the item's stroke color and width.
+- Editing: dragging the lens moves only the lens (`applyingResizeBounds`); the round grip at the source center (`ResizeHandle.magnifierSource`, single selection) moves only the source, with a dashed source outline as selection chrome. Rigid moves (`translatedBy`: paste/duplicate offsets, arrow-key nudges, inline selection moves, export offsets) carry both.
+- Rendering: `AnnotateMagnifierRenderer` (from `AnnotationRenderer.draw`, so canvas, live preview and every export match). It samples the current source image at draw time — no cached copy — then clips to the lens and draws the source ×zoom (nearest-neighbour from 3×, smooth below), then the border. Connector on: the source gets an outline and, once the shapes are apart, a line joins their edges; nothing is drawn while the lens covers the source center. Shadow on: an opaque fill under the content casts it. `renderBounds` includes shadow and source outline. Only source pixels are magnified (other annotations and combined images are not), like Measure.
+- Export: annotations are shifted by the crop origin and padding, so `AnnotationRenderer.sourceImageOrigin` tells the magnifier where the source image sits in the export context (`(0,0)` on the canvas).
+- Image transforms: crop changes no coordinates (the source still samples the full image, even outside the crop). Rotate 90° turns the source center with `AnnotateImageRotation.rotatePoint` (the lens bounds rotate like other boxes); flip mirrors it; Cut Out moves the lens with its half and the source with the pixels under it (`shiftPoint`). Undo goes through the normal image-transform snapshot.
+- Quick properties bar: border color and width, **Zoom** menu (1.5, 2, 3, 4, 6, 8×), **Shape**, **Shadow** and **Connector** toggles, plus a gesture hint. With magnifiers selected the controls restyle them as one undo step; otherwise they set the style for new lenses, persisted as JSON in `annotate.magnifierStyle`.
+- Sidecar: kind `magnifier` with `PersistedMagnifierGeometry` (`sourceCenter`, `zoom`, optional `shape`, `showsConnector`, `showsShadow`); schemaVersion stays 1. Builds before the Magnifier skip the item (unknown kind) and load the rest.
 
 ## Cut Out (Remove / Add a Strip)
 
@@ -238,7 +249,7 @@ source image.
 ## Rotate, Flip & Canvas Presets
 
 - Toolbar "Rotate & flip" menu (`rectangle.landscape.rotate`, `AnnotateImageTransformToolbarButton` pops a native `NSMenu` so the glyph matches `ToolbarButton` and shortcut hints show) (next to Cut Out; also in the canvas right-click menu, `AnnotateImageTransformMenuItems`): Rotate 90° left/right (`⌘L` / `⌘R`) and Flip horizontal/vertical (`⌃⌘H` / `⌃⌘V`, `AnnotateState.flipImage`); key codes, handled in `AnnotateWindow.performKeyEquivalent`, menu items only render the hints. Gated by `canRotateImage` (no crop/cut-out editing, no cutout request in flight).
-- Both transform the source, cutout and embedded image bitmaps plus annotations, crop rects and auto-crop rect. Flip mirrors placement only: text and watermark glyphs stay readable; measure spans keep axis/scale.
+- Both transform the source, cutout and embedded image bitmaps plus annotations, crop rects and auto-crop rect. Flip mirrors placement only: text and watermark glyphs stay readable; measure spans keep axis/scale; magnifier sources move with the pixels, so the lens shows the transformed image.
 - Dedicated image-transform (`ImageTransformSnapshot`) undo entries, shared with the Cut Out tool.
 - `AnnotateCanvasPresetStore` (`annotate.canvasPresets.v1`): background style, blur effect, spacing, shadow, corner radius, aspect ratio + orientation. One preset can be default (`annotate.defaultCanvasPresetId.v1`).
 - Default preset auto-applies to new screenshots during post-capture via `ScreenshotPresetAutoApplier` — lightweight `AnnotateExporter.renderCanvasEffects` without constructing full `AnnotateState`, returns editable session data. Inline area annotate does NOT auto-apply.
@@ -271,7 +282,7 @@ flowchart TD
 | `Esc` | Cancel | `N` | Counter |
 | `Space` (hold) | Move selection | `W` | Watermark |
 | `V`/`R`/`F`/`O` | Selection / Rect / Filled / Oval | `P` | Pencil |
-| `A`/`L`/`T`/`H` | Arrow / Line / Text / Highlighter | | |
+| `A`/`L`/`T`/`H` | Arrow / Line / Text / Highlighter | `U` / `Z` | Measure / Magnifier |
 | `⌘K` | Ask AI (prompt) | `⇧⌘T` / `⌥⌘T` | Auto Translate / Translate Area |
 | `⌥` (hold) | Peek at text under translations | | |
 

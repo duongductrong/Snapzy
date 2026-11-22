@@ -22,6 +22,7 @@ enum AnnotationFactory {
     var watermarkText: String
     var activeAnnotationBounds: CGRect
     var counterArrowMinimumDragDistance: CGFloat = 4
+    var magnifierStyle = MagnifierStyle()
   }
 
   static func createAnnotation(
@@ -48,7 +49,8 @@ enum AnnotationFactory {
         counterValue: state.nextCounterValue(),
         watermarkText: state.watermarkText,
         activeAnnotationBounds: state.activeAnnotationBounds,
-        counterArrowMinimumDragDistance: counterArrowMinimumDragDistance
+        counterArrowMinimumDragDistance: counterArrowMinimumDragDistance,
+        magnifierStyle: state.magnifierStyle
       )
     )
   }
@@ -127,6 +129,10 @@ enum AnnotationFactory {
       let text = context.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines)
       type = .watermark(text.isEmpty ? "Snapzy" : text)
 
+    // The press is the spot to magnify; the release places the lens (a click covers the spot).
+    case .magnifier:
+      type = .magnifier(MagnifierGeometry(sourceCenter: start, style: context.magnifierStyle))
+
     // Measure items come from a pixel scan (`AnnotateMeasureMapper`), not from drag geometry.
     case .selection, .crop, .cutOut, .text, .measure, .mockup:
       return nil
@@ -156,6 +162,14 @@ enum AnnotationFactory {
         drawnBounds: drawnBounds,
         center: start,
         canvasBounds: context.activeAnnotationBounds
+      )
+    case .magnifier:
+      let canvas = context.activeAnnotationBounds
+      let lensCenter = hypot(end.x - start.x, end.y - start.y) >= context.counterArrowMinimumDragDistance ? end : start
+      bounds = MagnifierGeometry.lensBounds(
+        centeredAt: lensCenter,
+        size: MagnifierGeometry.defaultLensSize(for: canvas),
+        within: canvas
       )
     case .highlight(let points):
       bounds = pathBounds(containing: points) ?? normalizedBounds(CGRect(

@@ -199,6 +199,7 @@ struct AnnotateQuickPropertiesBar: View {
     let showTextSnap = state.quickPropertiesSupportsHighlighterTextSnapping
     let showMeasureAxis = state.quickPropertiesSupportsMeasureAxis
     let showMeasureUnit = state.quickPropertiesSupportsMeasureUnit
+    let showMagnifier = state.quickPropertiesSupportsMagnifier
     let showTranslation = state.quickPropertiesSelectedAnnotationCount == 1 && state.selectedTranslation != nil
     let showAnnotationRotation = state.quickPropertiesSupportsAnnotationRotation
     let hasEditableStyleControls = showTranslation
@@ -213,6 +214,7 @@ struct AnnotateQuickPropertiesBar: View {
       || showLineStyle
       || showArrowStyle
       || showAnnotationRotation
+      || showMagnifier
     let showSelectionStyle = state.quickPropertiesShowsSelectionStyle && !hasEditableStyleControls
     let showSelectionInfo = state.quickPropertiesSelectedAnnotationCount > 0 && showSelectionStyle
     let hasBeforeTextPresentation = showStrokeColor || showFill
@@ -557,6 +559,27 @@ struct AnnotateQuickPropertiesBar: View {
           buttonWidth: density.controlButtonWidth,
           groupSpacing: density.groupSpacing
         )
+      }
+
+      activePropertySlot(
+        isVisible: showMagnifier,
+        isEnabled: true,
+        showsLeadingDivider: hasBeforeTextSnap || showTextSnap || showMeasureAxis || showMeasureUnit,
+        width: nil
+      ) {
+        QuickMagnifierControl(
+          style: state.quickMagnifierStyle,
+          buttonWidth: density.controlButtonWidth,
+          groupSpacing: density.groupSpacing,
+          update: { change in state.updateMagnifierStyle(change) }
+        )
+      }
+
+      if includesCounterHint, state.quickPropertiesMode == .toolDefaults, state.selectedTool == .magnifier {
+        Text(L10n.AnnotateUI.magnifierGestureHint)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .fixedSize()
       }
 
       if includesCounterHint, state.quickPropertiesMode == .toolDefaults, state.selectedTool == .measure {
@@ -1664,6 +1687,85 @@ private struct QuickMeasureUnitControl: View {
         .accessibilityLabel(option == .points ? L10n.AnnotateUI.measureUnitPoints : L10n.AnnotateUI.measureUnitPixels)
       }
     }
+  }
+}
+
+/// Zoom, lens shape, shadow and connector for magnifiers.
+private struct QuickMagnifierControl: View {
+  let style: MagnifierStyle
+  let buttonWidth: CGFloat
+  let groupSpacing: CGFloat
+  let update: ((inout MagnifierStyle) -> Void) -> Void
+
+  var body: some View {
+    HStack(spacing: groupSpacing * 2) {
+      QuickPropertiesGroup(title: L10n.AnnotateUI.magnifierZoom, spacing: groupSpacing) {
+        Menu {
+          ForEach(MagnifierGeometry.zoomPresets, id: \.self) { zoom in
+            Button {
+              update { $0.zoom = zoom }
+            } label: {
+              if abs(style.zoom - zoom) < 0.01 {
+                Label(Self.zoomText(zoom), systemImage: "checkmark")
+              } else {
+                Text(Self.zoomText(zoom))
+              }
+            }
+          }
+        } label: {
+          Text(Self.zoomText(style.zoom))
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+            .foregroundColor(LiquidGlassTokens.inkPrimary)
+            .frame(minWidth: buttonWidth * 1.4, minHeight: QuickPropertiesMetrics.chip)
+            .liquidGlassControl(isActive: false, activeGlassTint: nil)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(L10n.AnnotateUI.magnifierZoom)
+        .accessibilityLabel(L10n.AnnotateUI.magnifierZoom)
+      }
+
+      QuickPropertiesGroup(title: L10n.AnnotateUI.magnifierShape, spacing: groupSpacing) {
+        ForEach(MagnifierShape.allCases, id: \.self) { shape in
+          chip(
+            symbol: shape == .circle ? "circle" : "app",
+            title: shape == .circle ? L10n.AnnotateUI.magnifierShapeCircle : L10n.AnnotateUI.magnifierShapeRoundedRect,
+            isActive: style.shape == shape
+          ) {
+            update { $0.shape = shape }
+          }
+        }
+      }
+
+      HStack(spacing: groupSpacing) {
+        chip(symbol: "shadow", title: L10n.AnnotateUI.magnifierShadow, isActive: style.showsShadow) {
+          update { $0.showsShadow.toggle() }
+        }
+        chip(symbol: "line.diagonal", title: L10n.AnnotateUI.magnifierConnector, isActive: style.showsConnector) {
+          update { $0.showsConnector.toggle() }
+        }
+      }
+    }
+  }
+
+  private func chip(symbol: String, title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Image(systemName: symbol)
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundColor(isActive ? LiquidGlassTokens.inkPrimary : .secondary)
+        .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
+        .liquidGlassControl(isActive: isActive, activeGlassTint: nil)
+    }
+    .buttonStyle(.plain)
+    .help(title)
+    .accessibilityLabel(title)
+    .accessibilityAddTraits(isActive ? .isSelected : [])
+  }
+
+  private static func zoomText(_ zoom: CGFloat) -> String {
+    let value = zoom.rounded() == zoom ? String(Int(zoom)) : String(format: "%.1f", Double(zoom))
+    return "\(value)×"
   }
 }
 

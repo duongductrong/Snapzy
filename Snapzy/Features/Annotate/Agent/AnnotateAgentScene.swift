@@ -241,6 +241,7 @@ extension AnnotationType {
     case .embeddedImage: "image"
     case .spotlight: "spotlight"
     case .measurement: "measure"
+    case .magnifier: "magnifier"
     case .translation: "translation"
     }
   }

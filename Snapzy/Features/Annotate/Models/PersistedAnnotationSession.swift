@@ -145,6 +145,7 @@ struct PersistedAnnotationType: Codable, Equatable {
     case path, rectangle, filledRectangle, oval, arrow, line, text, highlight, blur, counter, watermark, embeddedImage, spotlight
     case measurement
     case translation
+    case magnifier
     /// A kind written by a newer Snapzy. The item is skipped instead of failing the whole
     /// manifest, so a session keeps everything this build can draw.
     case unknown
@@ -166,6 +167,7 @@ struct PersistedAnnotationType: Codable, Equatable {
   var embeddedImageAssetId: UUID?
   var measure: PersistedMeasureGeometry?
   var translation: PersistedTranslatedTextBlock?
+  var magnifier: PersistedMagnifierGeometry?
 
   init(annotationType: AnnotationType) {
     switch annotationType {
@@ -211,6 +213,9 @@ struct PersistedAnnotationType: Codable, Equatable {
     case .translation(let block):
       kind = .translation
       translation = PersistedTranslatedTextBlock(block: block)
+    case .magnifier(let geometry):
+      kind = .magnifier
+      magnifier = PersistedMagnifierGeometry(geometry: geometry)
     }
   }
 
@@ -248,6 +253,8 @@ struct PersistedAnnotationType: Codable, Equatable {
       return measure?.measureGeometry.map { .measurement($0) }
     case .translation:
       return translation.map { .translation($0.block) }
+    case .magnifier:
+      return magnifier?.magnifierGeometry.map { .magnifier($0) }
     case .unknown:
       return nil
     }
@@ -282,6 +289,34 @@ struct PersistedMeasureGeometry: Codable, Equatable {
       origin: origin ?? .zero,
       pixelScale: pixelScale,
       unit: unit.flatMap(MeasureUnit.init(rawValue:)) ?? .points
+    )
+  }
+}
+
+/// Magnifier source and style. Unknown shapes fall back; a non-finite source drops the item.
+struct PersistedMagnifierGeometry: Codable, Equatable {
+  var sourceCenter: CGPoint
+  var zoom: CGFloat
+  var shape: String?
+  var showsConnector: Bool?
+  var showsShadow: Bool?
+
+  init(geometry: MagnifierGeometry) {
+    sourceCenter = geometry.sourceCenter
+    zoom = geometry.zoom
+    shape = geometry.shape.rawValue
+    showsConnector = geometry.showsConnector
+    showsShadow = geometry.showsShadow
+  }
+
+  var magnifierGeometry: MagnifierGeometry? {
+    guard sourceCenter.x.isFinite, sourceCenter.y.isFinite else { return nil }
+    return MagnifierGeometry(
+      sourceCenter: sourceCenter,
+      zoom: zoom,
+      shape: shape.flatMap(MagnifierShape.init(rawValue:)) ?? .circle,
+      showsConnector: showsConnector ?? true,
+      showsShadow: showsShadow ?? true
     )
   }
 }
