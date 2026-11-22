@@ -92,15 +92,22 @@ struct SnapzyOnboardingWelcome: View {
   @State private var isFlooded = false
   @State private var markIn = false
   @State private var markBreathing = false
-  @State private var markOut = false
+  /// Continuous elevation of the solo brand mark from dead center (`0.0`, 84pt) up to its hero
+  /// perch directly above `Meet Snapzy.` (`1.0`, 56pt) with a silky optical rack-focus blur shimmer.
+  @State private var markElevation: CGFloat = 0
   @State private var revealedWordCount = 0
   @State private var periodRevealed = false
   @State private var subtitleIn = false
   @State private var ctaIn = false
   @State private var isExiting = false
-  /// Drives the silky top-left Logo Dock Morph (0.0 = full window aurora → 1.0 = docked pixel-for-
+  /// Smoothly exhales and dissolves the full-window blue aurora into the Dark Liquid Glass canvas
+  /// (`0.0` = opaque full-bleed aurora → `1.0` = gently expanded & completely dissolved).
+  @State private var auroraExitProgress: CGFloat = 0
+  /// Drives the silky top-left Logo Dock flight (0.0 = perched Hero Mark → 1.0 = docked pixel-for-
   /// pixel onto the 26×26 top-left Snapzy app icon).
   @State private var logoMorphProgress: CGFloat = 0
+  /// Crisp optical hairline ring expanding once around the top-left 26×26 logo on exact dock.
+  @State private var dockRingProgress: CGFloat = 0
   /// Used only under Reduce Motion for a simple crossfade exit.
   @State private var reduceMotionOpacity: Double = 1.0
 
@@ -135,16 +142,18 @@ struct SnapzyOnboardingWelcome: View {
             .allowsHitTesting(false)
         }
 
-        // Morphing Living Aurora Portal:
-        // - During opening: fills the full window through the organic 3-lobe liquid orb portal.
-        // - On arrow click: morphs smoothly into the exact right-column macOS stage rectangle with
-        //   crisp Snapzy viewfinder corner brackets, then dissolves like developing film to reveal
-        //   the real macOS desktop stage right inside the same frame.
-        morphingAuroraSurface(in: size)
+        // Living Aurora Backdrop:
+        // - During opening: fills the full window through the living plasma orb portal.
+        // - On arrow click: exhales gently (`scale 1.0 → 1.055`) and dissolves cleanly away into
+        //   the Dark Liquid Glass workspace (never dragging a shrinking rectangular box over Step 1).
+        dissolvingAuroraSurface(in: size)
 
-        // Solo crisp white Snapzy mark beat
-        mark
-          .frame(width: size.width, height: size.height)
+        // Single crisp optical hairline ring pulsing once around the top-left brand logo on dock
+        if !reduceMotion && dockRingProgress > 0.001 {
+          dockArrivalRing
+            .position(x: targetLogoFrame.midX, y: targetLogoFrame.midY)
+            .allowsHitTesting(false)
+        }
 
         // Arc focus-pull wave headline + airy subtitle + clean editorial arrow pill button.
         // Keeping `.blur` scoped to the tight `welcomeContent` bounds (before expanding to full
@@ -159,6 +168,11 @@ struct SnapzyOnboardingWelcome: View {
             value: isExiting
           )
           .frame(width: size.width, height: size.height)
+
+        // Continuous Living Hero Brand Mark:
+        // Pulls out of cinema blur in the center → glides up with optical focus shimmer to perch
+        // above `Meet Snapzy.` → leads a silky arc straight into the 26×26 top-left onboarding logo.
+        heroMark(in: size)
 
         // Top-right adaptive close button
         closeButton
@@ -181,11 +195,14 @@ struct SnapzyOnboardingWelcome: View {
   }
 
   /// Renders the living aurora + photographic grain inside a GPU-cached surface that freezes at
-  /// its exact live frame on exit and glides smoothly into the top-left 26×26 Snapzy app icon.
-  private func morphingAuroraSurface(in windowSize: CGSize) -> some View {
+  /// its exact live frame on exit and exhales/dissolves smoothly into Dark Liquid Glass.
+  private func dissolvingAuroraSurface(in windowSize: CGSize) -> some View {
     let shouldDrift = !reduceMotion && !isExiting
+    let windowShape = Radius.rect(SnapzyRadius.window)
+    let exitT = reduceMotion ? 0 : max(0, min(1, auroraExitProgress))
+    let exitOpacity = reduceMotion ? reduceMotionOpacity : Double(1.0 - exitT)
 
-    let baseAurora = ZStack {
+    return ZStack {
       WelcomeAuroraBackdrop(drifts: shouldDrift)
       WelcomeFilmGrainOverlay()
         .allowsHitTesting(false)
@@ -202,41 +219,74 @@ struct SnapzyOnboardingWelcome: View {
       isFullyOpen: isFlooded,
       drifts: shouldDrift
     ))
-
-    return baseAurora
-      .modifier(WelcomeLogoMorphModifier(
-        progress: logoMorphProgress,
-        windowSize: windowSize,
-        targetLogoFrame: targetLogoFrame,
-        isFlooded: isFlooded,
-        reduceMotion: reduceMotion
-      ))
-      .opacity(reduceMotionOpacity)
+    .scaleEffect(1.0 + 0.055 * exitT)
+    .clipShape(windowShape)
+    .overlay {
+      windowShape.strokeBorder(
+        LinearGradient(
+          colors: [
+            Color.white.opacity(isFlooded ? 0.30 : 0.14),
+            Color.white.opacity(isFlooded ? 0.08 : 0.05),
+          ],
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        ),
+        lineWidth: LiquidGlassTokens.specularLineWidth
+      )
+      .allowsHitTesting(false)
+    }
+    .opacity(exitOpacity)
   }
 
-  // MARK: - Solo Brand Mark Beat
+  // MARK: - Living Hero Brand Mark (Center Blur Reveal → Hero Perch → Top-Left Logo Dock)
 
-  private var mark: some View {
+  private func heroMark(in windowSize: CGSize) -> some View {
     Image("WelcomeMark")
       .resizable()
       .interpolation(.high)
       .aspectRatio(contentMode: .fit)
-      .frame(width: 84, height: 84)
-      .shadow(color: SnapzyWelcomePalette.cobaltShadow.opacity(0.30), radius: 22, y: 10)
-      .shadow(color: Color.white.opacity(0.28), radius: 10, y: 0)
-      .opacity(markIn && !markOut ? 1 : 0)
-      .blur(radius: reduceMotion ? 0 : (markOut ? 20 : (markIn ? 0 : 22)))
-      .scaleEffect(reduceMotion ? 1.0 : (markOut ? 1.10 : (markBreathing ? 1.035 : (markIn ? 1.0 : 0.86))))
-      .animation(phaseAnimation(.timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.86)), value: markIn)
-      .animation(phaseAnimation(.easeInOut(duration: 1.40)), value: markBreathing)
-      .animation(phaseAnimation(.easeInOut(duration: 0.50)), value: markOut)
+      .modifier(
+        WelcomeHeroMarkFlightModifier(
+          elevation: markElevation,
+          dockProgress: logoMorphProgress,
+          markIn: markIn,
+          markBreathing: markBreathing && !isExiting,
+          windowSize: windowSize,
+          targetLogoFrame: targetLogoFrame,
+          reduceMotion: reduceMotion
+        )
+      )
+      .opacity(reduceMotionOpacity)
       .allowsHitTesting(false)
+  }
+
+  private var dockArrivalRing: some View {
+    let clamped = max(0, min(1, dockRingProgress))
+    let diameter = 18 + 26 * clamped
+    let opacity = 0.62 * Double(pow(1.0 - clamped, 1.5))
+    return Circle()
+      .strokeBorder(
+        LinearGradient(
+          colors: [
+            Color.white.opacity(opacity),
+            SnapzyWelcomePalette.skyAzure.color.opacity(opacity * 0.85),
+          ],
+          startPoint: .top,
+          endPoint: .bottom
+        ),
+        lineWidth: 1.0
+      )
+      .frame(width: diameter, height: diameter)
   }
 
   // MARK: - Hero Content (Arc Focus-Pull Wave + Subtitle + Jewel Arrow Button)
 
   private var welcomeContent: some View {
     VStack(spacing: 0) {
+      // Reserves clean optical space directly above `Meet Snapzy.` for the elevated 56×56 Hero Mark
+      Spacer()
+        .frame(height: 76)
+
       WelcomeFocusWaveHeadline(
         tokens: headlineTokens,
         revealedWordCount: revealedWordCount,
@@ -295,8 +345,8 @@ struct SnapzyOnboardingWelcome: View {
     if reduceMotion {
       portalProgress = 1.0
       isFlooded = true
-      markIn = false
-      markOut = true
+      markIn = true
+      markElevation = 1.0
       revealedWordCount = tokenCount
       periodRevealed = true
       subtitleIn = true
@@ -318,7 +368,7 @@ struct SnapzyOnboardingWelcome: View {
       portalProgress = 1.0
     }
 
-    // Beat 3: Solo white Snapzy mark pulls into focus as the flood nears the edges
+    // Beat 3: Solo white Snapzy mark pulls out of deep optical cinema blur in the dead center
     guard await sleepSeconds(0.85) else { return }
     markIn = true
 
@@ -326,12 +376,15 @@ struct SnapzyOnboardingWelcome: View {
     isFlooded = true
     markBreathing = true
 
-    // Hold calm solo mark beat, then dissolve gently out of focus
-    guard await sleepSeconds(1.15) else { return }
-    markOut = true
+    // Beat 4: Hold calm solo beat, then glide the mark gracefully upward through a soft optical
+    // rack-focus blur shimmer to perch right above `Meet Snapzy.` (staying visible on hero!).
+    guard await sleepSeconds(0.95) else { return }
+    withAnimation(.timingCurve(0.22, 0.0, 0.12, 1.0, duration: 0.90)) {
+      markElevation = 1.0
+    }
 
-    // Beat 4: Arc signature word-by-word optical focus-pull wave
-    guard await sleepSeconds(0.38) else { return }
+    // Beat 5: Arc signature word-by-word optical focus-pull wave unfolds directly beneath the logo
+    guard await sleepSeconds(0.24) else { return }
     for index in 1...max(tokenCount, 1) {
       revealedWordCount = index
       if index < tokenCount {
@@ -345,11 +398,11 @@ struct SnapzyOnboardingWelcome: View {
       periodRevealed = true
     }
 
-    // Beat 5: Subtitle focuses gently into place
+    // Beat 6: Subtitle focuses gently into place
     guard await sleepSeconds(0.22) else { return }
     subtitleIn = true
 
-    // Beat 6: Editorial arrow button materializes + quietly pre-warm Step 1 behind the aurora
+    // Beat 7: Editorial arrow button materializes + quietly pre-warm Step 1 behind the aurora
     guard await sleepSeconds(0.30) else { return }
     ctaIn = true
     onReadyForPrewarm()
@@ -367,9 +420,11 @@ struct SnapzyOnboardingWelcome: View {
   private func triggerStart(allowEarly: Bool = false) {
     guard (ctaIn || allowEarly), !isExiting else { return }
     isExiting = true
-    // Ensure the opening portal is fully open if the user triggered early via Return/Esc
+    // Ensure opening portal & hero mark are ready if triggered early via Return/Esc
     portalProgress = 1.0
     isFlooded = true
+    markIn = true
+    markElevation = 1.0
     SnapzyOnboardingWelcomeAudio.shared.playConfirmChime()
 
     if reduceMotion {
@@ -389,142 +444,167 @@ struct SnapzyOnboardingWelcome: View {
     onReadyForPrewarm()
 
     Task { @MainActor in
-      // Beat 1: Brief optical release of headline & arrow button, then glide the entire frozen
-      // GPU-cached aurora + blooming white Snapzy mark in one continuous 120fps liquid arc right
-      // into the top-left 26×26 brand app icon.
-      try? await Task.sleep(for: .milliseconds(50))
-      withAnimation(.timingCurve(0.22, 0.0, 0.10, 1.0, duration: 1.08)) {
+      // Beat 1: Headline & arrow pill softly rack-focus out while the blue aurora exhales cleanly
+      // into Dark Liquid Glass AND the perched white logo crystallizes into the gleaming Snapzy
+      // App Icon squircle, gliding along one silky C∞ arc straight into the 26×26 top-left slot.
+      try? await Task.sleep(for: .milliseconds(25))
+      withAnimation(.timingCurve(0.22, 0.0, 0.16, 1.0, duration: 0.58)) {
+        auroraExitProgress = 1.0
+      }
+      withAnimation(.timingCurve(0.22, 0.0, 0.10, 1.0, duration: 0.94)) {
         logoMorphProgress = 1.0
       }
 
-      // Beat 2: As the aurora pulls away toward the top-left logo, let the Liquid Glass Step 1
-      // workspace (instruction rail, macOS stage, step rail, footer) breathe smoothly into view.
-      try? await Task.sleep(for: .milliseconds(110))
+      // Beat 2: Right as the blue veil turns translucent, bloom the pre-warmed Liquid Glass Step 1
+      // workspace seamlessly beneath the gliding Snapzy icon.
+      try? await Task.sleep(for: .milliseconds(70))
       onBeginTransition()
 
-      // Beat 3: On exact landing (t = 1.0), lock in the real brand icon underneath the pixel-
-      // identical docked portal, then cleanly retire the Welcome overlay with zero jump.
-      try? await Task.sleep(for: .milliseconds(980))
+      // Beat 3: On exact landing (t = 1.0), lock in the pixel-identical real brand icon beneath
+      // and expand one crisp 1pt optical hairline ring as the "Snapzy" wordmark unfolds beside it.
+      try? await Task.sleep(for: .milliseconds(875))
       onDockLogo()
+      withAnimation(.timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.40)) {
+        dockRingProgress = 1.0
+      }
 
-      try? await Task.sleep(for: .milliseconds(35))
+      try? await Task.sleep(for: .milliseconds(420))
       onCompleteTransition()
     }
   }
 }
 
-// MARK: - Top-Left Brand Logo Dock Morph (Full Window Aurora → 26×26 Top-Left Snapzy Icon)
+// MARK: - Continuous Living Hero Mark → Crystallized App Icon Dock (Pure GPU 120fps)
 
-/// Contracts the GPU-cached full-window electric-blue aurora along a silky liquid-squircle arc
-/// directly into the exact pixel coordinates and corner radius of the top-left `26×26` Snapzy app
-/// icon. Because the aurora texture is frozen at its exact live frame and scaled strictly on the
-/// GPU (no live `TimelineView` re-renders or layout-size re-rasterization), ProMotion drives the
-/// entire glide at locked 120fps with zero stutter.
-private struct WelcomeLogoMorphModifier: ViewModifier, Animatable {
-  var progress: CGFloat
+/// Drives the visible white Snapzy `WelcomeMark` across two unbroken, harmonious beats:
+/// 1. `elevation` (0 → 1): glides from dead center (`84pt`) up to its hero perch above `Meet Snapzy.`
+///    (`56pt`) through a silky rack-focus cinema blur shimmer.
+/// 2. `dockProgress` (0 → 1): as the full-window blue aurora exhales & dissolves into Dark Liquid
+///    Glass, the crisp Snapzy App Icon squircle crystallizes effortlessly right behind the white
+///    mark and glides as a single gleaming icon along a weightless upward-left arc straight into
+///    the `26×26` top-left onboarding brand logo — zero shrinking-background clutter.
+private struct WelcomeHeroMarkFlightModifier: ViewModifier, Animatable {
+  var elevation: CGFloat
+  var dockProgress: CGFloat
+  let markIn: Bool
+  let markBreathing: Bool
   let windowSize: CGSize
   let targetLogoFrame: CGRect
-  let isFlooded: Bool
   let reduceMotion: Bool
 
-  var animatableData: CGFloat {
-    get { progress }
-    set { progress = newValue }
+  var animatableData: AnimatablePair<CGFloat, CGFloat> {
+    get { AnimatablePair(elevation, dockProgress) }
+    set {
+      elevation = newValue.first
+      dockProgress = newValue.second
+    }
+  }
+
+  private static func smoothstep(_ edge0: CGFloat, _ edge1: CGFloat, _ x: CGFloat) -> CGFloat {
+    let t = max(0, min(1, (x - edge0) / max(0.0001, edge1 - edge0)))
+    return t * t * (3.0 - 2.0 * t)
   }
 
   func body(content: Content) -> some View {
-    let t = reduceMotion ? 0 : max(0, min(1, progress))
+    let e = max(0, min(1, elevation))
+    let d = reduceMotion ? 0 : max(0, min(1, dockProgress))
 
+    // Beat A: Center (84pt) → Hero Perch directly above `Meet Snapzy.` (56pt)
+    let centerX = windowSize.width * 0.5
+    let centerY = windowSize.height * 0.5
+    let heroY = centerY - 94
+    let perchY = centerY + (heroY - centerY) * e
+    let perchSize: CGFloat = 84 + (56 - 84) * e
+
+    // Beat B: Weightless curved arc from Hero Perch straight into the 26×26 top-left brand icon
     let targetW = max(16, targetLogoFrame.width)
-    let targetH = max(16, targetLogoFrame.height)
-    let targetMidX = targetLogoFrame.midX
-    let targetMidY = targetLogoFrame.midY
+    let targetX = targetLogoFrame.midX
+    let targetY = targetLogoFrame.midY
+    let arcSine = sin(d * .pi)
+    let currentX = centerX + (targetX - centerX) * d - 20 * arcSine
+    let currentY = perchY + (targetY - perchY) * d - 28 * arcSine
 
-    // Gently square the wide window early in flight so it reads as an organic liquid squircle
-    let tW = pow(t, 0.90)
-    let tH = t
-    let currentW = max(targetW, windowSize.width + (targetW - windowSize.width) * tW)
-    let currentH = max(targetH, windowSize.height + (targetH - windowSize.height) * tH)
+    // Icon squircle crystallizes seamlessly around the white mark as the blue aurora dissolves
+    let iconCrystallize = Double(Self.smoothstep(0.02, 0.28, d))
+    let markCrossfadeOut = Double(Self.smoothstep(0.14, 0.34, d))
+    let markOpacity = 1.0 - markCrossfadeOut
 
-    // Subtle weightless swoop arc into the top-left corner (tapers cleanly to 0 at both ends)
-    let startMidX = windowSize.width * 0.5
-    let startMidY = windowSize.height * 0.5
-    let arcSine = sin(t * .pi)
-    let currentMidX = startMidX + (targetMidX - startMidX) * t + 22 * arcSine
-    let currentMidY = startMidY + (targetMidY - startMidY) * t - 14 * arcSine
+    // Continuous size: 62pt crystallized icon squircle → exact 26pt docked brand icon
+    let startIconSize: CGFloat = 62
+    let currentIconSize = startIconSize + (targetW - startIconSize) * d
+    let currentIconRadius = Radius.card + (Radius.controlS - Radius.card) * d
+    let iconShape = RoundedRectangle(cornerRadius: currentIconRadius, style: .continuous) // radius-lint:allow — continuous interpolation between Radius.card and Radius.controlS
 
-    // Continuous squircle corner radius: window corner (26) → plump mid-flight squircle → icon (8)
-    let minDim = min(currentW, currentH)
-    let proportionalRadius = minDim * 0.27
-    let linearRadius = SnapzyRadius.window + (Radius.controlS - SnapzyRadius.window) * t
-    let squircleBlend = arcSine * 0.80
-    let currentRadius = min(minDim * 0.46, linearRadius + (proportionalRadius - linearRadius) * squircleBlend)
-    let shape = RoundedRectangle(cornerRadius: currentRadius, style: .continuous) // radius-lint:allow — continuous interpolation between Radius.window and Radius.controlS
+    // White WelcomeMark shrinks gracefully inside the crystallizing squircle so it aligns with
+    // the real macOS app icon's own white glyph (`~56%` of icon box) during cross-dissolve.
+    let insideIconMarkSize = currentIconSize * 0.56
+    let settleBlend = Self.smoothstep(0.0, 0.30, d)
+    let currentMarkSize = perchSize + (insideIconMarkSize - perchSize) * settleBlend
 
-    // Crisp white Snapzy mark blooms as the portal detaches, then cross-blends seamlessly into the
-    // real macOS app icon in the final approach so arrival is 100% pixel-identical.
-    let markFadeIn = min(1.0, max(0.0, Double((t - 0.03) / 0.22)))
-    let appIconBlend = min(1.0, max(0.0, Double((t - 0.72) / 0.24)))
-    let markOpacity = markFadeIn * (1.0 - appIconBlend)
-    let markSize = minDim * 0.54
-
-    let sx = windowSize.width > 0 ? currentW / windowSize.width : 1
-    let sy = windowSize.height > 0 ? currentH / windowSize.height : 1
+    // Optical rack-focus blur shimmer scoped ONLY to the tiny logo bounds (< 0.08 ms GPU cost)
+    let elevationBlur = reduceMotion ? 0 : sin(e * .pi) * 6.0
+    let flightBlur = reduceMotion ? 0 : arcSine * 1.8
+    let revealBlur: CGFloat = reduceMotion ? 0 : (markIn ? 0 : 28)
+    let motionBlur = d > 0.001 ? flightBlur : elevationBlur
+    let breatheScale: CGFloat = reduceMotion ? 1.0 : (markBreathing ? 1.03 : (markIn ? 1.0 : 0.80))
 
     ZStack {
-      // GPU-scaled cached aurora texture (zero Metal mesh re-rasterization per frame)
-      content
-        .scaleEffect(x: sx, y: sy, anchor: .center)
-
-      if markOpacity > 0.005 {
-        Image("WelcomeMark")
-          .resizable()
-          .interpolation(.high)
-          .aspectRatio(contentMode: .fit)
-          .frame(width: markSize, height: markSize)
-          .shadow(color: SnapzyWelcomePalette.cobaltShadow.opacity(0.24 * markOpacity), radius: 10, y: 4)
-          .opacity(markOpacity)
-          .allowsHitTesting(false)
-      }
-
-      if appIconBlend > 0.005 {
+      // Crystallized real macOS Snapzy App Icon gliding straight to the top-left header slot
+      if iconCrystallize > 0.004 {
         Image(nsImage: SnapzyOnboardingIconCache.appIcon)
           .resizable()
           .interpolation(.high)
-          .aspectRatio(contentMode: .fill)
-          .frame(width: currentW, height: currentH)
-          .opacity(appIconBlend)
-          .allowsHitTesting(false)
+          .aspectRatio(contentMode: .fit)
+          .frame(width: currentIconSize, height: currentIconSize)
+          .clipShape(iconShape)
+          .overlay {
+            iconShape.strokeBorder(
+              LinearGradient(
+                colors: [
+                  Color.white.opacity(0.32 * Double(arcSine)),
+                  Color.white.opacity(0.06 * Double(arcSine)),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+              ),
+              lineWidth: 0.6
+            )
+            .allowsHitTesting(false)
+          }
+          // Constant shadow radius with opacity-only modulation keeps 120fps free of kernel rebuilds
+          .shadow(
+            color: Color.black.opacity(0.36 * Double(arcSine)),
+            radius: 16,
+            x: 0,
+            y: 7
+          )
+          .scaleEffect(0.88 + 0.12 * CGFloat(iconCrystallize))
+          .opacity(iconCrystallize)
+      }
+
+      // Crisp white Snapzy WelcomeMark dissolving seamlessly into the icon's own white mark
+      if markOpacity > 0.004 {
+        content
+          .frame(width: currentMarkSize, height: currentMarkSize)
+          .shadow(
+            color: SnapzyWelcomePalette.cobaltShadow.opacity(0.28 * markOpacity),
+            radius: 16,
+            y: 6
+          )
+          .shadow(
+            color: Color.white.opacity(0.24 * markOpacity),
+            radius: 8,
+            y: 0
+          )
+          .blur(radius: revealBlur)
+          .scaleEffect(breatheScale)
+          .opacity(markIn ? markOpacity : 0)
+          .animation(reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.92), value: markIn)
+          .animation(reduceMotion ? nil : .easeInOut(duration: 1.50), value: markBreathing)
       }
     }
-    .frame(width: currentW, height: currentH)
-    .clipShape(shape)
-    .overlay {
-      let rimFade = 1.0 - appIconBlend
-      if rimFade > 0.01 {
-        shape.strokeBorder(
-          LinearGradient(
-            colors: [
-              Color.white.opacity((isFlooded ? 0.34 : 0.14) * rimFade),
-              Color.white.opacity((isFlooded ? 0.10 : 0.05) * rimFade),
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-          ),
-          lineWidth: LiquidGlassTokens.specularLineWidth
-        )
-        .allowsHitTesting(false)
-      }
-    }
-    // Constant shadow radius with opacity-only modulation avoids rebuilding Gaussian blur kernels
-    // at 120Hz while delivering the exact same smooth mid-flight elevation and flush dock settle.
-    .shadow(
-      color: Color.black.opacity(0.30 * Double(arcSine)),
-      radius: 22,
-      x: 0,
-      y: 10
-    )
-    .position(x: currentMidX, y: currentMidY)
+    .blur(radius: motionBlur)
+    .position(x: currentX, y: currentY)
   }
 }
 
@@ -549,7 +629,9 @@ private struct WelcomeLiquidPortalModifier: ViewModifier, Animatable {
     } else {
       let clamped = max(0, min(1, progress))
       let organicAmount = max(0, 1 - max(0, (clamped - 0.27) / 0.45))
-      let featherBlur = 38 * organicAmount
+      // Crisp, silky backlit-plasma feather (20pt instead of muddy 38pt) so internal fluid caustics
+      // stay luminous and sculpted instead of washing out into fog.
+      let featherBlur = 20 * organicAmount
 
       content.mask {
         Group {
@@ -574,8 +656,10 @@ private struct WelcomeLiquidPortalModifier: ViewModifier, Animatable {
       let center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
       let maxDiagonal = hypot(size.width, size.height) * 0.65
 
-      // Gentle organic emergence up to 0.27, then sweeping liquid expansion across the whole window
-      let orbRadius: CGFloat = 136
+      // Commanding, breathing organic emergence up to 0.27, then sweeping liquid surge edge-to-edge
+      let organicAmount = max(0, 1 - max(0, (clamped - 0.27) / 0.48))
+      let breathe: CGFloat = drifts ? (1.0 + CGFloat(sin(time * 2.35)) * 0.042 * organicAmount) : 1.0
+      let orbRadius: CGFloat = 154 * breathe
       let radius: CGFloat
       if clamped <= 0.27 {
         let localT = clamped / 0.27
@@ -586,7 +670,6 @@ private struct WelcomeLiquidPortalModifier: ViewModifier, Animatable {
         radius = orbRadius + (maxDiagonal * 1.45 - orbRadius) * eased
       }
 
-      let organicAmount = max(0, 1 - max(0, (clamped - 0.27) / 0.48))
       let path = Self.organicBlobPath(
         center: center,
         radius: radius,
@@ -607,15 +690,15 @@ private struct WelcomeLiquidPortalModifier: ViewModifier, Animatable {
     }
   }
 
-  /// Smooth closed spline perturbed by low-frequency polar harmonics — produces Arc's organic
-  /// softly-triangular liquid cloud silhouette instead of a rigid circle.
+  /// Smooth 36-segment closed quadratic spline sculpted by 4 lively polar harmonics — creates a
+  /// genuinely fluid, undulating zero-gravity liquid-aurora silhouette.
   static func organicBlobPath(
     center: CGPoint,
     radius: CGFloat,
     organicAmount: CGFloat,
     time: TimeInterval
   ) -> Path {
-    let steps = 24
+    let steps = 36
     let t = Double(time)
     var pts: [CGPoint] = []
     pts.reserveCapacity(steps)
@@ -623,9 +706,10 @@ private struct WelcomeLiquidPortalModifier: ViewModifier, Animatable {
     for i in 0..<steps {
       let theta = (Double(i) / Double(steps)) * (.pi * 2.0)
       let wave =
-        0.17 * sin(3.0 * theta + t * 0.90)
-        + 0.11 * cos(2.0 * theta - t * 0.68 + 0.9)
-        + 0.05 * sin(5.0 * theta + t * 1.25 + 2.1)
+        0.155 * sin(3.0 * theta + t * 1.55)
+        + 0.110 * cos(2.0 * theta - t * 1.15 + 0.8)
+        + 0.065 * sin(4.0 * theta + t * 2.05 + 1.7)
+        + 0.035 * cos(5.0 * theta - t * 1.75 + 2.6)
       let r = radius * (1.0 + CGFloat(wave) * organicAmount)
       pts.append(CGPoint(
         x: center.x + CGFloat(cos(theta)) * r,
@@ -649,7 +733,9 @@ private struct WelcomeLiquidPortalModifier: ViewModifier, Animatable {
   }
 }
 
-/// Whisper-soft deep cobalt atmospheric veil behind the organic orb that recedes during flood.
+/// Living multi-lobe atmospheric corona warming the midnight void around the awakening orb.
+/// Three gently counter-orbiting azure & crystalline-sky light clouds breathe with the orb and
+/// dissolve cleanly as the full-window aurora floods outward.
 private struct WelcomeOrbAmbientAura: View, Animatable {
   var progress: CGFloat
   let drifts: Bool
@@ -661,31 +747,88 @@ private struct WelcomeOrbAmbientAura: View, Animatable {
 
   var body: some View {
     let clamped = max(0, min(1, progress))
-    let fadeIn = min(1.0, clamped / 0.24)
-    let fadeOut = 1.0 - max(0, min(1, (clamped - 0.34) / 0.42))
+    let fadeIn = min(1.0, clamped / 0.22)
+    let fadeOut = 1.0 - max(0, min(1, (clamped - 0.32) / 0.42))
     let opacity = Double(fadeIn * fadeOut)
 
-    Circle()
-      .fill(
-        RadialGradient(
-          stops: [
-            .init(color: SnapzyWelcomePalette.brandAzure.color.opacity(0.30 * opacity), location: 0.0),
-            .init(color: SnapzyWelcomePalette.brandCobalt.color.opacity(0.12 * opacity), location: 0.52),
-            .init(color: .clear, location: 1.0),
-          ],
-          center: .center,
-          startRadius: 0,
-          endRadius: 270
+    Group {
+      if drifts {
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { context in
+          corona(at: context.date.timeIntervalSinceReferenceDate, clamped: clamped, opacity: opacity)
+        }
+      } else {
+        corona(at: 0.8, clamped: clamped, opacity: opacity)
+      }
+    }
+  }
+
+  private func corona(at time: TimeInterval, clamped: CGFloat, opacity: Double) -> some View {
+    let breathe = 1.0 + sin(time * 2.1) * 0.055
+    let orbit1X = cos(time * 1.15) * 48
+    let orbit1Y = sin(time * 0.95) * 40
+    let orbit2X = cos(-time * 0.90 + 2.2) * 54
+    let orbit2Y = sin(-time * 1.10 + 1.4) * 44
+
+    return ZStack {
+      // Deep wide electric-azure atmospheric bed
+      Circle()
+        .fill(
+          RadialGradient(
+            stops: [
+              .init(color: SnapzyWelcomePalette.brandAzure.color.opacity(0.44 * opacity), location: 0.0),
+              .init(color: SnapzyWelcomePalette.brandCobalt.color.opacity(0.20 * opacity), location: 0.46),
+              .init(color: .clear, location: 1.0),
+            ],
+            center: .center,
+            startRadius: 0,
+            endRadius: 320
+          )
         )
-      )
-      .frame(width: 540, height: 540)
-      .scaleEffect(0.88 + clamped * 1.2)
+        .frame(width: 640, height: 640)
+        .scaleEffect(breathe)
+
+      // Orbiting luminous sky-cyan light cloud
+      Circle()
+        .fill(
+          RadialGradient(
+            stops: [
+              .init(color: Color(red: 0.40, green: 0.72, blue: 1.0).opacity(0.34 * opacity), location: 0.0),
+              .init(color: SnapzyWelcomePalette.skyAzure.color.opacity(0.12 * opacity), location: 0.52),
+              .init(color: .clear, location: 1.0),
+            ],
+            center: .center,
+            startRadius: 0,
+            endRadius: 210
+          )
+        )
+        .frame(width: 420, height: 420)
+        .offset(x: orbit1X, y: orbit1Y)
+
+      // Counter-orbiting vibrant periwinkle-indigo depth halo
+      Circle()
+        .fill(
+          RadialGradient(
+            stops: [
+              .init(color: Color(red: 0.30, green: 0.40, blue: 1.0).opacity(0.32 * opacity), location: 0.0),
+              .init(color: SnapzyWelcomePalette.radiantAzure.color.opacity(0.10 * opacity), location: 0.55),
+              .init(color: .clear, location: 1.0),
+            ],
+            center: .center,
+            startRadius: 0,
+            endRadius: 220
+          )
+        )
+        .frame(width: 440, height: 440)
+        .offset(x: orbit2X, y: orbit2Y)
+    }
+    .scaleEffect(0.86 + clamped * 1.25)
   }
 }
 
-/// High-contrast swirling white-and-electric-cobalt fluid inside the opening organic orb, giving
-/// the blob bold sweeping bands of pure white and Snapzy cobalt (no pinpoint center dot). Smoothly
-/// dissolves into the full-window 4x4 aurora as the portal unfolds.
+/// High-chroma living liquid plasma inside the opening organic orb: a fold-free 4×4 iridescent
+/// azure-sky-white swirling mesh layered with counter-rotating luminous silk caustic currents
+/// (`.screen` blend) for unmistakable 3D fluid vitality. Dissolves seamlessly into the full-window
+/// 5×5 aurora as the portal surges outward.
 private struct WelcomeOrbSwirlCore: View, Animatable {
   var progress: CGFloat
   let drifts: Bool
@@ -699,30 +842,30 @@ private struct WelcomeOrbSwirlCore: View, Animatable {
     let clamped = max(0, min(1, progress))
     // Dissolve completely before the portal reaches half-screen so no circular halo ever lingers
     let dissolve = 1.0 - max(0, min(1, (clamped - 0.26) / 0.22))
-    let expansionScale = 1.0 + max(0, clamped - 0.27) * 1.8
+    let expansionScale = 1.0 + max(0, clamped - 0.27) * 1.85
 
     Group {
       if drifts {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { context in
-          swirlField(at: context.date.timeIntervalSinceReferenceDate)
+          livingFluidCore(at: context.date.timeIntervalSinceReferenceDate)
         }
       } else {
-        swirlField(at: 0.8)
+        livingFluidCore(at: 0.8)
       }
     }
-    .frame(width: 440, height: 440)
+    .frame(width: 460, height: 460)
     .mask {
       Circle()
         .fill(
           RadialGradient(
             stops: [
               .init(color: .white, location: 0.0),
-              .init(color: .white.opacity(0.85), location: 0.42),
+              .init(color: .white.opacity(0.92), location: 0.50),
               .init(color: .clear, location: 1.0),
             ],
             center: .center,
             startRadius: 0,
-            endRadius: 220
+            endRadius: 230
           )
         )
     }
@@ -730,48 +873,128 @@ private struct WelcomeOrbSwirlCore: View, Animatable {
     .opacity(Double(dissolve * dissolve))
   }
 
+  private func livingFluidCore(at time: TimeInterval) -> some View {
+    ZStack {
+      swirlField(at: time)
+
+      // Counter-rotating luminous silk caustic ribbons flowing inside the liquid orb
+      causticRibbons(at: time)
+        .blur(radius: 14)
+        .blendMode(.screen)
+        .opacity(0.82)
+    }
+  }
+
   @ViewBuilder
   private func swirlField(at time: TimeInterval) -> some View {
     if #available(macOS 15.0, *) {
       let t = Float(time)
-      // Strict fold-free sway (< 0.08 on a 0.5 grid) so the 3x3 Coons mesh never creases
-      let cx = 0.5 + sin(t * 0.72) * 0.07
-      let cy = 0.5 + cos(t * 0.64 + 0.8) * 0.07
+      // Fold-free 4×4 mesh (spacing 0.333, max sway 0.055 → min gap ≥ 0.22) for rich fluid depth
+      let p11x = 0.333 + sin(t * 1.35) * 0.052
+      let p11y = 0.333 + cos(t * 1.18 + 0.5) * 0.052
+      let p12x = 0.667 + cos(t * 1.28 + 1.4) * 0.052
+      let p12y = 0.333 + sin(t * 1.42 + 0.9) * 0.052
+      let p21x = 0.333 + cos(t * 1.15 + 2.3) * 0.052
+      let p21y = 0.667 + sin(t * 1.30 + 1.8) * 0.052
+      let p22x = 0.667 + sin(t * 1.24 + 3.1) * 0.052
+      let p22y = 0.667 + cos(t * 1.38 + 2.5) * 0.052
+
+      let electricCyan = Color(red: 0.42, green: 0.78, blue: 1.00)
+      let vibrantIndigo = Color(red: 0.25, green: 0.36, blue: 1.00)
+
       MeshGradient(
-        width: 3,
-        height: 3,
+        width: 4,
+        height: 4,
         points: [
-          [0.0, 0.0], [0.5 + sin(t * 0.55) * 0.06, 0.0], [1.0, 0.0],
-          [0.0, 0.5 + cos(t * 0.48) * 0.06], [cx, cy], [1.0, 0.5 + sin(t * 0.52 + 1.7) * 0.06],
-          [0.0, 1.0], [0.5 + cos(t * 0.60 + 2.1) * 0.06, 1.0], [1.0, 1.0],
+          [0.0, 0.0], [0.333, 0.0], [0.667, 0.0], [1.0, 0.0],
+          [0.0, 0.333], [p11x, p11y], [p12x, p12y], [1.0, 0.333],
+          [0.0, 0.667], [p21x, p21y], [p22x, p22y], [1.0, 0.667],
+          [0.0, 1.0], [0.333, 1.0], [0.667, 1.0], [1.0, 1.0],
         ],
         colors: [
           SnapzyWelcomePalette.pureLight.color,
-          SnapzyWelcomePalette.icePocket.color,
-          SnapzyWelcomePalette.brandCobalt.color,
+          electricCyan,
           SnapzyWelcomePalette.brandAzure.color,
-          SnapzyWelcomePalette.radiantAzure.color,
+          vibrantIndigo,
+          SnapzyWelcomePalette.brandCobalt.color,
           SnapzyWelcomePalette.pureLight.color,
+          electricCyan,
+          SnapzyWelcomePalette.icePocket.color,
+          vibrantIndigo,
+          SnapzyWelcomePalette.brandAzure.color,
+          SnapzyWelcomePalette.pureLight.color,
+          SnapzyWelcomePalette.skyAzure.color,
           SnapzyWelcomePalette.brandCobalt.color,
           SnapzyWelcomePalette.icePocket.color,
+          electricCyan,
           SnapzyWelcomePalette.pureLight.color,
         ],
         smoothsColors: true
       )
-      .rotationEffect(.degrees(time * 16))
+      .rotationEffect(.degrees(time * 34))
     } else {
       AngularGradient(
         colors: [
           SnapzyWelcomePalette.pureLight.color,
+          Color(red: 0.42, green: 0.78, blue: 1.00),
           SnapzyWelcomePalette.brandCobalt.color,
           SnapzyWelcomePalette.icePocket.color,
           SnapzyWelcomePalette.brandAzure.color,
           SnapzyWelcomePalette.pureLight.color,
         ],
         center: .center,
-        angle: .degrees(time * 18)
+        angle: .degrees(time * 34)
       )
-      .blur(radius: 36)
+      .blur(radius: 28)
+    }
+  }
+
+  /// Sweeping translucent white & ice-cyan internal light currents rotating in counter-motion to
+  /// give the opening orb luminous 3D liquid refraction and vitality.
+  private func causticRibbons(at time: TimeInterval) -> some View {
+    Canvas { context, size in
+      let cx = size.width * 0.5
+      let cy = size.height * 0.5
+      let r = min(size.width, size.height) * 0.28
+
+      // Ribbon 1: Bright silk-white S-arc gliding across the upper-left to lower-right hemisphere
+      let a1 = time * 1.45
+      var p1 = Path()
+      p1.move(to: CGPoint(x: cx + cos(a1) * r * 1.15, y: cy + sin(a1) * r * 1.15))
+      p1.addCurve(
+        to: CGPoint(x: cx + cos(a1 + .pi * 0.92) * r * 1.10, y: cy + sin(a1 + .pi * 0.92) * r * 1.10),
+        control1: CGPoint(x: cx + cos(a1 + 0.9) * r * 0.75, y: cy + sin(a1 + 0.9) * r * 0.75),
+        control2: CGPoint(x: cx + cos(a1 - 0.8) * r * 0.68, y: cy + sin(a1 - 0.8) * r * 0.68)
+      )
+      context.stroke(
+        p1,
+        with: .color(Color.white.opacity(0.68)),
+        style: StrokeStyle(lineWidth: 26, lineCap: .round)
+      )
+
+      // Ribbon 2: Counter-sweeping crystalline sky-cyan caustic filament
+      let a2 = -time * 1.15 + 1.9
+      var p2 = Path()
+      p2.move(to: CGPoint(x: cx + cos(a2) * r * 1.05, y: cy + sin(a2) * r * 1.05))
+      p2.addCurve(
+        to: CGPoint(x: cx + cos(a2 + .pi * 1.05) * r * 1.00, y: cy + sin(a2 + .pi * 1.05) * r * 1.00),
+        control1: CGPoint(x: cx + cos(a2 - 1.1) * r * 0.82, y: cy + sin(a2 - 1.1) * r * 0.82),
+        control2: CGPoint(x: cx + cos(a2 + 1.2) * r * 0.64, y: cy + sin(a2 + 1.2) * r * 0.64)
+      )
+      context.stroke(
+        p2,
+        with: .color(Color(red: 0.52, green: 0.86, blue: 1.0).opacity(0.62)),
+        style: StrokeStyle(lineWidth: 22, lineCap: .round)
+      )
+
+      // Ribbon 3: Crisp luminous highlight pocket drifting near the rim
+      let a3 = time * 1.85 + 3.4
+      let highlightCenter = CGPoint(
+        x: cx + cos(a3) * r * 0.56,
+        y: cy + sin(a3) * r * 0.56
+      )
+      let highlightRect = CGRect(x: highlightCenter.x - 42, y: highlightCenter.y - 30, width: 84, height: 60)
+      context.fill(Path(ellipseIn: highlightRect), with: .color(Color.white.opacity(0.55)))
     }
   }
 }

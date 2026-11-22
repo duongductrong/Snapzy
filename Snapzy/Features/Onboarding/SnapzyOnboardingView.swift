@@ -245,9 +245,9 @@ struct SnapzyOnboardingView: View {
         .font(.system(size: 14, weight: .semibold))
         .foregroundStyle(SnapzyGlassInk.primary)
         .opacity(isFlowSettled ? 1 : 0)
-        .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : -8))
+        .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : -10))
         .animation(
-          reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.62).delay(0.46),
+          reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.56).delay(0.56),
           value: isFlowSettled
         )
     }
