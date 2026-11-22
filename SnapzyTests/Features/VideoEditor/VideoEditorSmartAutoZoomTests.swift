@@ -570,4 +570,313 @@ final class VideoEditorSmartAutoZoomTests: XCTestCase {
     let plan = VideoEditorSmartAutoZoomEngine.generatePlan(from: metadata, duration: 4.0)
     XCTAssertFalse(plan.segments.isEmpty)
   }
+
+  func testLongMultiActionWorkflow_20SecondBurstStaysCohesiveWithoutArbitraryMidSplit() throws {
+    // Simulates a dense 20-second active editing session (18 consecutive clicks across the UI)
+    // and verifies it stays cohesive instead of arbitrarily splitting at 14s with a jarring 0.22s zoom-out bounce.
+    var waypoints: [(TimeInterval, CGFloat, CGFloat)] = [(0.0, 0.2, 0.2)]
+    var clicks: [RecordedClick] = []
+    let positions: [(CGFloat, CGFloat)] = [
+      (0.22, 0.22), (0.25, 0.34), (0.24, 0.48), (0.52, 0.42), (0.68, 0.30),
+      (0.72, 0.55), (0.45, 0.62), (0.28, 0.36), (0.28, 0.42), (0.60, 0.50),
+      (0.75, 0.25), (0.78, 0.40), (0.50, 0.72), (0.32, 0.68), (0.26, 0.28),
+      (0.30, 0.32), (0.58, 0.46), (0.64, 0.52),
+    ]
+    for (idx, pos) in positions.enumerated() {
+      let t = 1.5 + Double(idx) * 1.05
+      waypoints.append((t, pos.0, pos.1))
+      clicks.append(RecordedClick(time: t, button: .left, phase: .down, normalizedX: pos.0, normalizedY: pos.1))
+      clicks.append(RecordedClick(time: t + 0.06, button: .left, phase: .up, normalizedX: pos.0, normalizedY: pos.1))
+    }
+    waypoints.append((26.0, 0.64, 0.52))
+
+    let metadata = RecordingMetadata(
+      captureSize: CGSize(width: 3360, height: 2100),
+      samplesPerSecond: 30,
+      mouseSamples: makeMouseSamples(waypoints: waypoints),
+      cursorCapture: RecordingCursorCapture(clicks: clicks),
+      isCursorBaked: false
+    )
+
+    let plan = VideoEditorSmartAutoZoomEngine.generatePlan(from: metadata, duration: 26.0, style: .balanced)
+    XCTAssertEqual(plan.segments.count, 1, "Continuous 20s workflow must stay cohesive without a jarring mid-session split")
+    let seg = try XCTUnwrap(plan.segments.first)
+    XCTAssertGreaterThan(seg.duration, 18.0)
+    let keyframes = try XCTUnwrap(seg.smartKeyframes)
+    XCTAssertTrue(keyframes.allSatisfy { $0.zoomMultiplier >= 0.78 }, "Zero-pump discipline must hold across long multi-action chains")
+  }
+
+  func testComplex45SecondTutorialWorkflow_allStylesMaintainZeroOverlapAndSmoothCauseEffect() throws {
+    // Realistic 45s tutorial: double-click -> typing -> small slider drag -> remote modal + click ->
+    // full-screen transition -> idle gap -> large drag -> right-click menu -> trailing stop click.
+    var samples = makeMouseSamples(waypoints: [
+      (0.0, 0.20, 0.20),
+      (1.8, 0.25, 0.30),  // double-click
+      (5.0, 0.25, 0.30),  // typing hold
+      (6.5, 0.28, 0.40),  // small slider drag start
+      (7.2, 0.20, 0.40),  // small slider drag end
+      (9.0, 0.15, 0.10),  // click Close
+      (10.2, 0.50, 0.50), // click remote modal "Don't Save"
+      (14.0, 0.50, 0.50), // page transition settle + full-screen view
+      (20.0, 0.18, 0.65), // large drag start
+      (21.0, 0.72, 0.45), // large drag end
+      (27.0, 0.65, 0.35), // right-click context menu
+      (31.0, 0.67, 0.44), // click menu item
+      (44.7, 0.85, 0.04), // trailing stop-recording click (should be filtered!)
+      (45.0, 0.85, 0.04),
+    ])
+    // Mark cursor outside capture briefly around 16s-18s.
+    for i in samples.indices where samples[i].time >= 16.0 && samples[i].time <= 17.5 {
+      samples[i] = RecordedMouseSample(
+        time: samples[i].time,
+        normalizedX: samples[i].normalizedX,
+        normalizedY: samples[i].normalizedY,
+        isInsideCapture: false
+      )
+    }
+
+    let clicks: [RecordedClick] = [
+      // Double-click at 1.8s
+      RecordedClick(time: 1.80, button: .left, phase: .down, normalizedX: 0.25, normalizedY: 0.30),
+      RecordedClick(time: 1.85, button: .left, phase: .up, normalizedX: 0.25, normalizedY: 0.30),
+      RecordedClick(time: 1.98, button: .left, phase: .down, normalizedX: 0.25, normalizedY: 0.30),
+      RecordedClick(time: 2.04, button: .left, phase: .up, normalizedX: 0.25, normalizedY: 0.30),
+      // Small slider drag 6.5s -> 7.2s
+      RecordedClick(time: 6.50, button: .left, phase: .down, normalizedX: 0.28, normalizedY: 0.40),
+      RecordedClick(time: 7.20, button: .left, phase: .up, normalizedX: 0.20, normalizedY: 0.40),
+      // Click Close at 9.0s -> click modal at 10.2s
+      RecordedClick(time: 9.00, button: .left, phase: .down, normalizedX: 0.15, normalizedY: 0.10),
+      RecordedClick(time: 9.05, button: .left, phase: .up, normalizedX: 0.15, normalizedY: 0.10),
+      RecordedClick(time: 10.20, button: .left, phase: .down, normalizedX: 0.50, normalizedY: 0.50),
+      RecordedClick(time: 10.26, button: .left, phase: .up, normalizedX: 0.50, normalizedY: 0.50),
+      // Large file drag 20.0s -> 21.0s
+      RecordedClick(time: 20.00, button: .left, phase: .down, normalizedX: 0.18, normalizedY: 0.65),
+      RecordedClick(time: 21.00, button: .left, phase: .up, normalizedX: 0.72, normalizedY: 0.45),
+      // Right-click menu 27.0s -> select item 31.0s
+      RecordedClick(time: 27.00, button: .right, phase: .down, normalizedX: 0.65, normalizedY: 0.35),
+      RecordedClick(time: 27.06, button: .right, phase: .up, normalizedX: 0.65, normalizedY: 0.35),
+      RecordedClick(time: 31.00, button: .left, phase: .down, normalizedX: 0.67, normalizedY: 0.44),
+      RecordedClick(time: 31.06, button: .left, phase: .up, normalizedX: 0.67, normalizedY: 0.44),
+      // Trailing stop-recording click at 44.75s
+      RecordedClick(time: 44.75, button: .left, phase: .down, normalizedX: 0.85, normalizedY: 0.04),
+      RecordedClick(time: 44.80, button: .left, phase: .up, normalizedX: 0.85, normalizedY: 0.04),
+    ]
+    let appearance: [RecordedCursorChange] = [
+      RecordedCursorChange(time: 0.0, imageID: 0, isHidden: false),
+      RecordedCursorChange(time: 2.3, imageID: nil, isHidden: true),
+      RecordedCursorChange(time: 4.9, imageID: 0, isHidden: false),
+    ]
+    let metadata = RecordingMetadata(
+      captureSize: CGSize(width: 3360, height: 2100),
+      samplesPerSecond: 30,
+      mouseSamples: samples,
+      cursorCapture: RecordingCursorCapture(appearance: appearance, clicks: clicks),
+      isCursorBaked: false
+    )
+
+    let actions = VideoEditorSmartAutoZoomEngine.detectActions(from: metadata, duration: 45.0)
+    XCTAssertGreaterThanOrEqual(actions.count, 7)
+
+    var outcomes: [UUID: VideoEditorSmartAutoZoomEngine.VisualOutcome] = [:]
+    for action in actions {
+      if abs(action.startTime - 9.0) < 0.2 {
+        outcomes[action.id] = VideoEditorSmartAutoZoomEngine.VisualOutcome(
+          kind: .localRemoteResult,
+          settleTime: 9.3,
+          changedCoverage: 0.14,
+          outcomeCentroid: CGPoint(x: 0.50, y: 0.50),
+          outcomeBounds: CGRect(x: 0.38, y: 0.40, width: 0.24, height: 0.20)
+        )
+      } else if abs(action.startTime - 10.2) < 0.2 {
+        outcomes[action.id] = VideoEditorSmartAutoZoomEngine.VisualOutcome(
+          kind: .fullScreenTransition,
+          settleTime: 10.5,
+          changedCoverage: 0.58,
+          outcomeCentroid: CGPoint(x: 0.5, y: 0.5),
+          outcomeBounds: CGRect(x: 0, y: 0, width: 1, height: 1)
+        )
+      }
+    }
+
+    for style in SmartAutoZoomStyle.allCases {
+      let plan = VideoEditorSmartAutoZoomEngine.buildPlan(
+        actions: actions,
+        metadata: metadata,
+        duration: 45.0,
+        style: style,
+        visualOutcomes: outcomes
+      )
+      XCTAssertGreaterThanOrEqual(plan.segments.count, 3, "Style \(style) should produce distinct chapters across 45s workflow")
+      XCTAssertLessThan(plan.segments.last?.endTime ?? 45.0, 42.0, "Trailing stop-recording click must be filtered for \(style)")
+
+      for i in 0 ..< plan.segments.count {
+        let seg = plan.segments[i]
+        XCTAssertGreaterThanOrEqual(seg.duration, 1.15)
+        if i > 0 {
+          XCTAssertGreaterThanOrEqual(seg.startTime, plan.segments[i - 1].endTime + 0.20)
+        }
+        let kfs = try XCTUnwrap(seg.smartKeyframes)
+        XCTAssertTrue(kfs.allSatisfy { $0.zoomMultiplier >= 0.78 })
+      }
+    }
+  }
+
+  func testRapidConsecutiveFullScreenTransitions_doesNotBounceOutForTinyGap() {
+    let samples = makeMouseSamples(waypoints: [
+      (0.0, 0.2, 0.2),
+      (1.5, 0.2, 0.2),
+      (2.1, 0.7, 0.7),
+      (5.0, 0.7, 0.7),
+    ])
+    let clicks = [
+      RecordedClick(time: 1.50, button: .left, phase: .down, normalizedX: 0.2, normalizedY: 0.2),
+      RecordedClick(time: 1.55, button: .left, phase: .up, normalizedX: 0.2, normalizedY: 0.2),
+      RecordedClick(time: 2.10, button: .left, phase: .down, normalizedX: 0.7, normalizedY: 0.7),
+      RecordedClick(time: 2.15, button: .left, phase: .up, normalizedX: 0.7, normalizedY: 0.7),
+    ]
+    let metadata = RecordingMetadata(
+      captureSize: CGSize(width: 1920, height: 1080),
+      samplesPerSecond: 30,
+      mouseSamples: samples,
+      cursorCapture: RecordingCursorCapture(clicks: clicks),
+      isCursorBaked: false
+    )
+    let actions = VideoEditorSmartAutoZoomEngine.detectActions(from: metadata, duration: 5.0)
+    let outcomes = Dictionary(uniqueKeysWithValues: actions.map { action in
+      (
+        action.id,
+        VideoEditorSmartAutoZoomEngine.VisualOutcome(
+          kind: .fullScreenTransition,
+          settleTime: action.endTime + 0.2,
+          changedCoverage: 0.60,
+          outcomeCentroid: CGPoint(x: 0.5, y: 0.5),
+          outcomeBounds: CGRect(x: 0, y: 0, width: 1, height: 1)
+        )
+      )
+    })
+
+    let plan = VideoEditorSmartAutoZoomEngine.buildPlan(
+      actions: actions,
+      metadata: metadata,
+      duration: 5.0,
+      visualOutcomes: outcomes
+    )
+    XCTAssertEqual(plan.segments.count, 1, "Rapid clicks <0.95s apart must not bounce out to 1.0x for 0.2s and slam back in")
+  }
+
+  func testPathologicalMultiActionStorm_100ClicksAndEdgeCasesNeverCrash() {
+    // 100 rapid/noisy clicks with duplicate timestamps, unmatched downs/ups, and out-of-bounds coordinates.
+    var clicks: [RecordedClick] = []
+    for i in 0 ..< 100 {
+      let t = Double(i) * 0.28
+      let x = CGFloat((i * 17) % 130) / 100.0 - 0.15 // intentionally includes < 0 and > 1
+      let y = CGFloat((i * 29) % 130) / 100.0 - 0.15
+      clicks.append(RecordedClick(time: t, button: i % 7 == 0 ? .right : .left, phase: .down, normalizedX: x, normalizedY: y))
+      if i % 5 != 0 { // intentionally leave 20% unmatched downs
+        clicks.append(RecordedClick(time: t + (i % 3 == 0 ? 0.0 : 0.04), button: i % 7 == 0 ? .right : .left, phase: .up, normalizedX: x, normalizedY: y))
+      }
+    }
+    let metadata = RecordingMetadata(
+      captureSize: CGSize(width: 2560, height: 1600),
+      samplesPerSecond: 30,
+      mouseSamples: [
+        RecordedMouseSample(time: 0.0, normalizedX: 0.5, normalizedY: 0.5, isInsideCapture: true),
+      ],
+      cursorCapture: RecordingCursorCapture(
+        appearance: [RecordedCursorChange(time: 0.0, imageID: nil, isHidden: true)],
+        clicks: clicks
+      ),
+      isCursorBaked: false
+    )
+
+    let plan = VideoEditorSmartAutoZoomEngine.generatePlan(from: metadata, duration: 30.0, style: .dynamic)
+    XCTAssertFalse(plan.segments.isEmpty)
+    for (i, seg) in plan.segments.enumerated() {
+      XCTAssertTrue(seg.startTime.isFinite && seg.duration.isFinite && seg.zoomLevel.isFinite)
+      XCTAssertGreaterThanOrEqual(seg.duration, 1.15)
+      if i > 0 {
+        XCTAssertGreaterThanOrEqual(seg.startTime, plan.segments[i - 1].endTime + 0.20)
+      }
+      for kf in seg.smartKeyframes ?? [] {
+        XCTAssertTrue(kf.time.isFinite && kf.center.x.isFinite && kf.center.y.isFinite && kf.zoomMultiplier.isFinite)
+        XCTAssertGreaterThanOrEqual(kf.center.x, 0)
+        XCTAssertLessThanOrEqual(kf.center.x, 1)
+        XCTAssertGreaterThanOrEqual(kf.center.y, 0)
+        XCTAssertLessThanOrEqual(kf.center.y, 1)
+      }
+    }
+  }
+
+  func testEndToEndSpringAndShutterInvariants_acrossMultiActionSegments() {
+    let samples = makeMouseSamples(waypoints: [
+      (0.0, 0.12, 0.18),
+      (1.2, 0.12, 0.18),
+      (2.4, 0.82, 0.78),
+      (3.8, 0.45, 0.30),
+      (5.2, 0.85, 0.22),
+      (9.0, 0.85, 0.22),
+    ])
+    let clicks = [
+      RecordedClick(time: 1.20, button: .left, phase: .down, normalizedX: 0.12, normalizedY: 0.18),
+      RecordedClick(time: 1.25, button: .left, phase: .up, normalizedX: 0.12, normalizedY: 0.18),
+      RecordedClick(time: 2.40, button: .left, phase: .down, normalizedX: 0.82, normalizedY: 0.78),
+      RecordedClick(time: 2.46, button: .left, phase: .up, normalizedX: 0.82, normalizedY: 0.78),
+      RecordedClick(time: 3.80, button: .left, phase: .down, normalizedX: 0.45, normalizedY: 0.30),
+      RecordedClick(time: 3.86, button: .left, phase: .up, normalizedX: 0.45, normalizedY: 0.30),
+      RecordedClick(time: 5.20, button: .left, phase: .down, normalizedX: 0.85, normalizedY: 0.22),
+      RecordedClick(time: 5.26, button: .left, phase: .up, normalizedX: 0.85, normalizedY: 0.22),
+    ]
+    let frameSize = CGSize(width: 3360, height: 2100)
+    let metadata = RecordingMetadata(
+      captureSize: frameSize,
+      samplesPerSecond: 30,
+      mouseSamples: samples,
+      cursorCapture: RecordingCursorCapture(clicks: clicks),
+      isCursorBaked: false
+    )
+
+    let plan = VideoEditorSmartAutoZoomEngine.generatePlan(from: metadata, duration: 9.0, style: .dynamic)
+    XCTAssertFalse(plan.segments.isEmpty)
+
+    var paths: [UUID: [AutoFocusCameraSample]] = [:]
+    for seg in plan.segments {
+      paths[seg.id] = VideoEditorAutoFocusEngine.buildPath(from: metadata, segment: seg)
+      XCTAssertFalse(paths[seg.id]?.isEmpty ?? true)
+    }
+
+    var activeShutterFrames = 0
+    for frame in 0 ..< 270 {
+      let t = Double(frame) / 30.0
+      let state = VideoEditorAutoFocusEngine.resolvedCameraState(
+        at: t,
+        segments: plan.segments,
+        autoFocusPaths: paths,
+        transitionDuration: ZoomCalculator.defaultTransitionDuration
+      )
+      XCTAssertGreaterThanOrEqual(state.zoomLevel, 1.0)
+      XCTAssertLessThanOrEqual(state.zoomLevel, ZoomSegment.maxZoomLevel + 0.001)
+
+      let crop = ZoomCalculator.calculateCropRect(center: state.center, zoomLevel: state.zoomLevel, frameSize: frameSize)
+      XCTAssertGreaterThanOrEqual(crop.minX, -0.5)
+      XCTAssertGreaterThanOrEqual(crop.minY, -0.5)
+      XCTAssertLessThanOrEqual(crop.maxX, frameSize.width + 0.5)
+      XCTAssertLessThanOrEqual(crop.maxY, frameSize.height + 0.5)
+
+      let shutter = VideoEditorMotionBlurEngine.shutterPlan(
+        at: t,
+        frameDuration: 1.0 / 30.0,
+        frameSize: frameSize,
+        segments: plan.segments,
+        autoFocusPaths: paths,
+        transitionDuration: ZoomCalculator.defaultTransitionDuration,
+        settings: .default
+      )
+      if shutter.isActive {
+        activeShutterFrames += 1
+        let weightSum = shutter.taps.reduce(Float(0)) { $0 + $1.weight }
+        XCTAssertEqual(weightSum, 1.0, accuracy: 0.002)
+      }
+    }
+    XCTAssertGreaterThan(activeShutterFrames, 10, "Multi-action pans and transitions should engage physical shutter blur")
+  }
 }

@@ -66,7 +66,7 @@ nonisolated enum SmartAutoZoomStyle: String, Codable, CaseIterable, Equatable, S
   }
 
   var maxChapterDuration: TimeInterval {
-    14.0
+    26.0
   }
 }
 
@@ -248,6 +248,7 @@ nonisolated enum VideoEditorSmartAutoZoomEngine {
       // Also spot keyboard-triggered localized UI events (command palettes, dialogs, sheets) in idle stretches.
       let visualEvents = await detectAutonomousVisualEvents(
         existingActions: actions,
+        outcomes: outcomes,
         asset: asset,
         duration: resolvedDuration
       )
@@ -1010,34 +1011,35 @@ nonisolated enum VideoEditorSmartAutoZoomEngine {
     let generator = AVAssetImageGenerator(asset: asset)
     generator.appliesPreferredTrackTransform = true
     generator.maximumSize = CGSize(width: 160, height: 90)
-    generator.requestedTimeToleranceBefore = CMTime(seconds: 0.08, preferredTimescale: 600)
-    generator.requestedTimeToleranceAfter = CMTime(seconds: 0.08, preferredTimescale: 600)
+    generator.requestedTimeToleranceBefore = CMTime(seconds: 0.12, preferredTimescale: 600)
+    generator.requestedTimeToleranceAfter = CMTime(seconds: 0.12, preferredTimescale: 600)
 
-    let maxBudgetFrames = 190
-    let maxActionsToInspect = min(actions.count, 32)
+    let maxBudgetFrames = 96
+    let maxActionsToInspect = min(actions.count, 24)
     let strideActions = max(1, Int(ceil(Double(actions.count) / Double(maxActionsToInspect))))
 
     var results: [UUID: VisualOutcome] = [:]
     var framesUsed = 0
+    let postOffsets: [TimeInterval] = [0.16, 0.42, 0.74, 1.12, 1.58]
 
     for idx in stride(from: 0, to: actions.count, by: strideActions) {
       if Task.isCancelled || framesUsed >= maxBudgetFrames { break }
       let action = actions[idx]
       let nextStart = (idx + 1 < actions.count) ? actions[idx + 1].startTime : duration
-      let observationEnd = min(duration, min(action.endTime + 2.5, max(action.endTime + 0.55, nextStart - 0.12)))
+      let observationEnd = min(duration, min(action.endTime + 2.2, max(action.endTime + 0.55, nextStart - 0.12)))
       guard observationEnd > action.endTime + 0.12 else { continue }
 
       let preTime = max(0, action.startTime - 0.12)
       guard let preGrid = sampleRGBGrid(at: preTime, generator: generator) else { continue }
       framesUsed += 1
 
-      let step: TimeInterval = 0.22
       var postSamples: [(time: TimeInterval, grid: [Float])] = []
-      var t = action.endTime + 0.14
       var quietCount = 0
       var prevGrid = preGrid
 
-      while t <= observationEnd, framesUsed < maxBudgetFrames, postSamples.count < 9 {
+      for offset in postOffsets {
+        let t = action.endTime + offset
+        guard t <= observationEnd, framesUsed < maxBudgetFrames else { break }
         if Task.isCancelled { break }
         if let grid = sampleRGBGrid(at: t, generator: generator) {
           framesUsed += 1
@@ -1060,7 +1062,6 @@ nonisolated enum VideoEditorSmartAutoZoomEngine {
           }
           prevGrid = grid
         }
-        t += step
       }
 
       if !postSamples.isEmpty {
@@ -1079,21 +1080,25 @@ nonisolated enum VideoEditorSmartAutoZoomEngine {
   /// Coarse visual scanner for keyboard-triggered UI popups/modals occurring in idle gaps without clicks.
   private static func detectAutonomousVisualEvents(
     existingActions: [DetectedAction],
+    outcomes: [UUID: VisualOutcome],
     asset: AVAsset,
     duration: TimeInterval
   ) async -> [(DetectedAction, VisualOutcome)] {
     guard duration >= 3.0 else { return [] }
 
-    // Identify idle gaps > 2.4s where no clicks happened.
+    // Identify idle gaps > 2.6s where no clicks happened, skipping gaps that immediately follow
+    // sustained motion (e.g. clicking Play to watch video playback).
     var idleGaps: [(TimeInterval, TimeInterval)] = []
     var cursor: TimeInterval = 0.4
+    var precedingWasSustainedMotion = false
     for action in existingActions.sorted(by: { $0.startTime < $1.startTime }) {
-      if action.startTime - cursor >= 2.4 {
+      if action.startTime - cursor >= 2.6, !precedingWasSustainedMotion {
         idleGaps.append((cursor, action.startTime - 0.5))
       }
       cursor = max(cursor, action.endTime + 1.1)
+      precedingWasSustainedMotion = outcomes[action.id]?.isSustainedMotion == true
     }
-    if duration - cursor >= 2.4 {
+    if duration - cursor >= 2.6, !precedingWasSustainedMotion {
       idleGaps.append((cursor, duration - 0.4))
     }
     guard !idleGaps.isEmpty else { return [] }
@@ -1106,18 +1111,33 @@ nonisolated enum VideoEditorSmartAutoZoomEngine {
 
     var events: [(DetectedAction, VisualOutcome)] = []
     var framesUsed = 0
-    let maxScanFrames = 42
+    let maxScanFrames = 24
+    let scanStep: TimeInterval = 1.2
+
+    func isStaticBetween(_ a: [Float], _ b: [Float]) -> Bool {
+      let cellCount = rgbGridWidth * rgbGridHeight
+      var stillMovingCells = 0
+      for cell in 0 ..< cellCount {
+        let i = cell * 3
+        let diff = max(
+          abs(b[i] - a[i]),
+          max(abs(b[i + 1] - a[i + 1]), abs(b[i + 2] - a[i + 2]))
+        )
+        if diff >= 0.045 { stillMovingCells += 1 }
+      }
+      return Float(stillMovingCells) / Float(cellCount) < 0.020
+    }
 
     for (gapStart, gapEnd) in idleGaps {
       if Task.isCancelled || framesUsed >= maxScanFrames { break }
       guard var prevGrid = sampleRGBGrid(at: gapStart, generator: generator) else { continue }
       framesUsed += 1
 
-      var t = gapStart + 0.8
+      var t = gapStart + scanStep
       while t <= gapEnd, framesUsed < maxScanFrames {
         if Task.isCancelled { break }
         guard let currGrid = sampleRGBGrid(at: t, generator: generator) else {
-          t += 0.8
+          t += scanStep
           continue
         }
         framesUsed += 1
@@ -1130,26 +1150,16 @@ nonisolated enum VideoEditorSmartAutoZoomEngine {
         )
 
         // Only promote unmistakable STATIC localized UI appearances (e.g. Spotlight, Command Palette, modal).
-        // Verify with a confirmation frame +0.55s later so playing video or scrolling NEVER triggers false zooms!
+        // Verify stability at BOTH +0.55s and +1.15s so playing video or scrolling NEVER triggers false zooms.
         if (outcome.kind == .localNearClick || outcome.kind == .localRemoteResult),
            outcome.changedCoverage >= 0.04,
-           outcome.changedCoverage <= 0.32,
-           t + 0.55 <= gapEnd,
-           framesUsed < maxScanFrames,
-           let confirmGrid = sampleRGBGrid(at: t + 0.55, generator: generator) {
-          framesUsed += 1
-          let cellCount = rgbGridWidth * rgbGridHeight
-          var stillMovingCells = 0
-          for cell in 0 ..< cellCount {
-            let i = cell * 3
-            let diff = max(
-              abs(confirmGrid[i] - currGrid[i]),
-              max(abs(confirmGrid[i + 1] - currGrid[i + 1]), abs(confirmGrid[i + 2] - currGrid[i + 2]))
-            )
-            if diff >= 0.045 { stillMovingCells += 1 }
-          }
-          let motionRatio = Float(stillMovingCells) / Float(cellCount)
-          if motionRatio < 0.025 {
+           outcome.changedCoverage <= 0.30,
+           t + 1.15 <= gapEnd,
+           framesUsed + 2 <= maxScanFrames,
+           let confirm1 = sampleRGBGrid(at: t + 0.55, generator: generator),
+           let confirm2 = sampleRGBGrid(at: t + 1.15, generator: generator) {
+          framesUsed += 2
+          if isStaticBetween(currGrid, confirm1) && isStaticBetween(confirm1, confirm2) {
             let action = DetectedAction(
               id: UUID(),
               kind: .visualEvent,
@@ -1165,18 +1175,18 @@ nonisolated enum VideoEditorSmartAutoZoomEngine {
               postActionExploreEndTime: nil
             )
             events.append((action, outcome))
-            t += 2.4
-            if t <= gapEnd, let refreshed = sampleRGBGrid(at: t, generator: generator) {
+            t += 2.6
+            if t <= gapEnd, framesUsed < maxScanFrames, let refreshed = sampleRGBGrid(at: t, generator: generator) {
               framesUsed += 1
               prevGrid = refreshed
             }
-            t += 0.8
+            t += scanStep
             continue
           }
         }
 
         prevGrid = currGrid
-        t += 0.8
+        t += scanStep
       }
     }
 
@@ -1300,7 +1310,12 @@ nonisolated enum VideoEditorSmartAutoZoomEngine {
         samples: samples
       )
 
-      let shouldMerge = !prev.triggersZoomOut
+      let actionGap = item.action.startTime - prev.action.endTime
+      // Only honor a zoom-out split when there is genuine breathing room (>= 0.95s) before the next click;
+      // otherwise slamming out to 1.0x for 0.22s and immediately slamming back in feels jarring.
+      let effectiveZoomOutSplit = prev.triggersZoomOut && actionGap >= 0.95
+
+      let shouldMerge = !effectiveZoomOutSplit
         && !cursorLeftCapture
         && gapAfterOutcome <= style.mergeGapThreshold
         && projectedDuration <= style.maxChapterDuration
