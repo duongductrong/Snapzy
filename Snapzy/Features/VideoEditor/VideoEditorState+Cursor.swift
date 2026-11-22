@@ -35,7 +35,12 @@ extension VideoEditorState {
     var layers: [any VideoEditorStudioLayer] = []
     if let metadata = recordingMetadata {
       if hasEditableCursor,
-         let cursor = cursorSprites.makeLayer(metadata: metadata, settings: cursorSettings, mapping: mapping),
+         let cursor = cursorSprites.makeLayer(
+          metadata: metadata,
+          settings: cursorSettings,
+          mapping: mapping,
+          motionBlur: motionBlurSettings
+         ),
          cursor.isActive {
         layers.append(cursor)
       }

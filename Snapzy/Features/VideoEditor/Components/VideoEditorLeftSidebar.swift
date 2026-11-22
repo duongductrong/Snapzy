@@ -50,6 +50,7 @@ struct ZoomSettingsContent: View {
   @State private var localFollowSpeed: Double = AutoFocusSettings.defaultFollowSpeed
   @State private var localFocusMargin: CGFloat = AutoFocusSettings.defaultFocusMargin
   @State private var localTransitionDuration: TimeInterval = ZoomCalculator.defaultTransitionDuration
+  @State private var motionBlurDragStart: VideoEditorMotionBlurSettings?
 
   private struct LocalStateSnapshot: Equatable {
     let id: UUID
@@ -85,6 +86,15 @@ struct ZoomSettingsContent: View {
   var body: some View {
     ScrollView(.vertical, showsIndicators: true) {
       VStack(alignment: .leading, spacing: 16) {
+        if state.hasMouseTrackingData {
+          smartAutoZoomSection
+          Divider()
+        }
+
+        motionBlurSection
+
+        Divider()
+
         if let segment = selectedSegment {
           modeSection(for: segment)
 
@@ -123,6 +133,170 @@ struct ZoomSettingsContent: View {
     }
     .onDisappear { endContinuousEdit() }
     .accessibilityIdentifier("video-editor.zoom-settings")
+  }
+
+  private var smartAutoZoomSection: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack {
+        Label(L10n.VideoEditor.smartAutoZoomTitle, systemImage: "viewfinder")
+          .font(.system(size: 12, weight: .semibold))
+
+        Spacer()
+
+        if !state.zoomSegments.isEmpty {
+          Text("\(state.zoomSegments.count)")
+            .font(.system(size: 10, weight: .medium))
+            .monospacedDigit()
+            .foregroundColor(.secondary)
+        }
+      }
+
+      Picker("", selection: $state.smartAutoZoomStyle) {
+        Text(L10n.VideoEditor.smartAutoZoomSubtle).tag(SmartAutoZoomStyle.subtle)
+        Text(L10n.VideoEditor.smartAutoZoomBalanced).tag(SmartAutoZoomStyle.balanced)
+        Text(L10n.VideoEditor.smartAutoZoomDynamic).tag(SmartAutoZoomStyle.dynamic)
+      }
+      .labelsHidden()
+      .pickerStyle(.segmented)
+      .controlSize(.small)
+
+      Button {
+        state.generateSmartAutoZoom(style: state.smartAutoZoomStyle)
+      } label: {
+        HStack(spacing: 6) {
+          if state.isGeneratingSmartAutoZoom {
+            ProgressView()
+              .controlSize(.small)
+              .scaleEffect(0.75)
+          } else {
+            Image(systemName: "wand.and.stars")
+              .font(.system(size: 10, weight: .semibold))
+          }
+          Text(
+            state.isGeneratingSmartAutoZoom
+              ? L10n.VideoEditor.smartAutoZoomAnalyzing
+              : (state.zoomSegments.isEmpty
+                  ? L10n.VideoEditor.smartAutoZoomGenerate
+                  : L10n.VideoEditor.smartAutoZoomRegenerate)
+          )
+          .font(.system(size: 11, weight: .medium))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+        .background(ZoomColors.primary.opacity(0.22))
+        .foregroundColor(.primary)
+        .clipShape(Radius.controlRect(forHeight: 26))
+        .overlay(
+          Radius.controlRect(forHeight: 26)
+            .strokeBorder(ZoomColors.primary.opacity(0.42), lineWidth: 1)
+        )
+      }
+      .buttonStyle(.plain)
+      .disabled(state.isGeneratingSmartAutoZoom)
+      .accessibilityIdentifier("video-editor.smart-auto-zoom")
+
+      Text(L10n.VideoEditor.smartAutoZoomDescription)
+        .font(.system(size: 10))
+        .foregroundColor(.secondary.opacity(0.8))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private var motionBlurSection: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack {
+        Label(L10n.VideoEditor.motionBlurTitle, systemImage: "camera.aperture")
+          .font(.system(size: 12, weight: .semibold))
+
+        Spacer()
+
+        Toggle(
+          "",
+          isOn: Binding(
+            get: { state.motionBlurSettings.isEnabled },
+            set: { newValue in
+              var updated = state.motionBlurSettings
+              updated.isEnabled = newValue
+              if newValue, updated.shutterStrength <= 0.01 {
+                updated.shutterStrength = VideoEditorMotionBlurSettings.defaultShutterStrength
+              }
+              state.setMotionBlurSettings(updated)
+            }
+          )
+        )
+        .labelsHidden()
+        .toggleStyle(.switch)
+        .controlSize(.small)
+        .accessibilityIdentifier("video-editor.motion-blur-toggle")
+      }
+
+      if state.motionBlurSettings.isEnabled {
+        VStack(alignment: .leading, spacing: 4) {
+          HStack {
+            Text(L10n.VideoEditor.motionBlurStrength)
+              .font(.system(size: 11, weight: .medium))
+              .foregroundColor(.secondary)
+
+            Spacer()
+
+            Text(state.motionBlurSettings.strengthDisplayValue)
+              .font(.system(size: 11, weight: .semibold))
+              .monospacedDigit()
+          }
+
+          Slider(
+            value: Binding(
+              get: { state.motionBlurSettings.shutterStrength },
+              set: { newValue in
+                var updated = state.motionBlurSettings
+                updated.shutterStrength = VideoEditorMotionBlurSettings.clampStrength(newValue)
+                state.setMotionBlurSettings(updated, recordUndo: motionBlurDragStart == nil)
+              }
+            ),
+            in: VideoEditorMotionBlurSettings.strengthRange
+          ) { editing in
+            if editing {
+              motionBlurDragStart = state.motionBlurSettings
+            } else if let start = motionBlurDragStart {
+              motionBlurDragStart = nil
+              state.commitMotionBlurSettings(from: start)
+            }
+          }
+          .controlSize(.small)
+          .accessibilityIdentifier("video-editor.motion-blur-strength")
+        }
+
+        if state.hasEditableCursor {
+          HStack {
+            Text(L10n.VideoEditor.motionBlurCursor)
+              .font(.system(size: 11, weight: .medium))
+              .foregroundColor(.secondary)
+
+            Spacer()
+
+            Toggle(
+              "",
+              isOn: Binding(
+                get: { state.motionBlurSettings.cursorBlurEnabled },
+                set: { newValue in
+                  var updated = state.motionBlurSettings
+                  updated.cursorBlurEnabled = newValue
+                  state.setMotionBlurSettings(updated)
+                }
+              )
+            )
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .controlSize(.small)
+          }
+        }
+      }
+
+      Text(L10n.VideoEditor.motionBlurDescription)
+        .font(.system(size: 10))
+        .foregroundColor(.secondary.opacity(0.8))
+        .fixedSize(horizontal: false, vertical: true)
+    }
   }
 
   private func modeSection(for segment: ZoomSegment) -> some View {

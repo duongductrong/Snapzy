@@ -29,7 +29,7 @@ struct VideoEditorCursorOverlayView: View {
         guard let sourceTime = state.cursorSourceTime(atSequence: sequenceTime),
               let frame = resolver.resolve(sourceTime: sourceTime)
         else { return }
-        draw(frame, settings: resolver.settings, in: &context, size: canvasSize,
+        draw(frame, sourceTime: sourceTime, resolver: resolver, in: &context, size: canvasSize,
              pointsPerSourcePoint: canvasSize.width / metadata.captureSize.width)
       }
       .frame(width: size.width, height: size.height)
@@ -71,11 +71,13 @@ struct VideoEditorCursorOverlayView: View {
 
   private func draw(
     _ frame: VideoEditorCursorFrame,
-    settings: VideoEditorCursorSettings,
+    sourceTime: TimeInterval,
+    resolver: VideoEditorCursorResolver,
     in context: inout GraphicsContext,
     size: CGSize,
     pointsPerSourcePoint scale: CGFloat
   ) {
+    let settings = resolver.settings
     let color = settings.clickColor
     func ring(at point: CGPoint, radius: CGFloat, alpha: CGFloat) {
       let center = CGPoint(x: point.x * size.width, y: point.y * size.height)
@@ -97,13 +99,36 @@ struct VideoEditorCursorOverlayView: View {
 
     guard frame.opacity > 0, let sprite = state.cursorSprites.sprite(for: frame.imageID) else { return }
     let spriteScale = settings.scale * scale
-    let rect = CGRect(
-      x: frame.position.x * size.width - sprite.hotspot.x * spriteScale,
-      y: frame.position.y * size.height - sprite.hotspot.y * spriteScale,
-      width: sprite.pointSize.width * spriteScale,
-      height: sprite.pointSize.height * spriteScale
-    )
+    let cursorImage = Image(decorative: sprite.cgImage, scale: 1)
+
+    func cursorRect(at normalized: CGPoint) -> CGRect {
+      CGRect(
+        x: normalized.x * size.width - sprite.hotspot.x * spriteScale,
+        y: normalized.y * size.height - sprite.hotspot.y * spriteScale,
+        width: sprite.pointSize.width * spriteScale,
+        height: sprite.pointSize.height * spriteScale
+      )
+    }
+
+    // Analytical temporal sub-frame cursor shutter accumulation along the real curved mouse path.
+    if playbackState.isPlaying {
+      let shutterTaps = VideoEditorMotionBlurEngine.cursorShutterTaps(
+        at: sourceTime,
+        frameDuration: 1.0 / 30.0,
+        frameSize: size,
+        resolver: resolver,
+        settings: state.motionBlurSettings
+      )
+      if shutterTaps.count >= 2 {
+        for tap in shutterTaps {
+          context.opacity = Double(frame.opacity * min(1.0, tap.weight * 1.85))
+          context.draw(cursorImage, in: cursorRect(at: tap.position))
+        }
+        return
+      }
+    }
+
     context.opacity = frame.opacity
-    context.draw(Image(decorative: sprite.cgImage, scale: 1), in: rect)
+    context.draw(cursorImage, in: cursorRect(at: frame.position))
   }
 }

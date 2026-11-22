@@ -404,6 +404,15 @@ struct ZoomTimelineTrack: View, Equatable {
       )
     }
 
+    if state.hasMouseTrackingData {
+      Button {
+        state.generateSmartAutoZoom(style: state.smartAutoZoomStyle)
+      } label: {
+        Label(L10n.VideoEditor.smartAutoZoomGenerate, systemImage: "wand.and.stars")
+      }
+      .disabled(state.isGeneratingSmartAutoZoom)
+    }
+
     if state.selectedZoomId != nil {
       Divider()
 

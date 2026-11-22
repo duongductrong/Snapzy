@@ -49,7 +49,8 @@ struct VideoEditorCursorSpriteStore {
   func makeLayer(
     metadata: RecordingMetadata,
     settings: VideoEditorCursorSettings,
-    mapping: VideoEditorSourceTimeMapping
+    mapping: VideoEditorSourceTimeMapping,
+    motionBlur: VideoEditorMotionBlurSettings = .disabled
   ) -> VideoEditorCursorLayer? {
     guard let capture = metadata.cursorCapture, !metadata.isCursorBaked else { return nil }
     return VideoEditorCursorLayer(
@@ -57,7 +58,8 @@ struct VideoEditorCursorSpriteStore {
       mapping: mapping,
       captureSize: metadata.captureSize,
       sprites: images.mapValues(\.sprite),
-      arrow: arrow?.sprite
+      arrow: arrow?.sprite,
+      motionBlur: motionBlur
     )
   }
 

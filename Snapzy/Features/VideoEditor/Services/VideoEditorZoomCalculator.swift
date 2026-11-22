@@ -12,11 +12,11 @@ import Foundation
 nonisolated enum ZoomCalculator {
   // MARK: - Transition Configuration
 
-  static let transitionDurationRange: ClosedRange<TimeInterval> = 0.15 ... 0.75
-  static let defaultTransitionDuration: TimeInterval = 0.4
-  static let fastTransitionDuration: TimeInterval = 0.25
-  static let balancedTransitionDuration: TimeInterval = 0.4
-  static let smoothTransitionDuration: TimeInterval = 0.6
+  static let transitionDurationRange: ClosedRange<TimeInterval> = 0.15 ... 0.90
+  static let defaultTransitionDuration: TimeInterval = 0.52
+  static let fastTransitionDuration: TimeInterval = 0.30
+  static let balancedTransitionDuration: TimeInterval = 0.52
+  static let smoothTransitionDuration: TimeInterval = 0.72
   static let neutralCenter: CGPoint = .init(x: 0.5, y: 0.5)
 
   // MARK: - Crop Rect Calculation
@@ -56,6 +56,28 @@ nonisolated enum ZoomCalculator {
 
   // MARK: - Easing Functions
 
+  /// C²-continuous quintic smootherstep (zero velocity AND zero acceleration at both ends).
+  static func smootherstep(_ t: Double) -> Double {
+    let x = min(max(t, 0), 1)
+    return x * x * x * (x * (x * 6 - 15) + 10)
+  }
+
+  /// Cinema magnetic zoom-in curve: decisive acceleration into a long, silky critically-damped settle.
+  /// C²-smooth at both endpoints so shutter-angle motion blur ramps cleanly without flicker.
+  static func cinemaEaseIn(_ t: Double) -> Double {
+    let x = min(max(t, 0), 1)
+    // Warp time slightly toward early arrival, then apply C² smootherstep.
+    let warped = 1.0 - pow(1.0 - x, 1.38)
+    return smootherstep(warped)
+  }
+
+  /// Cinema calm zoom-out curve: gentle release into steady spatial reveal.
+  static func cinemaEaseOut(_ t: Double) -> Double {
+    let x = min(max(t, 0), 1)
+    let warped = pow(x, 0.92)
+    return smootherstep(warped)
+  }
+
   /// Cubic ease-in-out for smooth zoom transitions
   static func easeInOutCubic(_ t: Double) -> Double {
     t < 0.5 ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2
@@ -73,6 +95,17 @@ nonisolated enum ZoomCalculator {
 
   static func clampTransitionDuration(_ value: TimeInterval) -> TimeInterval {
     min(max(value, transitionDurationRange.lowerBound), transitionDurationRange.upperBound)
+  }
+
+  /// Interpolates zoom level optically in reciprocal viewport-width space (`1 / zoom`) so
+  /// screen-space corner trajectories follow straight lines with zero hyperbolic wobble.
+  static func opticalZoomLevel(target targetZoom: CGFloat, progress: Double) -> CGFloat {
+    let p = CGFloat(min(max(progress, 0), 1))
+    guard targetZoom > 1.0, p > 0 else { return 1.0 }
+    if p >= 1.0 { return targetZoom }
+    let targetViewportSpan = 1.0 / targetZoom
+    let currentSpan = 1.0 + (targetViewportSpan - 1.0) * p
+    return 1.0 / max(currentSpan, 0.0001)
   }
 
   static func interpolateCenter(
@@ -119,27 +152,29 @@ nonisolated enum ZoomCalculator {
     // Keep transition smooth but avoid overlap on short segments.
     let clampedTransition = clampTransitionDuration(transitionDuration)
     let maxTransitionPerEdge = segment.duration * 0.45
-    let effectiveTransition = min(clampedTransition, maxTransitionPerEdge)
-    let zoomInEnd = max(effectiveTransition, 0.0001)
-    let zoomOutStart = min(max(segment.duration - effectiveTransition, 0), segment.duration)
+    let effectiveIn = min(clampedTransition, maxTransitionPerEdge)
+    let effectiveOut = min(clampedTransition * 1.12, maxTransitionPerEdge)
+    let zoomInEnd = max(effectiveIn, 0.0001)
+    let zoomOutStart = min(max(segment.duration - effectiveOut, zoomInEnd), segment.duration)
 
     var progress: Double
 
     if timeInSegment < zoomInEnd {
-      // Zooming in
+      // Zooming in with C² cinema magnetic deceleration
       let t = timeInSegment / zoomInEnd
-      progress = easeInOutCubic(t)
+      progress = cinemaEaseIn(t)
     } else if timeInSegment > zoomOutStart {
-      // Zooming out
-      let t = (timeInSegment - zoomOutStart) / (segment.duration - zoomOutStart)
-      progress = 1.0 - easeInOutCubic(t)
+      // Zooming out with C² smooth reveal
+      let outSpan = max(segment.duration - zoomOutStart, 0.0001)
+      let t = (timeInSegment - zoomOutStart) / outSpan
+      progress = 1.0 - cinemaEaseOut(t)
     } else {
       // Fully zoomed
       progress = 1.0
     }
 
-    // Interpolate zoom level
-    let currentLevel = 1.0 + (segment.zoomLevel - 1.0) * CGFloat(progress)
+    // Interpolate zoom level in reciprocal viewport space for straight optical rays
+    let currentLevel = opticalZoomLevel(target: segment.zoomLevel, progress: progress)
 
     return (level: currentLevel, center: segment.zoomCenter, progress: progress)
   }

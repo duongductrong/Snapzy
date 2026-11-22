@@ -61,9 +61,38 @@ nonisolated struct AutoFocusSettings: Equatable {
   }
 }
 
-nonisolated struct AutoFocusCameraSample: Equatable {
+nonisolated struct AutoFocusCameraSample: Codable, Equatable, Hashable, Sendable {
   var time: TimeInterval
   var center: CGPoint
+  /// Relative zoom intensity in `0...1.5` applied against the segment's zoom delta (`1 + (zoom - 1) * multiplier`).
+  /// Defaults to `1.0` so standard cursor-follow paths keep the exact segment zoom level.
+  var zoomMultiplier: CGFloat
+
+  init(time: TimeInterval, center: CGPoint, zoomMultiplier: CGFloat = 1.0) {
+    self.time = time
+    self.center = center
+    self.zoomMultiplier = zoomMultiplier
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case time, center, zoomMultiplier
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    time = try container.decode(TimeInterval.self, forKey: .time)
+    center = try container.decode(CGPoint.self, forKey: .center)
+    zoomMultiplier = try container.decodeIfPresent(CGFloat.self, forKey: .zoomMultiplier) ?? 1.0
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(time, forKey: .time)
+    try container.encode(center, forKey: .center)
+    if abs(zoomMultiplier - 1.0) > 0.0001 {
+      try container.encode(zoomMultiplier, forKey: .zoomMultiplier)
+    }
+  }
 }
 
 nonisolated struct VideoEditorCameraState: Equatable {

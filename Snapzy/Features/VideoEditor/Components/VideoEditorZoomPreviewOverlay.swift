@@ -18,6 +18,7 @@ struct ZoomableVideoPlayerSection: View {
 
   @State private var currentZoomLevel: CGFloat = 1.0
   @State private var currentZoomCenter: CGPoint = .init(x: 0.5, y: 0.5)
+  @State private var currentShutterPlan: VideoEditorMotionBlurEngine.ShutterPlan = .inactive
 
   init(state: VideoEditorState) {
     _state = ObservedObject(wrappedValue: state)
@@ -76,6 +77,11 @@ struct ZoomableVideoPlayerSection: View {
     .onReceive(playbackState.$currentTime) { time in
       updateZoomState(at: CMTimeGetSeconds(time))
     }
+    .onReceive(playbackState.$isPlaying) { playing in
+      if !playing, currentShutterPlan != .inactive {
+        currentShutterPlan = .inactive
+      }
+    }
     .onChange(of: state.zoomSegments) { _ in
       updateZoomState(at: CMTimeGetSeconds(playbackState.currentTime))
     }
@@ -83,6 +89,9 @@ struct ZoomableVideoPlayerSection: View {
       updateZoomState(at: CMTimeGetSeconds(playbackState.currentTime))
     }
     .onChange(of: state.zoomTransitionDuration) { _ in
+      updateZoomState(at: CMTimeGetSeconds(playbackState.currentTime))
+    }
+    .onChange(of: state.motionBlurSettings) { _ in
       updateZoomState(at: CMTimeGetSeconds(playbackState.currentTime))
     }
   }
@@ -143,16 +152,33 @@ struct ZoomableVideoPlayerSection: View {
     shadowRadius: CGFloat,
     shadowY: CGFloat
   ) -> some View {
-    VideoPlayerSection(player: state.player)
+    ZStack {
+      // Base hardware-decoded AVPlayerView: never carries CALayer.filters so it stays 100% Retina-sharp.
+      VideoPlayerSection(player: state.player)
+        .frame(width: displayedVideoRect.width, height: displayedVideoRect.height)
+        .scaleEffect(currentZoomLevel)
+        .offset(zoomOffset(in: displayedVideoRect.size))
+        .clipped()
+
+      // Full-Retina Metal shutter-angle overlay: visible ONLY during active fast camera motion,
+      // rendering straight from full-resolution native CVPixelBuffers with zero pixelation.
+      MetalShutterPreviewView(
+        player: state.player,
+        shutterPlan: currentShutterPlan,
+        isPlaying: playbackState.isPlaying
+      )
       .frame(width: displayedVideoRect.width, height: displayedVideoRect.height)
-      // Studio source-space layers (cursor, clicks): zoomed together with the screen.
-      .overlay(alignment: .topLeading) {
-        VideoEditorStudioOverlayHost(space: .source, size: displayedVideoRect.size, state: state)
-      }
-      .scaleEffect(currentZoomLevel)
-      .offset(zoomOffset(in: displayedVideoRect.size))
-      .clipped()
-      .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+      .allowsHitTesting(false)
+
+      // Studio source-space layers (cursor with curved shutter blur, clicks): zoomed on top.
+      VideoEditorStudioOverlayHost(space: .source, size: displayedVideoRect.size, state: state)
+        .frame(width: displayedVideoRect.width, height: displayedVideoRect.height)
+        .scaleEffect(currentZoomLevel)
+        .offset(zoomOffset(in: displayedVideoRect.size))
+        .clipped()
+    }
+    .frame(width: displayedVideoRect.width, height: displayedVideoRect.height)
+    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
       // The shadow is cast by a static shape of the same rounded frame behind the video,
       // not by the video itself: a shadow on the player's content is re-derived from its
       // alpha offscreen on every video frame. The video is opaque across this rect, so
@@ -334,9 +360,14 @@ struct ZoomableVideoPlayerSection: View {
 
   private func updateZoomState(at time: TimeInterval) {
     let cameraState = state.cameraState(at: time)
+    let shutterPlan: VideoEditorMotionBlurEngine.ShutterPlan = playbackState.isPlaying
+      ? state.previewShutterPlan(at: time)
+      : .inactive
+
     // Called every tick; write only real changes so a tick outside a zoom block is free.
     if currentZoomLevel != cameraState.zoomLevel { currentZoomLevel = cameraState.zoomLevel }
     if currentZoomCenter != cameraState.center { currentZoomCenter = cameraState.center }
+    if currentShutterPlan != shutterPlan { currentShutterPlan = shutterPlan }
   }
 }
 

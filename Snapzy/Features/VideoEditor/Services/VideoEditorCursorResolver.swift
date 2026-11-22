@@ -26,6 +26,8 @@ nonisolated struct VideoEditorCursorFrame: Equatable, Sendable {
   var pulses: [Pulse]
   /// Points where a button is held down (ring effect).
   var held: [CGPoint]
+  /// Instantaneous cursor velocity in normalized top-left units per second.
+  var velocity: CGVector = .zero
 }
 
 nonisolated struct VideoEditorCursorResolver: Sendable {
@@ -123,12 +125,31 @@ nonisolated struct VideoEditorCursorResolver: Sendable {
     let opacity = isHidden ? 0 : idleOpacity(at: time)
     let imageID = settings.alwaysUseArrow ? nil : change?.imageID
     guard opacity > 0 || !pulses.isEmpty || !held.isEmpty else { return nil }
+    let velocity = opacity > 0 ? velocity(at: time) : .zero
     return VideoEditorCursorFrame(
       position: sample.normalizedPoint,
       imageID: imageID,
       opacity: opacity,
       pulses: pulses,
-      held: held
+      held: held,
+      velocity: velocity
+    )
+  }
+
+  private func velocity(at time: TimeInterval) -> CGVector {
+    guard samples.count >= 2 else { return .zero }
+    let halfWindow: TimeInterval = 0.008
+    let t0 = max(samples[0].time, time - halfWindow)
+    let t1 = min(samples[samples.count - 1].time, time + halfWindow)
+    let dt = t1 - t0
+    guard dt > 0.0005,
+          let a = RecordedMouseSampleInterpolator.sample(at: t0, in: samples),
+          let b = RecordedMouseSampleInterpolator.sample(at: t1, in: samples),
+          a.isInsideCapture, b.isInsideCapture
+    else { return .zero }
+    return CGVector(
+      dx: (b.normalizedX - a.normalizedX) / CGFloat(dt),
+      dy: (b.normalizedY - a.normalizedY) / CGFloat(dt)
     )
   }
 

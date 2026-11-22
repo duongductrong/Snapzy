@@ -429,7 +429,8 @@ enum VideoEditorExporter {
       backgroundStyle: state.backgroundStyle,
       backgroundPadding: state.backgroundPadding,
       cornerRadius: state.backgroundCornerRadius,
-      studioRecipe: state.studioRecipe
+      studioRecipe: state.studioRecipe,
+      motionBlur: state.motionBlurSettings
     )
 
     // Use actual composition duration to prevent frame boundary issues

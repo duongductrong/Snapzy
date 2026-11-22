@@ -37,17 +37,21 @@ nonisolated struct VideoEditorStudioLayerContext {
   /// Where the (zoomed) video frame sits inside `extent`, Core Image coordinates.
   /// Equals `extent` for `.source` layers and when there is no padding.
   let videoRect: CGRect
+  /// Duration of one output frame in seconds (used by velocity-based effects such as cursor motion blur).
+  let frameDuration: TimeInterval
 
   init(
     outputTime: TimeInterval,
     extent: CGRect,
     auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer],
-    videoRect: CGRect? = nil
+    videoRect: CGRect? = nil,
+    frameDuration: TimeInterval = 1.0 / 30.0
   ) {
     self.outputTime = outputTime
     self.extent = extent
     self.auxiliaryFrames = auxiliaryFrames
     self.videoRect = videoRect ?? extent
+    self.frameDuration = frameDuration
   }
 }
 
@@ -98,7 +102,8 @@ nonisolated struct VideoEditorStudioRecipe: Sendable {
     space: VideoEditorStudioLayerSpace,
     outputTime: TimeInterval,
     auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer],
-    videoRect: CGRect? = nil
+    videoRect: CGRect? = nil,
+    frameDuration: TimeInterval = 1.0 / 30.0
   ) -> CIImage {
     let spaceLayers = activeLayers(in: space)
     guard !spaceLayers.isEmpty else { return image }
@@ -106,7 +111,8 @@ nonisolated struct VideoEditorStudioRecipe: Sendable {
       outputTime: outputTime,
       extent: image.extent,
       auxiliaryFrames: auxiliaryFrames,
-      videoRect: videoRect
+      videoRect: videoRect,
+      frameDuration: frameDuration
     )
     return spaceLayers.reduce(image) { partial, layer in
       layer.composite(onto: partial, context: context)

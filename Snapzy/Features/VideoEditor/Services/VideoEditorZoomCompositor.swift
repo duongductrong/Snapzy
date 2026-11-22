@@ -25,6 +25,7 @@ class ZoomCompositor {
   private let backgroundPadding: CGFloat
   private let cornerRadius: CGFloat
   private let studioRecipe: VideoEditorStudioRecipe
+  private let motionBlur: VideoEditorMotionBlurSettings
   let paddedRenderSize: CGSize
 
   // MARK: - Initialization
@@ -38,7 +39,8 @@ class ZoomCompositor {
     backgroundStyle: BackgroundStyle = .none,
     backgroundPadding: CGFloat = 0,
     cornerRadius: CGFloat = 0,
-    studioRecipe: VideoEditorStudioRecipe = .empty
+    studioRecipe: VideoEditorStudioRecipe = .empty,
+    motionBlur: VideoEditorMotionBlurSettings = .disabled
   ) {
     self.zooms = zooms.filter(\.isEnabled)
     self.autoFocusPaths = autoFocusPaths
@@ -49,6 +51,7 @@ class ZoomCompositor {
     self.backgroundPadding = backgroundPadding
     self.cornerRadius = cornerRadius
     self.studioRecipe = studioRecipe
+    self.motionBlur = motionBlur
 
     // Calculate padded render size
     if backgroundStyle != .none, backgroundPadding > 0 {
@@ -94,6 +97,10 @@ class ZoomCompositor {
     print("🎬 [ZoomCompositor] Video track ID: \(resolvedScreenTrackID)")
 
     // Create instruction covering the entire time range
+    let frameDurationSeconds = CMTimeGetSeconds(frameDuration)
+    let resolvedFrameDuration = frameDurationSeconds.isFinite && frameDurationSeconds > 0
+      ? frameDurationSeconds
+      : (1.0 / 30.0)
     let instruction = ZoomVideoCompositionInstruction(
       timeRange: timeRange,
       zooms: zooms,
@@ -106,7 +113,9 @@ class ZoomCompositor {
       cornerRadius: cornerRadius,
       paddedRenderSize: paddedRenderSize,
       studioRecipe: studioRecipe,
-      auxiliaryTrackIDs: auxiliaryTrackIDs
+      auxiliaryTrackIDs: auxiliaryTrackIDs,
+      motionBlur: motionBlur,
+      frameDurationSeconds: resolvedFrameDuration
     )
     print("🎬 [ZoomCompositor] Created instruction with trackID: \(resolvedScreenTrackID)")
 
@@ -186,6 +195,8 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
   /// Auxiliary video tracks (camera sidecar, ...) Studio layers read. Never used as a
   /// stand-in for the screen track.
   let auxiliaryTrackIDs: [VideoEditorStudioAuxiliaryTrack: CMPersistentTrackID]
+  let motionBlur: VideoEditorMotionBlurSettings
+  let frameDurationSeconds: TimeInterval
 
   var enablePostProcessing: Bool {
     true
@@ -224,7 +235,9 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
     cornerRadius: CGFloat = 0,
     paddedRenderSize: CGSize? = nil,
     studioRecipe: VideoEditorStudioRecipe = .empty,
-    auxiliaryTrackIDs: [VideoEditorStudioAuxiliaryTrack: CMPersistentTrackID] = [:]
+    auxiliaryTrackIDs: [VideoEditorStudioAuxiliaryTrack: CMPersistentTrackID] = [:],
+    motionBlur: VideoEditorMotionBlurSettings = .disabled,
+    frameDurationSeconds: TimeInterval = 1.0 / 30.0
   ) {
     self.timeRange = timeRange
     self.zooms = zooms
@@ -244,6 +257,8 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
     self.paddedRenderSize = paddedRenderSize ?? renderSize
     self.studioRecipe = studioRecipe
     self.auxiliaryTrackIDs = auxiliaryTrackIDs
+    self.motionBlur = motionBlur
+    self.frameDurationSeconds = frameDurationSeconds
     super.init()
   }
 }
@@ -383,11 +398,21 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
       width: CVPixelBufferGetWidth(sourceBuffer),
       height: CVPixelBufferGetHeight(sourceBuffer)
     )
+    let shutterPlan = VideoEditorMotionBlurEngine.shutterPlan(
+      at: currentTime,
+      frameDuration: instruction.frameDurationSeconds,
+      frameSize: sourceSize,
+      segments: instruction.zooms,
+      autoFocusPaths: instruction.autoFocusPaths,
+      transitionDuration: instruction.transitionDuration,
+      settings: instruction.motionBlur
+    )
     let needsCanvasFit = abs(sourceSize.width - instruction.renderSize.width) > 0.5
       || abs(sourceSize.height - instruction.renderSize.height) > 0.5
 
-    // If no zoom, no background and no Studio layer, pass through original frame
+    // If no zoom, no active shutter motion blur, no background and no Studio layer, pass through original frame
     if zoomLevel <= minimumRenderableZoomLevel,
+       !shutterPlan.isActive,
        !instruction.hasBackground,
        !needsCanvasFit,
        !instruction.hasStudioLayers {
@@ -395,11 +420,12 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
       return
     }
 
-    // Apply zoom and/or background effect
+    // Apply zoom, true shutter-angle motion blur, and/or background effect
     guard let outputBuffer = applyEffects(
       to: sourceBuffer,
       zoomLevel: zoomLevel,
       center: zoomCenter,
+      shutterPlan: shutterPlan,
       instruction: instruction,
       outputTime: currentTime,
       auxiliaryFrames: auxiliaryFrames(for: instruction, request: request)
@@ -424,6 +450,7 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
     to sourceBuffer: CVPixelBuffer,
     zoomLevel: CGFloat,
     center: CGPoint,
+    shutterPlan: VideoEditorMotionBlurEngine.ShutterPlan,
     instruction: ZoomVideoCompositionInstruction,
     outputTime: TimeInterval,
     auxiliaryFrames: [VideoEditorStudioAuxiliaryTrack: CVPixelBuffer]
@@ -440,8 +467,13 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
       auxiliaryFrames: auxiliaryFrames
     )
 
-    // Apply zoom if needed
-    if zoomLevel > minimumRenderableZoomLevel {
+    // True physical shutter-angle motion blur renders zoom + temporal sub-frame accumulation in one GPU pass.
+    if shutterPlan.isActive {
+      processedImage = VideoEditorMotionBlurEngine.renderZoomedWithShutterMotionBlur(
+        sourceImage: processedImage,
+        shutterPlan: shutterPlan
+      )
+    } else if zoomLevel > minimumRenderableZoomLevel {
       let cropRect = ZoomCalculator.calculateCropRect(
         center: center,
         zoomLevel: zoomLevel,
@@ -530,7 +562,13 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
   ) -> CIImage {
     guard instruction.hasStudioLayers else { return image }
     return instruction.studioRecipe
-      .composite(image, space: .source, outputTime: outputTime, auxiliaryFrames: auxiliaryFrames)
+      .composite(
+        image,
+        space: .source,
+        outputTime: outputTime,
+        auxiliaryFrames: auxiliaryFrames,
+        frameDuration: instruction.frameDurationSeconds
+      )
       .cropped(to: image.extent)
   }
 
