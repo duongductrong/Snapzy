@@ -7747,6 +7747,31 @@ nonisolated enum L10n {
       defaultValue: "Zooms into clicks, drags, and typing, reframes for UI results, and zooms out cleanly on transitions.",
       comment: "Description of Smart Auto-Zoom behavior in the video editor sidebar"
     )
+    static let smartAutoZoomNoActionsDetected = string(
+      "video-editor.smart-auto-zoom-no-actions",
+      defaultValue: "No actions detected. Existing zooms were left unchanged.",
+      comment: "Notice shown when Smart Auto-Zoom finds no actions to zoom into"
+    )
+    static let smartAutoZoomConfirmTitle = string(
+      "video-editor.smart-auto-zoom-confirm-title",
+      defaultValue: "Existing Zooms Found",
+      comment: "Alert title when Smart Auto-Zoom is triggered on a timeline with user zooms"
+    )
+    static let smartAutoZoomConfirmMessage = string(
+      "video-editor.smart-auto-zoom-confirm-message",
+      defaultValue: "You already have custom zooms on this timeline. Keep them and fill the open gaps, or replace all zooms?",
+      comment: "Alert message explaining options when user zooms already exist"
+    )
+    static let smartAutoZoomKeepAndFillGaps = string(
+      "video-editor.smart-auto-zoom-keep-fill-gaps",
+      defaultValue: "Keep My Zooms & Fill Gaps",
+      comment: "Default action button that preserves user zooms and adds generated zooms only in non-overlapping gaps"
+    )
+    static let smartAutoZoomReplaceAll = string(
+      "video-editor.smart-auto-zoom-replace-all",
+      defaultValue: "Replace All",
+      comment: "Destructive action button that replaces all zooms on the timeline with generated Smart Auto-Zooms"
+    )
     static let motionBlurTitle = string(
       "video-editor.motion-blur-title",
       defaultValue: "Motion Blur",

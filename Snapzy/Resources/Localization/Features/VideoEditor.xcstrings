@@ -18048,6 +18048,148 @@
         }
       }
     },
+    "video-editor.smart-auto-zoom-confirm-message": {
+      "comment": "Alert message explaining options when user zooms already exist",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Zeitleiste enthält bereits eigene Zooms. Möchtest du sie behalten und Lücken füllen oder alle ersetzen?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You already have custom zooms on this timeline. Keep them and fill the open gaps, or replace all zooms?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ya tienes zooms personalizados en esta línea de tiempo. ¿Mantenerlos y rellenar los huecos, o reemplazar todos?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette timeline contient déjà vos zooms. Les conserver et combler les espaces libres, ou tout remplacer ?"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כבר קיימים זומים מותאמים בציר הזמן. לשמור אותם ולמלא פערים, או להחליף את כולם?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイムラインにはすでにカスタムズームがあります。維持して空き区間を埋めますか、それともすべて置き換えますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "타임라인에 사용자 확대/축소가 이미 있습니다. 유지하고 빈 구간을 채울까요, 아니면 모두 교체할까요?"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На шкале уже есть пользовательские масштабирования. Сохранить их и заполнить промежутки или заменить все?"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timeline hiện đã có các vùng zoom của bạn. Bạn muốn giữ lại và tự điền vào khoảng trống, hay thay thế toàn bộ?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此时间线上已有自定义缩放。保留它们并填充空隙，还是替换全部缩放？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此時間軸上已有自訂縮放。保留它們並填補空隙，還是取代全部縮放？"
+          }
+        }
+      }
+    },
+    "video-editor.smart-auto-zoom-confirm-title": {
+      "comment": "Alert title when Smart Auto-Zoom is triggered on a timeline with user zooms",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorhandene Zooms gefunden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existing Zooms Found"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zooms existentes encontrados"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zooms existants détectés"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נמצאו זומים קיימים"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "既存のズームが見つかりました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기존 확대/축소가 있습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обнаружены существующие масштабирования"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã có vùng zoom trên timeline"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发现现有缩放"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發現現有縮放"
+          }
+        }
+      }
+    },
     "video-editor.smart-auto-zoom-description": {
       "comment": "Description of Smart Auto-Zoom behavior in the video editor sidebar",
       "localizations": {
@@ -18261,6 +18403,148 @@
         }
       }
     },
+    "video-editor.smart-auto-zoom-keep-fill-gaps": {
+      "comment": "Default action button that preserves user zooms and adds generated zooms only in non-overlapping gaps",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meine Zooms behalten & Lücken füllen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep My Zooms & Fill Gaps"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantener mis zooms y rellenar huecos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conserver mes zooms et combler les espaces"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמור את הזומים שלי ומלא פערים"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のズームを維持して空きを埋める"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 확대/축소 유지 및 빈 구간 채우기"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранить мои и заполнить промежутки"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giữ zoom của tôi & điền khoảng trống"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保留我的缩放并填充空隙"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保留我的縮放並填補空隙"
+          }
+        }
+      }
+    },
+    "video-editor.smart-auto-zoom-no-actions": {
+      "comment": "Notice shown when Smart Auto-Zoom finds no actions to zoom into",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Aktionen erkannt. Vorhandene Zooms blieben unverändert."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No actions detected. Existing zooms were left unchanged."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se detectaron acciones. Los zooms existentes se mantuvieron sin cambios."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune action détectée. Les zooms existants sont restés inchangés."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זוהו פעולות. הזומים הקיימים נשארו ללא שינוי."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作が検出されませんでした。既存のズームは変更されていません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "감지된 동작이 없습니다. 기존 확대/축소는 변경되지 않았습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Действия не обнаружены. Существующие масштабирования не изменены."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không phát hiện thao tác nào. Các vùng zoom hiện có được giữ nguyên."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未检测到操作。现有缩放保持不变。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未偵測到操作。現有縮放維持不變。"
+          }
+        }
+      }
+    },
     "video-editor.smart-auto-zoom-regenerate": {
       "comment": "Button label to regenerate Smart Auto-Zoom segments",
       "localizations": {
@@ -18328,6 +18612,77 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新產生智慧縮放"
+          }
+        }
+      }
+    },
+    "video-editor.smart-auto-zoom-replace-all": {
+      "comment": "Destructive action button that replaces all zooms on the timeline with generated Smart Auto-Zooms",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle ersetzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace All"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reemplazar todo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout remplacer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלף הכול"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて置き換える"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 교체"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заменить все"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thay thế toàn bộ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "替换全部"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取代全部"
           }
         }
       }
