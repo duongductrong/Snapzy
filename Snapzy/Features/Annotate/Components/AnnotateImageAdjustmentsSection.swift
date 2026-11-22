@@ -14,12 +14,16 @@ struct AnnotateImageAdjustmentsSection: View {
   let adjustments: ImageAdjustments
   let thumbnails: [ImageFilterPreset: NSImage]
 
-  /// Three columns keep each tile wide enough for a readable thumbnail and a full label in
-  /// the 240pt sidebar.
-  private let presetColumns = Array(
-    repeating: GridItem(.flexible(minimum: 0), spacing: GridConfig.gap, alignment: .top),
-    count: 3
-  )
+  /// Filter grid columns: 3 fit the shared sidebar; the dedicated Adjust tab uses 2 for
+  /// larger, easier-to-compare thumbnails.
+  var presetColumnCount: Int = 3
+
+  private var presetColumns: [GridItem] {
+    Array(
+      repeating: GridItem(.flexible(minimum: 0), spacing: GridConfig.gap, alignment: .top),
+      count: max(1, presetColumnCount)
+    )
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
