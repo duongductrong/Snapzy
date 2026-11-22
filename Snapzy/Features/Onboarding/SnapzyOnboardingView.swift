@@ -10,26 +10,41 @@ import AppKit
 import SwiftUI
 
 struct SnapzyOnboardingView: View {
-  var onDismiss: () -> Void
+  /// Called when onboarding finishes. When `launchIconWindowFrame` is non-nil (user completed via
+  /// "Start Using Snapzy"), the window controller performs the celebratory desktop ascent straight
+  /// into the live macOS menu bar icon.
+  var onDismiss: (_ launchIconWindowFrame: CGRect?) -> Void
 
   @StateObject private var state = SnapzyOnboardingState()
   @State private var isShowingCompletion = false
+  @State private var isLaunchingFinale = false
+  @State private var completionLaunchTrigger = 0
   /// The welcome bloom plays once for fresh starts; resuming a saved step skips straight into it.
   @State private var isShowingWelcome: Bool
   /// Mounted as soon as the user initiates entry from Welcome so the Liquid Glass workspace
   /// rises synchronously behind the parting aurora aperture.
   @State private var isFlowMounted: Bool
   @State private var isFlowSettled: Bool
+  /// Stays `false` while the Welcome screen is flying into the top-left app icon, then flips to
+  /// `true` on the exact landing frame so the real brand icon locks in seamlessly with zero jump.
+  @State private var isBrandIconDocked: Bool
+  @State private var brandIconFrame: CGRect = CGRect(
+    x: SnapzyOnboardingMetrics.gutter,
+    y: (SnapzyOnboardingMetrics.gutter - 10) + (SnapzyOnboardingMetrics.headerHeight - 26) * 0.5,
+    width: 26,
+    height: 26
+  )
   @State private var welcomeStartTrigger = 0
   @Environment(\.accessibilityReduceMotion) private var envReduceMotion
   @EnvironmentObject private var onboardingLocalization: OnboardingLocalizationController
 
-  init(onDismiss: @escaping () -> Void) {
+  init(onDismiss: @escaping (_ launchIconWindowFrame: CGRect?) -> Void) {
     self.onDismiss = onDismiss
     let freshStart = UserDefaults.standard.string(forKey: PreferencesKeys.onboardingActiveStep) == nil
     _isShowingWelcome = State(initialValue: freshStart)
     _isFlowMounted = State(initialValue: !freshStart)
     _isFlowSettled = State(initialValue: !freshStart)
+    _isBrandIconDocked = State(initialValue: !freshStart)
   }
 
   private var reduceMotion: Bool {
@@ -43,23 +58,19 @@ struct SnapzyOnboardingView: View {
       if isFlowMounted {
         VStack(spacing: 0) {
           header
-            .opacity(isFlowSettled ? 1 : 0)
-            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : -14))
-            .animation(
-              reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.76),
-              value: isFlowSettled
-            )
+            .opacity(isLaunchingFinale ? 0 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: isLaunchingFinale)
 
           content
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
           // Liquid Glass Golden Rule: never animate `.opacity` on a view containing `.glassEffect`
           // (`SnapzyOnboardingActionBar`). Keep it cleanly tucked beneath the window's bottom clip
-          // during prewarm and slide smoothly into place as the aurora glides aside.
+          // during prewarm and slide smoothly into place as the aurora contracts to the logo.
           footer
-            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 72))
+            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 64))
             .animation(
-              reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.78).delay(0.08),
+              reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.84).delay(0.10),
               value: isFlowSettled
             )
         }
@@ -71,11 +82,19 @@ struct SnapzyOnboardingView: View {
       if isShowingWelcome {
         SnapzyOnboardingWelcome(
           externalStartTrigger: welcomeStartTrigger,
+          targetLogoFrame: brandIconFrame,
           onReadyForPrewarm: prewarmFlow,
           onBeginTransition: beginFlowReveal,
+          onDockLogo: dockBrandLogo,
           onCompleteTransition: completeFlowReveal,
-          onClose: finish
+          onClose: { finish(launchIconWindowFrame: nil) }
         )
+      }
+    }
+    .coordinateSpace(name: OnboardingRootCoordinateSpace.name)
+    .onPreferenceChange(OnboardingBrandIconFrameKey.self) { frame in
+      if frame.width > 0 && frame.height > 0 {
+        brandIconFrame = frame
       }
     }
     .frame(
@@ -95,8 +114,15 @@ struct SnapzyOnboardingView: View {
   @ViewBuilder
   private var content: some View {
     if isShowingCompletion {
-      SnapzyOnboardingCompletionCard(onFinish: finish, onBack: retreat)
-        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+      SnapzyOnboardingCompletionCard(
+        externalLaunchTrigger: completionLaunchTrigger,
+        onBeginLaunch: { isLaunchingFinale = true },
+        onFinish: { iconFrame in
+          finish(launchIconWindowFrame: iconFrame)
+        },
+        onBack: retreat
+      )
+      .transition(.opacity.combined(with: .scale(scale: 0.98)))
     } else if state.currentStep.usesWideLayout {
       SnapzyOnboardingPermissionsView(state: state)
         .transition(stepTransition)
@@ -136,13 +162,13 @@ struct SnapzyOnboardingView: View {
         .id(state.currentStep)
         .transition(stepTransition)
 
-      // The stage stays anchored at its exact final frame so the morphing Welcome aurora locks
-      // onto it pixel-for-pixel and dissolves cleanly to reveal the live macOS desktop inside.
       SnapzyOnboardingMockHost(state: state)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .opacity(isFlowSettled ? 1 : 0)
+        .scaleEffect(reduceMotion ? 1.0 : (isFlowSettled ? 1.0 : 0.965))
+        .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 14))
         .animation(
-          reduceMotion ? .easeOut(duration: 0.20) : .easeOut(duration: 0.35).delay(0.22),
+          reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.86).delay(0.06),
           value: isFlowSettled
         )
     }
@@ -158,13 +184,25 @@ struct SnapzyOnboardingView: View {
         Spacer(minLength: 0)
         HStack(spacing: SnapzySpace.md) {
           SnapzyOnboardingLanguagePicker()
-          SnapzyOnboardingCloseButton(action: finish)
+          SnapzyOnboardingCloseButton(action: { finish(launchIconWindowFrame: nil) })
         }
+        .opacity(isFlowSettled ? 1 : 0)
+        .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : -8))
+        .animation(
+          reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.76).delay(0.08),
+          value: isFlowSettled
+        )
       }
 
       if !isShowingCompletion {
         SnapzyOnboardingStepRail(state: state)
           .frame(maxWidth: 460)
+          .opacity(isFlowSettled ? 1 : 0)
+          .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : -8))
+          .animation(
+            reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.78).delay(0.06),
+            value: isFlowSettled
+          )
           .transition(.opacity)
       }
     }
@@ -180,10 +218,27 @@ struct SnapzyOnboardingView: View {
         .frame(width: 26, height: 26)
         // radius-lint:allow — clips the app icon bitmap; matches the icon's own corner
         .clipShape(Radius.rect(Radius.controlS))
+        // Stays fixed at exact resting coordinates (zero offset) so the Welcome morph lands on it
+        // pixel-for-pixel, then reveals synchronously on dock.
+        .opacity(isBrandIconDocked ? 1 : 0)
+        .background(
+          GeometryReader { geo in
+            Color.clear.preference(
+              key: OnboardingBrandIconFrameKey.self,
+              value: geo.frame(in: .named(OnboardingRootCoordinateSpace.name))
+            )
+          }
+        )
 
       Text("Snapzy")
         .font(.system(size: 14, weight: .semibold))
         .foregroundStyle(SnapzyGlassInk.primary)
+        .opacity(isFlowSettled ? 1 : 0)
+        .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : -8))
+        .animation(
+          reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.62).delay(0.46),
+          value: isFlowSettled
+        )
     }
     .fixedSize()
   }
@@ -262,13 +317,22 @@ struct SnapzyOnboardingView: View {
     isFlowSettled = true
   }
 
+  private func dockBrandLogo() {
+    isBrandIconDocked = true
+  }
+
   private func completeFlowReveal() {
+    isBrandIconDocked = true
     isShowingWelcome = false
   }
 
   private func advance() {
     if isShowingWelcome {
       startFlow()
+      return
+    }
+    if isShowingCompletion {
+      completionLaunchTrigger += 1
       return
     }
     guard state.canGoForward else {
@@ -297,17 +361,18 @@ struct SnapzyOnboardingView: View {
       return
     }
     if isShowingCompletion {
+      guard !isLaunchingFinale else { return }
       withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
         isShowingCompletion = false
       }
     } else if state.canGoBack {
       state.previousStep()
     } else {
-      finish()
+      finish(launchIconWindowFrame: nil)
     }
   }
 
-  private func finish() {
+  private func finish(launchIconWindowFrame: CGRect?) {
     UserDefaults.standard.set(true, forKey: PreferencesKeys.onboardingCompleted)
     UserDefaults.standard.set(true, forKey: PreferencesKeys.splashSkipped)
     UserDefaults.standard.set(true, forKey: PreferencesKeys.sponsorPromptSeen)
@@ -325,6 +390,22 @@ struct SnapzyOnboardingView: View {
       }
     }
 
-    onDismiss()
+    let finaleFrame = (isUnderXCTest || requiresRelaunch) ? nil : launchIconWindowFrame
+    onDismiss(finaleFrame)
+  }
+}
+
+private enum OnboardingRootCoordinateSpace {
+  static let name = "SnapzyOnboardingRootSpace"
+}
+
+private struct OnboardingBrandIconFrameKey: PreferenceKey {
+  static var defaultValue: CGRect = .zero
+
+  static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+    let candidate = nextValue()
+    if candidate.width > 0 && candidate.height > 0 {
+      value = candidate
+    }
   }
 }

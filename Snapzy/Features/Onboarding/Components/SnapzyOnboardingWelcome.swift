@@ -38,39 +38,48 @@ private struct WelcomeRGB {
 
 private enum SnapzyWelcomePalette {
   /// Luminous silk-white cloud peak (clean, never muddy gray).
-  static let pureLight = WelcomeRGB(r: 0.976, g: 0.986, b: 1.000)
+  static let pureLight = WelcomeRGB(r: 0.980, g: 0.988, b: 1.000)
   /// Glacial sky-white pocket — bright and airy, cooled to Snapzy blue.
-  static let icePocket = WelcomeRGB(r: 0.855, g: 0.916, b: 1.000)
-  /// Crystalline mist blue bridging white clouds into electric cobalt without desaturation.
-  static let mistBlue = WelcomeRGB(r: 0.665, g: 0.795, b: 1.000)
-  /// Vivid luminous sky-azure mid-tone.
-  static let skyAzure = WelcomeRGB(r: 0.355, g: 0.525, b: 1.000)
-  /// Exact bottom stop of Snapzy's app icon (`#395FFF`).
-  static let brandAzure = WelcomeRGB(r: 0.224, g: 0.373, b: 1.000)
-  /// Exact top stop of Snapzy's app icon (`#1138FF`).
-  static let brandCobalt = WelcomeRGB(r: 0.067, g: 0.220, b: 1.000)
-  /// Deep ultramarine velvet for rich depth and effortless white-type contrast.
-  static let deepCobalt = WelcomeRGB(r: 0.039, g: 0.135, b: 0.790)
+  static let icePocket = WelcomeRGB(r: 0.875, g: 0.930, b: 1.000)
+  /// Crystalline mist blue bridging white clouds into electric azure without desaturation.
+  static let mistBlue = WelcomeRGB(r: 0.700, g: 0.822, b: 1.000)
+  /// Airy luminous sky-azure mid-tone.
+  static let skyAzure = WelcomeRGB(r: 0.460, g: 0.625, b: 1.000)
+  /// Lively radiant periwinkle-azure surrounding the cobalt core.
+  static let radiantAzure = WelcomeRGB(r: 0.320, g: 0.490, b: 1.000)
+  /// Luminous Snapzy app-icon bright azure (`#3C66FF`).
+  static let brandAzure = WelcomeRGB(r: 0.235, g: 0.400, b: 1.000)
+  /// Radiant electric Snapzy blue (`#2A58FF`) — vibrant without heavy dark navy troughs.
+  static let brandCobalt = WelcomeRGB(r: 0.165, g: 0.345, b: 1.000)
 
   /// Midnight-cobalt void for the opening bloom.
-  static let voidDark = Color(red: 0.010, green: 0.022, blue: 0.068)
+  static let voidDark = Color(red: 0.014, green: 0.032, blue: 0.095)
 
-  /// Atmospheric cobalt shadow tint (keeps white text luminous instead of muddy black).
-  static let cobaltShadow = Color(red: 0.024, green: 0.090, blue: 0.470)
+  /// Atmospheric azure shadow tint (keeps white text luminous instead of muddy black).
+  static let cobaltShadow = Color(red: 0.055, green: 0.155, blue: 0.560)
 
-  /// Crisp velvety hover & press cobalt fills for the arrow button (flat, editorial, zero gloss).
-  static let buttonHoverFill = Color(red: 0.043, green: 0.145, blue: 0.785)
-  static let buttonPressFill = Color(red: 0.031, green: 0.110, blue: 0.640)
+  /// Crisp hover & press electric-blue fills for the arrow button (flat, editorial, zero gloss).
+  static let buttonHoverFill = Color(red: 0.115, green: 0.275, blue: 0.920)
+  static let buttonPressFill = Color(red: 0.088, green: 0.225, blue: 0.810)
 }
 
 // MARK: - Main Welcome View
 
 struct SnapzyOnboardingWelcome: View {
   var externalStartTrigger: Int = 0
+  /// Exact pixel frame of the top-left `26×26` Snapzy app icon in the onboarding root coordinate
+  /// space so the exiting Welcome screen contracts and docks straight into the brand logo.
+  var targetLogoFrame: CGRect = CGRect(
+    x: SnapzyOnboardingMetrics.gutter,
+    y: (SnapzyOnboardingMetrics.gutter - 10) + (SnapzyOnboardingMetrics.headerHeight - 26) * 0.5,
+    width: 26,
+    height: 26
+  )
   /// Called once the welcome CTA is visible so the host can silently pre-warm Step 1 offscreen
   /// behind the opaque aurora — eliminating any frame drop on the click frame.
   var onReadyForPrewarm: () -> Void = {}
   var onBeginTransition: () -> Void
+  var onDockLogo: () -> Void = {}
   var onCompleteTransition: () -> Void
   var onClose: () -> Void
 
@@ -89,11 +98,11 @@ struct SnapzyOnboardingWelcome: View {
   @State private var subtitleIn = false
   @State private var ctaIn = false
   @State private var isExiting = false
-  /// Drives the signature Viewfinder Portal Morph (0.0 = full window aurora → 1.0 = locked onto
-  /// the right-hand macOS desktop stage frame, pixel-perfect).
-  @State private var stageMorphProgress: CGFloat = 0
-  /// Smooth cross-dissolve of the morphed aurora once it settles onto the macOS desktop stage.
-  @State private var stageDissolveOpacity: Double = 1.0
+  /// Drives the silky top-left Logo Dock Morph (0.0 = full window aurora → 1.0 = docked pixel-for-
+  /// pixel onto the 26×26 top-left Snapzy app icon).
+  @State private var logoMorphProgress: CGFloat = 0
+  /// Used only under Reduce Motion for a simple crossfade exit.
+  @State private var reduceMotionOpacity: Double = 1.0
 
   private var reduceMotion: Bool {
     SnapzyMotionPreferences.shared.reduceMotion || envReduceMotion
@@ -141,11 +150,11 @@ struct SnapzyOnboardingWelcome: View {
         welcomeContent
           .frame(width: size.width, height: size.height)
           .opacity(isExiting ? 0 : 1)
-          .blur(radius: isExiting && !reduceMotion ? 14 : 0)
+          .blur(radius: isExiting && !reduceMotion ? 10 : 0)
           .scaleEffect(isExiting && !reduceMotion ? 0.94 : 1.0)
           .offset(y: isExiting && !reduceMotion ? -14 : 0)
           .animation(
-            phaseAnimation(.timingCurve(0.22, 1.0, 0.36, 1.0, duration: 0.34)),
+            phaseAnimation(.timingCurve(0.22, 1.0, 0.36, 1.0, duration: 0.28)),
             value: isExiting
           )
 
@@ -153,7 +162,7 @@ struct SnapzyOnboardingWelcome: View {
         closeButton
           .frame(width: size.width, height: size.height)
           .opacity(isExiting ? 0 : 1)
-          .animation(phaseAnimation(.easeOut(duration: 0.22)), value: isExiting)
+          .animation(phaseAnimation(.easeOut(duration: 0.18)), value: isExiting)
       }
       .frame(width: size.width, height: size.height)
     }
@@ -169,32 +178,38 @@ struct SnapzyOnboardingWelcome: View {
     }
   }
 
-  /// Renders the living aurora inside an animatable Viewfinder Portal frame that smoothly morphs
-  /// from the full onboarding window into the exact `SnapzyOnboardingMockHost` rectangle.
+  /// Renders the living aurora + photographic grain inside a GPU-cached surface that freezes at
+  /// its exact live frame on exit and glides smoothly into the top-left 26×26 Snapzy app icon.
   private func morphingAuroraSurface(in windowSize: CGSize) -> some View {
-    ZStack {
-      WelcomeAuroraBackdrop(drifts: !reduceMotion)
+    let shouldDrift = !reduceMotion && !isExiting
+
+    let baseAurora = ZStack {
+      WelcomeAuroraBackdrop(drifts: shouldDrift)
       WelcomeFilmGrainOverlay()
         .allowsHitTesting(false)
 
       if !isFlooded {
-        WelcomeOrbSwirlCore(progress: portalProgress, drifts: !reduceMotion)
+        WelcomeOrbSwirlCore(progress: portalProgress, drifts: shouldDrift)
           .allowsHitTesting(false)
       }
     }
+    .frame(width: windowSize.width, height: windowSize.height)
+    .drawingGroup(opaque: false)
     .modifier(WelcomeLiquidPortalModifier(
       progress: portalProgress,
       isFullyOpen: isFlooded,
-      drifts: !reduceMotion
+      drifts: shouldDrift
     ))
-    .modifier(WelcomeViewfinderMorphModifier(
-      progress: stageMorphProgress,
-      windowSize: windowSize,
-      isFlooded: isFlooded,
-      isExiting: isExiting,
-      reduceMotion: reduceMotion
-    ))
-    .opacity(stageDissolveOpacity)
+
+    return baseAurora
+      .modifier(WelcomeLogoMorphModifier(
+        progress: logoMorphProgress,
+        windowSize: windowSize,
+        targetLogoFrame: targetLogoFrame,
+        isFlooded: isFlooded,
+        reduceMotion: reduceMotion
+      ))
+      .opacity(reduceMotionOpacity)
   }
 
   // MARK: - Solo Brand Mark Beat
@@ -358,8 +373,9 @@ struct SnapzyOnboardingWelcome: View {
     if reduceMotion {
       onReadyForPrewarm()
       onBeginTransition()
+      onDockLogo()
       withAnimation(.easeOut(duration: 0.24)) {
-        stageDissolveOpacity = 0.0
+        reduceMotionOpacity = 0.0
       }
       Task { @MainActor in
         try? await Task.sleep(for: .milliseconds(250))
@@ -371,42 +387,42 @@ struct SnapzyOnboardingWelcome: View {
     onReadyForPrewarm()
 
     Task { @MainActor in
-      // Beat 1: Brief optical release of headline & arrow button, then glide the entire living
-      // aurora directly into the right-column macOS desktop stage rectangle like a Snapzy frame.
-      try? await Task.sleep(for: .milliseconds(55))
-      withAnimation(.timingCurve(0.22, 0.04, 0.14, 1.0, duration: 1.05)) {
-        stageMorphProgress = 1.0
+      // Beat 1: Brief optical release of headline & arrow button, then glide the entire frozen
+      // GPU-cached aurora + blooming white Snapzy mark in one continuous 120fps liquid arc right
+      // into the top-left 26×26 brand app icon.
+      try? await Task.sleep(for: .milliseconds(50))
+      withAnimation(.timingCurve(0.22, 0.0, 0.10, 1.0, duration: 1.08)) {
+        logoMorphProgress = 1.0
       }
 
-      // Beat 2: As the aurora glides right and unveils the Liquid Glass workspace on the left,
-      // lift the header, left instruction column, and footer into place in counter-motion.
-      try? await Task.sleep(for: .milliseconds(220))
+      // Beat 2: As the aurora pulls away toward the top-left logo, let the Liquid Glass Step 1
+      // workspace (instruction rail, macOS stage, step rail, footer) breathe smoothly into view.
+      try? await Task.sleep(for: .milliseconds(110))
       onBeginTransition()
 
-      // Beat 3: As the aurora locks seamlessly onto the macOS stage frame, dissolve it like
-      // developing film to reveal the live macOS Notes desktop right inside the exact same frame.
-      try? await Task.sleep(for: .milliseconds(420))
-      withAnimation(.timingCurve(0.25, 0.0, 0.20, 1.0, duration: 0.56)) {
-        stageDissolveOpacity = 0.0
-      }
+      // Beat 3: On exact landing (t = 1.0), lock in the real brand icon underneath the pixel-
+      // identical docked portal, then cleanly retire the Welcome overlay with zero jump.
+      try? await Task.sleep(for: .milliseconds(980))
+      onDockLogo()
 
-      try? await Task.sleep(for: .milliseconds(600))
+      try? await Task.sleep(for: .milliseconds(35))
       onCompleteTransition()
     }
   }
 }
 
-// MARK: - Viewfinder Portal Morph (Full Window Aurora → Right macOS Stage Frame)
+// MARK: - Top-Left Brand Logo Dock Morph (Full Window Aurora → 26×26 Top-Left Snapzy Icon)
 
-/// Morphs the full-window living aurora smoothly into the exact pixel coordinates and corner radius
-/// of `SnapzyOnboardingMockHost`, accompanied by crisp Leica-style Snapzy viewfinder corner
-/// brackets that embrace and lock onto the stage frame. Pure GPU frame/position/clip transforms
-/// guarantee locked 120fps motion with zero offscreen blur passes.
-private struct WelcomeViewfinderMorphModifier: ViewModifier, Animatable {
+/// Contracts the GPU-cached full-window electric-blue aurora along a silky liquid-squircle arc
+/// directly into the exact pixel coordinates and corner radius of the top-left `26×26` Snapzy app
+/// icon. Because the aurora texture is frozen at its exact live frame and scaled strictly on the
+/// GPU (no live `TimelineView` re-renders or layout-size re-rasterization), ProMotion drives the
+/// entire glide at locked 120fps with zero stutter.
+private struct WelcomeLogoMorphModifier: ViewModifier, Animatable {
   var progress: CGFloat
   let windowSize: CGSize
+  let targetLogoFrame: CGRect
   let isFlooded: Bool
-  let isExiting: Bool
   let reduceMotion: Bool
 
   var animatableData: CGFloat {
@@ -417,41 +433,78 @@ private struct WelcomeViewfinderMorphModifier: ViewModifier, Animatable {
   func body(content: Content) -> some View {
     let t = reduceMotion ? 0 : max(0, min(1, progress))
 
-    // Exact target geometry of SnapzyOnboardingMockHost inside SnapzyOnboardingView
-    let gutter = SnapzyOnboardingMetrics.gutter
-    let topPad = gutter - 10
-    let bottomPad = gutter - 12
-    let targetX = gutter + SnapzyOnboardingMetrics.railWidth + SnapzyOnboardingMetrics.columnGap
-    let targetY = topPad + SnapzyOnboardingMetrics.headerHeight + SnapzySpace.lg
-    let targetW = max(120, windowSize.width - targetX - gutter)
-    let targetH = max(120, windowSize.height - targetY - (bottomPad + SnapzyOnboardingMetrics.footerHeight + SnapzySpace.lg))
+    let targetW = max(16, targetLogoFrame.width)
+    let targetH = max(16, targetLogoFrame.height)
+    let targetMidX = targetLogoFrame.midX
+    let targetMidY = targetLogoFrame.midY
 
-    let currentW = windowSize.width + (targetW - windowSize.width) * t
-    let currentH = windowSize.height + (targetH - windowSize.height) * t
+    // Gently square the wide window early in flight so it reads as an organic liquid squircle
+    let tW = pow(t, 0.90)
+    let tH = t
+    let currentW = max(targetW, windowSize.width + (targetW - windowSize.width) * tW)
+    let currentH = max(targetH, windowSize.height + (targetH - windowSize.height) * tH)
+
+    // Subtle weightless swoop arc into the top-left corner (tapers cleanly to 0 at both ends)
     let startMidX = windowSize.width * 0.5
     let startMidY = windowSize.height * 0.5
-    let targetMidX = targetX + targetW * 0.5
-    let targetMidY = targetY + targetH * 0.5
-    let currentMidX = startMidX + (targetMidX - startMidX) * t
-    let currentMidY = startMidY + (targetMidY - startMidY) * t
+    let arcSine = sin(t * .pi)
+    let currentMidX = startMidX + (targetMidX - startMidX) * t + 22 * arcSine
+    let currentMidY = startMidY + (targetMidY - startMidY) * t - 14 * arcSine
 
-    let currentRadius = SnapzyRadius.window + (SnapzyOnboardingMetrics.stageRadius - SnapzyRadius.window) * t
-    let shape = RoundedRectangle(cornerRadius: currentRadius, style: .continuous) // radius-lint:allow — continuous interpolation between Radius.window and Radius.panel
+    // Continuous squircle corner radius: window corner (26) → plump mid-flight squircle → icon (8)
+    let minDim = min(currentW, currentH)
+    let proportionalRadius = minDim * 0.27
+    let linearRadius = SnapzyRadius.window + (Radius.controlS - SnapzyRadius.window) * t
+    let squircleBlend = arcSine * 0.80
+    let currentRadius = min(minDim * 0.46, linearRadius + (proportionalRadius - linearRadius) * squircleBlend)
+    let shape = RoundedRectangle(cornerRadius: currentRadius, style: .continuous) // radius-lint:allow — continuous interpolation between Radius.window and Radius.controlS
 
-    // Crisp Snapzy viewfinder brackets appear gracefully mid-flight and lock cleanly onto corners
-    let bracketFadeIn = min(1.0, max(0.0, (t - 0.06) / 0.22))
-    let bracketFadeOut = min(1.0, max(0.0, (1.0 - t) / 0.18))
-    let bracketOpacity = Double(bracketFadeIn * (0.45 + 0.55 * bracketFadeOut))
+    // Crisp white Snapzy mark blooms as the portal detaches, then cross-blends seamlessly into the
+    // real macOS app icon in the final approach so arrival is 100% pixel-identical.
+    let markFadeIn = min(1.0, max(0.0, Double((t - 0.03) / 0.22)))
+    let appIconBlend = min(1.0, max(0.0, Double((t - 0.72) / 0.24)))
+    let markOpacity = markFadeIn * (1.0 - appIconBlend)
+    let markSize = minDim * 0.54
 
-    content
-      .frame(width: currentW, height: currentH)
-      .clipShape(shape)
-      .overlay {
+    let sx = windowSize.width > 0 ? currentW / windowSize.width : 1
+    let sy = windowSize.height > 0 ? currentH / windowSize.height : 1
+
+    ZStack {
+      // GPU-scaled cached aurora texture (zero Metal mesh re-rasterization per frame)
+      content
+        .scaleEffect(x: sx, y: sy, anchor: .center)
+
+      if markOpacity > 0.005 {
+        Image("WelcomeMark")
+          .resizable()
+          .interpolation(.high)
+          .aspectRatio(contentMode: .fit)
+          .frame(width: markSize, height: markSize)
+          .shadow(color: SnapzyWelcomePalette.cobaltShadow.opacity(0.24 * markOpacity), radius: max(2, minDim * 0.08), y: max(1, minDim * 0.03))
+          .opacity(markOpacity)
+          .allowsHitTesting(false)
+      }
+
+      if appIconBlend > 0.005 {
+        Image(nsImage: NSApp.applicationIconImage)
+          .resizable()
+          .interpolation(.high)
+          .aspectRatio(contentMode: .fill)
+          .frame(width: currentW, height: currentH)
+          .opacity(appIconBlend)
+          .allowsHitTesting(false)
+      }
+    }
+    .frame(width: currentW, height: currentH)
+    .clipShape(shape)
+    .overlay {
+      let rimFade = 1.0 - appIconBlend
+      if rimFade > 0.01 {
         shape.strokeBorder(
           LinearGradient(
             colors: [
-              Color.white.opacity(isFlooded ? (0.34 - 0.10 * Double(t)) : 0.14),
-              Color.white.opacity(isFlooded ? (0.10 - 0.04 * Double(t)) : 0.05),
+              Color.white.opacity((isFlooded ? 0.34 : 0.14) * rimFade),
+              Color.white.opacity((isFlooded ? 0.10 : 0.05) * rimFade),
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -460,61 +513,14 @@ private struct WelcomeViewfinderMorphModifier: ViewModifier, Animatable {
         )
         .allowsHitTesting(false)
       }
-      .overlay {
-        if t > 0.01 {
-          WelcomeViewfinderBrackets(cornerRadius: currentRadius)
-            .stroke(
-              Color.white.opacity(0.88 * bracketOpacity),
-              style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
-            )
-            .padding(10 - 4 * t)
-            .allowsHitTesting(false)
-        }
-      }
-      .shadow(
-        color: Color.black.opacity(0.34 * Double(t)),
-        radius: 28 * t,
-        x: -4 * t,
-        y: 14 * t
-      )
-      .position(x: currentMidX, y: currentMidY)
-  }
-}
-
-/// Minimalist Leica-inspired 4-corner capture viewfinder brackets — pure vector geometry, zero glow.
-private struct WelcomeViewfinderBrackets: Shape {
-  var cornerRadius: CGFloat
-
-  func path(in rect: CGRect) -> Path {
-    let arm: CGFloat = 20
-    let r = max(4, min(cornerRadius - 4, 14))
-    var path = Path()
-
-    // Top-leading corner
-    path.move(to: CGPoint(x: rect.minX, y: rect.minY + arm))
-    path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + r))
-    path.addQuadCurve(to: CGPoint(x: rect.minX + r, y: rect.minY), control: CGPoint(x: rect.minX, y: rect.minY))
-    path.addLine(to: CGPoint(x: rect.minX + arm, y: rect.minY))
-
-    // Top-trailing corner
-    path.move(to: CGPoint(x: rect.maxX - arm, y: rect.minY))
-    path.addLine(to: CGPoint(x: rect.maxX - r, y: rect.minY))
-    path.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY + r), control: CGPoint(x: rect.maxX, y: rect.minY))
-    path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + arm))
-
-    // Bottom-trailing corner
-    path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - arm))
-    path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - r))
-    path.addQuadCurve(to: CGPoint(x: rect.maxX - r, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
-    path.addLine(to: CGPoint(x: rect.maxX - arm, y: rect.maxY))
-
-    // Bottom-leading corner
-    path.move(to: CGPoint(x: rect.minX + arm, y: rect.maxY))
-    path.addLine(to: CGPoint(x: rect.minX + r, y: rect.maxY))
-    path.addQuadCurve(to: CGPoint(x: rect.minX, y: rect.maxY - r), control: CGPoint(x: rect.minX, y: rect.maxY))
-    path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - arm))
-
-    return path
+    }
+    .shadow(
+      color: Color.black.opacity(0.32 * Double(arcSine)),
+      radius: 26 * arcSine,
+      x: 0,
+      y: 12 * arcSine
+    )
+    .position(x: currentMidX, y: currentMidY)
   }
 }
 
@@ -659,8 +665,8 @@ private struct WelcomeOrbAmbientAura: View, Animatable {
       .fill(
         RadialGradient(
           stops: [
-            .init(color: SnapzyWelcomePalette.brandCobalt.color.opacity(0.28 * opacity), location: 0.0),
-            .init(color: SnapzyWelcomePalette.deepCobalt.color.opacity(0.10 * opacity), location: 0.52),
+            .init(color: SnapzyWelcomePalette.brandAzure.color.opacity(0.30 * opacity), location: 0.0),
+            .init(color: SnapzyWelcomePalette.brandCobalt.color.opacity(0.12 * opacity), location: 0.52),
             .init(color: .clear, location: 1.0),
           ],
           center: .center,
@@ -739,10 +745,10 @@ private struct WelcomeOrbSwirlCore: View, Animatable {
           SnapzyWelcomePalette.pureLight.color,
           SnapzyWelcomePalette.icePocket.color,
           SnapzyWelcomePalette.brandCobalt.color,
-          SnapzyWelcomePalette.brandCobalt.color,
           SnapzyWelcomePalette.brandAzure.color,
+          SnapzyWelcomePalette.radiantAzure.color,
           SnapzyWelcomePalette.pureLight.color,
-          SnapzyWelcomePalette.deepCobalt.color,
+          SnapzyWelcomePalette.brandCobalt.color,
           SnapzyWelcomePalette.icePocket.color,
           SnapzyWelcomePalette.pureLight.color,
         ],
@@ -755,7 +761,7 @@ private struct WelcomeOrbSwirlCore: View, Animatable {
           SnapzyWelcomePalette.pureLight.color,
           SnapzyWelcomePalette.brandCobalt.color,
           SnapzyWelcomePalette.icePocket.color,
-          SnapzyWelcomePalette.deepCobalt.color,
+          SnapzyWelcomePalette.brandAzure.color,
           SnapzyWelcomePalette.pureLight.color,
         ],
         center: .center,
@@ -783,18 +789,25 @@ private struct WelcomeAuroraBackdrop: View {
   }
 }
 
+/// Tracks the live aurora clock without triggering SwiftUI state invalidations so pausing drift
+/// on exit freezes at the exact current frame with zero visual jump.
+private final class WelcomeAuroraClock {
+  var lastTime: TimeInterval = 2.1
+}
+
 @available(macOS 15.0, *)
 private struct WelcomeMesh5x5Backdrop: View {
   var drifts: Bool
+  @State private var clock = WelcomeAuroraClock()
 
-  // High-chroma Snapzy electric-cobalt → pure silk-white ramp: anchors deep cobalt richness
-  // alongside bright pure-white clouds without washing out into pale pastel midtones.
+  // Luminous radiant Snapzy electric-azure → pure silk-white ramp: eliminates dark navy pockets
+  // and keeps the vibrant mid-electric blue surrounding the core flowing smoothly into bright mist.
   private static let paletteRamp: [WelcomeRGB] = [
-    WelcomeRGB(r: 0.028, g: 0.098, b: 0.760), // deep electric ultramarine
-    SnapzyWelcomePalette.brandCobalt,         // #1138FF (Snapzy icon top)
-    SnapzyWelcomePalette.brandCobalt,         // extended electric-cobalt body
-    SnapzyWelcomePalette.brandAzure,          // #395FFF (Snapzy icon bottom)
-    SnapzyWelcomePalette.skyAzure,            // vivid bridge azure
+    SnapzyWelcomePalette.brandCobalt,         // #2A58FF radiant electric blue (no dark navy!)
+    SnapzyWelcomePalette.brandAzure,          // #3C66FF luminous Snapzy azure
+    SnapzyWelcomePalette.radiantAzure,        // #527DFF airy electric periwinkle
+    SnapzyWelcomePalette.skyAzure,            // #759FFF bright sky azure
+    SnapzyWelcomePalette.mistBlue,            // #B3D2FF crystalline mist
     SnapzyWelcomePalette.icePocket,           // crisp ice mist
     SnapzyWelcomePalette.pureLight,           // pure silk white peak
   ]
@@ -866,12 +879,12 @@ private struct WelcomeMesh5x5Backdrop: View {
       let raw = 0.46 + 0.46 * wave1 + 0.28 * wave2
       var field = max(0.0, min(1.0, raw))
 
-      // Keep the center typography zone anchored in vivid electric cobalt (≤ 0.46) so white text
+      // Keep the center typography zone anchored in radiant electric blue (≤ 0.34) so white text
       // stays crisp while bright silk-white clouds sweep boldly around all four flanks and corners.
       let nx = dx / 0.34
       let ny = dy / 0.24
       let centerProximity = exp(-(nx * nx + ny * ny) * 1.25)
-      let maxCenterField = 0.44
+      let maxCenterField = 0.34
       if field > maxCenterField {
         field -= (field - maxCenterField) * centerProximity * 0.90
       }
@@ -892,10 +905,12 @@ private struct WelcomeMesh5x5Backdrop: View {
   var body: some View {
     if drifts {
       TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { context in
-        mesh(at: context.date.timeIntervalSinceReferenceDate)
+        let t = context.date.timeIntervalSinceReferenceDate
+        let _ = (clock.lastTime = t)
+        mesh(at: t)
       }
     } else {
-      mesh(at: 2.1)
+      mesh(at: clock.lastTime)
     }
   }
 
@@ -922,7 +937,7 @@ private struct WelcomeLegacyAuroraBackdrop: View {
           colors: [
             SnapzyWelcomePalette.brandCobalt.color,
             SnapzyWelcomePalette.brandAzure.color,
-            SnapzyWelcomePalette.deepCobalt.color,
+            SnapzyWelcomePalette.radiantAzure.color,
           ],
           startPoint: .topLeading,
           endPoint: .bottomTrailing
@@ -999,19 +1014,19 @@ private struct WelcomeLegacyAuroraBackdrop: View {
 
 // MARK: - Tactile Clean Photographic Film Grain
 
-/// Editorial monochromatic micro-grain generated once at init with a clean bell-curve distribution
-/// around neutral mid-gray (128 ± 72). Composited in `.softLight`, which naturally attenuates near
-/// pure white so bright clouds stay spotless while electric-cobalt gradients gain a velvety,
-/// tactile print texture with zero banding or dirty noise speckles.
+/// Editorial monochromatic 35mm micro-grain generated once at init with a crisp 2-tap triangular
+/// distribution around neutral mid-gray (128 ± 124) on a 512×512 non-repeating tile. Composited in
+/// `.overlay`, giving the radiant azure aurora a distinctly rich, velvety print grain while
+/// naturally attenuating near pure white so bright clouds stay clean and luminous.
 private struct WelcomeFilmGrainOverlay: View {
-  private static let tileImage: CGImage? = makeGrainTile(size: 256)
+  private static let tileImage: CGImage? = makeGrainTile(size: 512)
 
   var body: some View {
     if let cgImage = Self.tileImage {
-      Image(decorative: cgImage, scale: 1.5)
+      Image(decorative: cgImage, scale: 1.4)
         .resizable(resizingMode: .tile)
-        .blendMode(.softLight)
-        .opacity(0.56)
+        .blendMode(.overlay)
+        .opacity(0.32)
     }
   }
 
@@ -1029,10 +1044,10 @@ private struct WelcomeFilmGrainOverlay: View {
       return Int(z & 0xFF)
     }
 
-    // Triangular/Gaussian sum avoids harsh black/white outlier dust while staying visibly crisp
+    // 2-tap triangular sum gives richer photographic grain contrast without harsh salt-and-pepper
     for i in 0..<pixels.count {
-      let sum = nextByte() + nextByte() + nextByte() // 0...765, mean 382.5
-      let centered = (sum - 382) * 86 / 382          // ±86 clean bell curve
+      let sum = nextByte() + nextByte()      // 0...510, mean 255
+      let centered = (sum - 255) * 124 / 255 // ±124 crisp analog grain
       pixels[i] = UInt8(clamping: 128 + centered)
     }
 

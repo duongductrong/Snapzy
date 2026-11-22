@@ -26,9 +26,9 @@ enum SnapzyMockApp: String, Equatable {
 
   var menus: [String] {
     switch self {
-    case .notes: ["File", "Edit", "View", "Help"]
-    case .finder: ["File", "Edit", "View", "Go"]
-    case .settings: ["Edit", "View", "Help"]
+    case .notes: ["File", "Edit", "View", "Window", "Help"]
+    case .finder: ["File", "Edit", "View", "Go", "Help"]
+    case .settings: ["Edit", "View", "Window", "Help"]
     }
   }
 
@@ -204,34 +204,40 @@ private struct MacBookNotchShape: Shape {
 struct SnapzyMockMenuBar: View, Equatable {
   var app: SnapzyMockApp = .notes
 
-  static let barHeight: CGFloat = 25
+  static let barHeight: CGFloat = 26
 
   var body: some View {
     ZStack(alignment: .top) {
-      // Translucent light macOS menu bar over the studio wallpaper
+      // Seamless frosted macOS translucent menu bar over the light studio wallpaper
       ZStack {
-        Rectangle()
-          .fill(Color.white.opacity(0.80))
+        LinearGradient(
+          colors: [
+            Color.white.opacity(0.68),
+            Color.white.opacity(0.54),
+          ],
+          startPoint: .top,
+          endPoint: .bottom
+        )
 
         HStack(spacing: 0) {
           leadingCluster
-            .padding(.leading, 13)
+            .padding(.leading, 12)
 
-          Spacer(minLength: 108)
+          Spacer(minLength: 96)
 
           trailingCluster
-            .padding(.trailing, 13)
+            .padding(.trailing, 12)
         }
       }
       .frame(height: Self.barHeight)
       .overlay(alignment: .bottom) {
         Rectangle()
-          .fill(Color.black.opacity(0.08))
+          .fill(Color.black.opacity(0.05))
           .frame(height: 0.5)
       }
 
-      // Authentic MacBook hardware camera notch: anchored flush at y = 0, centered horizontally,
-      // matching the full menu bar height just like real macOS on notched MacBooks.
+      // Authentic MacBook hardware camera notch: anchored flush at y = 0, matte black bezel,
+      // smooth concave shoulders meeting the screen top edge cleanly.
       cameraNotch
     }
     .frame(maxWidth: .infinity)
@@ -240,73 +246,118 @@ struct SnapzyMockMenuBar: View, Equatable {
   }
 
   private var leadingCluster: some View {
-    HStack(spacing: 10) {
+    HStack(spacing: 11) {
       Image(systemName: "apple.logo")
-        .font(.system(size: 11, weight: .medium))
+        .font(.system(size: 11.5, weight: .semibold))
+        .offset(y: -0.5)
 
       Text(app.menuTitle)
         .font(.system(size: 10.5, weight: .bold))
+        .tracking(-0.1)
 
       ForEach(app.menus, id: \.self) { menu in
         Text(menu)
+          .tracking(-0.08)
       }
     }
-    // Sized so the cluster always clears the centred notch cleanly at every onboarding window width.
     .font(.system(size: 10.5, weight: .medium))
-    .foregroundStyle(SnapzyMockPalette.ink.opacity(0.88))
+    .foregroundStyle(SnapzyMockPalette.ink.opacity(0.90))
     .fixedSize()
   }
 
   private var trailingCluster: some View {
-    HStack(spacing: 8) {
-      Image(systemName: "camera.viewfinder")
-        .font(.system(size: 9.5, weight: .semibold))
+    HStack(spacing: 9) {
+      // Snapzy's actual 4-petal menu bar glyph rendered as a crisp macOS template icon
+      Image("WelcomeMark")
+        .renderingMode(.template)
+        .resizable()
+        .interpolation(.high)
+        .aspectRatio(contentMode: .fit)
+        .frame(width: 10.5, height: 10.5)
 
       Image(systemName: "wifi")
-        .font(.system(size: 9.5, weight: .medium))
+        .font(.system(size: 10, weight: .semibold))
 
-      Image(systemName: "battery.100")
-        .font(.system(size: 11.5, weight: .regular))
+      MacOSMenuBarBattery()
 
       Image(systemName: "magnifyingglass")
-        .font(.system(size: 9.5, weight: .medium))
+        .font(.system(size: 9.5, weight: .semibold))
 
-      Image(systemName: "switch.2")
-        .font(.system(size: 9.5, weight: .medium))
+      MacOSControlCenterGlyph()
 
-      Text("9:41 AM")
-        .font(.system(size: 10, weight: .medium))
+      Text("Sun Nov 22  9:41")
+        .font(.system(size: 10.5, weight: .medium))
+        .tracking(-0.1)
         .monospacedDigit()
     }
-    .foregroundStyle(SnapzyMockPalette.ink.opacity(0.88))
+    .foregroundStyle(SnapzyMockPalette.ink.opacity(0.90))
     .fixedSize()
   }
 
   private var cameraNotch: some View {
     ZStack {
-      MacBookNotchShape(shoulderRadius: 5, bottomRadius: 7)
+      MacBookNotchShape(shoulderRadius: 5, bottomRadius: 6.5)
         .fill(SnapzyMockPalette.bezel)
 
-      // Recessed FaceTime HD camera optics
-      HStack(spacing: 5) {
-        Circle()
-          .fill(Color(white: 0.14))
-          .frame(width: 6, height: 6)
-          .overlay(
-            Circle()
-              .fill(Color(red: 0.04, green: 0.05, blue: 0.09))
-              .frame(width: 3.8, height: 3.8)
-          )
-          .overlay(
-            Circle()
-              .fill(Color(red: 0.24, green: 0.42, blue: 0.72).opacity(0.55))
-              .frame(width: 1.4, height: 1.4)
-              .offset(x: -0.6, y: -0.6)
-          )
-      }
-      .offset(y: -0.5)
+      // Subtle recessed FaceTime HD camera optics (quiet dark glass, no cartoonish glow)
+      Circle()
+        .fill(Color(white: 0.12))
+        .frame(width: 5, height: 5)
+        .overlay(
+          Circle()
+            .fill(Color(red: 0.04, green: 0.05, blue: 0.08))
+            .frame(width: 3, height: 3)
+        )
+        .offset(y: -0.5)
     }
-    .frame(width: 100, height: Self.barHeight)
+    .frame(width: 90, height: 22)
+  }
+}
+
+/// Crisp solid-fill macOS battery indicator matching modern Sonoma/Sequoia/Tahoe menu bar geometry.
+private struct MacOSMenuBarBattery: View {
+  var body: some View {
+    HStack(spacing: 1) {
+      RoundedRectangle(cornerRadius: 2.3, style: .continuous) // radius-lint:allow — micro 8.5pt macOS battery capsule geometry
+        .fill(.primary)
+        .frame(width: 16.5, height: 8.5)
+
+      UnevenRoundedRectangle(
+        topLeadingRadius: 0,
+        bottomLeadingRadius: 0,
+        bottomTrailingRadius: 1.2,
+        topTrailingRadius: 1.2
+      )
+      .fill(.primary.opacity(0.75))
+      .frame(width: 1.4, height: 3.4)
+    }
+  }
+}
+
+/// Authentic two-row macOS Control Center double-toggle glyph matching the real menu bar.
+private struct MacOSControlCenterGlyph: View {
+  var body: some View {
+    VStack(spacing: 1.8) {
+      ZStack(alignment: .trailing) {
+        Capsule(style: .continuous)
+          .strokeBorder(.primary, lineWidth: 1.0)
+          .frame(width: 11, height: 4.4)
+        Circle()
+          .fill(.primary)
+          .frame(width: 3.2, height: 3.2)
+          .padding(.trailing, 0.7)
+      }
+
+      ZStack(alignment: .leading) {
+        Capsule(style: .continuous)
+          .fill(.primary)
+          .frame(width: 11, height: 4.4)
+        Circle()
+          .fill(Color.white.opacity(0.92))
+          .frame(width: 2.6, height: 2.6)
+          .padding(.leading, 1.0)
+      }
+    }
   }
 }
 

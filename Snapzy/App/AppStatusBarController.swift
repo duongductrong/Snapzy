@@ -39,6 +39,14 @@ final class AppStatusBarController: ObservableObject {
     viewModel
   }
 
+  /// Screen-space frame (AppKit bottom-left coordinates) of the live menu bar icon, when visible.
+  var statusItemScreenFrame: CGRect? {
+    guard let button = statusItem?.button, let window = button.window else { return nil }
+    let frame = window.frame
+    guard frame.width > 0, frame.height > 0 else { return nil }
+    return frame
+  }
+
   // Track if we elevated activation policy for Settings window
   private var didElevateForSettings = false
   private weak var trackedPreferencesWindow: NSWindow?

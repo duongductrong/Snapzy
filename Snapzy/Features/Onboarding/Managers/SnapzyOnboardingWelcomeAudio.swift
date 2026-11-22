@@ -24,6 +24,7 @@ final class SnapzyOnboardingWelcomeAudio {
   private var cachedReducedScoreWAV: Data?
   private var cachedHoverTickWAV: Data?
   private var cachedConfirmChimeWAV: Data?
+  private var cachedCompletionChimeWAV: Data?
 
   private init() {}
 
@@ -119,6 +120,26 @@ final class SnapzyOnboardingWelcomeAudio {
       guard let self, self.soundsEnabled else { return }
       self.cachedConfirmChimeWAV = data
       self.playOneShot(data: data, volume: 0.56)
+    }
+  }
+
+  /// Warm two-beat resolving chord synced to the completion finale:
+  /// Beat 1 (0.0s) lifts the icon from the window; Beat 2 (0.88s) chimes crisply on menu bar dock.
+  func playCompletionChime() {
+    guard soundsEnabled else { return }
+    stopAmbient(fadeDuration: 0.6)
+
+    if let data = cachedCompletionChimeWAV {
+      playOneShot(data: data, volume: 0.58)
+      return
+    }
+    Task { [weak self] in
+      let data = await Task.detached(priority: .userInitiated) {
+        WelcomeAudioSynthesizer.renderCompletionChimeWAV()
+      }.value
+      guard let self, self.soundsEnabled else { return }
+      self.cachedCompletionChimeWAV = data
+      self.playOneShot(data: data, volume: 0.58)
     }
   }
 
@@ -380,6 +401,51 @@ private nonisolated enum WelcomeAudioSynthesizer {
 
     applyStereoReverb(left: &left, right: &right, wetMix: 0.28, feedback: 0.44)
     applyMasterPolish(left: &left, right: &right, targetPeak: 0.78)
+    return encodeStereoWAV(left: left, right: right)
+  }
+
+  // MARK: - Completion Ascent & Menu Bar Dock Chime (~2.45s synced two-beat sign-off)
+
+  static func renderCompletionChimeWAV() -> Data {
+    let totalDuration = 2.45
+    let frameCount = Int(totalDuration * sampleRate)
+    var left = [Double](repeating: 0, count: frameCount)
+    var right = [Double](repeating: 0, count: frameCount)
+
+    // Beat 1 (0.00s): Warm analog Cmaj9 lift as the completion cards release and the icon ascends
+    addAnalogPadChord(
+      PadChord(
+        start: 0.00, duration: 0.92, attack: 0.14, release: 1.05,
+        gain: 0.26, brightness: 0.58,
+        notes: [261.63, 329.63, 392.00, 493.88, 587.33] // C4 E4 G4 B4 D5
+      ),
+      left: &left,
+      right: &right
+    )
+
+    let launchNotes: [GlassBell] = [
+      GlassBell(start: 0.00, duration: 0.75, frequency: 523.25, gain: 0.16, pan: -0.14), // C5
+      GlassBell(start: 0.05, duration: 0.80, frequency: 659.25, gain: 0.18, pan: 0.10),  // E5
+    ]
+    for bell in launchNotes {
+      addGlassBell(bell, left: &left, right: &right)
+    }
+
+    // Subtle silky air breath during ascent
+    addAirBloomSwell(start: 0.18, peak: 0.56, end: 0.92, gain: 0.022, left: &left, right: &right)
+
+    // Beat 2 (0.90s): Crystalline resolving glass dock harmonic right as the icon lands in the menu bar
+    let dockNotes: [GlassBell] = [
+      GlassBell(start: 0.90, duration: 1.35, frequency: 783.99, gain: 0.26, pan: -0.12), // G5
+      GlassBell(start: 0.94, duration: 1.35, frequency: 1174.66, gain: 0.19, pan: 0.18), // D6
+      GlassBell(start: 0.98, duration: 1.25, frequency: 1567.98, gain: 0.08, pan: 0.24), // G6 airy shimmer
+    ]
+    for bell in dockNotes {
+      addGlassBell(bell, left: &left, right: &right)
+    }
+
+    applyStereoReverb(left: &left, right: &right, wetMix: 0.32, feedback: 0.48)
+    applyMasterPolish(left: &left, right: &right, targetPeak: 0.78, tailFadeSeconds: 0.55)
     return encodeStereoWAV(left: left, right: right)
   }
 

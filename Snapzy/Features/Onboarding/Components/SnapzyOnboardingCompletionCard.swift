@@ -9,12 +9,22 @@ import AppKit
 import SwiftUI
 
 struct SnapzyOnboardingCompletionCard: View {
-  var onFinish: () -> Void
+  var externalLaunchTrigger: Int = 0
+  var onBeginLaunch: () -> Void = {}
+  var onFinish: (_ iconWindowFrame: CGRect?) -> Void
   var onBack: (() -> Void)?
 
   /// The page arrives in beats instead of switching on as one block. This is the least-frequent
   /// screen in the flow, which is the one place a staged entrance is worth its length.
   @State private var hasAppeared = false
+  @State private var isLaunching = false
+  @State private var didHandOffIcon = false
+  @State private var iconWindowFrame: CGRect?
+  @Environment(\.accessibilityReduceMotion) private var envReduceMotion
+
+  private var reduceMotion: Bool {
+    SnapzyMotionPreferences.shared.reduceMotion || envReduceMotion
+  }
 
   var body: some View {
     VStack(spacing: SnapzySpace.giant) {
@@ -23,26 +33,75 @@ struct SnapzyOnboardingCompletionCard: View {
 
       capabilitiesGrid
         .entrance(1, appeared: hasAppeared, step: 0.06)
+        .opacity(isLaunching ? 0 : 1)
+        .scaleEffect(isLaunching && !reduceMotion ? 0.97 : 1.0)
+        .offset(y: isLaunching && !reduceMotion ? 14 : 0)
+        .animation(reduceMotion ? nil : .timingCurve(0.22, 1.0, 0.36, 1.0, duration: 0.24), value: isLaunching)
 
       communityRow
         .entrance(2, appeared: hasAppeared, step: 0.06)
+        .opacity(isLaunching ? 0 : 1)
+        .offset(y: isLaunching && !reduceMotion ? 12 : 0)
+        .animation(reduceMotion ? nil : .timingCurve(0.22, 1.0, 0.36, 1.0, duration: 0.22), value: isLaunching)
 
       primaryActionRow
         .entrance(3, appeared: hasAppeared, step: 0.06)
+        .opacity(isLaunching ? 0 : 1)
+        .scaleEffect(isLaunching && !reduceMotion ? 0.96 : 1.0)
+        .offset(y: isLaunching && !reduceMotion ? 10 : 0)
+        .animation(reduceMotion ? nil : .timingCurve(0.22, 1.0, 0.36, 1.0, duration: 0.20), value: isLaunching)
     }
     .frame(maxWidth: 760)
+    .allowsHitTesting(!isLaunching)
     .onAppear { hasAppeared = true }
+    .onChange(of: externalLaunchTrigger) { _ in
+      triggerLaunch()
+    }
   }
 
   // MARK: - Hero
 
   private var hero: some View {
     VStack(spacing: SnapzySpace.xxl) {
-      Image(nsImage: NSApp.applicationIconImage)
-        .resizable()
-        .aspectRatio(contentMode: .fit)
-        .frame(width: 56, height: 56)
-        .clipShape(Radius.rect(Radius.card))
+      ZStack {
+        // Minimalist Leica-inspired precision viewfinder brackets that briefly frame the icon
+        // right before it ascends to the macOS menu bar (pure hairline vector, zero glow).
+        CompletionViewfinderBrackets()
+          .stroke(
+            Color.white.opacity(isLaunching && !didHandOffIcon ? 0.72 : 0),
+            style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round)
+          )
+          .frame(width: 72, height: 72)
+          .scaleEffect(isLaunching ? 1.0 : 1.24)
+          .animation(
+            reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.22),
+            value: isLaunching
+          )
+
+        Image(nsImage: NSApp.applicationIconImage)
+          .resizable()
+          .aspectRatio(contentMode: .fit)
+          .frame(width: 56, height: 56)
+          .clipShape(Radius.rect(Radius.card))
+          .scaleEffect(isLaunching && !reduceMotion ? 1.08 : 1.0)
+          .opacity(didHandOffIcon ? 0 : 1)
+          .animation(
+            reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.22),
+            value: isLaunching
+          )
+          .background(
+            GeometryReader { geo in
+              Color.clear
+                .onAppear { iconWindowFrame = geo.frame(in: .global) }
+                .onChange(of: geo.frame(in: .global)) { newFrame in
+                  if newFrame.width > 0 && newFrame.height > 0 && !isLaunching {
+                    iconWindowFrame = newFrame
+                  }
+                }
+            }
+          )
+      }
+      .frame(width: 56, height: 56)
 
       VStack(spacing: SnapzySpace.lg) {
         SnapzyOnboardingOverline(L10n.Onboarding.completionCardOverline)
@@ -60,6 +119,30 @@ struct SnapzyOnboardingCompletionCard: View {
           .fixedSize(horizontal: false, vertical: true)
           .frame(maxWidth: 580)
       }
+      .opacity(isLaunching ? 0 : 1)
+      .offset(y: isLaunching && !reduceMotion ? 10 : 0)
+      .animation(reduceMotion ? nil : .timingCurve(0.22, 1.0, 0.36, 1.0, duration: 0.22), value: isLaunching)
+    }
+  }
+
+  private func triggerLaunch() {
+    guard !isLaunching else { return }
+    isLaunching = true
+    onBeginLaunch()
+    SnapzyOnboardingWelcomeAudio.shared.playCompletionChime()
+
+    if reduceMotion {
+      didHandOffIcon = true
+      onFinish(iconWindowFrame)
+      return
+    }
+
+    Task { @MainActor in
+      // Hold one crisp 220ms framing beat as the cards release and viewfinder brackets lock on,
+      // then hand the icon seamlessly to the desktop overlay for its 120fps ascent to the menu bar.
+      try? await Task.sleep(for: .milliseconds(220))
+      didHandOffIcon = true
+      onFinish(iconWindowFrame)
     }
   }
 
@@ -137,7 +220,7 @@ struct SnapzyOnboardingCompletionCard: View {
         continueKey: "\u{21A9}",
         isContinueEnabled: true,
         isHinted: true,
-        onContinue: onFinish
+        onContinue: triggerLaunch
       )
 
       if let onBack {
@@ -249,8 +332,44 @@ private struct CommunityLinkPill: View {
       .contentShape(shape)
     }
     .buttonStyle(.plain)
-    .onHover { hovering in
-      withAnimation(SnapzyMotionPreferences.shared.spec(.hover).animation) { isHovered = hovering }
-    }
+      .onHover { hovering in
+        withAnimation(SnapzyMotionPreferences.shared.spec(.hover).animation) { isHovered = hovering }
+      }
+  }
+}
+
+/// Crisp 4-corner optical viewfinder brackets framing the app icon right before it ascends to the
+/// macOS menu bar. Pure hairline vector geometry, zero glow.
+private struct CompletionViewfinderBrackets: Shape {
+  func path(in rect: CGRect) -> Path {
+    let arm: CGFloat = 12
+    let r: CGFloat = 6
+    var path = Path()
+
+    // Top-leading
+    path.move(to: CGPoint(x: rect.minX, y: rect.minY + arm))
+    path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + r))
+    path.addQuadCurve(to: CGPoint(x: rect.minX + r, y: rect.minY), control: CGPoint(x: rect.minX, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.minX + arm, y: rect.minY))
+
+    // Top-trailing
+    path.move(to: CGPoint(x: rect.maxX - arm, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.maxX - r, y: rect.minY))
+    path.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY + r), control: CGPoint(x: rect.maxX, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + arm))
+
+    // Bottom-trailing
+    path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - arm))
+    path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - r))
+    path.addQuadCurve(to: CGPoint(x: rect.maxX - r, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
+    path.addLine(to: CGPoint(x: rect.maxX - arm, y: rect.maxY))
+
+    // Bottom-leading
+    path.move(to: CGPoint(x: rect.minX + arm, y: rect.maxY))
+    path.addLine(to: CGPoint(x: rect.minX + r, y: rect.maxY))
+    path.addQuadCurve(to: CGPoint(x: rect.minX, y: rect.maxY - r), control: CGPoint(x: rect.minX, y: rect.maxY))
+    path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - arm))
+
+    return path
   }
 }
