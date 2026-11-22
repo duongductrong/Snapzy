@@ -102,8 +102,7 @@ struct AnnotateSidebarView: View, Equatable {
             AnnotateImageAdjustmentsSection(
               state: state,
               adjustments: snapshot.imageAdjustments,
-              thumbnails: state.imageFilterPresetThumbnails,
-              presetColumnCount: 2
+              thumbnails: state.imageFilterPresetThumbnails
             )
           }
 
@@ -113,6 +112,12 @@ struct AnnotateSidebarView: View, Equatable {
       }
       // Each tab keeps its own scroll position instead of inheriting the other's offset.
       .id(visibleTab)
+
+      if visibleTab == .adjust {
+        AnnotateImageAdjustmentsResetBar(state: state, adjustments: snapshot.imageAdjustments)
+          .padding(.horizontal, Spacing.md)
+          .padding(.vertical, Spacing.sm)
+      }
     }
     .frame(maxHeight: .infinity)
   }

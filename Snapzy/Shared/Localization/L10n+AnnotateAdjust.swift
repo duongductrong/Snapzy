@@ -104,5 +104,105 @@ extension L10n {
       defaultValue: "Transfer",
       comment: "Filter preset name: warm vintage look"
     )
+    static let exposure = string(
+      "annotate.adjust.exposure",
+      defaultValue: "Exposure",
+      comment: "Image adjustment slider label: overall exposure in EV"
+    )
+    static let highlights = string(
+      "annotate.adjust.highlights",
+      defaultValue: "Highlights",
+      comment: "Image adjustment slider label: brightness of the bright tones"
+    )
+    static let shadows = string(
+      "annotate.adjust.shadows",
+      defaultValue: "Shadows",
+      comment: "Image adjustment slider label: brightness of the dark tones"
+    )
+    static let whites = string(
+      "annotate.adjust.whites",
+      defaultValue: "Whites",
+      comment: "Image adjustment slider label: white point"
+    )
+    static let blacks = string(
+      "annotate.adjust.blacks",
+      defaultValue: "Blacks",
+      comment: "Image adjustment slider label: black point"
+    )
+    static let temperature = string(
+      "annotate.adjust.temperature",
+      defaultValue: "Temperature",
+      comment: "Image adjustment slider label: color temperature (cooler/warmer)"
+    )
+    static let tint = string(
+      "annotate.adjust.tint",
+      defaultValue: "Tint",
+      comment: "Image adjustment slider label: green/magenta tint"
+    )
+    static let vibrance = string(
+      "annotate.adjust.vibrance",
+      defaultValue: "Vibrance",
+      comment: "Image adjustment slider label: boosts muted colors"
+    )
+    static let clarity = string(
+      "annotate.adjust.clarity",
+      defaultValue: "Clarity",
+      comment: "Image adjustment slider label: local mid-tone contrast"
+    )
+    static let vignette = string(
+      "annotate.adjust.vignette",
+      defaultValue: "Vignette",
+      comment: "Image adjustment slider label: darkens or lightens the image corners"
+    )
+    static let intensity = string(
+      "annotate.adjust.intensity",
+      defaultValue: "Intensity",
+      comment: "Slider label: strength of the selected filter preset"
+    )
+    static let groupLight = string(
+      "annotate.adjust.group.light",
+      defaultValue: "Light",
+      comment: "Image adjustments group title: exposure, contrast, highlights, shadows"
+    )
+    static let groupColor = string(
+      "annotate.adjust.group.color",
+      defaultValue: "Color",
+      comment: "Image adjustments group title: temperature, tint, vibrance, saturation"
+    )
+    static let groupEffects = string(
+      "annotate.adjust.group.effects",
+      defaultValue: "Effects",
+      comment: "Image adjustments group title: clarity, sharpness, vignette"
+    )
+    static let groupResetHelp = string(
+      "annotate.adjust.group.reset-help",
+      defaultValue: "Reset this group",
+      comment: "Tooltip for the button that resets one group of image adjustment sliders"
+    )
+    static let sliderResetHelp = string(
+      "annotate.adjust.slider.reset-help",
+      defaultValue: "Double-click to reset",
+      comment: "Tooltip on an image adjustment slider: double-click resets it"
+    )
+    static let presetWarm = string(
+      "annotate.adjust.preset.warm",
+      defaultValue: "Warm",
+      comment: "Filter preset name: warmer, golden tones"
+    )
+    static let presetCool = string(
+      "annotate.adjust.preset.cool",
+      defaultValue: "Cool",
+      comment: "Filter preset name: cooler, bluish tones"
+    )
+    static let presetDramatic = string(
+      "annotate.adjust.preset.dramatic",
+      defaultValue: "Dramatic",
+      comment: "Filter preset name: punchy contrast with dark corners"
+    )
+    static let presetMatte = string(
+      "annotate.adjust.preset.matte",
+      defaultValue: "Matte",
+      comment: "Filter preset name: lifted blacks, soft muted look"
+    )
   }
 }

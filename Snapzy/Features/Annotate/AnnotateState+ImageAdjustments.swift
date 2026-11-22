@@ -36,7 +36,8 @@ extension AnnotateState {
   private static let adjustmentPreviewPixelBudget = 4_000_000
   /// Pixel budget for live previews while a slider drags (any base size).
   private static let adjustmentGesturePreviewPixelBudget = 2_500_000
-  private static let filterPresetThumbnailMaxDimension: CGFloat = 160
+  /// Pixel size of filter preset thumbnails: the tile's 1:1 box at 2× plus headroom.
+  static let filterPresetThumbnailPixelSize = CGSize(width: 168, height: 168)
 
   /// Adjustments apply to the single base image; combine layouts have no single source, so
   /// the controls hide there unless adjustments made earlier still need a way to be reset.
@@ -103,10 +104,19 @@ extension AnnotateState {
     scheduleImageAdjustmentRender()
   }
 
+  /// Picking a different preset starts it at full strength; re-picking keeps the strength.
   func selectImageFilterPreset(_ preset: ImageFilterPreset) {
     var adjustments = imageAdjustments
+    if adjustments.preset != preset {
+      adjustments.presetIntensity = 100
+    }
     adjustments.preset = preset
     setImageAdjustments(adjustments)
+  }
+
+  /// Sets every slider of `group` back to 0 as one undo step (preset untouched).
+  func resetImageAdjustmentGroup(_ group: ImageAdjustmentGroup) {
+    setImageAdjustments(group.reset(imageAdjustments))
   }
 
   func resetImageAdjustments() {
@@ -349,23 +359,33 @@ extension AnnotateState {
     if !imageFilterPresetThumbnails.isEmpty {
       imageFilterPresetThumbnails = [:]
     }
-    let maxDimension = Self.filterPresetThumbnailMaxDimension
+    let pixelSize = Self.filterPresetThumbnailPixelSize
 
     Task { [weak self] in
       let thumbnails = await Task.detached(priority: .utility) { () -> [ImageFilterPreset: CGImage] in
-        // Downscale once, then run every preset on the small bitmap.
-        guard let small = AnnotateImageAdjustmentRenderer.renderThumbnail(
-          cgImage, adjustments: .identity, maxDimension: maxDimension
-        ) else { return [:] }
+        // Crop + downscale once to the tile size, then run every preset on that small bitmap.
+        guard let small = AnnotateImageAdjustmentRenderer.makeThumbnailBase(cgImage, pixelSize: pixelSize) else {
+          return [:]
+        }
+        // Radius-based effects (clarity, vignette) scale with the thumbnail's reduction.
+        // (Square tiles: the crop's side is the source's shorter side.)
+        let detailScale = CGFloat(small.width) / CGFloat(max(1, min(cgImage.width, cgImage.height)))
         var result: [ImageFilterPreset: CGImage] = [ImageFilterPreset.none: small]
         for preset in ImageFilterPreset.allCases where preset != .none {
-          if let rendered = AnnotateImageAdjustmentRenderer.render(small, adjustments: ImageAdjustments(preset: preset)) {
+          if let rendered = AnnotateImageAdjustmentRenderer.renderPreview(
+            small, adjustments: ImageAdjustments(preset: preset), detailScale: detailScale
+          ) {
             result[preset] = rendered
           }
         }
         return result
       }.value
       guard let self, self.imageFilterPresetThumbnailsBase === base else { return }
+      guard !thumbnails.isEmpty else {
+        // Let the next sidebar appearance retry instead of spinning forever.
+        self.imageFilterPresetThumbnailsBase = nil
+        return
+      }
       self.imageFilterPresetThumbnails = thumbnails.mapValues { thumbnail in
         NSImage(cgImage: thumbnail, size: CGSize(width: thumbnail.width, height: thumbnail.height))
       }
