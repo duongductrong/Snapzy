@@ -2,109 +2,90 @@
 //  SnapzyOnboardingView.swift
 //  Snapzy
 //
-//  Ruru-inspired interactive walkthrough view for Snapzy, compatible with macOS 13.0+.
+//  Root onboarding view: header with the progress spine, a two-column step layout, the wide
+//  permissions layout, and the completion screen, over a shared footer.
 //
 
+import AppKit
 import SwiftUI
 
 struct SnapzyOnboardingView: View {
-  var onDismiss: () -> Void
+  /// Called when onboarding finishes. When `launchIconWindowFrame` is non-nil (user completed via
+  /// "Start Using Snapzy"), the window controller performs the celebratory desktop ascent straight
+  /// into the live macOS menu bar icon.
+  var onDismiss: (_ launchIconWindowFrame: CGRect?) -> Void
 
   @StateObject private var state = SnapzyOnboardingState()
   @State private var isShowingCompletion = false
+  @State private var isLaunchingFinale = false
+  @State private var completionLaunchTrigger = 0
+  /// The welcome bloom plays once for fresh starts; resuming a saved step skips straight into it.
+  @State private var isShowingWelcome: Bool
+  /// Mounted as soon as the user initiates entry from Welcome so the Liquid Glass workspace
+  /// rises synchronously behind the parting aurora aperture.
+  @State private var isFlowMounted: Bool
+  @State private var isFlowSettled: Bool
+  /// Stays `false` while the Welcome screen is flying into the top-left app icon, then flips to
+  /// `true` on the exact landing frame so the real brand icon locks in seamlessly with zero jump.
+  @State private var isBrandIconDocked: Bool
+  @State private var brandIconFrame: CGRect = CGRect(
+    x: SnapzyOnboardingMetrics.gutter,
+    y: (SnapzyOnboardingMetrics.gutter - 10) + (SnapzyOnboardingMetrics.headerHeight - 26) * 0.5,
+    width: 26,
+    height: 26
+  )
+  @State private var welcomeStartTrigger = 0
+  @Environment(\.accessibilityReduceMotion) private var envReduceMotion
   @EnvironmentObject private var onboardingLocalization: OnboardingLocalizationController
 
+  init(onDismiss: @escaping (_ launchIconWindowFrame: CGRect?) -> Void) {
+    self.onDismiss = onDismiss
+    let freshStart = UserDefaults.standard.string(forKey: PreferencesKeys.onboardingActiveStep) == nil
+    _isShowingWelcome = State(initialValue: freshStart)
+    _isFlowMounted = State(initialValue: !freshStart)
+    _isFlowSettled = State(initialValue: !freshStart)
+    _isBrandIconDocked = State(initialValue: !freshStart)
+  }
+
+  private var reduceMotion: Bool {
+    SnapzyMotionPreferences.shared.reduceMotion || envReduceMotion
+  }
+
   var body: some View {
-    ZStack(alignment: .topLeading) {
+    ZStack {
       SnapzyGlassWindowBackdrop()
 
-      if isShowingCompletion {
+      if isFlowMounted {
         VStack(spacing: 0) {
           header
-            .frame(height: SnapzyOnboardingMetrics.headerHeight)
-            .padding(.top, SnapzyOnboardingMetrics.gutter)
             .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+            .padding(.top, SnapzyOnboardingMetrics.gutter - 10)
+            .opacity(isLaunchingFinale ? 0 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: isLaunchingFinale)
 
-          SnapzyOnboardingCompletionCard(onFinish: finish, onBack: retreat)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .padding(.bottom, SnapzyOnboardingMetrics.gutter)
-            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+          content
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .animation(SnapzyMotionPreferences.shared.spec(.morph).animation, value: state.currentStep)
+            .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: isShowingCompletion)
         }
-        .transition(
-          .asymmetric(
-            insertion: .opacity.combined(with: .scale(scale: 0.97)),
-            removal: .opacity.combined(with: .scale(scale: 0.97))
-          )
+      }
+
+      if isShowingWelcome {
+        SnapzyOnboardingWelcome(
+          externalStartTrigger: welcomeStartTrigger,
+          targetLogoFrame: brandIconFrame,
+          onReadyForPrewarm: prewarmFlow,
+          onBeginTransition: beginFlowReveal,
+          onDockLogo: dockBrandLogo,
+          onCompleteTransition: completeFlowReveal,
+          onClose: { finish(launchIconWindowFrame: nil) }
         )
-      } else if state.currentStep.usesWideLayout {
-        // Full-width layout for permissions step
-        VStack(spacing: 0) {
-          header
-            .frame(height: SnapzyOnboardingMetrics.headerHeight)
-            .padding(.top, SnapzyOnboardingMetrics.gutter)
-            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
-
-          SnapzyOnboardingPermissionsView(state: state)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .padding(.top, 24)
-            .padding(.bottom, 16)
-            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
-
-          footer
-            .frame(height: SnapzyOnboardingMetrics.footerHeight)
-            .padding(.bottom, SnapzyOnboardingMetrics.gutter)
-            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
-        }
-        .transition(
-          .asymmetric(
-            insertion: .opacity.combined(with: .offset(x: 16)),
-            removal: .opacity.combined(with: .offset(x: -16))
-          )
-        )
-      } else {
-        // Two-column layout: Left instruction rail + Right full-bleed mock stage
-        VStack(spacing: 0) {
-          header
-            .frame(height: SnapzyOnboardingMetrics.headerHeight)
-            .padding(.top, SnapzyOnboardingMetrics.gutter)
-            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
-
-          HStack(alignment: .top, spacing: 0) {
-            // Left Column
-            VStack(alignment: .leading, spacing: 0) {
-              SnapzyOnboardingInstructionPanel(state: state)
-                .padding(.top, 20)
-
-              Spacer(minLength: 16)
-
-              SnapzyOnboardingEscapeHint(text: escapeHintText)
-                .frame(height: SnapzyOnboardingMetrics.footerHeight, alignment: .leading)
-                .padding(.bottom, SnapzyOnboardingMetrics.gutter)
-            }
-            .frame(width: SnapzyOnboardingMetrics.railWidth, alignment: .leading)
-            .padding(.leading, SnapzyOnboardingMetrics.gutter)
-            .padding(.trailing, SnapzyOnboardingMetrics.columnGap)
-
-            // Right Column: Mockup Stage with Floating Action Bar
-            ZStack(alignment: .bottomTrailing) {
-              SnapzyOnboardingMockHost(state: state)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.top, 14)
-
-              floatingActionBarWithHint
-                .padding(.trailing, SnapzyOnboardingMetrics.gutter)
-                .padding(.bottom, SnapzyOnboardingMetrics.gutter)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-          }
-          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
-        .transition(
-          .asymmetric(
-            insertion: .opacity.combined(with: .offset(x: 16)),
-            removal: .opacity.combined(with: .offset(x: -16))
-          )
-        )
+      }
+    }
+    .coordinateSpace(name: OnboardingRootCoordinateSpace.name)
+    .onPreferenceChange(OnboardingBrandIconFrameKey.self) { frame in
+      if frame.width > 0 && frame.height > 0 {
+        brandIconFrame = frame
       }
     }
     .frame(
@@ -115,43 +96,209 @@ struct SnapzyOnboardingView: View {
     )
     .environment(\.colorScheme, .dark)
     .background(keyboardShortcuts)
-    .animation(SnapzyMotionPreferences.shared.spec(.morph).animation, value: state.currentStep)
+    .onAppear {
+      SnapzyOnboardingWelcomeAudio.shared.prewarmInteractionEffects()
+    }
+  }
+
+  // MARK: - Content
+
+  private var content: some View {
+    ZStack(alignment: .top) {
+      if isShowingCompletion {
+        SnapzyOnboardingCompletionCard(
+          externalLaunchTrigger: completionLaunchTrigger,
+          onBeginLaunch: { isLaunchingFinale = true },
+          onFinish: { iconFrame in
+            finish(launchIconWindowFrame: iconFrame)
+          },
+          onBack: retreat
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+        .padding(.bottom, SnapzyOnboardingMetrics.gutter)
+        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+        .zIndex(2)
+      } else if state.currentStep.usesWideLayout {
+        VStack(spacing: 0) {
+          SnapzyOnboardingPermissionsView(state: state)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.top, 16)
+
+          footer
+            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 64))
+            .animation(
+              reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.84).delay(0.10),
+              value: isFlowSettled
+            )
+        }
+        .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+        .padding(.bottom, SnapzyOnboardingMetrics.gutter - 12)
+        .transition(stepTransition)
+        .zIndex(1)
+      } else {
+        stepColumns
+          .transition(stepTransition)
+          .zIndex(0)
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+  }
+
+  /// Steps tell which way they moved: the new page arrives from the side the target step lives
+  /// on, and a longer jump travels further. An opacity-only fade under Reduce Motion keeps the
+  /// meaning without the travel.
+  private var stepTransition: AnyTransition {
+    if SnapzyMotionPreferences.shared.reduceMotion {
+      return .opacity
+    }
+    let travel = min(18 + CGFloat(state.navigationDistance) * 14, 58)
+    let arrival: CGFloat = state.navigationDirection == .forward ? travel : -travel
+    return .asymmetric(
+      insertion: .opacity.combined(with: .offset(x: arrival)).combined(with: .scale(scale: 0.985)),
+      removal: .opacity.combined(with: .offset(x: -arrival))
+    )
+  }
+
+  private var stepColumns: some View {
+    HStack(alignment: .top, spacing: 0) {
+      // Left Column: instruction rail + bottom-left escape hint
+      VStack(alignment: .leading, spacing: 0) {
+        SnapzyOnboardingInstructionPanel(state: state, isRevealed: isFlowSettled)
+          .padding(.top, 10)
+          // Re-identified per step so each step's entrance replays cleanly in flow direction.
+          .id(state.currentStep)
+          .transition(stepTransition)
+
+        Spacer(minLength: 16)
+
+        SnapzyOnboardingEscapeHint(text: escapeHintText)
+          .frame(height: SnapzyOnboardingMetrics.footerHeight, alignment: .leading)
+          .padding(.bottom, SnapzyOnboardingMetrics.gutter - 12)
+      }
+      .frame(width: SnapzyOnboardingMetrics.railWidth, alignment: .topLeading)
+      .padding(.leading, SnapzyOnboardingMetrics.gutter)
+      .padding(.trailing, SnapzyOnboardingMetrics.columnGap)
+      .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : -22))
+      .animation(
+        reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.78),
+        value: isFlowSettled
+      )
+
+      // Right Column: full-bleed cropped macOS screen stage with floating Liquid Glass Action Bar
+      ZStack(alignment: .bottomTrailing) {
+        SnapzyOnboardingMockHost(state: state)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .padding(.top, 6)
+          .opacity(isFlowSettled ? 1 : 0)
+          .scaleEffect(reduceMotion ? 1.0 : (isFlowSettled ? 1.0 : 0.965))
+          .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 14))
+          .animation(
+            reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.86).delay(0.06),
+            value: isFlowSettled
+          )
+
+        // Liquid Glass Golden Rule: never animate `.opacity` on a view containing `.glassEffect`.
+        actionBar
+          .padding(.trailing, SnapzyOnboardingMetrics.gutter)
+          .padding(.bottom, SnapzyOnboardingMetrics.gutter - 12)
+          .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 64))
+          .animation(
+            reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.84).delay(0.10),
+            value: isFlowSettled
+          )
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
 
   // MARK: - Header
 
   private var header: some View {
-    HStack(spacing: 0) {
-      brand
+    ZStack {
+      HStack {
+        brand
+        Spacer(minLength: 0)
+        HStack(spacing: SnapzySpace.md) {
+          SnapzyOnboardingLanguagePicker()
+          SnapzyOnboardingCloseButton(action: { finish(launchIconWindowFrame: nil) })
+        }
+        .opacity(isFlowSettled ? 1 : 0)
+        .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : -8))
+        .animation(
+          reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.76).delay(0.08),
+          value: isFlowSettled
+        )
+      }
 
-      Spacer(minLength: SnapzySpace.xxl)
-
-      HStack(spacing: SnapzySpace.md) {
-        SnapzyOnboardingLanguagePicker()
-        SnapzyOnboardingCloseButton(action: finish)
+      if !isShowingCompletion {
+        SnapzyOnboardingStepRail(state: state)
+          .frame(maxWidth: 460)
+          .opacity(isFlowSettled ? 1 : 0)
+          .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : -8))
+          .animation(
+            reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.78).delay(0.06),
+            value: isFlowSettled
+          )
+          .transition(.opacity)
       }
     }
-    .overlay(SnapzyOnboardingStepRail(state: state))
+    .frame(height: SnapzyOnboardingMetrics.headerHeight)
+    .padding(.bottom, SnapzySpace.lg)
   }
 
   private var brand: some View {
-    HStack(spacing: SnapzySpace.xl) {
-      Image(nsImage: NSApp.applicationIconImage)
+    HStack(spacing: SnapzySpace.lg) {
+      Image(nsImage: SnapzyOnboardingIconCache.appIcon)
         .resizable()
         .aspectRatio(contentMode: .fit)
-      .frame(width: 32, height: 32)
-      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)) // radius-lint:allow — clips the app icon bitmap; matches the icon's own corner
+        .frame(width: 26, height: 26)
+        // radius-lint:allow — clips the app icon bitmap; matches the icon's own corner
+        .clipShape(Radius.rect(Radius.controlS))
+        // Stays fixed at exact resting coordinates (zero offset) so the Welcome morph lands on it
+        // pixel-for-pixel, then reveals synchronously on dock.
+        .opacity(isBrandIconDocked ? 1 : 0)
+        .background(
+          GeometryReader { geo in
+            Color.clear.preference(
+              key: OnboardingBrandIconFrameKey.self,
+              value: geo.frame(in: .named(OnboardingRootCoordinateSpace.name))
+            )
+          }
+        )
 
       Text("Snapzy")
-        .font(.system(size: 15, weight: .semibold))
+        .font(.system(size: 14, weight: .semibold))
         .foregroundStyle(SnapzyGlassInk.primary)
+        .opacity(isFlowSettled ? 1 : 0)
+        .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : -10))
+        .animation(
+          reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.56).delay(0.56),
+          value: isFlowSettled
+        )
     }
+    .fixedSize()
   }
 
-  // MARK: - Actions & Footer
+  // MARK: - Footer
 
   private var escapeHintText: String {
     state.canGoBack ? L10n.Onboarding.goBackHint : L10n.Onboarding.closeHint
+  }
+
+  private var footer: some View {
+    HStack(spacing: SnapzySpace.xxl) {
+      if isShowingCompletion {
+        Spacer()
+      } else {
+        SnapzyOnboardingEscapeHint(text: escapeHintText)
+        Spacer()
+        actionBar
+      }
+    }
+    .frame(height: SnapzyOnboardingMetrics.footerHeight)
+    .padding(.top, SnapzySpace.lg)
   }
 
   private var actionBar: some View {
@@ -165,40 +312,10 @@ struct SnapzyOnboardingView: View {
       continueTitle: isLastStep ? L10n.Onboarding.actionFinish : L10n.Onboarding.actionContinue,
       continueKey: "\u{21A9}",
       isContinueEnabled: canAdvance,
+      isHinted: state.isCurrentStepComplete || isLastStep,
       onSkip: skipAction,
       onContinue: advance
     )
-  }
-
-  private var floatingActionBarWithHint: some View {
-    VStack(alignment: .trailing, spacing: 6) {
-      if state.canGoForward && state.isCurrentStepComplete {
-        SnapzyCurvedHintArrow(
-          text: L10n.Onboarding.continueHint,
-          orientation: .curveDownToTarget,
-          arrowAlignment: .trailing,
-          color: .white
-        )
-        .padding(.trailing, 8)
-        .transition(
-          .asymmetric(
-            insertion: .scale(scale: 0.90, anchor: .bottomTrailing).combined(with: .opacity),
-            removal: .scale(scale: 0.95, anchor: .bottomTrailing).combined(with: .opacity)
-          )
-        )
-      }
-
-      actionBar
-    }
-    .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: state.isCurrentStepComplete)
-  }
-
-  private var footer: some View {
-    HStack(spacing: SnapzySpace.xxl) {
-      SnapzyOnboardingEscapeHint(text: escapeHintText)
-      Spacer(minLength: SnapzySpace.xxl)
-      actionBar
-    }
   }
 
   // MARK: - Keyboard Shortcuts
@@ -218,8 +335,46 @@ struct SnapzyOnboardingView: View {
 
   // MARK: - Navigation
 
+  /// The welcome sheet owns the first beat: both navigation keys trigger the same liquid aperture
+  /// transition as clicking the arrow pill so keyboard & pointer starts feel identical.
+  private func startFlow() {
+    welcomeStartTrigger += 1
+  }
+
+  /// Silently mounts Step 1 behind the opaque Welcome aurora once the CTA is ready so layout,
+  /// Liquid Glass sampling, and Metal pipelines are warm before the user clicks — zero click stall.
+  private func prewarmFlow() {
+    guard !isFlowMounted else { return }
+    isFlowMounted = true
+  }
+
+  private func beginFlowReveal() {
+    if !isFlowMounted {
+      isFlowMounted = true
+    }
+    isFlowSettled = true
+  }
+
+  private func dockBrandLogo() {
+    isBrandIconDocked = true
+  }
+
+  private func completeFlowReveal() {
+    isBrandIconDocked = true
+    isShowingWelcome = false
+  }
+
   private func advance() {
+    if isShowingWelcome {
+      startFlow()
+      return
+    }
+    if isShowingCompletion {
+      completionLaunchTrigger += 1
+      return
+    }
     guard state.canGoForward else {
+      SnapzyOnboardingWelcomeAudio.shared.playStepComplete()
       withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
         isShowingCompletion = true
       }
@@ -231,6 +386,7 @@ struct SnapzyOnboardingView: View {
 
   private func skip() {
     guard state.canGoForward else {
+      SnapzyOnboardingWelcomeAudio.shared.playStepComplete()
       withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
         isShowingCompletion = true
       }
@@ -240,18 +396,25 @@ struct SnapzyOnboardingView: View {
   }
 
   private func retreat() {
+    if isShowingWelcome {
+      startFlow()
+      return
+    }
     if isShowingCompletion {
+      guard !isLaunchingFinale else { return }
+      SnapzyOnboardingWelcomeAudio.shared.playStepBackward()
       withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
         isShowingCompletion = false
       }
     } else if state.canGoBack {
       state.previousStep()
     } else {
-      finish()
+      SnapzyOnboardingWelcomeAudio.shared.playButtonTap()
+      finish(launchIconWindowFrame: nil)
     }
   }
 
-  private func finish() {
+  private func finish(launchIconWindowFrame: CGRect?) {
     UserDefaults.standard.set(true, forKey: PreferencesKeys.onboardingCompleted)
     UserDefaults.standard.set(true, forKey: PreferencesKeys.splashSkipped)
     UserDefaults.standard.set(true, forKey: PreferencesKeys.sponsorPromptSeen)
@@ -269,6 +432,22 @@ struct SnapzyOnboardingView: View {
       }
     }
 
-    onDismiss()
+    let finaleFrame = (isUnderXCTest || requiresRelaunch) ? nil : launchIconWindowFrame
+    onDismiss(finaleFrame)
+  }
+}
+
+private enum OnboardingRootCoordinateSpace {
+  static let name = "SnapzyOnboardingRootSpace"
+}
+
+private struct OnboardingBrandIconFrameKey: PreferenceKey {
+  static var defaultValue: CGRect = .zero
+
+  static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+    let candidate = nextValue()
+    if candidate.width > 0 && candidate.height > 0 {
+      value = candidate
+    }
   }
 }

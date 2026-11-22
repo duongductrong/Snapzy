@@ -25,7 +25,7 @@ struct SnapzyMockQuickAccessCard: View {
   // Compact balanced sizing: 144 × 90pt (ratio 1.6:1, matching QuickAccessLayout perfectly)
   private let cardWidth: CGFloat = 144
   private let cardHeight: CGFloat = 90
-  private let cornerRadius: CGFloat = 11
+  private var cardShape: RoundedRectangle { Radius.rect(Radius.controlL) }
 
   var body: some View {
     ZStack(alignment: .center) {
@@ -63,17 +63,17 @@ struct SnapzyMockQuickAccessCard: View {
       }
     }
     .frame(width: cardWidth, height: cardHeight)
-    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-    .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    .clipShape(cardShape)
+    .contentShape(cardShape)
     .overlay(
-      RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+      cardShape
         .strokeBorder(
           LinearGradient(
-            colors: [Color.white.opacity(0.35), Color.white.opacity(0.12)],
+            colors: [Color.white.opacity(0.32), Color.white.opacity(0.10)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
           ),
-          lineWidth: 0.75
+          lineWidth: 0.5
         )
     )
     .shadow(color: Color.black.opacity(0.32), radius: 14, x: 0, y: 6)

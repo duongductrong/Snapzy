@@ -2,31 +2,33 @@
 //  SnapzyMockDesktopCanvas.swift
 //  Snapzy
 //
-//  Faithful macOS Desktop canvas with studio ambient wallpaper, monospaced watermark grid,
-//  and authentic Apple Silicon menu bar with camera notch.
+//  Faithful macOS desktop canvas: studio ambient wallpaper with per-step monospaced watermark
+//  grid and authentic Apple Silicon menu bar with flush camera notch.
 //
 
 import SwiftUI
 
+// MARK: - Mock Scene
+
 /// Which application the simulated desktop is dressed as.
-enum SnapzyMockApp: Equatable {
+enum SnapzyMockApp: String, Equatable {
   case notes
   case finder
   case settings
 
   var menuTitle: String {
     switch self {
-    case .notes: return "Notes"
-    case .finder: return "Finder"
-    case .settings: return "System Settings"
+    case .notes: "Notes"
+    case .finder: "Finder"
+    case .settings: "System Settings"
     }
   }
 
   var menus: [String] {
     switch self {
-    case .notes: return ["File", "Edit", "Format", "View", "Window", "Help"]
-    case .finder: return ["File", "Edit", "View", "Go", "Window", "Help"]
-    case .settings: return ["Edit", "View", "Window", "Help"]
+    case .notes: ["File", "Edit", "View", "Window", "Help"]
+    case .finder: ["File", "Edit", "View", "Go", "Help"]
+    case .settings: ["Edit", "View", "Window", "Help"]
     }
   }
 
@@ -70,7 +72,42 @@ struct SnapzyWatermark {
   var opacity: Double = 0.045
 }
 
-// MARK: - Equatable Wallpaper
+// MARK: - Palette
+
+/// The mock desktop's colours.
+///
+/// These are the only literal colours in the onboarding feature, on purpose. Every app token
+/// describes dark glass on a dark backdrop; the stage depicts the opposite — a lit macOS desktop —
+/// so there is nothing in the ramp to borrow. Gathering them here keeps "the fake desktop" one
+/// decision instead of forty scattered `Color(red:)` calls, and leaves the rest of the feature
+/// clean.
+enum SnapzyMockPalette {
+  /// Text and rules drawn on the light desktop surfaces.
+  static let ink = Color(red: 0.12, green: 0.13, blue: 0.15)
+  static let inkSecondary = Color(red: 0.34, green: 0.36, blue: 0.40)
+  static let inkTertiary = Color(red: 0.55, green: 0.57, blue: 0.61)
+  /// Window bodies and the menu bar.
+  static let chrome = Color(red: 0.985, green: 0.987, blue: 0.992)
+  static let chromeBar = Color(red: 0.94, green: 0.945, blue: 0.955)
+  static let chromeEdge = Color(red: 0.80, green: 0.81, blue: 0.83)
+  static let chromeRule = Color.black.opacity(0.08)
+  /// The notch and the display bezel it sits in.
+  static let bezel = Color(red: 0.04, green: 0.045, blue: 0.055)
+  /// Traffic lights, kept at their real macOS system hues (`#FF5F57`, `#FEBC2E`, `#28C840`).
+  static let trafficRed = Color(red: 1.00, green: 0.373, blue: 0.341)
+  static let trafficYellow = Color(red: 0.996, green: 0.737, blue: 0.180)
+  static let trafficGreen = Color(red: 0.157, green: 0.784, blue: 0.251)
+  /// Native macOS accent hues used inside simulated Apple apps (Finder, System Settings, Notes).
+  static let macBlue = Color(red: 0.00, green: 0.478, blue: 1.00)
+  static let finderFolderBlue = Color(red: 0.31, green: 0.71, blue: 0.98)
+  static let notesGold = Color(red: 0.90, green: 0.67, blue: 0.06)
+  /// Capture chrome drawn over the dimmed desktop: the selection gradient's sky tone and the
+  /// toolbar's active-toggle blue.
+  static let selectionAccent = Color(red: 0.40, green: 0.75, blue: 1.0)
+  static let toggleAccent = Color(red: 0.16, green: 0.50, blue: 0.98)
+}
+
+// MARK: - Studio Watermark Wallpaper
 
 struct SnapzyMockWallpaper: View, Equatable {
   var app: SnapzyMockApp = .notes
@@ -89,10 +126,10 @@ struct SnapzyMockWallpaper: View, Equatable {
 
       GeometryReader { proxy in
         VStack(alignment: .leading, spacing: 38) {
-          ForEach(0..<8) { row in
+          ForEach(0..<8, id: \.self) { row in
             HStack(spacing: 44) {
-              ForEach(0..<6) { col in
-                let mark = app.watermarks[(row * 3 + col) % 6]
+              ForEach(0..<6, id: \.self) { col in
+                let mark = app.watermarks[(row * 3 + col) % app.watermarks.count]
                 Text(mark.text)
                   .font(.system(size: mark.size, weight: mark.weight, design: .monospaced))
                   .foregroundStyle(Color.black.opacity(mark.opacity))
@@ -106,28 +143,84 @@ struct SnapzyMockWallpaper: View, Equatable {
       }
       .clipped()
     }
-    .compositingGroup()
+    .drawingGroup(opaque: true)
+    .accessibilityHidden(true)
   }
 }
 
-// MARK: - Equatable Menu Bar
+// MARK: - Authentic MacBook Hardware Notch Shape
+
+/// Real MacBook Pro / Air display notch: flush with `y = 0`, subtle concave top-corner shoulders
+/// meeting the screen top bezel seamlessly, and smooth rounded bottom corners.
+private struct MacBookNotchShape: Shape {
+  var shoulderRadius: CGFloat = 5
+  var bottomRadius: CGFloat = 7
+
+  func path(in rect: CGRect) -> Path {
+    let s = min(shoulderRadius, rect.width * 0.12)
+    let r = min(bottomRadius, rect.height * 0.5, (rect.width - s * 2) * 0.5)
+    let leftX = rect.minX + s
+    let rightX = rect.maxX - s
+
+    var path = Path()
+    // Top edge spanning across both concave shoulders
+    path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+
+    // Top-right concave shoulder curving down into the right vertical side
+    path.addQuadCurve(
+      to: CGPoint(x: rightX, y: rect.minY + s),
+      control: CGPoint(x: rightX, y: rect.minY)
+    )
+
+    // Right vertical side + smooth bottom-right corner
+    path.addLine(to: CGPoint(x: rightX, y: rect.maxY - r))
+    path.addQuadCurve(
+      to: CGPoint(x: rightX - r, y: rect.maxY),
+      control: CGPoint(x: rightX, y: rect.maxY)
+    )
+
+    // Bottom edge + smooth bottom-left corner
+    path.addLine(to: CGPoint(x: leftX + r, y: rect.maxY))
+    path.addQuadCurve(
+      to: CGPoint(x: leftX, y: rect.maxY - r),
+      control: CGPoint(x: leftX, y: rect.maxY)
+    )
+
+    // Left vertical side + top-left concave shoulder returning to top edge
+    path.addLine(to: CGPoint(x: leftX, y: rect.minY + s))
+    path.addQuadCurve(
+      to: CGPoint(x: rect.minX, y: rect.minY),
+      control: CGPoint(x: leftX, y: rect.minY)
+    )
+
+    path.closeSubpath()
+    return path
+  }
+}
+
+// MARK: - Menu Bar (Cropped Real-Scale MacBook Display)
 
 struct SnapzyMockMenuBar: View, Equatable {
   var app: SnapzyMockApp = .notes
 
+  static let barHeight: CGFloat = 28
+
   var body: some View {
     GeometryReader { proxy in
       let visibleWidth = proxy.size.width
+      // The right-column stage is a cropped frame onto a full-width Mac screen, so the camera
+      // notch sits shifted toward the virtual display center and right status icons crop naturally.
       let notchShift = max(100, visibleWidth * 0.21)
       let notchCenterX = (visibleWidth / 2) + notchShift
-      let notchWidth: CGFloat = 98
+      let notchWidth: CGFloat = 96
       let notchRightEdge = notchCenterX + (notchWidth / 2)
 
       ZStack(alignment: .topLeading) {
-        // Translucent menu bar strip
+        // Translucent frosted menu bar strip
         Rectangle()
           .fill(Color.white.opacity(0.84))
-          .frame(height: 28)
+          .frame(height: Self.barHeight)
           .overlay(
             Rectangle()
               .fill(Color.black.opacity(0.06))
@@ -135,102 +228,146 @@ struct SnapzyMockMenuBar: View, Equatable {
             alignment: .bottom
           )
 
-        // 1. Left Menu Items ( + App Title + standard menus)
-        HStack(spacing: 11) {
-          Image(systemName: "apple.logo")
-            .font(.system(size: 11.5, weight: .semibold))
-            .foregroundStyle(Color.black.opacity(0.90))
+        // 1. Left Menu Items ( + App Title + full macOS menus at real scale)
+        leadingCluster
+          .padding(.leading, 18)
+          .frame(height: Self.barHeight, alignment: .leading)
 
-          Text(app.menuTitle)
-            .font(.system(size: 11.5, weight: .bold))
-            .foregroundStyle(Color.black.opacity(0.92))
-
-          ForEach(app.menus, id: \.self) { menu in
-            Text(menu)
-          }
-        }
-        .font(.system(size: 11.5, weight: .regular))
-        .foregroundStyle(Color.black.opacity(0.82))
-        .padding(.leading, 18)
-        .frame(height: 28, alignment: .leading)
-
-        // 2. Camera Notch (Shifted right to virtual display center)
+        // 2. Camera Notch (shifted right to virtual display center, flush at y = 0)
         cameraNotch
-          .position(x: notchCenterX, y: 9)
+          .position(x: notchCenterX, y: 10.5)
 
-        // 3. Right Status Bar Items
-        HStack(spacing: 11) {
-          // Snapzy Camera Status Icon in subtle capsule
-          HStack(spacing: 3) {
-            Image(systemName: "camera.viewfinder")
-              .font(.system(size: 9.5, weight: .semibold))
-              .foregroundStyle(Color.black.opacity(0.85))
-          }
-          .padding(.horizontal, 4)
-          .padding(.vertical, 2)
-          .background(
-            RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-              .fill(Color.black.opacity(0.07))
-          )
-
-          Image(systemName: "switch.2")
-            .font(.system(size: 10.5))
-
-          Image(systemName: "speaker.wave.2.fill")
-            .font(.system(size: 10.5))
-
-          Image(systemName: "wifi")
-            .font(.system(size: 10.5, weight: .medium))
-
-          HStack(spacing: 3) {
-            Text("100%")
-              .font(.system(size: 9.5, weight: .medium))
-            Image(systemName: "battery.100")
-              .font(.system(size: 11.5))
-          }
-
-          Text("9:41 AM")
-            .font(.system(size: 10.5, weight: .medium))
-        }
-        .font(.system(size: 10.5, weight: .regular))
-        .foregroundStyle(Color.black.opacity(0.82))
-        .fixedSize()
-        .frame(height: 28, alignment: .leading)
-        .offset(x: notchRightEdge + 24)
+        // 3. Right Status Bar Items (extending naturally past the cropped right edge)
+        trailingCluster
+          .frame(height: Self.barHeight, alignment: .leading)
+          .offset(x: notchRightEdge + 22)
       }
     }
-    .frame(height: 28)
+    .frame(height: Self.barHeight)
+    .accessibilityHidden(true)
+  }
+
+  private var leadingCluster: some View {
+    HStack(spacing: 11) {
+      Image(systemName: "apple.logo")
+        .font(.system(size: 11.5, weight: .semibold))
+        .foregroundStyle(Color.black.opacity(0.90))
+        .offset(y: -0.5)
+
+      HStack(spacing: 11) {
+        Text(app.menuTitle)
+          .font(.system(size: 11.5, weight: .bold))
+          .foregroundStyle(Color.black.opacity(0.92))
+
+        ForEach(app.menus, id: \.self) { menu in
+          Text(menu)
+        }
+      }
+      .id(app)
+      .transition(.opacity.combined(with: .offset(y: 2)))
+      .animation(.timingCurve(0.20, 0.0, 0.12, 1.0, duration: 0.34), value: app)
+    }
+    .font(.system(size: 11.5, weight: .regular))
+    .foregroundStyle(Color.black.opacity(0.82))
+    .fixedSize()
+  }
+
+  private var trailingCluster: some View {
+    HStack(spacing: 11) {
+      // Snapzy's actual 4-petal menu bar glyph rendered as a crisp macOS template icon
+      Image("WelcomeMark")
+        .renderingMode(.template)
+        .resizable()
+        .interpolation(.high)
+        .aspectRatio(contentMode: .fit)
+        .frame(width: 11, height: 11)
+
+      Image(systemName: "wifi")
+        .font(.system(size: 10.5, weight: .semibold))
+
+      MacOSMenuBarBattery()
+
+      Image(systemName: "magnifyingglass")
+        .font(.system(size: 10, weight: .semibold))
+
+      MacOSControlCenterGlyph()
+
+      Text("Sun Nov 22  9:41")
+        .font(.system(size: 10.5, weight: .medium))
+        .tracking(-0.1)
+        .monospacedDigit()
+    }
+    .foregroundStyle(Color.black.opacity(0.84))
+    .fixedSize()
   }
 
   private var cameraNotch: some View {
     ZStack {
-      SnapzyUnevenRoundedRectangle(
-        cornerRadii: SnapzyCornerRadii(
-          topLeading: 0,
-          bottomLeading: 6,
-          bottomTrailing: 6,
-          topTrailing: 0
-        )
-      )
-      .fill(Color(red: 0.05, green: 0.055, blue: 0.065))
-      .frame(width: 98, height: 18)
+      MacBookNotchShape(shoulderRadius: 5, bottomRadius: 6.5)
+        .fill(SnapzyMockPalette.bezel)
 
-      HStack(spacing: 5) {
-        Circle()
-          .fill(Color(white: 0.16))
-          .frame(width: 3.5, height: 3.5)
-          .overlay(
-            Circle()
-              .fill(Color(red: 0.2, green: 0.35, blue: 0.6).opacity(0.5))
-              .frame(width: 1.5, height: 1.5)
-          )
-      }
+      Circle()
+        .fill(Color(white: 0.12))
+        .frame(width: 4.5, height: 4.5)
+        .overlay(
+          Circle()
+            .fill(Color(red: 0.04, green: 0.05, blue: 0.08))
+            .frame(width: 2.5, height: 2.5)
+        )
+        .offset(y: -0.5)
     }
-    .frame(width: 98, height: 18)
+    .frame(width: 96, height: 21)
   }
 }
 
-// MARK: - Backward-compatible Wrapper
+/// Crisp solid-fill macOS battery indicator matching modern Sonoma/Sequoia/Tahoe menu bar geometry.
+private struct MacOSMenuBarBattery: View {
+  var body: some View {
+    HStack(spacing: 1) {
+      RoundedRectangle(cornerRadius: 2.3, style: .continuous) // radius-lint:allow — micro 8.5pt macOS battery capsule geometry
+        .fill(.primary)
+        .frame(width: 16.5, height: 8.5)
+
+      UnevenRoundedRectangle(
+        topLeadingRadius: 0,
+        bottomLeadingRadius: 0,
+        bottomTrailingRadius: 1.2,
+        topTrailingRadius: 1.2
+      )
+      .fill(.primary.opacity(0.75))
+      .frame(width: 1.4, height: 3.4)
+    }
+  }
+}
+
+/// Authentic two-row macOS Control Center double-toggle glyph matching the real menu bar.
+private struct MacOSControlCenterGlyph: View {
+  var body: some View {
+    VStack(spacing: 1.8) {
+      ZStack(alignment: .trailing) {
+        Capsule(style: .continuous)
+          .strokeBorder(.primary, lineWidth: 1.0)
+          .frame(width: 11, height: 4.4)
+        Circle()
+          .fill(.primary)
+          .frame(width: 3.2, height: 3.2)
+          .padding(.trailing, 0.7)
+      }
+
+      ZStack(alignment: .leading) {
+        Capsule(style: .continuous)
+          .fill(.primary)
+          .frame(width: 11, height: 4.4)
+        Circle()
+          .fill(Color.white.opacity(0.92))
+          .frame(width: 2.6, height: 2.6)
+          .padding(.leading, 1.0)
+      }
+    }
+  }
+}
+
+// MARK: - Composed Canvas
 
 struct SnapzyMockDesktopCanvas: View {
   var app: SnapzyMockApp = .notes

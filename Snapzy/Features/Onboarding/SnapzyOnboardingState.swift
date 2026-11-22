@@ -59,9 +59,16 @@ enum Step2WorkflowStage: Equatable {
 
 @MainActor
 final class SnapzyOnboardingState: ObservableObject {
+  /// Which way the last step change travelled. Clicking back to an earlier step should slide the
+  /// page the other way than advancing, so the motion keeps telling the truth about direction.
+  enum NavigationDirection { case forward, backward }
+
   @Published var currentStep: SnapzyOnboardingStep = .meetSnapzy
   @Published var completedSteps: Set<SnapzyOnboardingStep> = []
   @Published var completedChallenges: Set<SnapzyOnboardingChallenge> = []
+  private(set) var navigationDirection: NavigationDirection = .forward
+  /// How many steps the last change jumped, so a long click-back travels further than an advance.
+  private(set) var navigationDistance: Int = 1
 
   init(restoreSavedStep: Bool = true) {
     if restoreSavedStep,
@@ -118,12 +125,16 @@ final class SnapzyOnboardingState: ObservableObject {
     }
   }
 
-  func completeChallenge(_ challenge: SnapzyOnboardingChallenge) {
+  func completeChallenge(_ challenge: SnapzyOnboardingChallenge, playSound: Bool = true) {
+    let wasCompleted = completedChallenges.contains(challenge)
     withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
       completedChallenges.insert(challenge)
       if isCurrentStepComplete {
         completedSteps.insert(currentStep)
       }
+    }
+    if playSound && !wasCompleted {
+      SnapzyOnboardingWelcomeAudio.shared.playChallengeComplete()
     }
   }
 
@@ -155,6 +166,14 @@ final class SnapzyOnboardingState: ObservableObject {
   }
 
   func transition(to step: SnapzyOnboardingStep) {
+    guard step != currentStep else { return }
+    navigationDirection = step.stepNumber < currentStep.stepNumber ? .backward : .forward
+    navigationDistance = abs(step.stepNumber - currentStep.stepNumber)
+    if navigationDirection == .forward {
+      SnapzyOnboardingWelcomeAudio.shared.playStepForward()
+    } else {
+      SnapzyOnboardingWelcomeAudio.shared.playStepBackward()
+    }
     withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
       currentStep = step
       UserDefaults.standard.set(step.rawValue, forKey: PreferencesKeys.onboardingActiveStep)
@@ -193,6 +212,7 @@ final class SnapzyOnboardingState: ObservableObject {
   }
 
   func completeCaptureToQuickAccess() {
+    SnapzyOnboardingWelcomeAudio.shared.playShutterSnap()
     withAnimation(.easeOut(duration: 0.12)) {
       screenFlashOpacity = 0.65
     }
@@ -200,7 +220,7 @@ final class SnapzyOnboardingState: ObservableObject {
       withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
         self?.screenFlashOpacity = 0
         self?.step1Stage = .quickAccessFloating
-        self?.completeChallenge(.captureToQuickAccess)
+        self?.completeChallenge(.captureToQuickAccess, playSound: false)
       }
     }
   }
@@ -222,6 +242,7 @@ final class SnapzyOnboardingState: ObservableObject {
   }
 
   func selectAnnotationTool(_ tool: MockAnnotateTool) {
+    let hadChallenge = completedChallenges.contains(.addAnnotation)
     withAnimation(SnapzyMotionPreferences.shared.spec(.hover).animation) {
       selectedTool = tool
       if !annotationItems.contains(where: { $0.tool == tool }) {
@@ -236,12 +257,19 @@ final class SnapzyOnboardingState: ObservableObject {
       }
       completeChallenge(.addAnnotation)
     }
+    if hadChallenge {
+      SnapzyOnboardingWelcomeAudio.shared.playButtonTap()
+    }
   }
 
   func simulateQuickAccessAction(_ actionName: String) {
+    let hadChallenge = completedChallenges.contains(.triggerQuickAction)
     withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
       quickAccessFeedbackText = actionName
       completeChallenge(.triggerQuickAction)
+    }
+    if hadChallenge {
+      SnapzyOnboardingWelcomeAudio.shared.playButtonTap()
     }
     DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
       withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
@@ -260,6 +288,7 @@ final class SnapzyOnboardingState: ObservableObject {
   }
 
   func simulateStartRecording() {
+    SnapzyOnboardingWelcomeAudio.shared.playButtonTap()
     recordingTimer?.invalidate()
     recordingTimer = nil
     recordingSeconds = 0
@@ -285,6 +314,7 @@ final class SnapzyOnboardingState: ObservableObject {
   }
 
   func simulateFinishRecording() {
+    SnapzyOnboardingWelcomeAudio.shared.playShutterSnap()
     recordingTimer?.invalidate()
     recordingTimer = nil
     isRecordingTimerRunning = false
@@ -296,7 +326,7 @@ final class SnapzyOnboardingState: ObservableObject {
       withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
         self?.screenFlashOpacity = 0
         self?.step2Stage = .videoQuickAccess
-        self?.completeChallenge(.recordVideo3s)
+        self?.completeChallenge(.recordVideo3s, playSound: false)
       }
     }
   }

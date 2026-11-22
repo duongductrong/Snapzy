@@ -15,6 +15,7 @@ import SwiftUI
 
 struct SnapzyMockQuickAccessView: View {
   @ObservedObject var state: SnapzyOnboardingState
+  var showMenuBar: Bool = true
   @State private var feedbackMessage: String? = nil
 
   // Framed area sizing
@@ -30,7 +31,9 @@ struct SnapzyMockQuickAccessView: View {
       desktopContent
 
       // 3. macOS Menu Bar & Camera Notch
-      SnapzyMockMenuBar(app: .finder).equatable()
+      if showMenuBar {
+        SnapzyMockMenuBar(app: .finder).equatable()
+      }
 
       // 4. Dimmed Fullscreen Overlay (covers 100% of demo screen in prerecord and recording stages)
       if state.step2Stage == .prerecordArea || state.step2Stage == .recordingActive {
@@ -58,18 +61,17 @@ struct SnapzyMockQuickAccessView: View {
 
   // MARK: - Desktop Content
 
-  @ViewBuilder
   private var desktopContent: some View {
     VStack(spacing: 0) {
-      Spacer(minLength: 16)
+      Spacer(minLength: SnapzySpace.xl)
 
       SnapzyMockFinderWindow().equatable()
         .frame(maxWidth: regionWidth, maxHeight: regionHeight)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, SnapzyMockScene.windowInset)
 
-      Spacer(minLength: 16)
+      Spacer(minLength: SnapzySpace.xl)
     }
-    .padding(.top, 28) // Space for Menu Bar
+    .padding(.top, SnapzyMockScene.windowTopInset) // Space for Menu Bar
   }
 
   // MARK: - Dimmed Overlay with Framed Cutout
@@ -80,13 +82,13 @@ struct SnapzyMockQuickAccessView: View {
 
       // Un-dimmed region cutout showing the framed Finder window
       VStack(spacing: 0) {
-        Spacer(minLength: 16)
+        Spacer(minLength: SnapzySpace.xl)
 
         ZStack {
           // Sharp cutout
           SnapzyMockFinderWindow().equatable()
             .frame(maxWidth: regionWidth, maxHeight: regionHeight)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, SnapzyMockScene.windowInset)
 
           // Selection border & handles
           if state.step2Stage == .prerecordArea {
@@ -96,9 +98,9 @@ struct SnapzyMockQuickAccessView: View {
           }
         }
 
-        Spacer(minLength: 16)
+        Spacer(minLength: SnapzySpace.xl)
       }
-      .padding(.top, 28)
+      .padding(.top, SnapzyMockScene.windowTopInset)
     }
   }
 
@@ -107,10 +109,10 @@ struct SnapzyMockQuickAccessView: View {
   private var prerecordBorder: some View {
     ZStack(alignment: .topLeading) {
       // Dashed border
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
+      Radius.rect(Radius.controlL)
         .strokeBorder(
           LinearGradient(
-            colors: [Color.white, Color(red: 0.40, green: 0.75, blue: 1.0)],
+            colors: [Color.white, SnapzyMockPalette.selectionAccent],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
           ),
@@ -123,28 +125,30 @@ struct SnapzyMockQuickAccessView: View {
       // Dimension Badge at top-left
       HStack(spacing: 2) {
         Text("460 × 240")
-          .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+          .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+          .lineLimit(1)
+
         Text("px")
-          .font(.system(size: 7.5, weight: .medium))
+          .font(.system(size: 8.5))
       }
       .foregroundStyle(Color.white)
-      .padding(.horizontal, 6)
-      .padding(.vertical, 2.5)
-      .background(Color.black.opacity(0.80))
-      .clipShape(RoundedRectangle(cornerRadius: 3.5, style: .continuous))
+      .padding(.horizontal, SnapzySpace.sm)
+      .padding(.vertical, SnapzySpace.xxs)
+      .background(Color.black.opacity(0.78))
+      .clipShape(Radius.rect(Radius.ornament))
       .overlay(
-        RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-          .strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5)
+        Radius.rect(Radius.ornament)
+          .strokeBorder(Color.white.opacity(0.22), lineWidth: SnapzySurfaceGlass.specularLineWidth)
       )
-      .padding(6)
+      .padding(SnapzySpace.sm)
     }
     .frame(width: regionWidth, height: regionHeight)
   }
 
   private var activeRecordingBorder: some View {
-    RoundedRectangle(cornerRadius: 12, style: .continuous)
-      .strokeBorder(Color.red.opacity(0.88), lineWidth: 2)
-      .shadow(color: Color.red.opacity(0.40), radius: 6)
+    Radius.rect(Radius.controlL)
+      .strokeBorder(Color.red.opacity(0.88), lineWidth: 1.75)
+      .shadow(color: Color.red.opacity(0.22), radius: 3)
       .frame(width: regionWidth, height: regionHeight)
   }
 
@@ -152,8 +156,7 @@ struct SnapzyMockQuickAccessView: View {
     GeometryReader { geo in
       let w = geo.size.width
       let h = geo.size.height
-
-      ForEach([
+      let points: [CGPoint] = [
         CGPoint(x: 0, y: 0),
         CGPoint(x: w / 2, y: 0),
         CGPoint(x: w, y: 0),
@@ -162,7 +165,9 @@ struct SnapzyMockQuickAccessView: View {
         CGPoint(x: 0, y: h),
         CGPoint(x: w / 2, y: h),
         CGPoint(x: w, y: h),
-      ], id: \.x) { point in
+      ]
+
+      ForEach(Array(points.enumerated()), id: \.offset) { _, point in
         handleCircle
           .position(point)
       }
@@ -173,7 +178,7 @@ struct SnapzyMockQuickAccessView: View {
     Circle()
       .fill(Color.white)
       .frame(width: 6.5, height: 6.5)
-      .overlay(Circle().strokeBorder(Color.black.opacity(0.4), lineWidth: 0.5))
+      .overlay(Circle().strokeBorder(Color.black.opacity(0.4), lineWidth: SnapzySurfaceGlass.specularLineWidth))
       .shadow(color: Color.black.opacity(0.25), radius: 1)
   }
 
@@ -187,43 +192,22 @@ struct SnapzyMockQuickAccessView: View {
       VStack {
         Spacer()
 
-        Button {
+        SnapzyMockSceneButton(
+          title: L10n.Onboarding.mockPressToRecord,
+          symbol: "record.circle"
+        ) {
           state.simulateStartPrerecord()
-        } label: {
-          HStack(spacing: 7) {
-            Image(systemName: "record.circle")
-              .font(.system(size: 13, weight: .semibold))
-              .foregroundStyle(Color.red)
-
-            Text("Simulate ⇧⌘5 Area Selection")
-              .font(.system(size: 11.5, weight: .semibold))
-              .lineLimit(1)
-              .fixedSize(horizontal: true, vertical: false)
-          }
-          .foregroundStyle(Color.white)
-          .padding(.horizontal, 14)
-          .padding(.vertical, 8)
-          .background {
-            SnapzyGlassSurface(
-              shape: Capsule(style: .continuous),
-              substrate: SnapzySurfaceGlass.baseDarkness,
-              tint: 0.12
-            )
-          }
-          .clipShape(Capsule(style: .continuous))
-          .shadow(color: Color.black.opacity(0.32), radius: 12, y: 6)
         }
-        .buttonStyle(.plain)
+        .transition(SnapzyMockScene.hudTransition)
 
         Spacer()
       }
-      .padding(.top, 28)
-      .transition(.scale(scale: 0.92).combined(with: .opacity))
+      .padding(.top, SnapzyMockScene.windowTopInset)
 
     case .prerecordArea:
       // Pre-record Toolbar floating below the framed selection area
       VStack(spacing: 0) {
-        Spacer(minLength: 16)
+        Spacer(minLength: SnapzySpace.xl)
 
         // Empty space matching Finder window height
         Color.clear
@@ -235,7 +219,7 @@ struct SnapzyMockQuickAccessView: View {
             state.simulateStartRecording()
           },
           onCapture: {
-            triggerFeedback("Snapshot taken")
+            triggerFeedback(L10n.Onboarding.mockCapturedMode(L10n.CaptureKind.screenshot))
           },
           onCancel: {
             state.resetStep2Flow()
@@ -243,9 +227,9 @@ struct SnapzyMockQuickAccessView: View {
         )
         .padding(.top, -10)
 
-        Spacer(minLength: 8)
+        Spacer(minLength: SnapzySpace.md)
       }
-      .padding(.top, 28)
+      .padding(.top, SnapzyMockScene.windowTopInset)
       .transition(.opacity.combined(with: .move(edge: .bottom)))
 
     case .recordingActive:
@@ -268,11 +252,11 @@ struct SnapzyMockQuickAccessView: View {
       VStack {
         Spacer()
 
-        HStack(alignment: .bottom, spacing: 8) {
-          VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .bottom, spacing: SnapzySpace.md) {
+          VStack(alignment: .leading, spacing: SnapzySpace.xs) {
             // Curved hint arrow pointing down to the card
             SnapzyCurvedHintArrow(
-              text: "Click card to open Video Editor",
+              text: L10n.Onboarding.mockOpenEditorHint,
               orientation: .curveDownToTarget,
               arrowAlignment: .leading,
               color: .white
@@ -285,10 +269,10 @@ struct SnapzyMockQuickAccessView: View {
               isVideo: true,
               durationText: "00:03",
               onCopy: {
-                triggerFeedback("Copied Video (⌘C)")
+                triggerFeedback(L10n.Onboarding.mockToastCopied)
               },
               onSave: {
-                triggerFeedback("Saved to Desktop (⌘S)")
+                triggerFeedback(L10n.Onboarding.mockToastSaved)
               },
               onAnnotate: {
                 state.openVideoEditorFromQuickAccess()
@@ -297,23 +281,22 @@ struct SnapzyMockQuickAccessView: View {
                 withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
                   state.isCardPinned.toggle()
                 }
-                triggerFeedback(state.isCardPinned ? "Pinned on Screen (⌘P)" : "Unpinned")
+                triggerFeedback(state.isCardPinned
+                  ? L10n.Onboarding.mockToastPinned
+                  : L10n.Onboarding.mockToastUnpinned)
               },
               onDismiss: {
                 state.resetStep2Flow()
               }
             )
           }
-          .padding(.leading, 24)
-          .padding(.bottom, 20)
+          .padding(.leading, SnapzyMockScene.windowInset)
+          .padding(.bottom, SnapzySpace.xl)
 
           Spacer()
         }
       }
-      .transition(.asymmetric(
-        insertion: .scale(scale: 0.88, anchor: .bottomLeading).combined(with: .opacity),
-        removal: .scale(scale: 0.92, anchor: .bottomLeading).combined(with: .opacity)
-      ))
+      .transition(SnapzyMockScene.cardTransition)
 
     case .videoEditorOpen:
       // Full Video Editor Window centered on screen
@@ -326,12 +309,12 @@ struct SnapzyMockQuickAccessView: View {
             state.resetStep2Flow()
           },
           onExport: {
-            triggerFeedback("Exported MP4 (⌘S)")
+            triggerFeedback(L10n.Onboarding.mockToastExported)
             state.completeChallenge(.openVideoEditor)
           }
         )
       }
-      .transition(.scale(scale: 0.94).combined(with: .opacity))
+      .transition(SnapzyMockScene.windowTransition)
     }
   }
 
@@ -340,7 +323,7 @@ struct SnapzyMockQuickAccessView: View {
   private func toastOverlay(_ feedback: String) -> some View {
     VStack {
       Spacer()
-      HStack(spacing: 6) {
+      HStack(spacing: SnapzySpace.sm) {
         Image(systemName: "checkmark.circle.fill")
           .foregroundStyle(Color.green)
         Text(feedback)
@@ -357,9 +340,10 @@ struct SnapzyMockQuickAccessView: View {
         )
       }
       .clipShape(Capsule(style: .continuous))
-      .shadow(color: Color.black.opacity(0.35), radius: 12, y: 6)
-      .padding(.bottom, 16)
-      .transition(.scale(scale: 0.92).combined(with: .opacity))
+      .shadow(color: SnapzyGlassShadow.controlColor, radius: SnapzyGlassShadow.controlRadius,
+              y: SnapzyGlassShadow.controlY)
+      .padding(.bottom, SnapzySpace.xl)
+      .transition(SnapzyMockScene.hudTransition)
     }
   }
 
@@ -371,8 +355,8 @@ struct SnapzyMockQuickAccessView: View {
 
     DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
       withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
-        if self.feedbackMessage == message {
-          self.feedbackMessage = nil
+        if feedbackMessage == message {
+          feedbackMessage = nil
         }
       }
     }

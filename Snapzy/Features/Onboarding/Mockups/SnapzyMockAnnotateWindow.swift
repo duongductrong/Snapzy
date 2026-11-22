@@ -35,10 +35,10 @@ struct SnapzyMockAnnotateWindow: View {
     }
     .frame(width: 480, height: 310)
     .background(Color(red: 0.12, green: 0.12, blue: 0.14))
-    .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+    .clipShape(Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 13, style: .continuous)
-        .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.75)
+      Radius.rect(Radius.card)
+        .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.5)
     )
     .shadow(color: Color.black.opacity(0.42), radius: 28, x: 0, y: 14)
     .shadow(color: Color.black.opacity(0.16), radius: 6, x: 0, y: 2)
@@ -48,13 +48,8 @@ struct SnapzyMockAnnotateWindow: View {
 
   private var windowToolbar: some View {
     HStack(spacing: 5) {
-      // Traffic Lights
-      HStack(spacing: 6) {
-        Circle().fill(Color(red: 1.0, green: 0.36, blue: 0.33)).frame(width: 9, height: 9)
-        Circle().fill(Color(red: 1.0, green: 0.74, blue: 0.18)).frame(width: 9, height: 9)
-        Circle().fill(Color(red: 0.15, green: 0.79, blue: 0.25)).frame(width: 9, height: 9)
-      }
-      .padding(.leading, 4)
+      SnapzyMockTrafficLights(size: 9.5, spacing: 6)
+        .padding(.leading, 4)
 
       divider
 
@@ -101,7 +96,7 @@ struct SnapzyMockAnnotateWindow: View {
           .padding(.horizontal, 7)
           .padding(.vertical, 4)
           .background(
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
+            Radius.rect(Radius.controlXS)
               .fill(isReplayHovered ? Color.white.opacity(0.14) : Color.white.opacity(0.08))
           )
         }
@@ -126,10 +121,9 @@ struct SnapzyMockAnnotateWindow: View {
         .padding(.horizontal, 9)
         .padding(.vertical, 4.5)
         .background(
-          RoundedRectangle(cornerRadius: 5, style: .continuous)
-            .fill(isSaveHovered ? Color(red: 0.12, green: 0.45, blue: 0.95) : Color(red: 0.08, green: 0.40, blue: 0.90))
+          Radius.rect(Radius.controlXS)
+            .fill(isSaveHovered ? SnapzyMockPalette.macBlue.opacity(0.92) : SnapzyMockPalette.macBlue)
         )
-        .shadow(color: Color.blue.opacity(0.35), radius: 4, y: 1.5)
         .fixedSize()
       }
       .buttonStyle(.plain)
@@ -146,8 +140,8 @@ struct SnapzyMockAnnotateWindow: View {
       .foregroundStyle(isSelected ? Color.white : (isEnabled ? Color.white.opacity(0.70) : Color.white.opacity(0.30)))
       .frame(width: 21, height: 21)
       .background(
-        RoundedRectangle(cornerRadius: 4, style: .continuous)
-          .fill(isSelected ? Color(red: 0.12, green: 0.45, blue: 0.95) : (hoveredTool == icon ? Color.white.opacity(0.08) : Color.clear))
+        Radius.rect(Radius.ornament)
+          .fill(isSelected ? SnapzyMockPalette.macBlue : (hoveredTool == icon ? Color.white.opacity(0.08) : Color.clear))
       )
       .onHover { h in
         if isEnabled { hoveredTool = h ? icon : nil }
@@ -178,7 +172,7 @@ struct SnapzyMockAnnotateWindow: View {
             .foregroundStyle(Color(red: 0.15, green: 0.15, blue: 0.17))
             .lineSpacing(3)
 
-          Text("*Aug 18, 2026. Light burning true. Sea calm. Work complete.*")
+          Text("Aug 18, 2026. Light burning true. Sea calm. Work complete.")
             .font(.system(size: 10.5, weight: .regular))
             .italic()
             .foregroundStyle(Color(red: 0.25, green: 0.25, blue: 0.28))
@@ -189,19 +183,19 @@ struct SnapzyMockAnnotateWindow: View {
         Image(systemName: "arrow.up.right")
           .font(.system(size: 36, weight: .bold))
           .foregroundStyle(Color(red: 0.98, green: 0.28, blue: 0.28))
-          .shadow(color: Color.black.opacity(0.40), radius: 3, y: 1.5)
+          .shadow(color: Color.black.opacity(0.30), radius: 2.5, y: 1)
           .offset(x: 180, y: 36)
 
         // Vector Rectangle Box
-        RoundedRectangle(cornerRadius: 3)
+        Radius.rect(Radius.ornament)
           .strokeBorder(Color(red: 0.98, green: 0.28, blue: 0.28), lineWidth: 2)
           .frame(width: 130, height: 32)
           .offset(x: 14, y: 22)
       }
       .frame(width: 360, height: 160)
-      .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+      .clipShape(Radius.rect(Radius.controlXS))
       .overlay(
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
+        Radius.rect(Radius.controlXS)
           .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
       )
       .shadow(color: Color.black.opacity(0.45), radius: 14, x: 0, y: 7)
@@ -213,7 +207,7 @@ struct SnapzyMockAnnotateWindow: View {
 
   private var bottomStatusBar: some View {
     HStack(spacing: 8) {
-      Text("420 × 160 px")
+      Text("344 × 184 px")
         .font(.system(size: 9.5, weight: .medium, design: .monospaced))
         .foregroundStyle(Color.white.opacity(0.55))
 
@@ -231,7 +225,7 @@ struct SnapzyMockAnnotateWindow: View {
       .padding(.horizontal, 6)
       .padding(.vertical, 2.5)
       .background(
-        RoundedRectangle(cornerRadius: 4)
+        Radius.rect(Radius.ornament)
           .fill(Color.white.opacity(0.08))
       )
     }
