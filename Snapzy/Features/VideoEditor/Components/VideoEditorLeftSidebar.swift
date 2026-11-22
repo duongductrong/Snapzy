@@ -627,26 +627,43 @@ struct ZoomSettingsContent: View {
           .foregroundColor(.secondary)
       }
 
-      HStack(spacing: 4) {
+      HStack(spacing: 2) {
         ForEach([1.5, 2.0, 2.5, 3.0], id: \.self) { level in
+          let isSelected = abs(localZoomLevel - level) < 0.05
           Button {
             localZoomLevel = level
             applyZoomLevel()
           } label: {
-            Text("\(String(format: "%.1f", level))x")
-              .font(.system(size: 9, weight: .medium))
-              .padding(.horizontal, 6)
-              .padding(.vertical, 3)
-              .background(
-                abs(localZoomLevel - level) < 0.05
-                  ? ZoomColors.primary.opacity(0.3)
-                  : Color.white.opacity(0.1)
-              )
-              .clipShape(Radius.controlRect(forHeight: 17))
+            Text("\(String(format: "%.1f", level))×")
+              .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
+              .monospacedDigit()
+              .foregroundColor(isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
+              .frame(maxWidth: .infinity)
+              .frame(height: 20)
+              .background {
+                if isSelected {
+                  Radius.controlRect(forHeight: 20)
+                    .fill(Color.primary.opacity(0.11))
+                    .overlay(
+                      Radius.controlRect(forHeight: 20)
+                        .strokeBorder(Color.primary.opacity(0.13), lineWidth: 0.5)
+                    )
+                }
+              }
+              .contentShape(Radius.controlRect(forHeight: 20))
           }
           .buttonStyle(.plain)
         }
       }
+      .padding(2)
+      .background(
+        Radius.controlRect(forHeight: 24)
+          .fill(Color.primary.opacity(0.05))
+          .overlay(
+            Radius.controlRect(forHeight: 24)
+              .strokeBorder(Color.primary.opacity(0.075), lineWidth: 0.5)
+          )
+      )
     }
   }
 
@@ -730,26 +747,42 @@ struct ZoomSettingsContent: View {
           .foregroundColor(.secondary)
       }
 
-      HStack(spacing: 4) {
+      HStack(spacing: 2) {
         ForEach(transitionPresets, id: \.title) { preset in
+          let isSelected = abs(localTransitionDuration - preset.value) < 0.02
           Button {
             localTransitionDuration = preset.value
             applyTransitionDuration()
           } label: {
             Text(preset.title)
-              .font(.system(size: 9, weight: .medium))
-              .padding(.horizontal, 6)
-              .padding(.vertical, 3)
-              .background(
-                abs(localTransitionDuration - preset.value) < 0.02
-                  ? ZoomColors.primary.opacity(0.3)
-                  : Color.white.opacity(0.1)
-              )
-              .clipShape(Radius.controlRect(forHeight: 17))
+              .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
+              .foregroundColor(isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
+              .frame(maxWidth: .infinity)
+              .frame(height: 20)
+              .background {
+                if isSelected {
+                  Radius.controlRect(forHeight: 20)
+                    .fill(Color.primary.opacity(0.11))
+                    .overlay(
+                      Radius.controlRect(forHeight: 20)
+                        .strokeBorder(Color.primary.opacity(0.13), lineWidth: 0.5)
+                    )
+                }
+              }
+              .contentShape(Radius.controlRect(forHeight: 20))
           }
           .buttonStyle(.plain)
         }
       }
+      .padding(2)
+      .background(
+        Radius.controlRect(forHeight: 24)
+          .fill(Color.primary.opacity(0.05))
+          .overlay(
+            Radius.controlRect(forHeight: 24)
+              .strokeBorder(Color.primary.opacity(0.075), lineWidth: 0.5)
+          )
+      )
 
       Text(L10n.VideoEditor.transitionAppliesDescription)
         .font(.system(size: 10))
