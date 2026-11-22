@@ -122,7 +122,38 @@ private enum VideoControlsLayoutStyle {
 }
 
 private enum VideoControlsPart: Hashable {
-  case left, center, status, zoom
+  case status, zoom, trailingFrame
+}
+
+/// The one rule the status badges are shown under: their group has to fit the width the trailing
+/// side of the row was actually given.
+///
+/// That width is measured from the laid-out side frame rather than derived, because the row's
+/// division is the only thing the badges are judged against and it is not something the row can
+/// promise: the transport is centred by two equally flexible side frames, a side that needs more
+/// than its half takes it, and the widths involved (spacings, glyph sizes, the layout style the
+/// row switches between) all move with the theme and the zoom level.
+///
+/// What the measurement does capture is the asymmetry that produced issue #780. The badges are
+/// wrapped in `.frame(minWidth: 0)` on purpose, so the row's minimum keeps no room for them and
+/// an over-wide badge group can neither buy width from the leading side nor push the row wider —
+/// it keeps its `.fixedSize()` width and paints over the duration readout. A cluster that is part
+/// of the minimum behaves differently: it grows its frame, which costs the transport its centring
+/// but never overlaps. Comparing the group with the container instead — the old check — prices the
+/// badges as though they were part of the minimum, and at the reported size the row really does
+/// pack into 530 pt with them on while the trailing frame is only 147 pt of it.
+enum VideoControlsFitPolicy {
+  /// Whether the zoom cluster and the status badges fit inside the trailing side's measured width.
+  /// An unknown or empty measurement shows the badges, matching the first layout pass.
+  static func showsStatus(
+    trailingWidth: CGFloat,
+    zoomWidth: CGFloat,
+    statusWidth: CGFloat,
+    badgeSpacing: CGFloat
+  ) -> Bool {
+    guard trailingWidth > 0, zoomWidth > 0, statusWidth > 0 else { return true }
+    return trailingWidth >= zoomWidth + badgeSpacing + statusWidth
+  }
 }
 
 private struct VideoControlsPartWidthKey: PreferenceKey {
@@ -182,10 +213,11 @@ struct VideoControlsView: View {
 
   var body: some View {
     let _ = VideoEditorRenderRateGuard.record("VideoControlsView", isPlaying: playbackState.isPlaying)
-    // Both sides are equally flexible, so the transport stays centred whenever each half
-    // fits its side; when it doesn't, the row goes asymmetric and then drops the status
-    // badges instead of demanding width. The bar must stay compressible: its minimum
-    // width feeds the window's content minimum (NSHostingView `.minSize`), and a rigid
+    // The two side frames are equally flexible, which is what keeps the transport centred, and
+    // `VideoControlsFitPolicy` drops the status badges as soon as the trailing group stops
+    // fitting the width that side frame is actually given — measured off the frame, because
+    // that width is the only space the badges really have. The bar must stay compressible: its
+    // minimum width feeds the window's content minimum (NSHostingView `.minSize`), and a rigid
     // row made ⌘K's sidebar reservation grow the window instead of narrowing the editor.
     // (Not `ViewThatFits`: probing both glass candidates on every layout pass made each
     // editor layout ~15× slower.)
@@ -193,15 +225,14 @@ struct VideoControlsView: View {
       leftActions
         .disabled(aiChrome.isRunning)
         .fixedSize(horizontal: true, vertical: false)
-        .measureVideoControlsPart(.left)
         .frame(maxWidth: .infinity, alignment: .leading)
 
       centerTransport
         .fixedSize(horizontal: true, vertical: false)
-        .measureVideoControlsPart(.center)
 
       rightActions(showsStatus: showsStatus)
         .frame(maxWidth: .infinity, alignment: .trailing)
+        .measureVideoControlsPart(.trailingFrame)
     }
     .onPreferenceChange(VideoControlsPartWidthKey.self) { widths in
       if partWidths != widths { partWidths = widths }
@@ -219,18 +250,20 @@ struct VideoControlsView: View {
     .onReceive(agent.chromePublisher) { aiChrome = $0 }
   }
 
-  /// Whether the status badges fit beside the zoom cluster without squeezing the row.
-  /// Unknown widths (first pass) show them, matching the previous layout.
+  /// Whether the status badges fit beside the zoom cluster inside the width the trailing side was
+  /// laid out in. See `VideoControlsFitPolicy` for why that measured frame, and not the row's
+  /// leftover space, is what the badges have to live in.
   private var showsStatus: Bool {
-    guard containerWidth > 0,
-          let left = partWidths[.left],
-          let center = partWidths[.center],
+    guard let trailing = partWidths[.trailingFrame],
           let zoom = partWidths[.zoom],
-          let status = partWidths[.status],
-          status > 0
+          let status = partWidths[.status]
     else { return true }
-    let available = containerWidth - left - center - zoom - 2 * controlsLayout.outerSpacing
-    return available >= status + controlsLayout.metadataSpacing
+    return VideoControlsFitPolicy.showsStatus(
+      trailingWidth: trailing,
+      zoomWidth: zoom,
+      statusWidth: status,
+      badgeSpacing: controlsLayout.metadataSpacing
+    )
   }
 
   private var controlsLayout: VideoControlsLayoutStyle {

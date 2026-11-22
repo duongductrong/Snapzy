@@ -49,6 +49,10 @@ nonisolated struct VideoEditorActivity: Equatable {
 
 @MainActor
 final class VideoEditorAgentAnalyzer {
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   /// Audio window. Short enough to cut between words, long enough to be cheap.
   nonisolated static let window: TimeInterval = 0.05
   /// Shortest silence or idle stretch worth reporting at all; tools filter further.

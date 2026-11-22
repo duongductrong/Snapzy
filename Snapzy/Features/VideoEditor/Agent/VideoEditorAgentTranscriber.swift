@@ -20,6 +20,10 @@ import Foundation
 
 @MainActor
 final class VideoEditorAgentTranscriber {
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   /// `@concurrent`: a nonsending async closure type stored as a value pulls in
   /// swift_getExtendedFunctionTypeMetadata (macOS 15+ only), which crashes Release builds on 13/14 (#725).
   typealias Engine = @concurrent @Sendable (_ asset: AVAsset, _ roles: [VideoEditorAudioTrackRole], _ locale: Locale) async throws -> [VideoEditorTranscriptWord]
