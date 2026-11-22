@@ -118,7 +118,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
   - 在悬浮的快速访问卡片上直接复制、编辑、拖拽或上传截图；将截图固定到屏幕上。
   - 按文件名、类型或时间搜索截图、视频和 GIF，并在编辑器中重新打开。
 - **云端上传**
-  - 从快速访问、标注（Annotate）、视频编辑器（Video Editor）或历史记录中手动上传到 AWS S3、Cloudflare R2 或 Google Drive。
+  - 从快速访问、标注（Annotate）、视频编辑器（Video Editor）或历史记录中手动上传到 AWS S3、Cloudflare R2、Google Drive 或 imgbb。imgbb 链接是公开的，任何人都能查看（仅限图片，最大 32 MB）。
   - 文件直接上传到你选择的服务商。Snapzy 不会在截图后自动上传，也不会经由自己的服务器中转文件。
 - **应用语言**：支持 macOS 原生的按应用设置语言，共 10 种语言：英语、越南语、简体中文、繁体中文、西班牙语、日语、韩语、俄语、法语和德语。
 

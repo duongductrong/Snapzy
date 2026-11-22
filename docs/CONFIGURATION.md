@@ -59,7 +59,7 @@ The TOML file covers portable app preferences:
 
 The export intentionally excludes secrets and machine-private state:
 
-- Cloud access key and secret key are not exported. They remain in Keychain.
+- Cloud access key and secret key, and the imgbb API key, are not exported. They remain in Keychain. For imgbb the `[cloud]` table holds only `provider = "imgbb"` and `expire_time`.
 - Custom OCR endpoint API keys are not exported. They remain in Keychain
   (`capture.ocr.custom_models` carries endpoint metadata only).
 - Cloud credential archive transfer stays in the existing encrypted cloud

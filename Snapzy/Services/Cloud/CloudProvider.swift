@@ -14,12 +14,23 @@ nonisolated enum CloudProviderType: String, Codable, CaseIterable {
   case awsS3 = "aws_s3"
   case cloudflareR2 = "cloudflare_r2"
   case googleDrive = "google_drive"
+  case imgbb = "imgbb"
 
   var displayName: String {
     switch self {
     case .awsS3: return L10n.CloudProvider.awsS3
     case .cloudflareR2: return L10n.CloudProvider.cloudflareR2
     case .googleDrive: return L10n.CloudProvider.googleDrive
+    case .imgbb: return L10n.CloudProvider.imgbb
+    }
+  }
+
+  /// Providers that can't write bucket lifecycle rules, list usage, or name objects.
+  /// imgbb sets expiration per upload instead; Google Drive has none at all.
+  var usesObjectStorage: Bool {
+    switch self {
+    case .awsS3, .cloudflareR2: return true
+    case .googleDrive, .imgbb: return false
     }
   }
 }
@@ -32,6 +43,8 @@ struct CloudUploadResult {
   let key: String
   let fileSize: Int64
   let uploadedAt: Date
+  /// Web page that deletes the upload, for providers with no delete API (imgbb).
+  var deleteURL: URL? = nil
 }
 
 // MARK: - Cloud Provider Protocol
@@ -86,6 +99,8 @@ nonisolated enum CloudError: LocalizedError {
   case signingFailed(String)
   case invalidResponse
   case keychainError(String)
+  case unsupportedFileType(provider: String)
+  case fileTooLarge(provider: String, limitBytes: Int64)
 
   var errorDescription: String? {
     switch self {
@@ -105,6 +120,13 @@ nonisolated enum CloudError: LocalizedError {
       return L10n.CloudOperation.invalidResponse
     case .keychainError(let reason):
       return L10n.CloudOperation.keychainError(reason)
+    case .unsupportedFileType(let provider):
+      return L10n.CloudOperation.unsupportedFileType(provider)
+    case .fileTooLarge(let provider, let limitBytes):
+      return L10n.CloudOperation.fileTooLarge(
+        provider,
+        limit: ByteCountFormatter.string(fromByteCount: limitBytes, countStyle: .file)
+      )
     }
   }
 }

@@ -20,6 +20,8 @@ struct CloudUploadRecord: Identifiable, Codable, Equatable, FetchableRecord, Per
   let expireTime: CloudExpireTime
   /// MIME type of the uploaded file (e.g. "image/png"). Optional for backward compatibility.
   let contentType: String?
+  /// Web page that deletes the upload (imgbb). Nil for providers deleted through their API.
+  var deleteURL: URL? = nil
 
   /// Human-readable file size
   var formattedFileSize: String {

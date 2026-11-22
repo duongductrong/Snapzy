@@ -5353,6 +5353,11 @@ nonisolated enum L10n {
       defaultValue: "Google Drive",
       comment: "Cloud provider display name"
     )
+    static let imgbb = string(
+      "cloud-provider.imgbb",
+      defaultValue: "imgbb",
+      comment: "Cloud provider display name for the imgbb image host"
+    )
   }
 
   enum CloudExpire {
@@ -5451,6 +5456,25 @@ nonisolated enum L10n {
       defaultValue: "Invalid response from cloud provider.",
       comment: "Error shown when the cloud provider response is invalid"
     )
+    static func unsupportedFileType(_ provider: String) -> String {
+      format(
+        "cloud-operation.unsupported-file-type",
+        defaultValue: "%@ only accepts images. Videos can't be uploaded there.",
+        comment: "Error shown when a video is uploaded to an image-only cloud provider. %@ is the provider name.",
+        provider
+      )
+    }
+
+    static func fileTooLarge(_ provider: String, limit: String) -> String {
+      format(
+        "cloud-operation.file-too-large",
+        defaultValue: "This file is too large for %1$@, which accepts files up to %2$@.",
+        comment: "Error shown when a file exceeds the provider size limit. %1$@ is the provider name. %2$@ is the size limit, e.g. 32 MB.",
+        provider,
+        limit
+      )
+    }
+
     static func keychainError(_ reason: String) -> String {
       format(
         "cloud-operation.keychain-error",
@@ -5753,6 +5777,41 @@ nonisolated enum L10n {
       "cloud-settings.google-setup-guide",
       defaultValue: "Bring your own credentials to protect privacy. Create a Desktop App OAuth Client ID in your Google Cloud Console.",
       comment: "Google Drive client setup guide text"
+    )
+    static let imgbbCredentialsSection = string(
+      "cloud-settings.imgbb-credentials-section",
+      defaultValue: "imgbb API Key",
+      comment: "Section title for the imgbb API key"
+    )
+    static let imgbbAPIKey = string(
+      "cloud-settings.imgbb-api-key",
+      defaultValue: "API Key",
+      comment: "Label for the imgbb API key field"
+    )
+    static let imgbbAPIKeyTooltip = string(
+      "cloud-settings.imgbb-api-key-tooltip",
+      defaultValue: "Your imgbb API key. Snapzy stores it only in the macOS Keychain.",
+      comment: "Tooltip for the imgbb API key field"
+    )
+    static let imgbbGetAPIKey = string(
+      "cloud-settings.imgbb-get-api-key",
+      defaultValue: "Get an API key",
+      comment: "Link that opens the imgbb API key page"
+    )
+    static let imgbbPublicWarning = string(
+      "cloud-settings.imgbb-public-warning",
+      defaultValue: "imgbb links are public. Anyone with the link can view the image, so don't upload anything private.",
+      comment: "Warning that images uploaded to imgbb are publicly accessible"
+    )
+    static let imgbbExpirationInfo = string(
+      "cloud-settings.imgbb-expiration-info",
+      defaultValue: "imgbb deletes each image after the selected period. Permanent keeps images until you delete them.",
+      comment: "Note about how imgbb expiration works"
+    )
+    static let imgbbDeleteInfo = string(
+      "cloud-settings.imgbb-delete-info",
+      defaultValue: "imgbb has no delete API. Deleting an upload in Snapzy opens its imgbb delete page in your browser. imgbb accepts images up to 32 MB, not videos.",
+      comment: "Note about deleting imgbb uploads and imgbb limits"
     )
     static let googleAuthSection = string(
       "cloud-settings.google-auth-section",
