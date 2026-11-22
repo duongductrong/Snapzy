@@ -1473,6 +1473,73 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     return url
   }
 
+  func testMasterFormatManifestFixture_decodesZoomsWithSchemaV1Pinned() throws {
+    // Pin schema version 1 so existing user sessions never get rejected on load.
+    XCTAssertEqual(PersistedVideoEditorSession.currentSchemaVersion, 1)
+
+    let targetURL = try writeFile(named: "legacy-master.mov", contents: "rendered output")
+    let masterURL = try writeFile(named: "legacy-source.mov", contents: "unrendered master")
+    let manualZoom = ZoomSegment(
+      startTime: 0.5,
+      duration: 2.0,
+      zoomLevel: 2.0,
+      zoomCenter: CGPoint(x: 0.3, y: 0.7),
+      zoomType: .manual
+    )
+    let autoZoom = ZoomSegment(
+      startTime: 3.0,
+      duration: 2.5,
+      zoomLevel: 1.8,
+      zoomCenter: CGPoint(x: 0.6, y: 0.4),
+      zoomType: .auto
+    )
+    var sessionData = makeSessionData(sourceSnapshotURL: masterURL)
+    sessionData.zoomSegments = [manualZoom, autoZoom]
+    sessionData.motionBlurSettings = .disabled
+
+    XCTAssertTrue(store.persist(sessionData, for: targetURL))
+
+    // Rewrite manifest.json into strict pre-PR master format (no motionBlurSettings, no smartKeyframes).
+    let manifestURL = sessionDirectory(for: targetURL).appendingPathComponent("manifest.json")
+    let rawData = try Data(contentsOf: manifestURL)
+    var jsonObject = try XCTUnwrap(
+      JSONSerialization.jsonObject(with: rawData) as? [String: Any]
+    )
+    XCTAssertEqual(jsonObject["schemaVersion"] as? Int, 1)
+    if var editState = jsonObject["editState"] as? [String: Any] {
+      editState.removeValue(forKey: "motionBlurSettings")
+      if var zooms = editState["zoomSegments"] as? [[String: Any]] {
+        for idx in zooms.indices {
+          zooms[idx].removeValue(forKey: "smartKeyframes")
+        }
+        editState["zoomSegments"] = zooms
+      }
+      jsonObject["editState"] = editState
+    }
+    let masterFixtureData = try JSONSerialization.data(withJSONObject: jsonObject, options: [.sortedKeys])
+    try masterFixtureData.write(to: manifestURL, options: .atomic)
+
+    // Load strict master-format manifest and confirm full backward compatibility.
+    let loaded = try XCTUnwrap(store.load(for: targetURL))
+    XCTAssertEqual(loaded.zoomSegments.count, 2)
+    XCTAssertEqual(loaded.zoomSegments[0].id, manualZoom.id)
+    XCTAssertEqual(loaded.zoomSegments[0].zoomType, .manual)
+    XCTAssertNil(loaded.zoomSegments[0].smartKeyframes)
+    XCTAssertFalse(loaded.zoomSegments[0].isSmartAutoZoom)
+    XCTAssertEqual(loaded.zoomSegments[1].id, autoZoom.id)
+    XCTAssertEqual(loaded.zoomSegments[1].zoomType, .auto)
+    XCTAssertNil(loaded.zoomSegments[1].smartKeyframes)
+    XCTAssertFalse(loaded.zoomSegments[1].isSmartAutoZoom)
+    XCTAssertEqual(loaded.motionBlurSettings, .disabled)
+
+    // Re-encoding a decoded master ZoomSegment must not emit an unexpected smartKeyframes key.
+    let reencoded = try JSONEncoder().encode(loaded.zoomSegments[0])
+    let reencodedDict = try XCTUnwrap(
+      JSONSerialization.jsonObject(with: reencoded) as? [String: Any]
+    )
+    XCTAssertNil(reencodedDict["smartKeyframes"])
+  }
+
   private func writeFile(at url: URL, contents: String) throws {
     try Data(contents.utf8).write(to: url, options: .atomic)
   }
