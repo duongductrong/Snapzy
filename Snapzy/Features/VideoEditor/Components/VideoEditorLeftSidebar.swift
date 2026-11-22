@@ -302,11 +302,14 @@ struct ZoomSettingsContent: View {
     }
   }
 
+  // MARK: - Motion Blur Section
+
   private var motionBlurSection: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      HStack {
-        Label(L10n.VideoEditor.motionBlurTitle, systemImage: "camera.aperture")
-          .font(.system(size: 12, weight: .semibold))
+    inspectorCard {
+      HStack(alignment: .center, spacing: 8) {
+        Text(L10n.VideoEditor.motionBlurTitle)
+          .font(Typography.sectionHeader)
+          .foregroundColor(SidebarColors.labelPrimary)
 
         Spacer()
 
@@ -315,12 +318,14 @@ struct ZoomSettingsContent: View {
           isOn: Binding(
             get: { state.motionBlurSettings.isEnabled },
             set: { newValue in
-              var updated = state.motionBlurSettings
-              updated.isEnabled = newValue
-              if newValue, updated.shutterStrength <= 0.01 {
-                updated.shutterStrength = VideoEditorMotionBlurSettings.defaultShutterStrength
+              withAnimation(LiquidGlassTokens.settleSpring) {
+                var updated = state.motionBlurSettings
+                updated.isEnabled = newValue
+                if newValue, updated.shutterStrength <= 0.01 {
+                  updated.shutterStrength = VideoEditorMotionBlurSettings.defaultShutterStrength
+                }
+                state.setMotionBlurSettings(updated)
               }
-              state.setMotionBlurSettings(updated)
             }
           )
         )
@@ -331,70 +336,74 @@ struct ZoomSettingsContent: View {
       }
 
       if state.motionBlurSettings.isEnabled {
-        VStack(alignment: .leading, spacing: 4) {
-          HStack {
-            Text(L10n.VideoEditor.motionBlurStrength)
-              .font(.system(size: 11, weight: .medium))
-              .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+          VStack(alignment: .leading, spacing: 4) {
+            HStack {
+              Text(L10n.VideoEditor.motionBlurStrength)
+                .font(Typography.labelMedium)
+                .foregroundColor(SidebarColors.labelSecondary)
 
-            Spacer()
+              Spacer()
 
-            Text(state.motionBlurSettings.strengthDisplayValue)
-              .font(.system(size: 11, weight: .semibold))
-              .monospacedDigit()
-          }
-
-          Slider(
-            value: Binding(
-              get: { state.motionBlurSettings.shutterStrength },
-              set: { newValue in
-                var updated = state.motionBlurSettings
-                updated.shutterStrength = VideoEditorMotionBlurSettings.clampStrength(newValue)
-                state.setMotionBlurSettings(updated, recordUndo: motionBlurDragStart == nil)
-              }
-            ),
-            in: VideoEditorMotionBlurSettings.strengthRange
-          ) { editing in
-            if editing {
-              motionBlurDragStart = state.motionBlurSettings
-            } else if let start = motionBlurDragStart {
-              motionBlurDragStart = nil
-              state.commitMotionBlurSettings(from: start)
+              Text(state.motionBlurSettings.strengthDisplayValue)
+                .font(.system(size: 11, weight: .semibold))
+                .monospacedDigit()
+                .contentTransition(.numericText())
             }
-          }
-          .controlSize(.small)
-          .accessibilityIdentifier("video-editor.motion-blur-strength")
-        }
 
-        if state.hasEditableCursor {
-          HStack {
-            Text(L10n.VideoEditor.motionBlurCursor)
-              .font(.system(size: 11, weight: .medium))
-              .foregroundColor(.secondary)
-
-            Spacer()
-
-            Toggle(
-              "",
-              isOn: Binding(
-                get: { state.motionBlurSettings.cursorBlurEnabled },
+            Slider(
+              value: Binding(
+                get: { state.motionBlurSettings.shutterStrength },
                 set: { newValue in
                   var updated = state.motionBlurSettings
-                  updated.cursorBlurEnabled = newValue
-                  state.setMotionBlurSettings(updated)
+                  updated.shutterStrength = VideoEditorMotionBlurSettings.clampStrength(newValue)
+                  state.setMotionBlurSettings(updated, recordUndo: motionBlurDragStart == nil)
                 }
-              )
-            )
-            .labelsHidden()
-            .toggleStyle(.switch)
+              ),
+              in: VideoEditorMotionBlurSettings.strengthRange
+            ) { editing in
+              if editing {
+                motionBlurDragStart = state.motionBlurSettings
+              } else if let start = motionBlurDragStart {
+                motionBlurDragStart = nil
+                state.commitMotionBlurSettings(from: start)
+              }
+            }
             .controlSize(.small)
+            .accessibilityIdentifier("video-editor.motion-blur-strength")
+          }
+
+          if state.hasEditableCursor {
+            HStack {
+              Text(L10n.VideoEditor.motionBlurCursor)
+                .font(Typography.labelMedium)
+                .foregroundColor(SidebarColors.labelSecondary)
+
+              Spacer()
+
+              Toggle(
+                "",
+                isOn: Binding(
+                  get: { state.motionBlurSettings.cursorBlurEnabled },
+                  set: { newValue in
+                    var updated = state.motionBlurSettings
+                    updated.cursorBlurEnabled = newValue
+                    state.setMotionBlurSettings(updated)
+                  }
+                )
+              )
+              .labelsHidden()
+              .toggleStyle(.switch)
+              .controlSize(.small)
+            }
           }
         }
+        .transition(.opacity.combined(with: .move(edge: .top)))
       }
 
       Text(L10n.VideoEditor.motionBlurDescription)
         .font(.system(size: 10))
-        .foregroundColor(.secondary.opacity(0.8))
+        .foregroundColor(SidebarColors.labelTertiary)
         .fixedSize(horizontal: false, vertical: true)
     }
   }
