@@ -2514,12 +2514,26 @@ final class VideoEditorState: ObservableObject {
     guard let index = zoomSegments.firstIndex(where: { $0.id == id }) else { return }
 
     var segment = zoomSegments[index]
+    let oldStartTime = segment.startTime
+    let oldDuration = segment.duration
     if startTime != nil || duration != nil,
        let resolved = resolvedZoomSegment(
-        id: id, startTime: startTime ?? segment.startTime,
-        duration: duration ?? segment.duration
+         id: id, startTime: startTime ?? segment.startTime,
+         duration: duration ?? segment.duration
        ) {
-      segment.startTime = resolved.startTime
+      let newStartTime = resolved.startTime
+      let newDuration = duration != nil ? resolved.duration : segment.duration
+      if let keyframes = segment.smartKeyframes,
+         !keyframes.isEmpty,
+         abs(newStartTime - oldStartTime) > 0.0001 || abs(newDuration - oldDuration) > 0.0001 {
+        segment.smartKeyframes = Self.remapSmartKeyframes(
+          keyframes,
+          fromOldRange: oldStartTime ... (oldStartTime + oldDuration),
+          toNewRange: newStartTime ... (newStartTime + newDuration),
+          placements: placements
+        )
+      }
+      segment.startTime = newStartTime
       if duration != nil { segment.duration = resolved.duration }
     }
     if let zoomLevel {
@@ -3254,6 +3268,67 @@ final class VideoEditorState: ObservableObject {
     case fillGaps
     /// Replace every existing zoom segment when the generated plan is non-empty.
     case replaceAll
+  }
+
+  /// Shifts or linearly rescales source-time `smartKeyframes` when a Smart Auto-Zoom segment
+  /// is dragged or resized on the structural timeline, preventing the camera from clamping to
+  /// stale keyframe bounds. Returns `nil` (falling back to cursor-follow) if the new position
+  /// does not land on a primary recording clip.
+  static func remapSmartKeyframes(
+    _ keyframes: [AutoFocusCameraSample],
+    fromOldRange oldRange: ClosedRange<TimeInterval>,
+    toNewRange newRange: ClosedRange<TimeInterval>,
+    placements: [TimelineSequence.Placement]
+  ) -> [AutoFocusCameraSample]? {
+    guard !keyframes.isEmpty else { return nil }
+
+    func primarySourceTime(at sequenceTime: TimeInterval) -> TimeInterval? {
+      if let exact = placements.first(where: {
+        $0.clip.isPrimary && sequenceTime >= $0.start && sequenceTime <= $0.end
+      }) {
+        return exact.sourceTime(at: sequenceTime)
+      }
+      return nil
+    }
+
+    guard let oldSourceStart = primarySourceTime(at: oldRange.lowerBound),
+          let newSourceStart = primarySourceTime(at: newRange.lowerBound)
+    else {
+      return nil
+    }
+
+    let oldDuration = oldRange.upperBound - oldRange.lowerBound
+    let newDuration = newRange.upperBound - newRange.lowerBound
+
+    if abs(newDuration - oldDuration) < 0.001 {
+      let sourceDelta = newSourceStart - oldSourceStart
+      return keyframes.map { sample in
+        AutoFocusCameraSample(
+          time: max(0, sample.time + sourceDelta),
+          center: sample.center,
+          zoomMultiplier: sample.zoomMultiplier
+        )
+      }
+    }
+
+    guard let oldSourceEnd = primarySourceTime(at: oldRange.upperBound),
+          let newSourceEnd = primarySourceTime(at: newRange.upperBound)
+    else {
+      return nil
+    }
+    let oldSourceSpan = oldSourceEnd - oldSourceStart
+    let newSourceSpan = newSourceEnd - newSourceStart
+    guard oldSourceSpan > 0.001, newSourceSpan > 0.001 else { return nil }
+
+    return keyframes.map { sample in
+      let u = (sample.time - oldSourceStart) / oldSourceSpan
+      let remappedTime = max(0, newSourceStart + u * newSourceSpan)
+      return AutoFocusCameraSample(
+        time: remappedTime,
+        center: sample.center,
+        zoomMultiplier: sample.zoomMultiplier
+      )
+    }
   }
 
   /// Projects source-time Smart Auto-Zoom segments onto the current primary clip placements,
