@@ -3931,7 +3931,7 @@ final class VideoEditorState: ObservableObject {
       return ZoomCalculator.defaultTransitionDuration
     }
 
-    return ZoomCalculator.clampTransitionDuration(stored)
+    return ZoomCalculator.migrateLegacyTransitionDuration(stored)
   }
 
   private func setupEndObserver() {

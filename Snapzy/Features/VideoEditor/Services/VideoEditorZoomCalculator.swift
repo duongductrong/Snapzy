@@ -17,7 +17,25 @@ nonisolated enum ZoomCalculator {
   static let fastTransitionDuration: TimeInterval = 0.30
   static let balancedTransitionDuration: TimeInterval = 0.52
   static let smoothTransitionDuration: TimeInterval = 0.72
+  static let legacyFastTransitionDuration: TimeInterval = 0.25
+  static let legacyBalancedTransitionDuration: TimeInterval = 0.40
+  static let legacySmoothTransitionDuration: TimeInterval = 0.60
   static let neutralCenter: CGPoint = .init(x: 0.5, y: 0.5)
+
+  /// Snaps legacy persisted transition presets (`0.25 / 0.40 / 0.60`) to the updated
+  /// Fast / Balanced / Smooth preset values so existing users keep their selected preset highlighted.
+  static func migrateLegacyTransitionDuration(_ stored: TimeInterval) -> TimeInterval {
+    if abs(stored - legacyFastTransitionDuration) < 0.01 {
+      return fastTransitionDuration
+    }
+    if abs(stored - legacyBalancedTransitionDuration) < 0.01 {
+      return balancedTransitionDuration
+    }
+    if abs(stored - legacySmoothTransitionDuration) < 0.01 {
+      return smoothTransitionDuration
+    }
+    return clampTransitionDuration(stored)
+  }
 
   // MARK: - Crop Rect Calculation
 
