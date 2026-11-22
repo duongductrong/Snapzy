@@ -345,7 +345,7 @@ final class AnnotateImageOpsTests: XCTestCase {
           // Routed before the drawing-tool intent is consulted.
           XCTAssertEqual(unselected, .draw, "\(tool) unselected")
           XCTAssertEqual(selected, .draw, "\(tool) selected")
-        case .text, .counter:
+        case .text, .counter, .stamp:
           XCTAssertEqual(unselected, .selectNow(item: rectangle, editTextOnClick: false), "\(tool) unselected")
           XCTAssertEqual(selected, .moveSelection(anchor: rectangle, editTextOnClick: false), "\(tool) selected")
         default:
