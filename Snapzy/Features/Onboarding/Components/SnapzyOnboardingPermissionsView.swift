@@ -2,8 +2,7 @@
 //  SnapzyOnboardingPermissionsView.swift
 //  Snapzy
 //
-//  Step 4 full-width permissions screen: a scannable list of grants beside a quiet
-//  reassurance rail.
+//  Step 4 full-width permissions grid with promises, assurances, live TCC checks, and privacy band.
 //
 
 import ApplicationServices
@@ -14,15 +13,12 @@ struct SnapzyOnboardingPermissionsView: View {
   @ObservedObject var state: SnapzyOnboardingState
 
   /// Height of the per-row grant button. The frame and the shape both derive from it.
-  static let grantButtonHeight: CGFloat = 28
+  static let grantButtonHeight: CGFloat = 32
   /// Grant button shape. A labelled action, so it is a pill; the pill derives its own radius
   /// from the button's height, so the frame and the shape cannot drift.
   static var grantButtonShape: Capsule {
     Capsule(style: .continuous)
   }
-
-  /// Width of the open editorial privacy column beside the permissions list.
-  private static let privacyRailWidth: CGFloat = 304
 
   @ObservedObject private var screenCaptureManager = ScreenCaptureManager.shared
   @ObservedObject private var identityManager = AppIdentityManager.shared
@@ -34,17 +30,74 @@ struct SnapzyOnboardingPermissionsView: View {
   @State private var probeTimer: Timer? = nil
 
   var body: some View {
-    VStack(alignment: .leading, spacing: SnapzySpace.huge) {
+    VStack(alignment: .leading, spacing: 24) {
       headline
 
-      HStack(alignment: .top, spacing: SnapzySpace.giant) {
-        permissionList
-          .frame(maxWidth: .infinity, alignment: .top)
+      LazyVGrid(
+        columns: Array(
+          repeating: GridItem(.flexible(), spacing: SnapzySpace.xxl, alignment: .top),
+          count: 3
+        ),
+        spacing: SnapzySpace.xxl
+      ) {
+        // 1. Screen Recording
+        PermissionCard(
+          title: L10n.Onboarding.screenRecording,
+          isRequired: true,
+          promise: L10n.Onboarding.permissionsScreenRecordingPromise,
+          assurances: [
+            L10n.Onboarding.permissionsScreenRecordingAssurance1,
+            L10n.Onboarding.permissionsScreenRecordingAssurance2,
+            L10n.Onboarding.permissionsScreenRecordingAssurance3,
+          ],
+          isGranted: screenCaptureManager.hasPermission,
+          actionTitle: L10n.Onboarding.permissionsScreenRecordingAction,
+          onAction: {
+            Task {
+              _ = await screenCaptureManager.requestPermission()
+              await refreshPermissions()
+            }
+          }
+        )
 
-        privacyRail
-          .frame(width: SnapzyOnboardingPermissionsView.privacyRailWidth, alignment: .topLeading)
+        // 2. Save Location
+        PermissionCard(
+          title: L10n.Onboarding.saveFolder,
+          isRequired: true,
+          promise: L10n.Onboarding.permissionsSaveFolderPromise,
+          assurances: [
+            L10n.Onboarding.permissionsSaveFolderAssurance1,
+            L10n.Onboarding.permissionsSaveFolderAssurance2,
+            L10n.Onboarding.permissionsSaveFolderAssurance3,
+          ],
+          isGranted: exportFolderGranted,
+          actionTitle: L10n.Onboarding.permissionsSaveFolderAction,
+          onAction: {
+            requestExportFolder()
+          }
+        )
+
+        // 3. Accessibility & Global Shortcuts
+        PermissionCard(
+          title: L10n.Onboarding.accessibility,
+          isRequired: false,
+          promise: L10n.Onboarding.permissionsAccessibilityPromise,
+          assurances: [
+            L10n.Onboarding.permissionsAccessibilityAssurance1,
+            L10n.Onboarding.permissionsAccessibilityAssurance2,
+            L10n.Onboarding.permissionsAccessibilityAssurance3,
+          ],
+          isGranted: accessibilityGranted,
+          actionTitle: L10n.Onboarding.permissionsAccessibilityAction,
+          onAction: {
+            requestAccessibility()
+          }
+        )
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+      privacyBand
+
+      Spacer(minLength: 0)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .onAppear {
@@ -67,111 +120,32 @@ struct SnapzyOnboardingPermissionsView: View {
   // MARK: - Headline
 
   private var headline: some View {
-    VStack(alignment: .leading, spacing: SnapzySpace.md) {
-      SnapzyOnboardingOverline(
-        L10n.Onboarding.stepIndicator(state.currentStep.stepNumber, SnapzyOnboardingStep.allCases.count)
-      )
-
+    VStack(alignment: .leading, spacing: SnapzySpace.xl) {
       Text(state.currentStep.title)
-        .font(.system(size: SnapzyOnboardingType.title, weight: .bold))
-        .tracking(SnapzyOnboardingType.displayTracking + 0.2)
+        .font(.system(size: SnapzyOnboardingType.display - 4, weight: .bold))
+        .tracking(-0.5)
         .foregroundStyle(SnapzyGlassInk.primary)
 
-      Text(state.currentStep.subtitle)
-        .font(.system(size: SnapzyOnboardingType.lede))
-        .foregroundStyle(SnapzyGlassInk.body)
-        .lineSpacing(4)
-        .fixedSize(horizontal: false, vertical: true)
+      VStack(alignment: .leading, spacing: SnapzySpace.md) {
+        Text(state.currentStep.subtitle)
+          .font(.system(size: SnapzyOnboardingType.lede))
+          .foregroundStyle(SnapzyGlassInk.body)
+
+        Text(L10n.Onboarding.permissionsAdjustAnytime)
+          .font(.system(size: SnapzyOnboardingType.lede))
+          .foregroundStyle(SnapzyGlassInk.muted)
+      }
+      .fixedSize(horizontal: false, vertical: true)
     }
   }
 
-  // MARK: - Permissions
+  // MARK: - Privacy Band
 
-  private var permissionList: some View {
-    VStack(spacing: 0) {
-      PermissionsGrantRow(
-        symbol: "display",
-        title: L10n.Onboarding.screenRecording,
-        isRequired: true,
-        promise: L10n.Onboarding.permissionsScreenRecordingPromise,
-        assurances: [
-          L10n.Onboarding.permissionsScreenRecordingAssurance1,
-          L10n.Onboarding.permissionsScreenRecordingAssurance2,
-          L10n.Onboarding.permissionsScreenRecordingAssurance3,
-        ],
-        isGranted: screenCaptureManager.hasPermission,
-        actionTitle: L10n.Onboarding.permissionsScreenRecordingAction,
-        onAction: {
-          Task {
-            _ = await screenCaptureManager.requestPermission()
-            await refreshPermissions()
-          }
-        }
-      )
+  private var privacyBand: some View {
+    VStack(alignment: .leading, spacing: SnapzySpace.xl) {
+      SnapzyOnboardingOverline(L10n.Onboarding.permissionsPrivacyOverline)
 
-      rowRule
-
-      PermissionsGrantRow(
-        symbol: "folder",
-        title: L10n.Onboarding.saveFolder,
-        isRequired: true,
-        promise: L10n.Onboarding.permissionsSaveFolderPromise,
-        assurances: [
-          L10n.Onboarding.permissionsSaveFolderAssurance1,
-          L10n.Onboarding.permissionsSaveFolderAssurance2,
-          L10n.Onboarding.permissionsSaveFolderAssurance3,
-        ],
-        isGranted: exportFolderGranted,
-        actionTitle: L10n.Onboarding.permissionsSaveFolderAction,
-        onAction: {
-          requestExportFolder()
-        }
-      )
-
-      rowRule
-
-      PermissionsGrantRow(
-        symbol: "keyboard",
-        title: L10n.Onboarding.accessibility,
-        isRequired: false,
-        promise: L10n.Onboarding.permissionsAccessibilityPromise,
-        assurances: [
-          L10n.Onboarding.permissionsAccessibilityAssurance1,
-          L10n.Onboarding.permissionsAccessibilityAssurance2,
-          L10n.Onboarding.permissionsAccessibilityAssurance3,
-        ],
-        isGranted: accessibilityGranted,
-        actionTitle: L10n.Onboarding.permissionsAccessibilityAction,
-        onAction: {
-          requestAccessibility()
-        }
-      )
-    }
-    .background(listShape.fill(SnapzyGlassInk.fillQuiet))
-    .overlay(listShape.strokeBorder(SnapzyGlassInk.hairline, lineWidth: SnapzySurfaceGlass.specularLineWidth))
-    .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: screenCaptureManager.hasPermission)
-    .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: exportFolderGranted)
-    .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: accessibilityGranted)
-  }
-
-  private var listShape: RoundedRectangle {
-    Radius.rect(SnapzyRadius.card)
-  }
-
-  private var rowRule: some View {
-    Rectangle()
-      .fill(SnapzyGlassInk.hairline)
-      .frame(height: SnapzySurfaceGlass.specularLineWidth)
-      .padding(.horizontal, SnapzySpace.xxxl)
-  }
-
-  // MARK: - Open Editorial Privacy Column (No Empty Box Stretching to Bottom)
-
-  private var privacyRail: some View {
-    VStack(alignment: .leading, spacing: SnapzySpace.xxxl) {
-      SnapzyOnboardingOverline(L10n.Onboarding.permissionsPrivacyOverline, rule: true)
-
-      VStack(alignment: .leading, spacing: SnapzySpace.xxxl) {
+      HStack(alignment: .top, spacing: SnapzySpace.xxl + SnapzySpace.xs) {
         PrivacyPromise(
           symbol: "hand.tap",
           title: L10n.Onboarding.permissionsPrivacyTriggerTitle,
@@ -190,19 +164,17 @@ struct SnapzyOnboardingPermissionsView: View {
           detail: L10n.Onboarding.permissionsPrivacySettingsDetail
         )
       }
-
-      Rectangle()
-        .fill(SnapzyGlassInk.hairline)
-        .frame(height: SnapzySurfaceGlass.specularLineWidth)
-
-      Text(L10n.Onboarding.permissionsAdjustAnytime)
-        .font(.system(size: SnapzyOnboardingType.caption))
-        .foregroundStyle(SnapzyGlassInk.faint)
-        .lineSpacing(4)
-        .fixedSize(horizontal: false, vertical: true)
     }
-    .padding(.top, SnapzySpace.sm)
-    .frame(maxWidth: .infinity, alignment: .topLeading)
+    .padding(SnapzySpace.xxl)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      Radius.rect(SnapzyRadius.card)
+        .fill(Color.white.opacity(0.035))
+        .overlay(
+          Radius.rect(SnapzyRadius.card)
+            .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
+    )
   }
 
   // MARK: - Actions
@@ -222,8 +194,8 @@ struct SnapzyOnboardingPermissionsView: View {
 
   private func requestExportFolder() {
     _ = fileAccessManager.chooseExportDirectory(
-      message: L10n.Onboarding.chooseFolderMessage,
-      prompt: L10n.Onboarding.grantAccess,
+      message: "Choose a folder for Snapzy captures (default: Desktop/Snapzy)",
+      prompt: "Grant Access",
       directoryURL: fileAccessManager.defaultExportDirectory
     )
     Task { await refreshPermissions() }
@@ -261,10 +233,9 @@ struct SnapzyOnboardingPermissionsView: View {
   }
 }
 
-// MARK: - Permission Row
+// MARK: - Permission Card
 
-private struct PermissionsGrantRow: View {
-  var symbol: String
+private struct PermissionCard: View {
   var title: String
   var isRequired: Bool
   var promise: String
@@ -274,148 +245,91 @@ private struct PermissionsGrantRow: View {
   var onAction: () -> Void
 
   var body: some View {
-    HStack(alignment: .top, spacing: SnapzySpace.xl) {
-      tile
+    VStack(alignment: .leading, spacing: SnapzySpace.xl) {
+      HStack(spacing: SnapzySpace.md) {
+        SnapzyOnboardingOverline(title)
+        badge
+        Spacer(minLength: 0)
+      }
 
-      VStack(alignment: .leading, spacing: SnapzySpace.xs) {
-        // Single-line header: capability title + subtle inline necessity label + trailing status/CTA
-        HStack(alignment: .center, spacing: SnapzySpace.sm) {
-          Text(title)
-            .font(.system(size: SnapzyOnboardingType.challenge, weight: .semibold))
-            .foregroundStyle(SnapzyGlassInk.primary)
+      Text(promise)
+        .font(.system(size: SnapzyOnboardingType.lede - 1.5, weight: .semibold))
+        .foregroundStyle(SnapzyGlassInk.primary)
+        .fixedSize(horizontal: false, vertical: true)
 
-          Text("·")
-            .font(.system(size: SnapzyOnboardingType.caption, weight: .medium))
-            .foregroundStyle(SnapzyGlassInk.faint)
-            .accessibilityHidden(true)
+      VStack(alignment: .leading, spacing: SnapzySpace.lg) {
+        ForEach(assurances, id: \.self) { item in
+          HStack(alignment: .top, spacing: SnapzySpace.md) {
+            Image(systemName: "checkmark.circle")
+              .font(.system(size: 11))
+              .foregroundStyle(SnapzyGlassInk.faint)
 
-          Text(isRequired ? L10n.Onboarding.permissionsBadgeRequired : L10n.Onboarding.permissionsBadgeOptional)
-            .font(.system(size: 11.5, weight: .medium))
-            .foregroundStyle(isRequired ? SnapzyGlassInk.muted : SnapzyGlassInk.faint)
-            .accessibilityLabel(isRequired ? L10n.Onboarding.requiredForCaptures : L10n.Onboarding.optionalForGlobalShortcuts)
-
-          Spacer(minLength: SnapzySpace.lg)
-
-          trailing
-        }
-        .frame(minHeight: SnapzyOnboardingPermissionsView.grantButtonHeight)
-
-        Text(promise)
-          .font(.system(size: SnapzyOnboardingType.body - 0.5))
-          .foregroundStyle(SnapzyGlassInk.body)
-          .lineSpacing(3)
-          .fixedSize(horizontal: false, vertical: true)
-
-        // Quiet editorial assurance list anchored with a subtle vertical rule — preserves 100% of
-        // the privacy details while staying crisp, scannable, and free of SaaS card clutter.
-        VStack(alignment: .leading, spacing: 2.5) {
-          ForEach(assurances, id: \.self) { item in
             Text(item)
-              .font(.system(size: 11.5))
-              .foregroundStyle(SnapzyGlassInk.muted.opacity(0.85))
-              .lineSpacing(2)
+              .font(.system(size: SnapzyOnboardingType.caption))
+              .foregroundStyle(SnapzyGlassInk.body)
+              .lineSpacing(3)
               .fixedSize(horizontal: false, vertical: true)
           }
         }
-        .padding(.leading, SnapzySpace.md)
-        .overlay(alignment: .leading) {
-          Rectangle()
-            .fill(SnapzyGlassInk.hairline)
-            .frame(width: 1)
-            .padding(.vertical, 2)
+      }
+
+      Spacer(minLength: SnapzySpace.lg)
+
+      // Status button row
+      if isGranted {
+        HStack(spacing: SnapzySpace.md) {
+          Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 14))
+            .foregroundStyle(Color.green)
+
+          Text(L10n.Onboarding.permissionsStatusGranted)
+            .font(.system(size: SnapzyOnboardingType.body, weight: .medium))
+            .foregroundStyle(SnapzyGlassInk.body)
         }
-        .padding(.top, SnapzySpace.xs)
+      } else {
+        let shape = SnapzyOnboardingPermissionsView.grantButtonShape
+
+        Button(action: onAction) {
+          Text(actionTitle)
+            .font(.system(size: SnapzyOnboardingType.body, weight: .semibold))
+            .foregroundStyle(SnapzyGlassInk.primary)
+            .padding(.horizontal, SnapzySpace.xl)
+            .frame(height: SnapzyOnboardingPermissionsView.grantButtonHeight)
+            .background(
+              shape
+                .fill(Color.white.opacity(0.14))
+                .overlay(
+                  shape
+                    .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.5)
+                )
+            )
+        }
+        .buttonStyle(.plain)
       }
     }
-    .padding(.horizontal, SnapzySpace.xxxl)
-    .padding(.vertical, SnapzySpace.xxl)
-    .frame(maxWidth: .infinity, alignment: .topLeading)
-  }
-
-  /// Trailing grant state: quiet green status dot + label (never duplicating a green checkmark box
-  /// on the left), or a crisp action pill when still needed.
-  @ViewBuilder
-  private var trailing: some View {
-    if isGranted {
-      HStack(spacing: 6) {
-        Circle()
-          .fill(Color(red: 0.22, green: 0.80, blue: 0.42))
-          .frame(width: 6.5, height: 6.5)
-
-        Text(L10n.Onboarding.permissionsStatusGranted)
-          .font(.system(size: SnapzyOnboardingType.caption, weight: .medium))
-          .foregroundStyle(SnapzyGlassInk.body)
-      }
-      .fixedSize()
-    } else {
-      Button(action: {
-        SnapzyOnboardingWelcomeAudio.shared.playButtonTap()
-        onAction()
-      }) {
-        Text(actionTitle)
-          .font(.system(size: SnapzyOnboardingType.caption, weight: .semibold))
-          .foregroundStyle(isRequired ? Color(red: 0.04, green: 0.08, blue: 0.22) : SnapzyGlassInk.primary)
-          .padding(.horizontal, SnapzySpace.xl)
-          .frame(height: SnapzyOnboardingPermissionsView.grantButtonHeight)
-          .background(
-            SnapzyOnboardingPermissionsView.grantButtonShape
-              .fill(isRequired ? Color.white : SnapzyGlassInk.fillRaised)
-          )
-          .overlay(
-            SnapzyOnboardingPermissionsView.grantButtonShape
-              .strokeBorder(
-                isRequired ? Color.black.opacity(0.06) : SnapzyGlassInk.hairlineStrong,
-                lineWidth: SnapzySurfaceGlass.specularLineWidth
-              )
-          )
-          .contentShape(SnapzyOnboardingPermissionsView.grantButtonShape)
-      }
-      .buttonStyle(SnapzyGrantButtonStyle(isProminent: isRequired))
-      .fixedSize()
-    }
-  }
-
-  /// Keeps each permission's real macOS capability glyph (`display`, `folder`, `keyboard`) intact
-  /// instead of turning all three rows into identical green check boxes.
-  private var tile: some View {
-    ZStack {
-      Radius.rect(Radius.tile)
-        .fill(SnapzyGlassInk.fillRaised)
-
-      Image(systemName: symbol)
-        .font(.system(size: 13.5, weight: .medium))
-        .foregroundStyle(isGranted ? SnapzyGlassInk.primary : SnapzyGlassInk.body)
-    }
-    .frame(width: 32, height: 32)
-    .overlay(
-      Radius.rect(Radius.tile)
-        .strokeBorder(SnapzyGlassInk.hairline, lineWidth: SnapzySurfaceGlass.specularLineWidth)
-    )
-    .accessibilityHidden(true)
-  }
-}
-
-private struct SnapzyGrantButtonStyle: ButtonStyle {
-  var isProminent: Bool = false
-  @State private var isHovered = false
-
-  private var shape: Capsule {
-    SnapzyOnboardingPermissionsView.grantButtonShape
-  }
-
-  func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .overlay(
-        shape.fill(
-          (isProminent ? Color(red: 0.06, green: 0.20, blue: 0.90).opacity(0.10) : SnapzyGlassInk.fillHover)
-            .opacity(configuration.isPressed ? 0.8 : (isHovered ? 1 : 0))
+    .padding(SnapzySpace.xxl)
+    .frame(maxWidth: .infinity, minHeight: 250, alignment: .topLeading)
+    .background(
+      Radius.rect(SnapzyRadius.card)
+        .fill(Color.white.opacity(0.05))
+        .overlay(
+          Radius.rect(SnapzyRadius.card)
+            .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
         )
+    )
+    .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: isGranted)
+  }
+
+  private var badge: some View {
+    Text(isRequired ? L10n.Onboarding.permissionsBadgeRequired : L10n.Onboarding.permissionsBadgeOptional)
+      .font(.system(size: 9, weight: .bold))
+      .tracking(0.8)
+      .foregroundStyle(SnapzyGlassInk.body)
+      .padding(.horizontal, SnapzySpace.md)
+      .padding(.vertical, 3)
+      .background(
+        Capsule().fill(Color.white.opacity(isRequired ? 0.12 : 0.07))
       )
-      .scaleEffect(configuration.isPressed ? 0.98 : 1)
-      .onHover { hovering in
-        withAnimation(SnapzyMotionPreferences.shared.spec(.hover).animation) { isHovered = hovering }
-      }
-      .animation(SnapzyMotionPreferences.shared.spec(.anticipation).animation, value: configuration.isPressed)
   }
 }
 
@@ -425,15 +339,17 @@ private struct PrivacyPromise: View {
   var detail: String
 
   var body: some View {
-    HStack(alignment: .top, spacing: SnapzySpace.lg) {
+    HStack(alignment: .top, spacing: SnapzySpace.xl) {
       Image(systemName: symbol)
-        .font(.system(size: 12))
+        .font(.system(size: 13))
         .foregroundStyle(SnapzyGlassInk.body)
-        .frame(width: 22)
-        .padding(.top, 2)
-        .accessibilityHidden(true)
+        .frame(width: 26, height: 26)
+        .background(
+          Radius.rect(Radius.tile)
+            .fill(Color.white.opacity(0.10))
+        )
 
-      VStack(alignment: .leading, spacing: SnapzySpace.xxs) {
+      VStack(alignment: .leading, spacing: SnapzySpace.sm) {
         Text(title)
           .font(.system(size: SnapzyOnboardingType.body, weight: .semibold))
           .foregroundStyle(SnapzyGlassInk.primary)
@@ -441,9 +357,11 @@ private struct PrivacyPromise: View {
         Text(detail)
           .font(.system(size: SnapzyOnboardingType.caption))
           .foregroundStyle(SnapzyGlassInk.muted)
-          .lineSpacing(4)
+          .lineSpacing(3)
           .fixedSize(horizontal: false, vertical: true)
       }
+
+      Spacer(minLength: 0)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }

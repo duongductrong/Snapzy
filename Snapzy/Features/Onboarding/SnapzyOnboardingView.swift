@@ -123,6 +123,7 @@ struct SnapzyOnboardingView: View {
         VStack(spacing: 0) {
           SnapzyOnboardingPermissionsView(state: state)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.top, 16)
 
           footer
             .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 64))

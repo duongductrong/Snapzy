@@ -26,7 +26,7 @@ struct SnapzyMockAreaCaptureView: View {
       SnapzyMockWallpaper(app: .notes).equatable()
 
       windowLayer
-        .padding(.top, SnapzyMockScene.windowTopInset)
+        .padding(.top, SnapzyMockScene.windowTopInset + 16)
         .padding(.horizontal, SnapzyMockScene.windowInset)
 
       if showMenuBar {
@@ -70,7 +70,7 @@ struct SnapzyMockAreaCaptureView: View {
     } else {
       SnapzyMockNotesWindow()
         .equatable()
-        .frame(maxWidth: 520)
+        .frame(maxWidth: 520, maxHeight: 316)
         .overlay(alignment: .topLeading) {
           if state.step1Stage == .selectingArea {
             selection
