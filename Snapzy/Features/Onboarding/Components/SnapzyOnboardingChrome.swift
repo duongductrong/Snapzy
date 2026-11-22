@@ -60,7 +60,10 @@ struct SnapzyOnboardingCloseButton: View {
   }
 
   var body: some View {
-    Button(action: action) {
+    Button {
+      SnapzyOnboardingWelcomeAudio.shared.playButtonTap()
+      action()
+    } label: {
       Image(systemName: "xmark")
         .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(isHovered ? SnapzyGlassInk.primary : SnapzyGlassInk.muted)
@@ -96,6 +99,7 @@ struct SnapzyOnboardingLanguagePicker: View {
   var body: some View {
     Menu {
       Button {
+        SnapzyOnboardingWelcomeAudio.shared.playButtonTap()
         onboardingLocalization.selectLanguage("")
       } label: {
         HStack {
@@ -110,6 +114,7 @@ struct SnapzyOnboardingLanguagePicker: View {
 
       ForEach(onboardingLocalization.availableOptions) { option in
         Button {
+          SnapzyOnboardingWelcomeAudio.shared.playButtonTap()
           onboardingLocalization.selectLanguage(option.identifier)
         } label: {
           HStack {

@@ -143,7 +143,7 @@ struct SnapzyMockWallpaper: View, Equatable {
       }
       .clipped()
     }
-    .compositingGroup()
+    .drawingGroup(opaque: true)
     .accessibilityHidden(true)
   }
 }

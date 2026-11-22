@@ -78,7 +78,7 @@ struct SnapzyOnboardingCompletionCard: View {
             value: isLaunching
           )
 
-        Image(nsImage: NSApp.applicationIconImage)
+        Image(nsImage: SnapzyOnboardingIconCache.appIcon)
           .resizable()
           .aspectRatio(contentMode: .fit)
           .frame(width: 56, height: 56)
@@ -306,6 +306,7 @@ private struct CommunityLinkPill: View {
 
   var body: some View {
     Button {
+      SnapzyOnboardingWelcomeAudio.shared.playButtonTap()
       if let targetURL = URL(string: url) {
         NSWorkspace.shared.open(targetURL)
       }

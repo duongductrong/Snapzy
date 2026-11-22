@@ -63,6 +63,8 @@ struct SnapzyOnboardingView: View {
 
           content
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .animation(SnapzyMotionPreferences.shared.spec(.morph).animation, value: state.currentStep)
+            .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: isShowingCompletion)
 
           // Liquid Glass Golden Rule: never animate `.opacity` on a view containing `.glassEffect`
           // (`SnapzyOnboardingActionBar`). Keep it cleanly tucked beneath the window's bottom clip
@@ -105,8 +107,9 @@ struct SnapzyOnboardingView: View {
     )
     .environment(\.colorScheme, .dark)
     .background(keyboardShortcuts)
-    .animation(SnapzyMotionPreferences.shared.spec(.morph).animation, value: state.currentStep)
-    .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: isShowingCompletion)
+    .onAppear {
+      SnapzyOnboardingWelcomeAudio.shared.prewarmInteractionEffects()
+    }
   }
 
   // MARK: - Content
@@ -212,7 +215,7 @@ struct SnapzyOnboardingView: View {
 
   private var brand: some View {
     HStack(spacing: SnapzySpace.lg) {
-      Image(nsImage: NSApp.applicationIconImage)
+      Image(nsImage: SnapzyOnboardingIconCache.appIcon)
         .resizable()
         .aspectRatio(contentMode: .fit)
         .frame(width: 26, height: 26)
@@ -336,6 +339,7 @@ struct SnapzyOnboardingView: View {
       return
     }
     guard state.canGoForward else {
+      SnapzyOnboardingWelcomeAudio.shared.playStepComplete()
       withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
         isShowingCompletion = true
       }
@@ -347,6 +351,7 @@ struct SnapzyOnboardingView: View {
 
   private func skip() {
     guard state.canGoForward else {
+      SnapzyOnboardingWelcomeAudio.shared.playStepComplete()
       withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
         isShowingCompletion = true
       }
@@ -362,12 +367,14 @@ struct SnapzyOnboardingView: View {
     }
     if isShowingCompletion {
       guard !isLaunchingFinale else { return }
+      SnapzyOnboardingWelcomeAudio.shared.playStepBackward()
       withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
         isShowingCompletion = false
       }
     } else if state.canGoBack {
       state.previousStep()
     } else {
+      SnapzyOnboardingWelcomeAudio.shared.playButtonTap()
       finish(launchIconWindowFrame: nil)
     }
   }

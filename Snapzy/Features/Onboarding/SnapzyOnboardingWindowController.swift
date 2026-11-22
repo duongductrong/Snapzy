@@ -415,6 +415,7 @@ private final class OnboardingFinaleOverlayController {
     )
     hosting.wantsLayer = true
     hosting.layer?.backgroundColor = NSColor.clear.cgColor
+    hosting.layer?.drawsAsynchronously = true
     overlayPanel.contentView = hosting
 
     overlayPanel.orderFrontRegardless()
@@ -520,7 +521,7 @@ private struct OnboardingFinaleOverlayView: View {
   private var menuBarArrivalPill: some View {
     let shape = Capsule(style: .continuous)
     return HStack(spacing: 10) {
-      Image(nsImage: NSApp.applicationIconImage)
+      Image(nsImage: SnapzyOnboardingIconCache.appIcon)
         .resizable()
         .interpolation(.high)
         .aspectRatio(contentMode: .fit)
@@ -647,16 +648,17 @@ private struct FinaleIconFlightModifier: ViewModifier, Animatable {
 
     ZStack {
       if iconAlpha > 0.005 {
-        Image(nsImage: NSApp.applicationIconImage)
+        Image(nsImage: SnapzyOnboardingIconCache.appIcon)
           .resizable()
           .interpolation(.high)
           .aspectRatio(contentMode: .fit)
           .frame(width: currentSize, height: currentSize)
           .clipShape(shape)
+          // Constant radius + alpha-only modulation keeps 120fps free of per-frame blur rebuilds
           .shadow(
-            color: Color.black.opacity(0.32 * (1.0 - Double(t) * 0.7)),
-            radius: 16 * (1.0 - t * 0.6),
-            y: 8 * (1.0 - t * 0.6)
+            color: Color.black.opacity(0.30 * (1.0 - Double(t) * 0.75)),
+            radius: 14,
+            y: 7
           )
           .opacity(iconAlpha)
       }

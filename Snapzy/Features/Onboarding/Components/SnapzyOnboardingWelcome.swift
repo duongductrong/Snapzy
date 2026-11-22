@@ -146,9 +146,10 @@ struct SnapzyOnboardingWelcome: View {
         mark
           .frame(width: size.width, height: size.height)
 
-        // Arc focus-pull wave headline + airy subtitle + clean editorial arrow pill button
+        // Arc focus-pull wave headline + airy subtitle + clean editorial arrow pill button.
+        // Keeping `.blur` scoped to the tight `welcomeContent` bounds (before expanding to full
+        // window frame) avoids running a full-window Gaussian blur during the 120fps exit flight.
         welcomeContent
-          .frame(width: size.width, height: size.height)
           .opacity(isExiting ? 0 : 1)
           .blur(radius: isExiting && !reduceMotion ? 10 : 0)
           .scaleEffect(isExiting && !reduceMotion ? 0.94 : 1.0)
@@ -157,6 +158,7 @@ struct SnapzyOnboardingWelcome: View {
             phaseAnimation(.timingCurve(0.22, 1.0, 0.36, 1.0, duration: 0.28)),
             value: isExiting
           )
+          .frame(width: size.width, height: size.height)
 
         // Top-right adaptive close button
         closeButton
@@ -194,7 +196,7 @@ struct SnapzyOnboardingWelcome: View {
       }
     }
     .frame(width: windowSize.width, height: windowSize.height)
-    .drawingGroup(opaque: false)
+    .drawingGroup(opaque: isFlooded)
     .modifier(WelcomeLiquidPortalModifier(
       progress: portalProgress,
       isFullyOpen: isFlooded,
@@ -480,13 +482,13 @@ private struct WelcomeLogoMorphModifier: ViewModifier, Animatable {
           .interpolation(.high)
           .aspectRatio(contentMode: .fit)
           .frame(width: markSize, height: markSize)
-          .shadow(color: SnapzyWelcomePalette.cobaltShadow.opacity(0.24 * markOpacity), radius: max(2, minDim * 0.08), y: max(1, minDim * 0.03))
+          .shadow(color: SnapzyWelcomePalette.cobaltShadow.opacity(0.24 * markOpacity), radius: 10, y: 4)
           .opacity(markOpacity)
           .allowsHitTesting(false)
       }
 
       if appIconBlend > 0.005 {
-        Image(nsImage: NSApp.applicationIconImage)
+        Image(nsImage: SnapzyOnboardingIconCache.appIcon)
           .resizable()
           .interpolation(.high)
           .aspectRatio(contentMode: .fill)
@@ -514,11 +516,13 @@ private struct WelcomeLogoMorphModifier: ViewModifier, Animatable {
         .allowsHitTesting(false)
       }
     }
+    // Constant shadow radius with opacity-only modulation avoids rebuilding Gaussian blur kernels
+    // at 120Hz while delivering the exact same smooth mid-flight elevation and flush dock settle.
     .shadow(
-      color: Color.black.opacity(0.32 * Double(arcSine)),
-      radius: 26 * arcSine,
+      color: Color.black.opacity(0.30 * Double(arcSine)),
+      radius: 22,
       x: 0,
-      y: 12 * arcSine
+      y: 10
     )
     .position(x: currentMidX, y: currentMidY)
   }

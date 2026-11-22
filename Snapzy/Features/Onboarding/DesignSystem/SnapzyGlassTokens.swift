@@ -143,3 +143,10 @@ enum SnapzyOnboardingType {
   static let caption: CGFloat = 12
   static let keycap: CGFloat = 10
 }
+
+/// Caches `NSApp.applicationIconImage` once on the main actor so 120Hz `Animatable` flight
+/// modifiers and onboarding headers never re-query AppKit's bundle icon cache per frame.
+@MainActor
+enum SnapzyOnboardingIconCache {
+  static let appIcon: NSImage = NSApp.applicationIconImage
+}

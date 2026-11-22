@@ -15,23 +15,37 @@ import Foundation
 final class SnapzyOnboardingWelcomeAudio {
   static let shared = SnapzyOnboardingWelcomeAudio()
 
+  private enum CueKey: Hashable, Sendable {
+    case hoverTick
+    case confirmChime
+    case completionChime
+    case stepForward
+    case stepBackward
+    case stepComplete
+    case buttonTap
+    case challengeTick
+    case shutterSnap
+  }
+
   private var ambientPlayer: AVAudioPlayer?
   private var fadingPlayers: [ObjectIdentifier: (player: AVAudioPlayer, task: Task<Void, Never>)] = [:]
   private var effectPlayers: [AVAudioPlayer] = []
   private var synthesisTask: Task<Void, Never>?
+  private var prewarmTask: Task<Void, Never>?
 
   private var cachedFullScoreWAV: Data?
   private var cachedReducedScoreWAV: Data?
-  private var cachedHoverTickWAV: Data?
-  private var cachedConfirmChimeWAV: Data?
-  private var cachedCompletionChimeWAV: Data?
+  private var cachedCueWAVs: [CueKey: Data] = [:]
 
   private init() {}
 
   nonisolated deinit {}
 
   private var soundsEnabled: Bool {
-    UserDefaults.standard.object(forKey: PreferencesKeys.playSounds) as? Bool ?? true
+    guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
+      return false
+    }
+    return UserDefaults.standard.object(forKey: PreferencesKeys.playSounds) as? Bool ?? true
   }
 
   // MARK: - Public API
@@ -70,36 +84,42 @@ final class SnapzyOnboardingWelcomeAudio {
     }
   }
 
-  /// Pre-renders the tiny hover/confirm cues off-main so the first pointer hover has 0 ms latency.
-  private func prewarmInteractionEffects() {
-    guard cachedHoverTickWAV == nil || cachedConfirmChimeWAV == nil else { return }
-    Task { [weak self] in
-      let (hover, confirm) = await Task.detached(priority: .utility) {
-        (
-          WelcomeAudioSynthesizer.renderHoverTickWAV(),
-          WelcomeAudioSynthesizer.renderConfirmChimeWAV()
-        )
+  /// Pre-renders all tiny interactive onboarding WAV buffers off-main (pure Swift DSP only;
+  /// `AVAudioPlayer` always initializes on `@MainActor` so CoreAudio run-loop affinity stays safe
+  /// and no idle AudioQueues remain open after onboarding closes).
+  func prewarmInteractionEffects() {
+    guard soundsEnabled else { return }
+    guard prewarmTask == nil, cachedCueWAVs.count < 9 else { return }
+
+    prewarmTask = Task { [weak self] in
+      let built = await Task.detached(priority: .utility) { () -> [(CueKey, Data)] in
+        [
+          (.hoverTick, WelcomeAudioSynthesizer.renderHoverTickWAV()),
+          (.confirmChime, WelcomeAudioSynthesizer.renderConfirmChimeWAV()),
+          (.completionChime, WelcomeAudioSynthesizer.renderCompletionChimeWAV()),
+          (.stepForward, WelcomeAudioSynthesizer.renderStepForwardWAV()),
+          (.stepBackward, WelcomeAudioSynthesizer.renderStepBackwardWAV()),
+          (.stepComplete, WelcomeAudioSynthesizer.renderStepCompleteWAV()),
+          (.buttonTap, WelcomeAudioSynthesizer.renderButtonTapWAV()),
+          (.challengeTick, WelcomeAudioSynthesizer.renderChallengeTickWAV()),
+          (.shutterSnap, WelcomeAudioSynthesizer.renderShutterSnapWAV()),
+        ]
       }.value
+
       guard let self else { return }
-      if self.cachedHoverTickWAV == nil { self.cachedHoverTickWAV = hover }
-      if self.cachedConfirmChimeWAV == nil { self.cachedConfirmChimeWAV = confirm }
+      for (key, wav) in built {
+        if self.cachedCueWAVs[key] == nil {
+          self.cachedCueWAVs[key] = wav
+        }
+      }
+      self.prewarmTask = nil
     }
   }
 
   /// Soft optical-glass micro-tick when hovering the hero arrow button.
   func playHoverTick() {
-    guard soundsEnabled else { return }
-    if let data = cachedHoverTickWAV {
-      playOneShot(data: data, volume: 0.22)
-      return
-    }
-    Task { [weak self] in
-      let data = await Task.detached(priority: .userInitiated) {
-        WelcomeAudioSynthesizer.renderHoverTickWAV()
-      }.value
-      guard let self, self.soundsEnabled else { return }
-      self.cachedHoverTickWAV = data
-      self.playOneShot(data: data, volume: 0.22)
+    playCue(.hoverTick, volume: 0.22) {
+      WelcomeAudioSynthesizer.renderHoverTickWAV()
     }
   }
 
@@ -108,18 +128,8 @@ final class SnapzyOnboardingWelcomeAudio {
   func playConfirmChime() {
     guard soundsEnabled else { return }
     stopAmbient(fadeDuration: 2.0)
-
-    if let data = cachedConfirmChimeWAV {
-      playOneShot(data: data, volume: 0.56)
-      return
-    }
-    Task { [weak self] in
-      let data = await Task.detached(priority: .userInitiated) {
-        WelcomeAudioSynthesizer.renderConfirmChimeWAV()
-      }.value
-      guard let self, self.soundsEnabled else { return }
-      self.cachedConfirmChimeWAV = data
-      self.playOneShot(data: data, volume: 0.56)
+    playCue(.confirmChime, volume: 0.56) {
+      WelcomeAudioSynthesizer.renderConfirmChimeWAV()
     }
   }
 
@@ -128,18 +138,72 @@ final class SnapzyOnboardingWelcomeAudio {
   func playCompletionChime() {
     guard soundsEnabled else { return }
     stopAmbient(fadeDuration: 0.6)
+    playCue(.completionChime, volume: 0.58) {
+      WelcomeAudioSynthesizer.renderCompletionChimeWAV()
+    }
+  }
 
-    if let data = cachedCompletionChimeWAV {
-      playOneShot(data: data, volume: 0.58)
+  /// Buoyant ascending two-note glass interval when advancing to the next step (Continue / Skip / Step Rail).
+  func playStepForward() {
+    playCue(.stepForward, volume: 0.36) {
+      WelcomeAudioSynthesizer.renderStepForwardWAV()
+    }
+  }
+
+  /// Soft descending two-note glass interval when stepping backward (Esc / Step Rail / Review).
+  func playStepBackward() {
+    playCue(.stepBackward, volume: 0.30) {
+      WelcomeAudioSynthesizer.renderStepBackwardWAV()
+    }
+  }
+
+  /// Sunlit three-note major arrival chord when finishing Step 4 into the "You're All Set!" card.
+  func playStepComplete() {
+    playCue(.stepComplete, volume: 0.40) {
+      WelcomeAudioSynthesizer.renderStepCompleteWAV()
+    }
+  }
+
+  /// Crisp optical-glass micro-detent for secondary onboarding buttons, menus, and tools.
+  func playButtonTap() {
+    playCue(.buttonTap, volume: 0.24) {
+      WelcomeAudioSynthesizer.renderButtonTapWAV()
+    }
+  }
+
+  /// Warm marimba-glass confirmation pip when an interactive checklist challenge completes.
+  func playChallengeComplete() {
+    playCue(.challengeTick, volume: 0.30) {
+      WelcomeAudioSynthesizer.renderChallengeTickWAV()
+    }
+  }
+
+  /// Damped tactile camera shutter micro-click for interactive capture/record simulations.
+  func playShutterSnap() {
+    playCue(.shutterSnap, volume: 0.30) {
+      WelcomeAudioSynthesizer.renderShutterSnapWAV()
+    }
+  }
+
+  private func playCue(
+    _ key: CueKey,
+    volume: Float,
+    render: @escaping @Sendable () -> Data
+  ) {
+    guard soundsEnabled else { return }
+
+    if let data = cachedCueWAVs[key] {
+      playOneShot(data: data, volume: volume)
       return
     }
+
     Task { [weak self] in
-      let data = await Task.detached(priority: .userInitiated) {
-        WelcomeAudioSynthesizer.renderCompletionChimeWAV()
+      let wav = await Task.detached(priority: .userInitiated) {
+        render()
       }.value
       guard let self, self.soundsEnabled else { return }
-      self.cachedCompletionChimeWAV = data
-      self.playOneShot(data: data, volume: 0.58)
+      self.cachedCueWAVs[key] = wav
+      self.playOneShot(data: wav, volume: volume)
     }
   }
 
@@ -446,6 +510,168 @@ private nonisolated enum WelcomeAudioSynthesizer {
 
     applyStereoReverb(left: &left, right: &right, wetMix: 0.32, feedback: 0.48)
     applyMasterPolish(left: &left, right: &right, targetPeak: 0.78, tailFadeSeconds: 0.55)
+    return encodeStereoWAV(left: left, right: right)
+  }
+
+  // MARK: - Step Forward (~0.34s buoyant ascending D5 → G5 glass glide)
+
+  static func renderStepForwardWAV() -> Data {
+    let totalDuration = 0.36
+    let frameCount = Int(totalDuration * sampleRate)
+    var left = [Double](repeating: 0, count: frameCount)
+    var right = [Double](repeating: 0, count: frameCount)
+
+    addGlassBell(
+      GlassBell(start: 0.00, duration: 0.24, frequency: 587.33, gain: 0.22, pan: -0.14), // D5
+      left: &left, right: &right
+    )
+    addGlassBell(
+      GlassBell(start: 0.036, duration: 0.30, frequency: 783.99, gain: 0.26, pan: 0.16), // G5
+      left: &left, right: &right
+    )
+
+    applyStereoReverb(left: &left, right: &right, wetMix: 0.18, feedback: 0.34)
+    applyMasterPolish(left: &left, right: &right, targetPeak: 0.72, tailFadeSeconds: 0.09)
+    return encodeStereoWAV(left: left, right: right)
+  }
+
+  // MARK: - Step Backward (~0.32s gentle descending G5 → D5 glass settle)
+
+  static func renderStepBackwardWAV() -> Data {
+    let totalDuration = 0.34
+    let frameCount = Int(totalDuration * sampleRate)
+    var left = [Double](repeating: 0, count: frameCount)
+    var right = [Double](repeating: 0, count: frameCount)
+
+    addGlassBell(
+      GlassBell(start: 0.00, duration: 0.22, frequency: 783.99, gain: 0.20, pan: 0.14),   // G5
+      left: &left, right: &right
+    )
+    addGlassBell(
+      GlassBell(start: 0.038, duration: 0.28, frequency: 587.33, gain: 0.24, pan: -0.16), // D5
+      left: &left, right: &right
+    )
+
+    applyStereoReverb(left: &left, right: &right, wetMix: 0.16, feedback: 0.32)
+    applyMasterPolish(left: &left, right: &right, targetPeak: 0.68, tailFadeSeconds: 0.09)
+    return encodeStereoWAV(left: left, right: right)
+  }
+
+  // MARK: - Step 4 → Completion Card Arrival (~0.68s open C5-E5-G5 shimmer)
+
+  static func renderStepCompleteWAV() -> Data {
+    let totalDuration = 0.72
+    let frameCount = Int(totalDuration * sampleRate)
+    var left = [Double](repeating: 0, count: frameCount)
+    var right = [Double](repeating: 0, count: frameCount)
+
+    let notes: [GlassBell] = [
+      GlassBell(start: 0.00, duration: 0.56, frequency: 523.25, gain: 0.20, pan: -0.18), // C5
+      GlassBell(start: 0.042, duration: 0.58, frequency: 659.25, gain: 0.22, pan: 0.04),  // E5
+      GlassBell(start: 0.084, duration: 0.60, frequency: 783.99, gain: 0.24, pan: 0.20),  // G5
+    ]
+    for bell in notes {
+      addGlassBell(bell, left: &left, right: &right)
+    }
+
+    applyStereoReverb(left: &left, right: &right, wetMix: 0.24, feedback: 0.40)
+    applyMasterPolish(left: &left, right: &right, targetPeak: 0.76, tailFadeSeconds: 0.18)
+    return encodeStereoWAV(left: left, right: right)
+  }
+
+  // MARK: - Tactile Button Tap (~0.065s crisp damped optical-glass detent)
+
+  static func renderButtonTapWAV() -> Data {
+    let totalDuration = 0.068
+    let frameCount = Int(totalDuration * sampleRate)
+    var left = [Double](repeating: 0, count: frameCount)
+    var right = [Double](repeating: 0, count: frameCount)
+
+    let twoPi = 2.0 * Double.pi
+    for i in 0..<frameCount {
+      let t = Double(i) / sampleRate
+      let attack = min(1.0, t / 0.0018)
+      let decay = exp(-t * 74.0)
+      let env = attack * decay
+
+      let body = sin(twoPi * 440.0 * t) * 0.45 * exp(-t * 52.0)
+      let glass = sin(twoPi * 880.0 * t) * 0.48
+      let air = sin(twoPi * 1318.51 * t) * 0.16 * exp(-t * 95.0)
+      let sample = (body + glass + air) * env
+
+      left[i] = sample * 0.98
+      right[i] = sample * 1.00
+    }
+
+    applyMasterPolish(left: &left, right: &right, targetPeak: 0.62, tailFadeSeconds: 0.015)
+    return encodeStereoWAV(left: left, right: right)
+  }
+
+  // MARK: - Challenge Checklist Complete (~0.24s warm marimba-glass confirm pip)
+
+  static func renderChallengeTickWAV() -> Data {
+    let totalDuration = 0.26
+    let frameCount = Int(totalDuration * sampleRate)
+    var left = [Double](repeating: 0, count: frameCount)
+    var right = [Double](repeating: 0, count: frameCount)
+
+    addGlassBell(
+      GlassBell(start: 0.00, duration: 0.18, frequency: 659.25, gain: 0.18, pan: -0.08), // E5 warm body
+      left: &left, right: &right
+    )
+    addGlassBell(
+      GlassBell(start: 0.024, duration: 0.22, frequency: 987.77, gain: 0.22, pan: 0.12), // B5 crisp tick
+      left: &left, right: &right
+    )
+
+    applyStereoReverb(left: &left, right: &right, wetMix: 0.14, feedback: 0.28)
+    applyMasterPolish(left: &left, right: &right, targetPeak: 0.70, tailFadeSeconds: 0.06)
+    return encodeStereoWAV(left: left, right: right)
+  }
+
+  // MARK: - Simulated Capture Shutter Snap (~0.085s refined mechanical micro-shutter)
+
+  static func renderShutterSnapWAV() -> Data {
+    let totalDuration = 0.090
+    let frameCount = Int(totalDuration * sampleRate)
+    var left = [Double](repeating: 0, count: frameCount)
+    var right = [Double](repeating: 0, count: frameCount)
+
+    var rng: UInt64 = 0x71E9_23B5_4C0A_D81F
+    var lp = 0.0
+    var hp = 0.0
+    let twoPi = 2.0 * Double.pi
+
+    @inline(__always)
+    func nextNoise() -> Double {
+      rng &+= 0x9E37_79B9_7F4A_7C15
+      var z = rng
+      z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+      z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+      z = z ^ (z >> 31)
+      return (Double(z & 0xFFFF) / 32768.0) - 1.0
+    }
+
+    for i in 0..<frameCount {
+      let t = Double(i) / sampleRate
+      // Two crisp damped mechanical leaves separated by 22ms (like a modern mirrorless shutter)
+      let blade1 = min(1.0, t / 0.0012) * exp(-t * 145.0)
+      let t2 = max(0, t - 0.022)
+      let blade2 = t >= 0.022 ? min(1.0, t2 / 0.0015) * exp(-t2 * 130.0) * 0.58 : 0.0
+      let mechEnv = blade1 + blade2
+
+      let raw = nextNoise()
+      lp += 0.34 * (raw - lp)
+      hp += 0.08 * (lp - hp)
+      let crisp = (lp - hp) * mechEnv * 0.72
+      let thump = sin(twoPi * 210.0 * t) * exp(-t * 110.0) * 0.26
+      let sample = crisp + thump
+
+      left[i] = sample * 0.96
+      right[i] = sample * 1.00
+    }
+
+    applyMasterPolish(left: &left, right: &right, targetPeak: 0.68, tailFadeSeconds: 0.02)
     return encodeStereoWAV(left: left, right: right)
   }
 

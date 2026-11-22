@@ -348,7 +348,10 @@ private struct PermissionsGrantRow: View {
       }
       .fixedSize()
     } else {
-      Button(action: onAction) {
+      Button(action: {
+        SnapzyOnboardingWelcomeAudio.shared.playButtonTap()
+        onAction()
+      }) {
         Text(actionTitle)
           .font(.system(size: SnapzyOnboardingType.caption, weight: .semibold))
           .foregroundStyle(isRequired ? Color(red: 0.04, green: 0.08, blue: 0.22) : SnapzyGlassInk.primary)
