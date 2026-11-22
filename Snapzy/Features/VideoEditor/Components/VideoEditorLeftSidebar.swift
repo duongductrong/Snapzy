@@ -207,8 +207,8 @@ struct ZoomSettingsContent: View {
             state.isGeneratingSmartAutoZoom
               ? L10n.VideoEditor.smartAutoZoomAnalyzing
               : (hasZooms
-                  ? L10n.VideoEditor.smartAutoZoomRegenerate
-                  : L10n.VideoEditor.smartAutoZoomGenerate)
+                ? L10n.VideoEditor.smartAutoZoomRegenerate
+                : L10n.VideoEditor.smartAutoZoomGenerate)
           )
           .font(.system(size: 11, weight: .semibold))
           .lineLimit(1)
@@ -835,35 +835,44 @@ struct ZoomSettingsContent: View {
         center: $localCenter,
         previewImage: previewImage,
         onEditingChanged: { editing in
-          if editing { beginContinuousEdit() } else { endContinuousEdit() }
+          if editing {
+            beginContinuousEdit()
+          } else {
+            endContinuousEdit()
+          }
         },
         onCenterChanged: applyCenter
       )
 
-      HStack(spacing: 4) {
+      HStack(spacing: 2) {
         ForEach(centerPresets, id: \.name) { preset in
+          let isSelected = isNearPreset(localCenter, preset.point)
           Button {
             localCenter = preset.point
             applyCenter(preset.point)
           } label: {
             Image(systemName: preset.icon)
-              .font(.system(size: 10))
-              .frame(width: 24, height: 24)
-              .background(
-                isNearPreset(localCenter, preset.point)
-                  ? ZoomColors.primary.opacity(0.3)
-                  : Color.white.opacity(0.1)
-              )
-              .clipShape(Radius.controlRect(forHeight: 24))
+              .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
+              .foregroundColor(isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
+              .frame(maxWidth: .infinity)
+              .frame(height: 22)
+              .background {
+                if isSelected {
+                  activeThumbShape
+                }
+              }
+              .contentShape(Radius.controlRect(forHeight: 22))
           }
           .buttonStyle(.plain)
           .help(preset.name)
         }
       }
+      .padding(2)
+      .background(railBackground)
 
       Text(L10n.VideoEditor.manualCameraControlOnlyInManualMode)
         .font(.system(size: 10))
-        .foregroundColor(.secondary.opacity(0.8))
+        .foregroundColor(SidebarColors.labelTertiary)
     }
   }
 
