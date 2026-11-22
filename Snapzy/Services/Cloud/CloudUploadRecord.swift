@@ -47,7 +47,7 @@ struct CloudUploadRecord: Identifiable, Codable, Equatable, FetchableRecord, Per
     }
     // Fallback: infer from file extension
     let ext = (fileName as NSString).pathExtension.lowercased()
-    return ["png", "jpg", "jpeg", "webp", "gif", "tiff", "tif", "bmp"].contains(ext)
+    return ["png", "jpg", "jpeg", "webp", "heic", "heif", "avif", "gif", "tiff", "tif", "bmp"].contains(ext)
   }
 
   /// Local thumbnail URL in App Support, if the thumbnail file exists

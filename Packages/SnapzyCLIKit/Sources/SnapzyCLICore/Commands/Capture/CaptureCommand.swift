@@ -68,7 +68,7 @@ struct CaptureOutputOptions: ParsableArguments {
   @Option(help: "Image format. Defaults to the --output extension, else png.")
   var format: CLIImageFormat?
 
-  @Option(help: "JPEG quality, 0 to 1.")
+  @Option(help: "JPEG, HEIC or AVIF quality, 0 to 1.")
   var quality: Double?
 
   @Option(name: .customLong("max-dimension"), help: "Downscale so the longest edge is at most this many pixels.")
@@ -84,7 +84,7 @@ struct CaptureOutputOptions: ParsableArguments {
     let format = try resolvedFormat()
     if let quality {
       guard (0 ... 1).contains(quality) else { throw ValidationError("--quality must be between 0 and 1.") }
-      guard format == .jpeg else { throw ValidationError("--quality only applies to jpg output.") }
+      guard format.acceptsQuality else { throw ValidationError("--quality only applies to jpg, heic and avif output.") }
     }
     if let maxDimension, maxDimension <= 0 {
       throw ValidationError("--max-dimension must be greater than 0.")

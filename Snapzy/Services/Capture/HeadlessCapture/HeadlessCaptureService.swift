@@ -267,6 +267,8 @@ final class HeadlessCaptureService {
     case .png: .png
     case .jpeg(let quality): .jpeg(quality: Double(quality))
     case .webp: .webp
+    case .heic(let quality): .heic(quality: Double(quality))
+    case .avif(let quality): .avif(quality: Double(quality))
     }
   }
 }

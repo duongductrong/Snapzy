@@ -19,7 +19,7 @@ final class AnnotateExporter {
     DiagnosticLogger.shared.log(.info, .annotate, "Save As dialog opened")
     guard state.hasImage else { return }
     let panel = NSSavePanel()
-    panel.allowedContentTypes = [.png, .jpeg, .webP]
+    panel.allowedContentTypes = ImageFormatOption.savePanelContentTypes
     panel.nameFieldStringValue = generateFileName(from: state.sourceURL, isCombine: state.isCombineMode)
     panel.canCreateDirectories = true
 
@@ -205,8 +205,8 @@ final class AnnotateExporter {
     return image.cgImage(forProposedRect: nil, context: nil, hints: nil)
   }
 
-  /// Convert NSImage to Data for any supported format (PNG, JPEG, WebP)
-  /// Uses CGImageDestination for WebP support (macOS 14+)
+  /// Convert NSImage to Data for any supported format (PNG, JPEG, WebP, HEIC, AVIF).
+  /// Unknown extensions fall back to PNG; HEIC/AVIF on a Mac without that encoder return nil.
   nonisolated static func imageData(from image: NSImage, for fileExtension: String) -> Data? {
     guard let cgImage = bestCGImage(from: image) else {
       return nil
@@ -220,13 +220,19 @@ final class AnnotateExporter {
       return WebPEncoderService.encode(cgImage)
     }
 
-    // PNG/JPEG: use CGImageDestination
+    // PNG/JPEG/HEIC/AVIF: use CGImageDestination
     let utType: CFString
-    switch ext {
-    case "jpg", "jpeg":
-      utType = "public.jpeg" as CFString
-    default:
-      utType = "public.png" as CFString
+    if let type = ImageEncoderSupport.typeIdentifier(forExtension: ext) {
+      guard ImageEncoderSupport.canEncode(typeIdentifier: type) else {
+        // e.g. saving an opened .avif on a macOS without the AVIF encoder: fail the
+        // save rather than write PNG bytes under an .avif name.
+        DiagnosticLogger.shared.log(.error, .export, "No image encoder for .\(ext)")
+        return nil
+      }
+      utType = type as CFString
+    } else {
+      // Legacy behavior for other opened types (TIFF/GIF/BMP): write PNG data.
+      utType = ImageEncoderSupport.pngType as CFString
     }
 
     let data = NSMutableData()
@@ -258,8 +264,8 @@ final class AnnotateExporter {
         kCGImagePropertyPNGXPixelsPerMeter: pixelsPerMeter,
         kCGImagePropertyPNGYPixelsPerMeter: pixelsPerMeter
       ] as CFDictionary
-    case "jpg", "jpeg":
-      properties[kCGImageDestinationLossyCompressionQuality] = 0.9
+    case "jpg", "jpeg", "heic", "heif", "avif":
+      properties[kCGImageDestinationLossyCompressionQuality] = ImageEncoderSupport.defaultLossyQuality
     default:
       break
     }

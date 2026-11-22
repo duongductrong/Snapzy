@@ -82,7 +82,7 @@ enum CaptureOutputKind {
 
 enum CaptureOutputNaming {
   private static let invalidPathComponentCharacters = CharacterSet(charactersIn: "\\:?%*|\"<>\n\r\t")
-  private static let knownExtensions: Set<String> = ["png", "jpg", "jpeg", "webp", "mov", "mp4", "gif"]
+  private static let knownExtensions: Set<String> = ["png", "jpg", "jpeg", "webp", "heic", "heif", "avif", "mov", "mp4", "gif"]
 
   static func resolveBaseName(
     customName: String?,

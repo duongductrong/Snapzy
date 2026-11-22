@@ -1411,6 +1411,19 @@ final class ScreenCaptureManager: ObservableObject {
     context: CaptureContext = .empty,
     captureOrigin: CGRect? = nil
   ) async -> CaptureResult {
+    // Settings and config only offer formats this Mac can encode, but a synced or
+    // hand-edited preference can still name one (AVIF on an older macOS). Fall back to PNG.
+    let requestedFormat = format
+    let format: ImageFormat = requestedFormat.isEncoderAvailable ? requestedFormat : .png
+    if !requestedFormat.isEncoderAvailable {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .capture,
+        "Image encoder unavailable, saving PNG instead",
+        context: ["requested": requestedFormat.fileExtension]
+      )
+    }
+
     let directoryAccess = SandboxFileAccessManager.shared.beginAccessingURL(directory)
     defer { directoryAccess.stop() }
     let scopedDirectory = directoryAccess.url
@@ -1453,7 +1466,7 @@ final class ScreenCaptureManager: ObservableObject {
           return .failure(.saveFailed(L10n.ScreenCapture.webpEncodingFailed))
         }
       } else {
-        // PNG/JPEG: use CGImageDestination
+        // PNG/JPEG/HEIC/AVIF: use CGImageDestination
         guard
           let destination = CGImageDestinationCreateWithURL(
             fileURL as CFURL,
@@ -1559,7 +1572,7 @@ final class ScreenCaptureManager: ObservableObject {
         kCGImagePropertyPNGXPixelsPerMeter: pixelsPerMeter,
         kCGImagePropertyPNGYPixelsPerMeter: pixelsPerMeter
       ] as CFDictionary
-    case .jpeg(let quality):
+    case .jpeg(let quality), .heic(let quality), .avif(let quality):
       properties[kCGImageDestinationLossyCompressionQuality] = quality
     case .webp:
       break
@@ -2935,20 +2948,43 @@ enum ImageFormat {
   case png
   case jpeg(quality: CGFloat)
   case webp
+  case heic(quality: CGFloat)
+  case avif(quality: CGFloat)
 
   var fileExtension: String {
     switch self {
     case .png: return "png"
     case .jpeg: return "jpg"
     case .webp: return "webp"
+    case .heic: return "heic"
+    case .avif: return "avif"
     }
   }
 
   var utType: CFString {
     switch self {
-    case .png: return "public.png" as CFString
-    case .jpeg: return "public.jpeg" as CFString
+    case .png: return ImageEncoderSupport.pngType as CFString
+    case .jpeg: return ImageEncoderSupport.jpegType as CFString
     case .webp: return "org.webmproject.webp" as CFString
+    case .heic: return ImageEncoderSupport.heicType as CFString
+    case .avif: return ImageEncoderSupport.avifType as CFString
+    }
+  }
+
+  /// Encoder quality for lossy ImageIO formats; `nil` for PNG and WebP.
+  var lossyQuality: CGFloat? {
+    switch self {
+    case .jpeg(let quality), .heic(let quality), .avif(let quality): return quality
+    case .png, .webp: return nil
+    }
+  }
+
+  /// Whether this Mac has an encoder for the format (AVIF depends on the macOS release).
+  var isEncoderAvailable: Bool {
+    switch self {
+    case .png, .jpeg, .webp: return true
+    case .heic: return ImageEncoderSupport.canEncodeHEIC
+    case .avif: return ImageEncoderSupport.canEncodeAVIF
     }
   }
 }

@@ -16,12 +16,12 @@ extension DisplaySelector: ExpressibleByArgument {}
 extension CLIPoint: ExpressibleByArgument {}
 
 extension CLIImageFormat: ExpressibleByArgument {
-  /// Accepts `png`, `jpg`, `jpeg` and `webp`.
+  /// Accepts `png`, `jpg`, `jpeg`, `webp`, `heic`, `heif` and `avif`.
   public init?(argument: String) {
     self.init(fileExtension: argument)
   }
 
   public static var allValueStrings: [String] {
-    ["png", "jpg", "webp"]
+    ["png", "jpg", "webp", "heic", "avif"]
   }
 }

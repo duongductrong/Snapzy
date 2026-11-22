@@ -84,8 +84,9 @@ Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegate
 
 ## Output Formats and Naming
 
-- `ImageFormat` (`Snapzy/Services/Capture/ScreenCaptureManager.swift`): `.png`, `.jpeg(quality:)`, `.webp`; extensions `png` / `jpg` / `webp`.
-- PNG/JPEG write through `CGImageDestination` with DPI metadata set to `scaleFactor × 72` (PNG also gets pixels-per-meter); JPEG carries `kCGImageDestinationLossyCompressionQuality`.
+- `ImageFormat` (`Snapzy/Services/Capture/ScreenCaptureManager.swift`): `.png`, `.jpeg(quality:)`, `.webp`, `.heic(quality:)`, `.avif(quality:)`; extensions `png` / `jpg` / `webp` / `heic` / `avif`. Settings-driven captures use quality 0.9 (`ImageEncoderSupport.defaultLossyQuality`).
+- PNG/JPEG/HEIC/AVIF write through `CGImageDestination` (`public.png`, `public.jpeg`, `public.heic`, `public.avif`) with DPI metadata set to `scaleFactor × 72` (PNG also gets pixels-per-meter); the lossy formats carry `kCGImageDestinationLossyCompressionQuality`. HEIC and AVIF keep alpha and the source color profile, so cutouts stay transparent (only JPEG flattens).
+- **Encoder availability**: `ImageEncoderSupport` (`Snapzy/Services/ImageEncoderSupport.swift`) reads `CGImageDestinationCopyTypeIdentifiers()` once. AVIF encoding exists only on macOS releases that ship an ImageIO AVIF encoder (older releases only decode it). When the saved format cannot be encoded, `ImageFormatOption.current` and `ScreenCaptureManager.saveImage` fall back to PNG and log a warning; Settings shows the option as unsupported plus a note, and the CLI rejects the request instead of writing PNG under an `.avif` name.
 - WebP writes through `WebPEncoderService` (`Snapzy/Services/WebPEncoder.swift`, libwebp via Swift-WebP): `.photo` preset, `method = 1`, multithreaded, atomic file write.
 - Screenshot outputs use each display's **native** pixel density (`minimumScreenshotOutputScaleFactor` floor is 1.0). Non-Retina external-display captures stay at 1×; mixed-DPI composites may still promote low-density slices to the highest native scale in the selection.
 - Naming goes through `CaptureOutputNaming` (`Snapzy/Services/Capture/CaptureOutputNaming.swift`):
@@ -93,12 +94,14 @@ Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegate
   - Tokens: `{datetime}`, `{date}`, `{year}`, `{yearShort}`, `{month}`, `{monthName}`, `{monthShort}`, `{day}`, `{time}`, `{ms}`, `{timestamp}`, `{type}`, `{appName}` plus snake/short aliases; `{appName}` resolves from the captured app (or frontmost app for fullscreen/area) and is empty when unavailable.
   - `/` creates sanitized subfolders under the destination; traversal segments and invalid path characters are stripped; known media extensions embedded in templates are removed.
   - `makeUniqueFileURL` dedupes with `_2`, `_3`, … suffixes.
+- Annotate Save/Save As/Copy/drag and Mockup export encode by extension through `AnnotateExporter.imageData(from:for:)`, so editing a `.heic`/`.avif` capture writes the same format back (annotation sidecars key on the file path, so they restore for HEIC/AVIF like any other image). Save panels offer every format this Mac can encode (`ImageFormatOption.savePanelContentTypes`).
+- Quick Access Optimize can rewrite PNG/JPEG/WebP/HEIC/AVIF files and convert to HEIC/AVIF; its quality slider applies to JPEG, WebP, HEIC and AVIF. Presets whose format this Mac cannot encode fall back to PNG.
 
 ## Clipboard Behavior
 
 `Snapzy/Services/Clipboard/ClipboardHelper.swift` writes one pasteboard item per capture so receiving apps pick their preferred representation:
 
-- `copyImage(from:)` — `writeObjects([NSURL])` (grants the receiver a sandbox extension), then augments the same item with the encoded data type (`.png`/JPEG/WebP UTI) and `.tiff` pixel data. When `NSImage` cannot decode the file (e.g. WebP on macOS 13), the item still carries the file URL and original encoded bytes.
+- `copyImage(from:)` — `writeObjects([NSURL])` (grants the receiver a sandbox extension), then augments the same item with the encoded data type (`.png`/JPEG/WebP/HEIC/AVIF UTI) and `.tiff` pixel data. When `NSImage` cannot decode the file (e.g. WebP on macOS 13), the item still carries the file URL and original encoded bytes.
 - `copyMediaFile(from:)` — videos/GIFs: file-URL write plus same-item `.URL` and `.string` fallbacks for Teams/Electron/WebView paste targets.
 - `copyFileURLs(_:)` — batch file-URL copy for multi-display screenshot sets.
 - Render-based `copyImage(_:format:)` — Annotate/Mockup copies render to the configured format, write a temp file (`Snapzy_clipboard_<uuid>`), then copy like a file.

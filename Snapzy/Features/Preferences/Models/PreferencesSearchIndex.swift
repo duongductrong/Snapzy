@@ -169,7 +169,7 @@ extension PreferencesSearchEntry {
       .init(.capture, section: format, title: L10n.PreferencesCapture.livePassthroughTitle,
             detail: L10n.PreferencesCapture.livePassthroughDescription, keywords: ["live", "click through"]),
       .init(.capture, section: format, title: L10n.PreferencesCapture.imageFormatTitle,
-            detail: L10n.PreferencesCapture.imageFormatDescription, keywords: ["png", "jpeg", "webp", "file type"]),
+            detail: L10n.PreferencesCapture.imageFormatDescription, keywords: ["png", "jpeg", "webp", "heic", "avif", "file type"]),
       .init(.capture, section: format, title: L10n.PreferencesCapture.clipboardContentTitle,
             detail: L10n.PreferencesCapture.clipboardContentDescription,
             keywords: ["copy", "paste", "citrix", "rdp", "remote desktop", "file url", "attachment", "terminal"]),

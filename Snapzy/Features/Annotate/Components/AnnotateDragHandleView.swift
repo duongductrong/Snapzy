@@ -451,20 +451,12 @@ extension DragHandleNSView {
 
   /// Resolve the user's preferred screenshot format as UTType
   static func preferredUTType() -> UTType {
-    guard let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
-          let option = ImageFormatOption(rawValue: raw) else { return .png }
-    switch option {
-    case .png:  return .png
-    case .jpeg: return .jpeg
-    case .webp: return .webP
-    }
+    ImageFormatOption.current.utType
   }
 
   /// Resolve the user's preferred screenshot format file extension
   static func preferredFormatExtension() -> String {
-    guard let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
-          let option = ImageFormatOption(rawValue: raw) else { return "png" }
-    return option.format.fileExtension
+    ImageFormatOption.current.format.fileExtension
   }
 }
 
