@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.9] - 2026-11-22
+
+### Features
+- Added welcome screen, step transitions, and shortcuts/completion UI polish (#798) (ecc53f3a)
+
+### Contributors
+- @github-actions[bot]
+- @williamcachamwri
+
 ## [2.3.0-beta.8] - 2026-11-22
 
 ### Bug Fixes
