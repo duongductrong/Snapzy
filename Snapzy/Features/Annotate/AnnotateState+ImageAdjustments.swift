@@ -19,14 +19,23 @@ struct AnnotateAdjustedImageRender {
   let isFullResolution: Bool
 }
 
+/// Base image downscaled once for live slider previews.
+struct AnnotateAdjustmentPreviewBase {
+  let base: NSImage
+  let image: CGImage
+  /// Scale `image` was rendered at relative to the base's pixels.
+  let scale: CGFloat
+
+  typealias Payload = (image: CGImage, scale: CGFloat)
+}
+
 extension AnnotateState {
   /// Bases above this pixel count publish a downscaled preview before the full render.
   private static let adjustmentPreviewPixelThreshold = 12_000_000
   /// Pixel budget for that preview (still sharp at the canvas' fit scale).
   private static let adjustmentPreviewPixelBudget = 4_000_000
-  /// While a slider drags on a large base, wait this long without changes before the
-  /// full-resolution render.
-  private static let adjustmentFullRenderDebounceNanoseconds: UInt64 = 200_000_000
+  /// Pixel budget for live previews while a slider drags (any base size).
+  private static let adjustmentGesturePreviewPixelBudget = 2_500_000
   private static let filterPresetThumbnailMaxDimension: CGFloat = 160
 
   /// Adjustments apply to the single base image; combine layouts have no single source, so
@@ -35,11 +44,16 @@ extension AnnotateState {
     hasImage && (!isCombineMode || !imageAdjustments.isIdentity)
   }
 
+  /// Value the controls and the canvas reflect: the live drag value, else the committed one.
+  var liveImageAdjustments: ImageAdjustments {
+    imageAdjustmentGestureValue ?? imageAdjustments
+  }
+
   /// Adjusted image for `base` when one was rendered from it (live preview may lag a few
   /// frames behind the sliders), else nil.
   func currentAdjustedImage(for base: NSImage?) -> NSImage? {
     guard let base,
-          !imageAdjustments.isIdentity,
+          !liveImageAdjustments.isIdentity,
           let render = adjustedSourceRender,
           render.base === base else { return nil }
     return render.image
@@ -49,7 +63,7 @@ extension AnnotateState {
   /// preview, stale, or still in flight.
   func exportSourceImage() -> NSImage? {
     guard let base = adjustmentBaseImage else { return nil }
-    let adjustments = imageAdjustments
+    let adjustments = liveImageAdjustments
     guard !adjustments.isIdentity else { return base }
     if let render = adjustedSourceRender,
        render.base === base,
@@ -103,32 +117,45 @@ extension AnnotateState {
   func beginImageAdjustmentGesture() {
     guard imageAdjustmentGestureStart == nil else { return }
     imageAdjustmentGestureStart = imageAdjustments
+    imageAdjustmentGestureValue = imageAdjustments
   }
 
-  /// Live slider value: re-render the preview without touching the undo stack.
+  /// Live slider value: re-render a low-resolution preview without publishing the value or
+  /// touching the undo stack.
   func updateImageAdjustmentGesture(_ adjustments: ImageAdjustments) {
     if imageAdjustmentGestureStart == nil {
       beginImageAdjustmentGesture()
     }
     let clamped = adjustments.clamped
-    guard clamped != imageAdjustments else { return }
-    imageAdjustments = clamped
+    guard clamped != imageAdjustmentGestureValue else { return }
+    imageAdjustmentGestureValue = clamped
     scheduleImageAdjustmentRender()
   }
 
+  /// Drag released: publish the final value once, push one undo step, render full resolution.
   func endImageAdjustmentGesture() {
     guard let start = imageAdjustmentGestureStart else { return }
+    let final = imageAdjustmentGestureValue ?? imageAdjustments
     imageAdjustmentGestureStart = nil
-    if start != imageAdjustments {
+    imageAdjustmentGestureValue = nil
+    if start != final {
       pushImageAdjustmentsUndo(start)
     }
-    // A large base may be waiting out the drag debounce; render full resolution now.
+    if imageAdjustments != final {
+      imageAdjustments = final
+    }
     scheduleImageAdjustmentRender()
+  }
+
+  /// Drops an in-progress drag without committing it (undo, restore, new image).
+  private func cancelImageAdjustmentGesture() {
+    imageAdjustmentGestureStart = nil
+    imageAdjustmentGestureValue = nil
   }
 
   /// Undo/redo target (the caller already moved the current value to the other stack).
   func applyImageAdjustmentsFromUndo(_ adjustments: ImageAdjustments) {
-    imageAdjustmentGestureStart = nil
+    cancelImageAdjustmentGesture()
     imageAdjustments = adjustments
     hasUnsavedChanges = true
     scheduleImageAdjustmentRender()
@@ -137,7 +164,7 @@ extension AnnotateState {
   /// Session restore (QuickAccess cache, sidecar): no undo step, not an unsaved change.
   /// Small images render synchronously so the editor never opens on the original pixels.
   func restoreImageAdjustments(_ adjustments: ImageAdjustments) {
-    imageAdjustmentGestureStart = nil
+    cancelImageAdjustmentGesture()
     imageAdjustments = adjustments.clamped
     guard !imageAdjustments.isIdentity,
           let base = adjustmentBaseImage,
@@ -154,7 +181,8 @@ extension AnnotateState {
 
   /// A different capture was loaded into this editor: adjustments belong to the old one.
   func resetImageAdjustmentsForNewImage() {
-    imageAdjustmentGestureStart = nil
+    cancelImageAdjustmentGesture()
+    imageAdjustmentPreviewBase = nil
     imageAdjustments = .identity
     imageFilterPresetThumbnails = [:]
     imageFilterPresetThumbnailsBase = nil
@@ -168,18 +196,20 @@ extension AnnotateState {
       imageFilterPresetThumbnailsBase = nil
       prepareImageFilterPresetThumbnailsIfNeeded()
     }
-    guard !imageAdjustments.isIdentity || adjustedSourceRender != nil else { return }
+    imageAdjustmentPreviewBase = nil
+    guard !liveImageAdjustments.isIdentity || adjustedSourceRender != nil else { return }
     scheduleImageAdjustmentRender()
   }
 
   // MARK: - Rendering
 
-  /// Renders the adjusted image off the main actor. Renders are chained (one in flight)
-  /// and only the newest request renders, so fast slider drags coalesce.
+  /// Renders the adjusted image off the main actor. While a slider drags only a coalescing
+  /// low-resolution preview runs; otherwise renders are chained (one in flight) and only the
+  /// newest request renders.
   func scheduleImageAdjustmentRender() {
     imageAdjustmentRenderGeneration &+= 1
     let generation = imageAdjustmentRenderGeneration
-    let adjustments = imageAdjustments
+    let adjustments = liveImageAdjustments
 
     guard let base = adjustmentBaseImage, !adjustments.isIdentity else {
       imageAdjustmentRenderTask?.cancel()
@@ -189,6 +219,14 @@ extension AnnotateState {
       }
       return
     }
+
+    if imageAdjustmentGestureStart != nil {
+      // The full render (if any) is stale now; the preview loop picks up the newest value.
+      imageAdjustmentRenderTask?.cancel()
+      startImageAdjustmentPreviewLoopIfNeeded()
+      return
+    }
+
     if let render = adjustedSourceRender,
        render.base === base,
        render.adjustments == adjustments,
@@ -200,23 +238,16 @@ extension AnnotateState {
     let pointSize = base.size
     let usesPreview = cgImage.width * cgImage.height > Self.adjustmentPreviewPixelThreshold
     let previewBudget = Self.adjustmentPreviewPixelBudget
-    let debounce = Self.adjustmentFullRenderDebounceNanoseconds
     let previous = imageAdjustmentRenderTask
     previous?.cancel()
 
     imageAdjustmentRenderTask = Task { [weak self] in
-      // Large bases: the cheap preview never waits behind an in-flight full render (the
-      // detached Core Image work can't be interrupted); only the full render is chained.
-      if !usesPreview {
-        await previous?.value
-      }
-      guard let self, self.imageAdjustmentRenderGeneration == generation else { return }
-
+      // Large bases: publish a cheap preview first so the canvas responds right away.
       if usesPreview {
         let preview = await Task.detached(priority: .userInitiated) {
           AnnotateImageAdjustmentRenderer.render(cgImage, adjustments: adjustments, maxPixelCount: previewBudget)
         }.value
-        guard self.imageAdjustmentRenderGeneration == generation else { return }
+        guard let self, self.imageAdjustmentRenderGeneration == generation else { return }
         if let preview {
           self.adjustedSourceRender = AnnotateAdjustedImageRender(
             base: base,
@@ -225,13 +256,10 @@ extension AnnotateState {
             isFullResolution: false
           )
         }
-        if self.imageAdjustmentGestureStart != nil {
-          try? await Task.sleep(nanoseconds: debounce)
-          guard !Task.isCancelled, self.imageAdjustmentRenderGeneration == generation else { return }
-        }
-        await previous?.value
-        guard self.imageAdjustmentRenderGeneration == generation else { return }
       }
+      // Detached Core Image work can't be interrupted: wait for it rather than pile up.
+      await previous?.value
+      guard let self, self.imageAdjustmentRenderGeneration == generation else { return }
 
       let rendered = await Task.detached(priority: .userInitiated) {
         AnnotateImageAdjustmentRenderer.render(cgImage, adjustments: adjustments)
@@ -250,6 +278,65 @@ extension AnnotateState {
         image: AnnotateImageAdjustmentRenderer.makeImage(rendered, pointSize: pointSize),
         isFullResolution: true
       )
+    }
+  }
+
+  /// One render at a time on a downscaled copy of the base; after each frame it renders the
+  /// newest slider value if it moved meanwhile, so fast drags never queue renders up.
+  private func startImageAdjustmentPreviewLoopIfNeeded() {
+    guard imageAdjustmentPreviewTask == nil else { return }
+    let budget = Self.adjustmentGesturePreviewPixelBudget
+
+    imageAdjustmentPreviewTask = Task { [weak self] in
+      defer { self?.imageAdjustmentPreviewTask = nil }
+      var lastRendered: ImageAdjustments?
+      while let self, self.imageAdjustmentGestureStart != nil {
+        let adjustments = self.liveImageAdjustments
+        guard adjustments != lastRendered,
+              let base = self.adjustmentBaseImage else { return }
+        if adjustments.isIdentity {
+          if self.adjustedSourceRender != nil { self.adjustedSourceRender = nil }
+          lastRendered = adjustments
+          continue
+        }
+
+        let cachedBase = self.imageAdjustmentPreviewBase.flatMap { $0.base === base ? $0 : nil }
+        let sourceCG = cachedBase == nil ? AnnotateExporter.bestCGImage(from: base) : nil
+        if cachedBase == nil && sourceCG == nil { return }
+
+        let result = await Task.detached(priority: .userInitiated) {
+          () -> (preview: AnnotateAdjustmentPreviewBase.Payload, image: CGImage?)? in
+          let previewBase: AnnotateAdjustmentPreviewBase.Payload
+          if let cachedBase {
+            previewBase = (cachedBase.image, cachedBase.scale)
+          } else if let sourceCG,
+                    let made = AnnotateImageAdjustmentRenderer.makePreviewBase(sourceCG, maxPixelCount: budget) {
+            previewBase = made
+          } else {
+            return nil
+          }
+          let image = AnnotateImageAdjustmentRenderer.renderPreview(
+            previewBase.image, adjustments: adjustments, detailScale: previewBase.scale
+          )
+          return (previewBase, image)
+        }.value
+
+        guard let result, self.adjustmentBaseImage === base else { return }
+        if cachedBase == nil {
+          self.imageAdjustmentPreviewBase = AnnotateAdjustmentPreviewBase(
+            base: base, image: result.preview.image, scale: result.preview.scale
+          )
+        }
+        lastRendered = adjustments
+        // Released meanwhile: the full-resolution render owns the canvas now.
+        guard self.imageAdjustmentGestureStart != nil, let image = result.image else { return }
+        self.adjustedSourceRender = AnnotateAdjustedImageRender(
+          base: base,
+          adjustments: adjustments,
+          image: AnnotateImageAdjustmentRenderer.makeImage(image, pointSize: base.size),
+          isFullResolution: result.preview.scale >= 1
+        )
+      }
     }
   }
 

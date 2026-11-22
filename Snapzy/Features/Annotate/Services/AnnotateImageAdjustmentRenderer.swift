@@ -30,7 +30,7 @@ nonisolated enum AnnotateImageAdjustmentRenderer {
     if let maxPixelCount, maxPixelCount > 0, pixelCount > maxPixelCount {
       scale = sqrt(CGFloat(maxPixelCount) / CGFloat(pixelCount))
     }
-    return render(cgImage, adjustments: adjustments, scale: scale)
+    return render(cgImage, adjustments: adjustments, scale: scale, detailScale: scale)
   }
 
   /// Renders a thumbnail whose longest side is at most `maxDimension` pixels.
@@ -41,7 +41,23 @@ nonisolated enum AnnotateImageAdjustmentRenderer {
   ) -> CGImage? {
     let longest = CGFloat(max(cgImage.width, cgImage.height))
     let scale = longest > maxDimension ? maxDimension / longest : 1
-    return render(cgImage, adjustments: adjustments, scale: scale)
+    return render(cgImage, adjustments: adjustments, scale: scale, detailScale: scale)
+  }
+
+  /// Downscales `cgImage` once to fit `maxPixelCount` (no adjustments) for live slider
+  /// previews. Returns the bitmap and the scale it was rendered at (1 = untouched).
+  static func makePreviewBase(_ cgImage: CGImage, maxPixelCount: Int) -> (image: CGImage, scale: CGFloat)? {
+    let pixelCount = cgImage.width * cgImage.height
+    guard maxPixelCount > 0, pixelCount > maxPixelCount else { return (cgImage, 1) }
+    let scale = sqrt(CGFloat(maxPixelCount) / CGFloat(pixelCount))
+    guard let image = render(cgImage, adjustments: .identity, scale: scale, detailScale: scale) else { return nil }
+    return (image, scale)
+  }
+
+  /// Renders `adjustments` over an already downscaled bitmap. `detailScale` is the scale
+  /// that bitmap was made at, so radius-based filters match the full-resolution result.
+  static func renderPreview(_ cgImage: CGImage, adjustments: ImageAdjustments, detailScale: CGFloat) -> CGImage? {
+    render(cgImage, adjustments: adjustments, scale: 1, detailScale: detailScale)
   }
 
   /// Wraps a rendered bitmap so it keeps the base image's point size (annotation space)
@@ -57,7 +73,12 @@ nonisolated enum AnnotateImageAdjustmentRenderer {
 
   // MARK: - Pipeline
 
-  private static func render(_ cgImage: CGImage, adjustments: ImageAdjustments, scale: CGFloat) -> CGImage? {
+  private static func render(
+    _ cgImage: CGImage,
+    adjustments: ImageAdjustments,
+    scale: CGFloat,
+    detailScale: CGFloat
+  ) -> CGImage? {
     let source = CIImage(cgImage: cgImage)
     var image = source
     if scale < 1 {
@@ -65,9 +86,10 @@ nonisolated enum AnnotateImageAdjustmentRenderer {
     }
     let extent = image.extent.integral
 
+    guard !adjustments.isIdentity || scale < 1 else { return cgImage }
     image = applyTone(adjustments, to: image)
     image = applyPreset(adjustments.preset, to: image)
-    image = applySharpness(adjustments.sharpness, scale: scale, to: image, extent: extent)
+    image = applySharpness(adjustments.sharpness, scale: detailScale, to: image, extent: extent)
     // No alpha re-masking: Core Image color filters work on unpremultiplied values and keep
     // alpha, so cutout edges stay intact (multiplying by the source alpha again would square it).
 

@@ -14,9 +14,11 @@ struct AnnotateImageAdjustmentsSection: View {
   let adjustments: ImageAdjustments
   let thumbnails: [ImageFilterPreset: NSImage]
 
+  /// Three columns keep each tile wide enough for a readable thumbnail and a full label in
+  /// the 240pt sidebar.
   private let presetColumns = Array(
-    repeating: GridItem(.flexible(), spacing: Spacing.xs),
-    count: 4
+    repeating: GridItem(.flexible(minimum: 0), spacing: GridConfig.gap, alignment: .top),
+    count: 3
   )
 
   var body: some View {
@@ -44,7 +46,7 @@ struct AnnotateImageAdjustmentsSection: View {
         .foregroundColor(SidebarColors.labelSecondary)
         .padding(.top, Spacing.xs)
 
-      LazyVGrid(columns: presetColumns, spacing: Spacing.sm) {
+      LazyVGrid(columns: presetColumns, alignment: .leading, spacing: Spacing.sm) {
         ForEach(ImageFilterPreset.allCases) { preset in
           ImageFilterPresetTile(
             preset: preset,
@@ -77,7 +79,7 @@ struct AnnotateImageAdjustmentsSection: View {
       value: Binding(
         get: { CGFloat(adjustments[keyPath: keyPath]) },
         set: { newValue in
-          var updated = state.imageAdjustments
+          var updated = state.liveImageAdjustments
           updated[keyPath: keyPath] = Double(newValue).rounded()
           state.setImageAdjustments(updated)
         }
@@ -85,7 +87,7 @@ struct AnnotateImageAdjustmentsSection: View {
       range: CGFloat(range.lowerBound) ... CGFloat(range.upperBound),
       onDragging: { isDragging, value in
         if isDragging {
-          var updated = state.imageAdjustments
+          var updated = state.liveImageAdjustments
           updated[keyPath: keyPath] = Double(value).rounded()
           state.updateImageAdjustmentGesture(updated)
         } else {
@@ -102,35 +104,57 @@ private struct ImageFilterPresetTile: View {
   let isSelected: Bool
   let action: () -> Void
 
+  @State private var isHovering = false
+
+  private static let thumbnailAspectRatio: CGFloat = 4.0 / 3.0
+
   var body: some View {
     Button(action: action) {
-      VStack(spacing: 3) {
-        ZStack {
-          Radius.rect(Radius.tile)
-            .fill(SidebarColors.itemDefault)
-          if let thumbnail {
-            Image(nsImage: thumbnail)
-              .resizable()
-              .interpolation(.medium)
-              .aspectRatio(contentMode: .fill)
+      VStack(spacing: Spacing.xs) {
+        // A fixed-ratio clear box sizes the tile from the column width; the thumbnail only
+        // fills it as an overlay, so a wide capture can never push past its cell.
+        Color.clear
+          .aspectRatio(Self.thumbnailAspectRatio, contentMode: .fit)
+          .frame(maxWidth: .infinity)
+          .background(SidebarColors.itemDefault)
+          .overlay {
+            if let thumbnail {
+              Image(nsImage: thumbnail)
+                .resizable()
+                .interpolation(.medium)
+                .scaledToFill()
+            }
           }
-        }
-        .frame(height: 38)
-        .frame(maxWidth: .infinity)
-        .clipShape(Radius.rect(Radius.tile))
-        .sidebarItemStyle(isSelected: isSelected)
+          .clipShape(Radius.rect(Radius.tile))
+          .overlay {
+            Radius.rect(Radius.tile)
+              .fill(isHovering && !isSelected ? SidebarColors.itemHover.opacity(0.35) : Color.clear)
+          }
+          .overlay {
+            Radius.rect(Radius.tile)
+              .strokeBorder(borderColor, lineWidth: Size.strokeSelected)
+          }
 
         Text(preset.displayName)
           .font(Typography.labelSmall)
           .foregroundColor(isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
           .lineLimit(1)
+          .minimumScaleFactor(0.85)
           .truncationMode(.tail)
+          .frame(maxWidth: .infinity)
       }
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .onHover { isHovering = $0 }
     .help(preset.displayName)
     .accessibilityLabel(preset.displayName)
     .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+
+  private var borderColor: Color {
+    if isSelected { return SidebarColors.borderSelected }
+    if isHovering { return SidebarColors.borderHover }
+    return .clear
   }
 }

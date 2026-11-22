@@ -235,6 +235,13 @@ final class AnnotateState: ObservableObject {
   var imageAdjustmentRenderGeneration = 0
   /// Value at the start of a slider drag; the drag commits one undo step on release.
   var imageAdjustmentGestureStart: ImageAdjustments?
+  /// Live slider value during a drag. Not published: the slider shows its own value and the
+  /// canvas follows `adjustedSourceRender`, so a drag doesn't re-render every observer per tick.
+  var imageAdjustmentGestureValue: ImageAdjustments?
+  /// Coalescing low-resolution render loop that runs while a slider drags.
+  var imageAdjustmentPreviewTask: Task<Void, Never>?
+  /// Downscaled copy of the base reused by every drag preview.
+  var imageAdjustmentPreviewBase: AnnotateAdjustmentPreviewBase?
   @Published private(set) var isCutoutProcessing: Bool = false
   @Published var cutoutErrorMessage: String?
   private var activeCutoutOperationID: UUID?
