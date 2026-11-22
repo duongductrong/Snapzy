@@ -118,7 +118,7 @@ final class AnnotateMagnifierTests: XCTestCase {
     )!
   }
 
-  func testCanvas_clickPlacesLensOverSpotAndDragPullsItOut() throws {
+  func testCanvas_clickMagnifiesInPlaceAndDragCallsOutTheArea() throws {
     let (state, canvas) = makeCanvas()
     canvas.mouseDown(with: event(.leftMouseDown, at: CGPoint(x: 50, y: 50)))
     canvas.mouseUp(with: event(.leftMouseUp, at: CGPoint(x: 50, y: 50)))
@@ -129,19 +129,73 @@ final class AnnotateMagnifierTests: XCTestCase {
     XCTAssertEqual(state.selectedAnnotationId, clicked.id)
 
     state.deselectAnnotation()
-    canvas.mouseDown(with: event(.leftMouseDown, at: CGPoint(x: 150, y: 70)))
+    // Drag a 20×20 box around (150, 50): a 2× lens would be 40 pt, under the 72 pt minimum,
+    // so the zoom rises to 3.6× and the lens goes on the roomiest side (left), off the area.
+    canvas.mouseDown(with: event(.leftMouseDown, at: CGPoint(x: 140, y: 60)))
     canvas.mouseDragged(with: event(.leftMouseDragged, at: CGPoint(x: 160, y: 40)))
     canvas.mouseUp(with: event(.leftMouseUp, at: CGPoint(x: 160, y: 40)))
     XCTAssertEqual(state.annotations.count, 2)
     let dragged = try XCTUnwrap(state.annotations.last)
-    XCTAssertEqual(dragged.type.magnifierGeometry?.sourceCenter, CGPoint(x: 150, y: 70))
-    // Lens nudged inside the 200×100 canvas but centred on the release where it fits.
+    let geometry = try XCTUnwrap(dragged.type.magnifierGeometry)
+    XCTAssertEqual(geometry.sourceCenter, CGPoint(x: 150, y: 50))
+    XCTAssertEqual(geometry.zoom, 3.6, accuracy: 0.001)
     XCTAssertEqual(dragged.bounds.width, 72, accuracy: 0.001)
-    XCTAssertEqual(dragged.bounds.midX, 160, accuracy: 0.001)
-    XCTAssertTrue(CGRect(x: 0, y: 0, width: 200, height: 100).contains(dragged.bounds))
+    XCTAssertEqual(dragged.bounds.maxX, 140 - MagnifierGeometry.calloutGap, accuracy: 0.001)
+    XCTAssertEqual(dragged.bounds.midY, 50, accuracy: 0.001)
+    // The lens shows exactly the dragged area.
+    XCTAssertEqual(geometry.sourceRect(forLens: dragged.bounds).width, 20, accuracy: 0.001)
 
     state.undo()
     XCTAssertEqual(state.annotations.count, 1)
+  }
+
+  func testCreation_dragLowersZoomWhenTheLensWouldNotFit() {
+    let canvas = CGRect(x: 0, y: 0, width: 1000, height: 800)
+    var style = MagnifierStyle()
+    style.zoom = 4
+    style.shape = .roundedRect
+    let result = MagnifierGeometry.creation(
+      from: CGPoint(x: 100, y: 100), to: CGPoint(x: 300, y: 200), isDrag: true, style: style, canvas: canvas
+    )
+    // 200 pt wide area × 4 = 800 > 60% of 800 = 480 → zoom 2.4, lens keeps the area's aspect.
+    XCTAssertEqual(result.geometry.zoom, 2.4, accuracy: 0.001)
+    XCTAssertEqual(result.lens.width, 480, accuracy: 0.001)
+    XCTAssertEqual(result.lens.height, 240, accuracy: 0.001)
+    XCTAssertTrue(canvas.contains(result.lens))
+    XCTAssertFalse(result.lens.intersects(CGRect(x: 100, y: 100, width: 200, height: 100)))
+  }
+
+  func testSteppedZoomWalksThePresets() {
+    XCTAssertEqual(MagnifierGeometry.steppedZoom(from: 2, up: true), 3)
+    XCTAssertEqual(MagnifierGeometry.steppedZoom(from: 2, up: false), 1.5)
+    XCTAssertEqual(MagnifierGeometry.steppedZoom(from: 3.6, up: true), 4)
+    XCTAssertEqual(MagnifierGeometry.steppedZoom(from: 3.6, up: false), 3)
+    XCTAssertEqual(MagnifierGeometry.steppedZoom(from: 8, up: true), 8)
+    XCTAssertEqual(MagnifierGeometry.steppedZoom(from: 1.5, up: false), 1.5)
+  }
+
+  func testStepSelectedMagnifierZoomIsOneUndoStepAndNeedsASelection() {
+    let state = makeState()
+    let item = magnifier(lens: CGRect(x: 0, y: 0, width: 40, height: 40), source: CGPoint(x: 150, y: 50))
+    state.annotations = [item]
+    XCTAssertFalse(state.stepSelectedMagnifierZoom(up: true))
+    state.setSelectedAnnotationIds([item.id])
+    XCTAssertTrue(state.stepSelectedMagnifierZoom(up: true))
+    XCTAssertEqual(state.annotations[0].type.magnifierGeometry?.zoom, 3)
+    state.undo()
+    XCTAssertEqual(state.annotations[0].type.magnifierGeometry?.zoom, 2)
+  }
+
+  func testCalloutConeJoinsTheOuterEdges() throws {
+    let source = CGRect(x: 0, y: 0, width: 20, height: 20)
+    let lens = CGRect(x: 100, y: -30, width: 80, height: 80)
+    let cone = try XCTUnwrap(MagnifierGeometry.calloutCone(shape: .circle, source: source, lens: lens))
+    XCTAssertEqual(cone.count, 4)
+    // One edge runs along the top of both circles, the other along the bottom.
+    let ys = [cone[0].y, cone[1].y, cone[2].y, cone[3].y]
+    XCTAssertGreaterThan(ys.max()!, 40)
+    XCTAssertLessThan(ys.min()!, -20)
+    XCTAssertNil(MagnifierGeometry.calloutCone(shape: .circle, source: source, lens: CGRect(x: -10, y: -10, width: 40, height: 40)))
   }
 
   func testStyleChangeRestylesSelectionInOneUndoStep() {

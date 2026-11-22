@@ -14852,67 +14852,67 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Klicken zum Vergrößern · Ziehen, um die Lupe zu platzieren"
+            "value": "Klicken zum Vergrößern an Ort und Stelle · Bereich umrahmen, um ihn hervorzuheben · Scrollen oder +/− zum Zoomen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Click to magnify · Drag to place the lens"
+            "value": "Click to magnify in place · Drag around an area to call it out · Scroll or +/− to zoom"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haz clic para ampliar · Arrastra para colocar la lupa"
+            "value": "Haz clic para ampliar en el sitio · Arrastra alrededor de un área para destacarla · Desplaza o pulsa +/− para hacer zoom"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cliquez pour agrandir · Faites glisser pour placer la loupe"
+            "value": "Cliquez pour agrandir sur place · Entourez une zone pour la mettre en avant · Défilez ou +/− pour zoomer"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "לחץ כדי להגדיל · גרור כדי למקם את העדשה"
+            "value": "לחצו להגדלה במקום · גררו סביב אזור כדי להבליט אותו · גללו או +/− לזום"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クリックで拡大 · ドラッグでレンズを配置"
+            "value": "クリックでその場を拡大 · 範囲をドラッグして拡大表示 · スクロールまたは +/− でズーム"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "클릭하여 확대 · 드래그하여 렌즈 배치"
+            "value": "클릭해 제자리에서 확대 · 영역을 드래그해 강조 · 스크롤 또는 +/−로 확대/축소"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Щелчок — увеличить · Перетаскивание — разместить линзу"
+            "value": "Щелчок — увеличить на месте · Обведите область, чтобы вынести её · Прокрутка или +/− — масштаб"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bấm để phóng to · Kéo để đặt ống kính"
+            "value": "Bấm để phóng ngay tại chỗ · Kéo quanh một vùng để phóng ra bên cạnh · Cuộn hoặc +/− để đổi mức zoom"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "点按放大 · 拖移放置镜头"
+            "value": "点按即在原处放大 · 框选区域以放大标注 · 滚动或按 +/− 调整缩放"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "點按放大 · 拖移放置鏡頭"
+            "value": "點按即在原處放大 · 框選區域以放大標註 · 捲動或按 +/− 調整縮放"
           }
         }
       }

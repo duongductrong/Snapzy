@@ -68,6 +68,7 @@ enum AnnotationFactory {
     properties.counterArrowTarget = nil
 
     let type: AnnotationType?
+    var magnifierLens: CGRect?
 
     switch tool {
     case .rectangle:
@@ -129,9 +130,17 @@ enum AnnotationFactory {
       let text = context.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines)
       type = .watermark(text.isEmpty ? "Snapzy" : text)
 
-    // The press is the spot to magnify; the release places the lens (a click covers the spot).
+    // A click magnifies in place; a drag draws the area to call out and the lens goes beside it.
     case .magnifier:
-      type = .magnifier(MagnifierGeometry(sourceCenter: start, style: context.magnifierStyle))
+      let creation = MagnifierGeometry.creation(
+        from: start,
+        to: end,
+        isDrag: hypot(end.x - start.x, end.y - start.y) >= context.counterArrowMinimumDragDistance,
+        style: context.magnifierStyle,
+        canvas: context.activeAnnotationBounds
+      )
+      magnifierLens = creation.lens
+      type = .magnifier(creation.geometry)
 
     // Measure items come from a pixel scan (`AnnotateMeasureMapper`), not from drag geometry.
     case .selection, .crop, .cutOut, .text, .measure, .mockup:
@@ -164,13 +173,7 @@ enum AnnotationFactory {
         canvasBounds: context.activeAnnotationBounds
       )
     case .magnifier:
-      let canvas = context.activeAnnotationBounds
-      let lensCenter = hypot(end.x - start.x, end.y - start.y) >= context.counterArrowMinimumDragDistance ? end : start
-      bounds = MagnifierGeometry.lensBounds(
-        centeredAt: lensCenter,
-        size: MagnifierGeometry.defaultLensSize(for: canvas),
-        within: canvas
-      )
+      bounds = magnifierLens ?? .zero
     case .highlight(let points):
       bounds = pathBounds(containing: points) ?? normalizedBounds(CGRect(
         x: min(start.x, end.x),

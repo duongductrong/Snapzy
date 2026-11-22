@@ -4251,6 +4251,28 @@ final class AnnotateState: ObservableObject {
     hasUnsavedChanges = true
   }
 
+  /// Selected magnifiers, in drawing order.
+  var selectedMagnifiers: [AnnotationItem] {
+    annotations.filter { selectedAnnotationIds.contains($0.id) && $0.type.magnifierGeometry != nil }
+  }
+
+  /// Steps each selected magnifier to its next zoom preset (scroll wheel, `+` / `−`), as one undo
+  /// step. False when no magnifier is selected, so the caller can let the event through.
+  @discardableResult
+  func stepSelectedMagnifierZoom(up: Bool) -> Bool {
+    guard !selectedMagnifiers.isEmpty else { return false }
+    updateMagnifierStyle { style in
+      style.zoom = MagnifierGeometry.steppedZoom(from: style.zoom, up: up)
+    }
+    return true
+  }
+
+  /// Whether the pointer is over a selected magnifier's lens, where the scroll wheel zooms it.
+  var isPointerOverSelectedMagnifier: Bool {
+    guard let point = canvasMouseLocation else { return false }
+    return selectedMagnifiers.contains { $0.bounds.standardized.contains(point) }
+  }
+
   /// Moves a magnifier's source area. Gestures checkpoint undo themselves.
   func updateMagnifierSource(id: UUID, center: CGPoint) {
     guard let index = annotations.firstIndex(where: { $0.id == id }),

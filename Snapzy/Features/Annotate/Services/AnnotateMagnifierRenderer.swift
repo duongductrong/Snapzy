@@ -98,7 +98,12 @@ nonisolated enum AnnotateMagnifierRenderer {
     }
   }
 
-  /// Source outline plus a line between the two shapes, skipped where the lens covers them.
+  /// Opacity of the cone fill between the source and the lens.
+  static let coneFillAlpha: CGFloat = 0.14
+
+  /// Source outline plus a callout cone (two edge lines and a light fill) joining it to the
+  /// lens, drawn under the lens. Falls back to one center line when the cone cannot be built,
+  /// and draws nothing while the lens covers the source center.
   private static func drawConnector(
     geometry: MagnifierGeometry,
     lens: CGRect,
@@ -111,16 +116,37 @@ nonisolated enum AnnotateMagnifierRenderer {
     let lensCenter = CGPoint(x: lens.midX, y: lens.midY)
     let sourceCenter = CGPoint(x: source.midX, y: source.midY)
     guard !lens.contains(sourceCenter) else { return }
+    let sourcePath = MagnifierGeometry.path(for: geometry.shape, in: source)
 
     context.saveGState()
+    defer { context.restoreGState() }
     context.setStrokeColor(color)
     context.setLineWidth(lineWidth)
     context.setLineDash(phase: 0, lengths: [])
     context.setLineCap(.round)
-    context.addPath(MagnifierGeometry.path(for: geometry.shape, in: source))
-    context.strokePath()
+    context.setLineJoin(.round)
 
-    if !lens.intersects(source) {
+    if let cone = MagnifierGeometry.calloutCone(shape: geometry.shape, source: source, lens: lens) {
+      // Fill the cone everywhere but over the source, so the called-out pixels stay untinted.
+      context.saveGState()
+      let outside = source.union(lens).insetBy(dx: -lens.width, dy: -lens.height)
+      context.addRect(outside)
+      context.addPath(sourcePath)
+      context.clip(using: .evenOdd)
+      context.beginPath()
+      context.addLines(between: cone)
+      context.closePath()
+      context.setFillColor(color.copy(alpha: (color.alpha) * coneFillAlpha) ?? color)
+      context.fillPath()
+      context.restoreGState()
+
+      context.beginPath()
+      context.move(to: cone[0])
+      context.addLine(to: cone[1])
+      context.move(to: cone[2])
+      context.addLine(to: cone[3])
+      context.strokePath()
+    } else if !lens.intersects(source) {
       let from = MagnifierGeometry.boundaryPoint(of: geometry.shape, in: source, toward: lensCenter)
       let to = MagnifierGeometry.boundaryPoint(of: geometry.shape, in: lens, toward: sourceCenter)
       context.beginPath()
@@ -128,7 +154,9 @@ nonisolated enum AnnotateMagnifierRenderer {
       context.addLine(to: to)
       context.strokePath()
     }
-    context.restoreGState()
+
+    context.addPath(sourcePath)
+    context.strokePath()
   }
 
   private static func drawMagnifiedPixels(

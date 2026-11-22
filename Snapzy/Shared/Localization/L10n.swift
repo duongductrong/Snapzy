@@ -6671,8 +6671,8 @@ nonisolated enum L10n {
     )
     static let magnifierGestureHint = string(
       "annotate.magnifier-gesture-hint",
-      defaultValue: "Click to magnify · Drag to place the lens",
-      comment: "Hint for the Magnifier tool: press on the spot to magnify; dragging places the zoomed lens elsewhere"
+      defaultValue: "Click to magnify in place · Drag around an area to call it out · Scroll or +/− to zoom",
+      comment: "Hint for the Magnifier tool: a click puts the lens over the spot; dragging a box around an area places a zoomed lens beside it; scroll wheel or + / - over a selected lens changes its zoom"
     )
     static let magnifierZoom = string(
       "annotate.magnifier-zoom",

@@ -316,6 +316,8 @@ final class DrawingCanvasNSView: NSView {
   private var drawingRawEndPoint: CGPoint?
   /// Measure tool: the span under the pointer while hovering (drawn, never committed).
   private var measureHoverItem: AnnotationItem?
+  /// Faint lens under the pointer while the Magnifier tool is idle: what a click would place.
+  private var magnifierHoverItem: AnnotationItem?
   private var drawingStartDisplayPoint: CGPoint?
   private var drawingDragDistance: CGFloat = 0
   /// The drawing-tool press in progress: set once on mouseDown, cleared once
@@ -737,6 +739,14 @@ final class DrawingCanvasNSView: NSView {
       }
 
     default:
+      // With magnifiers selected, + / − (= / -, keypad too) step their zoom, like the scroll
+      // wheel over the lens. Other keys, and these keys with no magnifier selected, carry on.
+      if [24, 27, 69, 78].contains(event.keyCode), !event.modifierFlags.contains(.command),
+         state.editingTextAnnotationId == nil,
+         state.stepSelectedMagnifierZoom(up: event.keyCode == 24 || event.keyCode == 69) {
+        invalidateDrawing()
+        return
+      }
       // Crop mode owns `A` (auto-crop to content) even if the user bound it to
       // a tool — same precedence as Enter/Esc while cropping.
       if state.isCropInteractionActive, !event.modifierFlags.contains(.command),
@@ -1321,6 +1331,7 @@ final class DrawingCanvasNSView: NSView {
     // Start drawing for other tools (in image coordinates)
     isDrawing = true
     measureHoverItem = nil
+    magnifierHoverItem = nil
     drawingStartDisplayPoint = displayPoint
     drawingDragDistance = 0
     drawingCounterValue = state.selectedTool == .counter ? state.nextCounterValue() : nil
@@ -2578,6 +2589,13 @@ final class DrawingCanvasNSView: NSView {
       drawMeasurePreview(in: context)
       return
     }
+    if state.selectedTool == .magnifier, !isDrawing, let hover = magnifierHoverItem {
+      context.saveGState()
+      context.setAlpha(Self.magnifierHoverAlpha)
+      makeRenderer(sourceImage: sourceImage, sourceCGImage: sourceCGImage, in: context).draw(hover)
+      context.restoreGState()
+      return
+    }
     guard isDrawing, let start = dragStart else { return }
     let renderer = makeRenderer(sourceImage: sourceImage, sourceCGImage: sourceCGImage, in: context)
 
@@ -2764,6 +2782,43 @@ final class DrawingCanvasNSView: NSView {
     context.addPath(MagnifierGeometry.path(for: geometry.shape, in: source))
     context.strokePath()
     context.restoreGState()
+    drawMagnifierZoomBadge(zoom: geometry.zoom, lens: lens, in: context)
+  }
+
+  /// A small "2×" pill inside the bottom of a selected lens, so the zoom (changed with the
+  /// scroll wheel or + / −) is always visible while editing. Selection chrome only: never exported.
+  private func drawMagnifierZoomBadge(zoom: CGFloat, lens: CGRect, in context: CGContext) {
+    let text = Self.magnifierZoomLabel(zoom)
+    let fontSize = selectionChromeMetrics.imageLength(forScreenPoints: 11)
+    let font = NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold) as CTFont
+    let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [
+      NSAttributedString.Key(kCTFontAttributeName as String): font,
+      NSAttributedString.Key(kCTForegroundColorAttributeName as String): NSColor.white.cgColor,
+    ]))
+    let textWidth = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+    let paddingX = selectionChromeMetrics.imageLength(forScreenPoints: 6)
+    let height = selectionChromeMetrics.imageLength(forScreenPoints: 18)
+    let standardized = lens.standardized
+    let pill = CGRect(
+      x: standardized.midX - (textWidth + paddingX * 2) / 2,
+      y: standardized.minY + selectionChromeMetrics.imageLength(forScreenPoints: 8),
+      width: textWidth + paddingX * 2,
+      height: height
+    )
+    context.saveGState()
+    context.addPath(CGPath(roundedRect: pill, cornerWidth: height / 2, cornerHeight: height / 2, transform: nil))
+    context.setFillColor(NSColor.systemBlue.cgColor)
+    context.fillPath()
+    context.textMatrix = .identity
+    context.textPosition = CGPoint(x: pill.minX + paddingX, y: pill.midY - CTFontGetCapHeight(font) / 2)
+    CTLineDraw(line, context)
+    context.restoreGState()
+  }
+
+  static func magnifierZoomLabel(_ zoom: CGFloat) -> String {
+    let rounded = (zoom * 10).rounded() / 10
+    let number = rounded == rounded.rounded() ? String(Int(rounded)) : String(format: "%.1f", rounded)
+    return "\(number)×"
   }
 
   private func drawSelectionBounds(_ bounds: CGRect, transform: CGAffineTransform? = nil, in context: CGContext) {
@@ -2890,6 +2945,7 @@ final class DrawingCanvasNSView: NSView {
     state.updateCanvasMouseLocation(nil)
     NSCursor.arrow.set()
     updateMeasureHover(at: nil)
+    updateMagnifierHover(at: nil)
   }
 
   override func mouseMoved(with event: NSEvent) {
@@ -2897,6 +2953,37 @@ final class DrawingCanvasNSView: NSView {
     updateCanvasMouseLocation(for: displayPoint)
     updateCursor(for: event)
     updateMeasureHover(at: displayToImage(displayPoint))
+    updateMagnifierHover(at: displayToImage(displayPoint))
+  }
+
+  /// Moves the Magnifier tool's hover lens with the pointer (hidden over the canvas margin and
+  /// while any gesture runs).
+  private static let magnifierHoverAlpha: CGFloat = 0.7
+
+  private func updateMagnifierHover(at imagePoint: CGPoint?) {
+    var item: AnnotationItem?
+    if state.selectedTool == .magnifier, !isDrawing, !isDraggingAnnotation, !isResizingAnnotation,
+       let imagePoint, state.activeAnnotationBounds.contains(imagePoint) {
+      item = AnnotationFactory.createAnnotation(
+        tool: .magnifier,
+        from: imagePoint,
+        to: imagePoint,
+        path: [],
+        context: AnnotationFactory.CreationContext(
+          properties: state.annotationCreationProperties(for: .magnifier),
+          arrowStyle: .straight,
+          blurType: state.blurType,
+          counterValue: 1,
+          watermarkText: state.watermarkText,
+          activeAnnotationBounds: state.activeAnnotationBounds,
+          counterArrowMinimumDragDistance: counterArrowMinimumDragDistance,
+          magnifierStyle: state.magnifierStyle
+        )
+      )
+    }
+    guard item?.type != magnifierHoverItem?.type || item?.bounds != magnifierHoverItem?.bounds else { return }
+    magnifierHoverItem = item
+    invalidateLiveLayers()
   }
 
   // MARK: - Measure
