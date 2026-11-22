@@ -879,4 +879,276 @@ final class VideoEditorSmartAutoZoomTests: XCTestCase {
     }
     XCTAssertGreaterThan(activeShutterFrames, 10, "Multi-action pans and transitions should engage physical shutter blur")
   }
+
+  // MARK: - Review Regression Tests
+
+  @MainActor
+  func testMergeSmartAutoZoomSegments_preservesUserZoomsAndEmptyPlanIsNoOp() {
+    let manualZoom = ZoomSegment(
+      startTime: 1.0,
+      duration: 2.0,
+      zoomLevel: 2.0,
+      zoomCenter: CGPoint(x: 0.3, y: 0.3),
+      zoomType: .manual
+    )
+    let regularAutoZoom = ZoomSegment(
+      startTime: 6.0,
+      duration: 1.5,
+      zoomLevel: 1.8,
+      zoomCenter: CGPoint(x: 0.5, y: 0.5),
+      zoomType: .auto
+    )
+    let previousSmartZoom = ZoomSegment(
+      startTime: 8.0,
+      duration: 1.5,
+      zoomLevel: 2.2,
+      zoomCenter: CGPoint(x: 0.7, y: 0.7),
+      zoomType: .auto,
+      smartKeyframes: [
+        AutoFocusCameraSample(time: 8.0, center: CGPoint(x: 0.7, y: 0.7), zoomMultiplier: 1.0),
+        AutoFocusCameraSample(time: 9.5, center: CGPoint(x: 0.7, y: 0.7), zoomMultiplier: 1.0),
+      ]
+    )
+    let existing = [manualZoom, regularAutoZoom, previousSmartZoom]
+
+    // 1. Empty plan must leave all existing zooms completely untouched under both policies.
+    XCTAssertEqual(
+      VideoEditorState.mergeSmartAutoZoomSegments(existing: existing, generated: [], policy: .fillGaps),
+      existing
+    )
+    XCTAssertEqual(
+      VideoEditorState.mergeSmartAutoZoomSegments(existing: existing, generated: [], policy: .replaceAll),
+      existing
+    )
+
+    // 2. Fill-gaps policy keeps manual & regular auto zooms, replaces prior smart zooms,
+    //    and drops any generated segment overlapping a preserved user zoom.
+    let overlappingGenerated = ZoomSegment(
+      startTime: 2.2,
+      duration: 1.5,
+      zoomLevel: 2.0,
+      zoomCenter: CGPoint(x: 0.4, y: 0.4),
+      zoomType: .auto,
+      smartKeyframes: [
+        AutoFocusCameraSample(time: 2.2, center: CGPoint(x: 0.4, y: 0.4), zoomMultiplier: 1.0),
+      ]
+    )
+    let gapGenerated = ZoomSegment(
+      startTime: 3.5,
+      duration: 2.0,
+      zoomLevel: 2.0,
+      zoomCenter: CGPoint(x: 0.6, y: 0.4),
+      zoomType: .auto,
+      smartKeyframes: [
+        AutoFocusCameraSample(time: 3.5, center: CGPoint(x: 0.6, y: 0.4), zoomMultiplier: 1.0),
+      ]
+    )
+    let replacementSmartGenerated = ZoomSegment(
+      startTime: 8.2,
+      duration: 1.6,
+      zoomLevel: 2.1,
+      zoomCenter: CGPoint(x: 0.8, y: 0.8),
+      zoomType: .auto,
+      smartKeyframes: [
+        AutoFocusCameraSample(time: 8.2, center: CGPoint(x: 0.8, y: 0.8), zoomMultiplier: 1.0),
+      ]
+    )
+
+    let merged = VideoEditorState.mergeSmartAutoZoomSegments(
+      existing: existing,
+      generated: [overlappingGenerated, gapGenerated, replacementSmartGenerated],
+      policy: .fillGaps
+    )
+    XCTAssertEqual(merged.map(\.id), [
+      manualZoom.id,
+      gapGenerated.id,
+      regularAutoZoom.id,
+      replacementSmartGenerated.id,
+    ])
+    XCTAssertFalse(merged.contains { $0.id == overlappingGenerated.id })
+    XCTAssertFalse(merged.contains { $0.id == previousSmartZoom.id })
+
+    // 3. Explicit replaceAll policy replaces every segment when plan is non-empty.
+    let replaced = VideoEditorState.mergeSmartAutoZoomSegments(
+      existing: existing,
+      generated: [overlappingGenerated, gapGenerated],
+      policy: .replaceAll
+    )
+    XCTAssertEqual(replaced.map(\.id), [overlappingGenerated.id, gapGenerated.id])
+  }
+
+  @MainActor
+  func testMovingSmartSegment_shiftsSmartKeyframesAndDoesNotFreezeCamera() throws {
+    let clip = TimelineClip(
+      source: .primary,
+      sourceDuration: 12.0,
+      sourceStart: 0.0,
+      sourceEnd: 12.0
+    )
+    let placements = TimelineSequence.layout([clip])
+    let originalKeyframes = [
+      AutoFocusCameraSample(time: 1.2, center: CGPoint(x: 0.20, y: 0.25), zoomMultiplier: 1.0),
+      AutoFocusCameraSample(time: 3.6, center: CGPoint(x: 0.80, y: 0.72), zoomMultiplier: 1.0),
+    ]
+
+    // Pure drag move from 1.0...4.0 to 5.0...8.0 (+4.0s source delta).
+    let movedKeyframes = try XCTUnwrap(
+      VideoEditorState.remapSmartKeyframes(
+        originalKeyframes,
+        fromOldRange: 1.0 ... 4.0,
+        toNewRange: 5.0 ... 8.0,
+        placements: placements
+      )
+    )
+    XCTAssertEqual(movedKeyframes.count, 2)
+    XCTAssertEqual(movedKeyframes[0].time, 5.2, accuracy: 0.001)
+    XCTAssertEqual(movedKeyframes[1].time, 7.6, accuracy: 0.001)
+
+    let movedSegment = ZoomSegment(
+      startTime: 5.0,
+      duration: 3.0,
+      zoomLevel: 2.0,
+      zoomCenter: CGPoint(x: 0.5, y: 0.5),
+      zoomType: .auto,
+      smartKeyframes: movedKeyframes
+    )
+    let metadata = RecordingMetadata(
+      captureSize: CGSize(width: 1920, height: 1080),
+      samplesPerSecond: 30,
+      mouseSamples: makeMouseSamples(waypoints: [(0, 0.5, 0.5), (12, 0.5, 0.5)]),
+      isCursorBaked: false
+    )
+    let path = VideoEditorAutoFocusEngine.buildPath(from: metadata, segment: movedSegment)
+    XCTAssertFalse(path.isEmpty)
+
+    let earlyState = VideoEditorAutoFocusEngine.resolvedCameraState(
+      at: 5.4,
+      segments: [movedSegment],
+      autoFocusPaths: [movedSegment.id: path],
+      transitionDuration: ZoomCalculator.defaultTransitionDuration
+    )
+    let lateState = VideoEditorAutoFocusEngine.resolvedCameraState(
+      at: 7.4,
+      segments: [movedSegment],
+      autoFocusPaths: [movedSegment.id: path],
+      transitionDuration: ZoomCalculator.defaultTransitionDuration
+    )
+    let panDistance = hypot(lateState.center.x - earlyState.center.x, lateState.center.y - earlyState.center.y)
+    XCTAssertGreaterThan(panDistance, 0.25, "Moved smart zoom must keep panning smoothly rather than clamping/freezing")
+
+    // Resizing stretches keyframe times cleanly to fill the new range.
+    let resizedKeyframes = try XCTUnwrap(
+      VideoEditorState.remapSmartKeyframes(
+        originalKeyframes,
+        fromOldRange: 1.0 ... 4.0,
+        toNewRange: 2.0 ... 8.0,
+        placements: placements
+      )
+    )
+    XCTAssertEqual(resizedKeyframes[0].time, 2.4, accuracy: 0.001)
+    XCTAssertEqual(resizedKeyframes[1].time, 7.2, accuracy: 0.001)
+
+    // Dragging onto an inserted non-primary clip returns nil to fall back to cursor-follow.
+    let insertedClip = TimelineClip(
+      source: .file(url: URL(fileURLWithPath: "/tmp/smart-move-inserted.mov")),
+      sourceDuration: 4.0,
+      sourceStart: 0.0,
+      sourceEnd: 4.0
+    )
+    let mixedPlacements = TimelineSequence.layout([clip, insertedClip])
+    let droppedOntoInserted = VideoEditorState.remapSmartKeyframes(
+      originalKeyframes,
+      fromOldRange: 1.0 ... 4.0,
+      toNewRange: 12.5 ... 15.5,
+      placements: mixedPlacements
+    )
+    XCTAssertNil(droppedOntoInserted)
+  }
+
+  @MainActor
+  func testMapSmartSegments_splitsAcrossPrimaryClipCutsAndRemapsEditedTimeline() {
+    let insertedURL = URL(fileURLWithPath: "/tmp/smart-cut-inserted.mov")
+
+    // Edited timeline: primary [0...4], inserted [0...2], primary [6...10].
+    // Sequence axis: primary1 = 0...4, inserted = 4...6, primary2 = 6...10.
+    let primary1 = TimelineClip(
+      source: .primary,
+      sourceDuration: 10.0,
+      sourceStart: 0.0,
+      sourceEnd: 4.0
+    )
+    let inserted = TimelineClip(
+      source: .file(url: insertedURL),
+      sourceDuration: 2.0,
+      sourceStart: 0.0,
+      sourceEnd: 2.0
+    )
+    let primary2 = TimelineClip(
+      source: .primary,
+      sourceDuration: 10.0,
+      sourceStart: 6.0,
+      sourceEnd: 10.0
+    )
+    let livePlacements = TimelineSequence.layout([primary1, inserted, primary2])
+    let liveDuration = livePlacements.last?.end ?? 10.0
+
+    // Source-time segment spanning across the removed middle [4...6] and inserted clip.
+    let crossCutSourceSegment = ZoomSegment(
+      startTime: 2.0,
+      duration: 6.0, // source 2.0...8.0
+      zoomLevel: 2.0,
+      zoomCenter: CGPoint(x: 0.5, y: 0.5),
+      zoomType: .auto,
+      smartKeyframes: [
+        AutoFocusCameraSample(time: 2.0, center: CGPoint(x: 0.2, y: 0.2), zoomMultiplier: 1.0),
+        AutoFocusCameraSample(time: 5.0, center: CGPoint(x: 0.5, y: 0.5), zoomMultiplier: 1.0),
+        AutoFocusCameraSample(time: 8.0, center: CGPoint(x: 0.8, y: 0.8), zoomMultiplier: 1.0),
+      ]
+    )
+
+    let mapped = VideoEditorState.mapSmartSegments(
+      [crossCutSourceSegment],
+      onto: livePlacements,
+      timelineDuration: liveDuration
+    )
+
+    // Must split into two distinct segments across both overlapping primary clips,
+    // aligned accurately around the inserted 2s clip.
+    XCTAssertEqual(mapped.count, 2)
+    XCTAssertNotEqual(mapped[0].id, mapped[1].id)
+
+    XCTAssertEqual(mapped[0].startTime, 2.0, accuracy: 0.001)
+    XCTAssertEqual(mapped[0].endTime, 4.0, accuracy: 0.001)
+    XCTAssertEqual(mapped[0].smartKeyframes?.first?.time ?? -1, 2.0, accuracy: 0.001)
+    XCTAssertEqual(mapped[0].smartKeyframes?.last?.time ?? -1, 4.0, accuracy: 0.001)
+
+    XCTAssertEqual(mapped[1].startTime, 6.0, accuracy: 0.001)
+    XCTAssertEqual(mapped[1].endTime, 8.0, accuracy: 0.001)
+    XCTAssertEqual(mapped[1].smartKeyframes?.first?.time ?? -1, 6.0, accuracy: 0.001)
+    XCTAssertEqual(mapped[1].smartKeyframes?.last?.time ?? -1, 8.0, accuracy: 0.001)
+  }
+
+  func testLegacyTransitionPresetMigration_snapsStoredPresetsToUpdatedValues() {
+    XCTAssertEqual(
+      ZoomCalculator.migrateLegacyTransitionDuration(0.25),
+      ZoomCalculator.fastTransitionDuration,
+      accuracy: 0.0001
+    )
+    XCTAssertEqual(
+      ZoomCalculator.migrateLegacyTransitionDuration(0.40),
+      ZoomCalculator.balancedTransitionDuration,
+      accuracy: 0.0001
+    )
+    XCTAssertEqual(
+      ZoomCalculator.migrateLegacyTransitionDuration(0.60),
+      ZoomCalculator.smoothTransitionDuration,
+      accuracy: 0.0001
+    )
+    // Custom non-preset values are preserved (clamped to valid range).
+    XCTAssertEqual(
+      ZoomCalculator.migrateLegacyTransitionDuration(0.45),
+      0.45,
+      accuracy: 0.0001
+    )
+  }
 }

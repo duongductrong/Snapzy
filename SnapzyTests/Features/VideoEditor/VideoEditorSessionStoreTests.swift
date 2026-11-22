@@ -1530,7 +1530,7 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     XCTAssertEqual(loaded.zoomSegments[1].zoomType, .auto)
     XCTAssertNil(loaded.zoomSegments[1].smartKeyframes)
     XCTAssertFalse(loaded.zoomSegments[1].isSmartAutoZoom)
-    XCTAssertEqual(loaded.motionBlurSettings, .disabled)
+    XCTAssertNil(loaded.motionBlurSettings)
 
     // Re-encoding a decoded master ZoomSegment must not emit an unexpected smartKeyframes key.
     let reencoded = try JSONEncoder().encode(loaded.zoomSegments[0])

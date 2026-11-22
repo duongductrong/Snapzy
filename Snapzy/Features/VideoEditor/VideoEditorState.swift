@@ -3427,7 +3427,7 @@ final class VideoEditorState: ObservableObject {
       let a = sorted[low]
       let b = sorted[high]
       let span = max(b.time - a.time, 0.0001)
-      let t = CGFloat(((time - a.time) / span).clamped(to: 0 ... 1))
+      let t = CGFloat(min(max((time - a.time) / span, 0), 1))
       return AutoFocusCameraSample(
         time: time,
         center: CGPoint(
