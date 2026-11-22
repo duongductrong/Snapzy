@@ -179,30 +179,35 @@ struct ZoomSettingsContent: View {
       )
   }
 
+  // MARK: - Smart Auto-Zoom Section
+
   private var smartAutoZoomSection: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      HStack {
-        Label(L10n.VideoEditor.smartAutoZoomTitle, systemImage: "viewfinder")
-          .font(.system(size: 12, weight: .semibold))
+    let hasZooms = !state.zoomSegments.isEmpty
+
+    return inspectorCard {
+      HStack(alignment: .firstTextBaseline, spacing: 6) {
+        Text(L10n.VideoEditor.smartAutoZoomTitle)
+          .font(Typography.sectionHeader)
+          .foregroundColor(SidebarColors.labelPrimary)
 
         Spacer()
 
-        if !state.zoomSegments.isEmpty {
+        if hasZooms {
           Text("\(state.zoomSegments.count)")
             .font(.system(size: 10, weight: .medium))
             .monospacedDigit()
-            .foregroundColor(.secondary)
+            .foregroundColor(SidebarColors.labelSecondary)
+            .contentTransition(.numericText())
         }
       }
 
-      Picker("", selection: $state.smartAutoZoomStyle) {
-        Text(L10n.VideoEditor.smartAutoZoomSubtle).tag(SmartAutoZoomStyle.subtle)
-        Text(L10n.VideoEditor.smartAutoZoomBalanced).tag(SmartAutoZoomStyle.balanced)
-        Text(L10n.VideoEditor.smartAutoZoomDynamic).tag(SmartAutoZoomStyle.dynamic)
+      HStack(spacing: 2) {
+        ForEach(SmartAutoZoomStyle.allCases, id: \.self) { style in
+          smartStyleOption(style)
+        }
       }
-      .labelsHidden()
-      .pickerStyle(.segmented)
-      .controlSize(.small)
+      .padding(2)
+      .background(railBackground)
 
       Button {
         state.generateSmartAutoZoom(style: state.smartAutoZoomStyle)
@@ -219,9 +224,9 @@ struct ZoomSettingsContent: View {
           Text(
             state.isGeneratingSmartAutoZoom
               ? L10n.VideoEditor.smartAutoZoomAnalyzing
-              : (state.zoomSegments.isEmpty
-                  ? L10n.VideoEditor.smartAutoZoomGenerate
-                  : L10n.VideoEditor.smartAutoZoomRegenerate)
+              : (hasZooms
+                  ? L10n.VideoEditor.smartAutoZoomRegenerate
+                  : L10n.VideoEditor.smartAutoZoomGenerate)
           )
           .font(.system(size: 11, weight: .medium))
         }
@@ -241,8 +246,46 @@ struct ZoomSettingsContent: View {
 
       Text(L10n.VideoEditor.smartAutoZoomDescription)
         .font(.system(size: 10))
-        .foregroundColor(.secondary.opacity(0.8))
+        .foregroundColor(SidebarColors.labelTertiary)
         .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private func smartStyleOption(_ style: SmartAutoZoomStyle) -> some View {
+    let isSelected = state.smartAutoZoomStyle == style
+    let isHovered = hoveredSmartStyle == style
+    let title: String = switch style {
+    case .subtle: L10n.VideoEditor.smartAutoZoomSubtle
+    case .balanced: L10n.VideoEditor.smartAutoZoomBalanced
+    case .dynamic: L10n.VideoEditor.smartAutoZoomDynamic
+    }
+
+    return Button {
+      withAnimation(LiquidGlassTokens.settleSpring) {
+        state.smartAutoZoomStyle = style
+      }
+    } label: {
+      Text(title)
+        .font(.system(size: 10.5, weight: isSelected ? .semibold : .medium))
+        .foregroundColor(isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
+        .lineLimit(1)
+        .frame(maxWidth: .infinity)
+        .frame(height: 22)
+        .background {
+          if isSelected {
+            activeThumbShape
+              .matchedGeometryEffect(id: "smartStyleThumb", in: smartStyleNamespace)
+          } else if isHovered {
+            Radius.controlRect(forHeight: 22)
+              .fill(Color.primary.opacity(0.05))
+          }
+        }
+        .animation(.easeOut(duration: 0.10), value: isHovered)
+        .contentShape(Radius.controlRect(forHeight: 22))
+    }
+    .buttonStyle(.plain)
+    .onHover { hovering in
+      hoveredSmartStyle = hovering ? style : (hoveredSmartStyle == style ? nil : hoveredSmartStyle)
     }
   }
 
