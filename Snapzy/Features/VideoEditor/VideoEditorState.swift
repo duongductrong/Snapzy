@@ -3331,8 +3331,30 @@ final class VideoEditorState: ObservableObject {
     }
   }
 
-  /// Projects source-time Smart Auto-Zoom segments onto the current primary clip placements,
-  /// splitting segments cleanly across every primary clip cut they overlap.
+  /// Filters recording metadata so clicks inside trimmed-out or deleted primary clip ranges
+  /// never trigger phantom Smart Auto-Zooms.
+  static func activeTimelineMetadata(
+    from metadata: RecordingMetadata,
+    placements: [TimelineSequence.Placement]
+  ) -> RecordingMetadata {
+    let activeRanges = placements
+      .filter { $0.clip.isPrimary && $0.clip.sourceEnd > $0.clip.sourceStart }
+      .map { $0.clip.sourceStart ... $0.clip.sourceEnd }
+    guard !activeRanges.isEmpty, var capture = metadata.cursorCapture else {
+      return metadata
+    }
+    capture.clicks = capture.clicks.filter { click in
+      activeRanges.contains { $0.contains(click.time) }
+    }
+    var filtered = metadata
+    filtered.cursorCapture = capture
+    return filtered
+  }
+
+  /// Projects source-time Smart Auto-Zoom segments onto the current primary clip placements.
+  /// Consecutive primary clips (such as a clip split with `S` or trimmed at a cut) coalesce into
+  /// a single continuous `ZoomSegment` so the camera never double-zooms across a split seam, while
+  /// segments spanning across an inserted external clip split cleanly around it.
   static func mapSmartSegments(
     _ sourceSegments: [ZoomSegment],
     onto placements: [TimelineSequence.Placement],
@@ -3347,11 +3369,31 @@ final class VideoEditorState: ObservableObject {
       let overlapping = primaryPlacements.filter {
         segment.startTime < $0.clip.sourceEnd && segment.endTime > $0.clip.sourceStart
       }
+      guard !overlapping.isEmpty else { continue }
+
+      // Group overlapping primary placements into contiguous primary runs (no inserted
+      // non-primary `.file` clip in between and no large > 2.5s deleted source jump).
+      var runs: [[TimelineSequence.Placement]] = []
       for placement in overlapping {
-        let clippedStart = max(segment.startTime, placement.clip.sourceStart)
-        let clippedEnd = min(segment.endTime, placement.clip.sourceEnd)
-        let mappedStart = placement.sequenceTime(atSource: clippedStart)
-        let mappedEnd = placement.sequenceTime(atSource: clippedEnd)
+        if var currentRun = runs.last,
+           let previous = currentRun.last,
+           placement.index == previous.index + 1,
+           abs(placement.clip.sourceStart - previous.clip.sourceEnd) <= 2.5 {
+          currentRun.append(placement)
+          runs[runs.count - 1] = currentRun
+        } else {
+          runs.append([placement])
+        }
+      }
+
+      for run in runs {
+        guard let firstPlacement = run.first, let lastPlacement = run.last else { continue }
+        let clippedStart = max(segment.startTime, firstPlacement.clip.sourceStart)
+        let clippedEnd = min(segment.endTime, lastPlacement.clip.sourceEnd)
+        guard clippedEnd > clippedStart else { continue }
+
+        let mappedStart = firstPlacement.sequenceTime(atSource: clippedStart)
+        let mappedEnd = lastPlacement.sequenceTime(atSource: clippedEnd)
         let mappedDuration = mappedEnd - mappedStart
         guard mappedDuration >= ZoomSegment.minDuration else { continue }
 
@@ -3493,11 +3535,12 @@ final class VideoEditorState: ObservableObject {
     let primaryAsset = asset
     let transition = zoomTransitionDuration
     let startingLayoutRevision = timelineLayoutRevision
+    let activeMetadata = Self.activeTimelineMetadata(from: metadata, placements: placements)
 
     smartAutoZoomTask = Task { [weak self] in
       let analysisTask = Task.detached(priority: .userInitiated) {
         await VideoEditorSmartAutoZoomEngine.generatePlan(
-          from: metadata,
+          from: activeMetadata,
           asset: primaryAsset,
           style: chosenStyle,
           transitionDuration: transition

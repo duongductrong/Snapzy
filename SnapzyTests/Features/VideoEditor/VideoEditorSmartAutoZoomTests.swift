@@ -1128,6 +1128,48 @@ final class VideoEditorSmartAutoZoomTests: XCTestCase {
     XCTAssertEqual(mapped[1].smartKeyframes?.last?.time ?? -1, 8.0, accuracy: 0.001)
   }
 
+  @MainActor
+  func testMapSmartSegments_coalescesAcrossSplitPrimaryClipsWithoutDoubleZoom() {
+    // User splits a 12s recording at 8.35s with `S` (two adjacent primary clips: 0...8.35 and 8.35...12.0).
+    let primaryLeft = TimelineClip(
+      source: .primary,
+      sourceDuration: 12.0,
+      sourceStart: 0.0,
+      sourceEnd: 8.35
+    )
+    let primaryRight = TimelineClip(
+      source: .primary,
+      sourceDuration: 12.0,
+      sourceStart: 8.35,
+      sourceEnd: 12.0
+    )
+    let splitPlacements = TimelineSequence.layout([primaryLeft, primaryRight])
+    let duration = TimelineSequence.duration([primaryLeft, primaryRight])
+
+    let segmentAcrossSplit = ZoomSegment(
+      startTime: 6.6,
+      duration: 2.9, // 6.6...9.5 across the 8.35 split seam
+      zoomLevel: 2.0,
+      zoomCenter: CGPoint(x: 0.4, y: 0.5),
+      zoomType: .auto,
+      smartKeyframes: [
+        AutoFocusCameraSample(time: 6.6, center: CGPoint(x: 0.4, y: 0.5), zoomMultiplier: 1.0),
+        AutoFocusCameraSample(time: 9.5, center: CGPoint(x: 0.45, y: 0.52), zoomMultiplier: 1.0),
+      ]
+    )
+
+    let mapped = VideoEditorState.mapSmartSegments(
+      [segmentAcrossSplit],
+      onto: splitPlacements,
+      timelineDuration: duration
+    )
+
+    // Must produce ONE continuous zoom segment (6.6...9.5), never two touching blocks at 8.35.
+    XCTAssertEqual(mapped.count, 1, "Splitting a primary clip must not split a continuous zoom into two double-zooming blocks")
+    XCTAssertEqual(mapped[0].startTime, 6.6, accuracy: 0.001)
+    XCTAssertEqual(mapped[0].endTime, 9.5, accuracy: 0.001)
+  }
+
   func testLegacyTransitionPresetMigration_snapsStoredPresetsToUpdatedValues() {
     XCTAssertEqual(
       ZoomCalculator.migrateLegacyTransitionDuration(0.25),
