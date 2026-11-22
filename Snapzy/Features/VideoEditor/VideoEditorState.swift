@@ -3237,6 +3237,130 @@ final class VideoEditorState: ObservableObject {
     updateHasUnsavedChanges()
   }
 
+  /// How Smart Auto-Zoom results are combined with existing timeline zoom segments.
+  enum SmartAutoZoomMergePolicy: Equatable, Sendable {
+    /// Keep all manual and regular auto zooms, replace only prior Smart Auto-Zooms,
+    /// and drop generated segments that overlap kept user zooms.
+    case fillGaps
+    /// Replace every existing zoom segment when the generated plan is non-empty.
+    case replaceAll
+  }
+
+  /// Projects source-time Smart Auto-Zoom segments onto the current primary clip placements,
+  /// splitting segments cleanly across every primary clip cut they overlap.
+  static func mapSmartSegments(
+    _ sourceSegments: [ZoomSegment],
+    onto placements: [TimelineSequence.Placement],
+    timelineDuration: TimeInterval
+  ) -> [ZoomSegment] {
+    guard timelineDuration > 0 else { return [] }
+    let primaryPlacements = placements.filter { $0.clip.isPrimary }
+    guard !primaryPlacements.isEmpty else { return [] }
+
+    var mappedSegments: [ZoomSegment] = []
+    for segment in sourceSegments {
+      let overlapping = primaryPlacements.filter {
+        segment.startTime < $0.clip.sourceEnd && segment.endTime > $0.clip.sourceStart
+      }
+      for placement in overlapping {
+        let clippedStart = max(segment.startTime, placement.clip.sourceStart)
+        let clippedEnd = min(segment.endTime, placement.clip.sourceEnd)
+        let mappedStart = placement.sequenceTime(atSource: clippedStart)
+        let mappedEnd = placement.sequenceTime(atSource: clippedEnd)
+        let mappedDuration = mappedEnd - mappedStart
+        guard mappedDuration >= ZoomSegment.minDuration else { continue }
+
+        let clippedKeyframes = segment.smartKeyframes.map {
+          clipSmartKeyframes($0, to: clippedStart ... clippedEnd)
+        }
+        let mapped = ZoomSegment(
+          id: UUID(),
+          startTime: mappedStart,
+          duration: mappedDuration,
+          zoomLevel: segment.zoomLevel,
+          zoomCenter: segment.zoomCenter,
+          zoomType: segment.zoomType,
+          followSpeed: segment.followSpeed,
+          focusMargin: segment.focusMargin,
+          isEnabled: segment.isEnabled,
+          smartKeyframes: clippedKeyframes
+        )
+        mappedSegments.append(mapped.clamped(to: timelineDuration))
+      }
+    }
+
+    return mappedSegments.sorted { $0.startTime < $1.startTime }
+  }
+
+  /// Merges generated Smart Auto-Zoom segments with existing timeline zooms according to `policy`.
+  /// An empty generated plan is always a no-op so existing user zooms are never wiped.
+  static func mergeSmartAutoZoomSegments(
+    existing: [ZoomSegment],
+    generated: [ZoomSegment],
+    policy: SmartAutoZoomMergePolicy
+  ) -> [ZoomSegment] {
+    guard !generated.isEmpty else { return existing }
+
+    switch policy {
+    case .replaceAll:
+      return generated.sorted { $0.startTime < $1.startTime }
+    case .fillGaps:
+      let preservedUserZooms = existing.filter { !$0.isSmartAutoZoom }
+      let nonOverlappingGenerated = generated.filter { candidate in
+        !preservedUserZooms.contains { userZoom in
+          candidate.startTime < userZoom.endTime && candidate.endTime > userZoom.startTime
+        }
+      }
+      return (preservedUserZooms + nonOverlappingGenerated).sorted { $0.startTime < $1.startTime }
+    }
+  }
+
+  private static func clipSmartKeyframes(
+    _ keyframes: [AutoFocusCameraSample],
+    to sourceRange: ClosedRange<TimeInterval>
+  ) -> [AutoFocusCameraSample] {
+    let sorted = keyframes.sorted { $0.time < $1.time }
+    guard !sorted.isEmpty else { return [] }
+    guard let first = sorted.first, let last = sorted.last else { return [] }
+    if first.time >= sourceRange.lowerBound && last.time <= sourceRange.upperBound {
+      return sorted
+    }
+
+    func interpolatedSample(at time: TimeInterval) -> AutoFocusCameraSample {
+      if time <= first.time {
+        return AutoFocusCameraSample(time: time, center: first.center, zoomMultiplier: first.zoomMultiplier)
+      }
+      if time >= last.time {
+        return AutoFocusCameraSample(time: time, center: last.center, zoomMultiplier: last.zoomMultiplier)
+      }
+      var low = 0
+      var high = sorted.count - 1
+      while low + 1 < high {
+        let mid = (low + high) / 2
+        if sorted[mid].time <= time { low = mid } else { high = mid }
+      }
+      let a = sorted[low]
+      let b = sorted[high]
+      let span = max(b.time - a.time, 0.0001)
+      let t = CGFloat(((time - a.time) / span).clamped(to: 0 ... 1))
+      return AutoFocusCameraSample(
+        time: time,
+        center: CGPoint(
+          x: a.center.x + (b.center.x - a.center.x) * t,
+          y: a.center.y + (b.center.y - a.center.y) * t
+        ),
+        zoomMultiplier: a.zoomMultiplier + (b.zoomMultiplier - a.zoomMultiplier) * t
+      )
+    }
+
+    var clipped: [AutoFocusCameraSample] = [interpolatedSample(at: sourceRange.lowerBound)]
+    for sample in sorted where sample.time > sourceRange.lowerBound + 0.0005 && sample.time < sourceRange.upperBound - 0.0005 {
+      clipped.append(sample)
+    }
+    clipped.append(interpolatedSample(at: sourceRange.upperBound))
+    return clipped
+  }
+
   /// Generates intelligent action- and outcome-aware Smart Auto-Zoom segments from
   /// recorded cursor/click telemetry and lightweight video-frame outcome analysis.
   func generateSmartAutoZoom(style: SmartAutoZoomStyle? = nil) {
