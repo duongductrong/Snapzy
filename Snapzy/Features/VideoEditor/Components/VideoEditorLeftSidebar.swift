@@ -52,6 +52,14 @@ struct ZoomSettingsContent: View {
   @State private var localTransitionDuration: TimeInterval = ZoomCalculator.defaultTransitionDuration
   @State private var motionBlurDragStart: VideoEditorMotionBlurSettings?
 
+  @Namespace private var smartStyleNamespace
+  @Namespace private var zoomModeNamespace
+  @State private var hoveredSmartStyle: SmartAutoZoomStyle?
+  @State private var hoveredMode: ZoomType?
+  @State private var isHoveringSmartAction = false
+  @State private var isHoveringEnableAction = false
+  @State private var isHoveringDeleteAction = false
+
   private struct LocalStateSnapshot: Equatable {
     let id: UUID
     let zoomType: ZoomType
@@ -133,6 +141,42 @@ struct ZoomSettingsContent: View {
     }
     .onDisappear { endContinuousEdit() }
     .accessibilityIdentifier("video-editor.zoom-settings")
+  }
+
+  // MARK: - Inspector Surface & Rail Primitives
+
+  private func inspectorCard(@ViewBuilder content: () -> some View) -> some View {
+    VStack(alignment: .leading, spacing: 10) {
+      content()
+    }
+    .padding(11)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      Radius.rect(Radius.card)
+        .fill(Color.primary.opacity(0.035))
+        .overlay(
+          Radius.rect(Radius.card)
+            .strokeBorder(Color.primary.opacity(0.075), lineWidth: 0.5)
+        )
+    )
+  }
+
+  private var railBackground: some View {
+    Radius.controlRect(forHeight: 26)
+      .fill(Color.primary.opacity(0.05))
+      .overlay(
+        Radius.controlRect(forHeight: 26)
+          .strokeBorder(Color.primary.opacity(0.075), lineWidth: 0.5)
+      )
+  }
+
+  private var activeThumbShape: some View {
+    Radius.controlRect(forHeight: 22)
+      .fill(Color.primary.opacity(0.11))
+      .overlay(
+        Radius.controlRect(forHeight: 22)
+          .strokeBorder(Color.primary.opacity(0.13), lineWidth: 0.5)
+      )
   }
 
   private var smartAutoZoomSection: some View {
