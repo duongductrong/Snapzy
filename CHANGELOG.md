@@ -4,6 +4,17 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.8] - 2026-11-22
+
+### Bug Fixes
+- keep the camera preview controller off the isolated deinit shim (efa0f5d1)
+- stop the status badges from painting over the duration readout (#783) (b96a6091)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @williamcachamwri
+
 ## [2.3.0-beta.7] - 2026-11-22
 
 ### Features
