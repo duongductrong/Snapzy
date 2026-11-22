@@ -14,7 +14,7 @@ import Foundation
 /// opacity in `AnnotationProperties.opacity` and rotation in `rotationDegrees`.
 nonisolated struct StampAnnotation: Equatable {
   var content: StampContent
-  /// White die-cut outline and soft drop shadow around the stamp.
+  /// White die-cut outline and hard drop shadow around the stamp.
   var isStickerStyle: Bool
 
   init(content: StampContent, isStickerStyle: Bool = true) {
@@ -97,10 +97,9 @@ nonisolated struct StampImage: Equatable {
 /// Curated vector stickers. Raw values are persisted in sidecars: never rename one.
 nonisolated enum StampSticker: String, CaseIterable, Identifiable {
   // Text badges
-  case approved, rejected, lgtm, new, beta, hot, todo, wip, bug, fixed
+  case approved, rejected, lgtm, done, todo, wip, blocked, bug, fixed, new, beta, hot, note, fyi
   // Round icon stickers
-  case thumbsUp, heart, star, check, cross, warning, question, idea, sparkles, pin
-  case arrowRight, arrowLeft, arrowUp, arrowDown
+  case thumbsUp, heart, star, check, cross, warning, question, idea, pin, smile, eyes, party, fire
 
   nonisolated enum Shape {
     case badge
@@ -126,15 +125,16 @@ nonisolated enum StampSticker: String, CaseIterable, Identifiable {
 
   var id: String { rawValue }
 
-  static let badges: [StampSticker] = [.approved, .rejected, .lgtm, .new, .beta, .hot, .todo, .wip, .bug, .fixed]
+  static let badges: [StampSticker] = [
+    .approved, .rejected, .lgtm, .done, .todo, .wip, .blocked, .bug, .fixed, .new, .beta, .hot, .note, .fyi
+  ]
   static let icons: [StampSticker] = [
-    .thumbsUp, .heart, .star, .check, .cross, .warning, .question, .idea, .sparkles, .pin,
-    .arrowRight, .arrowLeft, .arrowUp, .arrowDown
+    .thumbsUp, .heart, .star, .check, .cross, .warning, .question, .idea, .pin, .smile, .eyes, .party, .fire
   ]
 
   var shape: Shape {
     switch self {
-    case .approved, .rejected, .lgtm, .new, .beta, .hot, .todo, .wip, .bug, .fixed:
+    case .approved, .rejected, .lgtm, .done, .todo, .wip, .blocked, .bug, .fixed, .new, .beta, .hot, .note, .fyi:
       return .badge
     default:
       return .round
@@ -148,29 +148,37 @@ nonisolated enum StampSticker: String, CaseIterable, Identifiable {
     case .approved: return "APPROVED"
     case .rejected: return "REJECTED"
     case .lgtm: return "LGTM"
+    case .done: return "DONE"
+    case .todo: return "TODO"
+    case .wip: return "WIP"
+    case .blocked: return "BLOCKED"
+    case .bug: return "BUG"
+    case .fixed: return "FIXED"
     case .new: return "NEW"
     case .beta: return "BETA"
     case .hot: return "HOT"
-    case .todo: return "TODO"
-    case .wip: return "WIP"
-    case .bug: return "BUG"
-    case .fixed: return "FIXED"
+    case .note: return "NOTE"
+    case .fyi: return "FYI"
     default: return nil
     }
   }
 
   var symbolName: String {
     switch self {
-    case .approved: return "checkmark.seal.fill"
-    case .rejected: return "xmark.octagon.fill"
+    case .approved: return "checkmark.circle.fill"
+    case .rejected: return "xmark.circle.fill"
     case .lgtm: return "hand.thumbsup.fill"
-    case .new: return "sparkles"
-    case .beta: return "testtube.2"
-    case .hot: return "flame.fill"
-    case .todo: return "checklist"
+    case .done: return "checkmark"
+    case .todo: return "circle.dashed"
     case .wip: return "hammer.fill"
+    case .blocked: return "nosign"
     case .bug: return "ladybug.fill"
-    case .fixed: return "wrench.and.screwdriver.fill"
+    case .fixed: return "wrench.adjustable.fill"
+    case .new: return "sparkle"
+    case .beta: return "flask.fill"
+    case .hot: return "flame.fill"
+    case .note: return "pencil"
+    case .fyi: return "info.circle.fill"
     case .thumbsUp: return "hand.thumbsup.fill"
     case .heart: return "heart.fill"
     case .star: return "star.fill"
@@ -179,46 +187,32 @@ nonisolated enum StampSticker: String, CaseIterable, Identifiable {
     case .warning: return "exclamationmark"
     case .question: return "questionmark"
     case .idea: return "lightbulb.fill"
-    case .sparkles: return "sparkles"
     case .pin: return "pin.fill"
-    case .arrowRight: return "arrow.right"
-    case .arrowLeft: return "arrow.left"
-    case .arrowUp: return "arrow.up"
-    case .arrowDown: return "arrow.down"
+    case .smile: return "face.smiling.inverse"
+    case .eyes: return "eyes"
+    case .party: return "party.popper.fill"
+    case .fire: return "flame.fill"
     }
   }
 
-  /// Gradient from the top of the sticker to the bottom.
-  var gradient: (top: RGB, bottom: RGB) {
+  /// Solid body color. Flat on purpose: no gradient, gloss or highlight.
+  var fill: RGB {
     switch self {
-    case .approved, .check: return (RGB(0x4ADE80), RGB(0x16A34A))
-    case .rejected, .cross: return (RGB(0xFF7A70), RGB(0xE5312B))
-    case .lgtm: return (RGB(0x2DD4BF), RGB(0x0D9488))
-    case .new: return (RGB(0x8B7CFF), RGB(0x4F6BFF))
-    case .beta: return (RGB(0xFFC24D), RGB(0xFF8A00))
-    case .hot: return (RGB(0xFFA14A), RGB(0xFF3B30))
-    case .todo: return (RGB(0xFFE066), RGB(0xF5B400))
-    case .wip: return (RGB(0x94A3B8), RGB(0x526079))
-    case .bug: return (RGB(0xFF7EAA), RGB(0xE8366E))
-    case .fixed: return (RGB(0x67D3FF), RGB(0x0A84FF))
-    case .thumbsUp: return (RGB(0x5AB0FF), RGB(0x0A6CFF))
-    case .heart: return (RGB(0xFF7A98), RGB(0xFF2D55))
-    case .star: return (RGB(0xFFDD3C), RGB(0xFF9F0A))
-    case .warning: return (RGB(0xFFD43B), RGB(0xFF9500))
-    case .question: return (RGB(0xC77DFF), RGB(0x8944D8))
-    case .idea: return (RGB(0xFFE97A), RGB(0xFFC300))
-    case .sparkles: return (RGB(0xFF7AD9), RGB(0x9B5CFF))
-    case .pin: return (RGB(0xFF7B72), RGB(0xD92D20))
-    case .arrowRight, .arrowLeft, .arrowUp, .arrowDown: return (RGB(0x7C8BFF), RGB(0x3F4BDB))
+    case .approved, .done, .check: return StampPalette.green
+    case .rejected, .blocked, .cross, .pin: return StampPalette.red
+    case .lgtm: return StampPalette.teal
+    case .fixed, .fyi, .thumbsUp: return StampPalette.blue
+    case .new, .question, .party: return StampPalette.violet
+    case .beta, .hot, .warning, .fire: return StampPalette.orange
+    case .todo, .note, .star, .idea, .smile: return StampPalette.yellow
+    case .bug, .heart: return StampPalette.pink
+    case .wip, .eyes: return StampPalette.slate
     }
   }
 
-  /// Icon and label color. Dark on the light yellow stickers, white elsewhere.
+  /// Icon and label color: dark brown on yellow, white elsewhere.
   var foreground: RGB {
-    switch self {
-    case .todo, .idea: return RGB(0x4A3500)
-    default: return RGB(0xFFFFFF)
-    }
+    fill == StampPalette.yellow ? RGB(0x422006) : RGB(0xFFFFFF)
   }
 
   var aspectRatio: CGFloat {
@@ -235,13 +229,17 @@ nonisolated enum StampSticker: String, CaseIterable, Identifiable {
     case .approved: return L10n.AnnotateStamp.stickerApproved
     case .rejected: return L10n.AnnotateStamp.stickerRejected
     case .lgtm: return L10n.AnnotateStamp.stickerLGTM
+    case .done: return L10n.AnnotateStamp.stickerDone
+    case .todo: return L10n.AnnotateStamp.stickerTodo
+    case .wip: return L10n.AnnotateStamp.stickerWIP
+    case .blocked: return L10n.AnnotateStamp.stickerBlocked
+    case .bug: return L10n.AnnotateStamp.stickerBug
+    case .fixed: return L10n.AnnotateStamp.stickerFixed
     case .new: return L10n.AnnotateStamp.stickerNew
     case .beta: return L10n.AnnotateStamp.stickerBeta
     case .hot: return L10n.AnnotateStamp.stickerHot
-    case .todo: return L10n.AnnotateStamp.stickerTodo
-    case .wip: return L10n.AnnotateStamp.stickerWIP
-    case .bug: return L10n.AnnotateStamp.stickerBug
-    case .fixed: return L10n.AnnotateStamp.stickerFixed
+    case .note: return L10n.AnnotateStamp.stickerNote
+    case .fyi: return L10n.AnnotateStamp.stickerFYI
     case .thumbsUp: return L10n.AnnotateStamp.stickerThumbsUp
     case .heart: return L10n.AnnotateStamp.stickerHeart
     case .star: return L10n.AnnotateStamp.stickerStar
@@ -250,14 +248,26 @@ nonisolated enum StampSticker: String, CaseIterable, Identifiable {
     case .warning: return L10n.AnnotateStamp.stickerWarning
     case .question: return L10n.AnnotateStamp.stickerQuestion
     case .idea: return L10n.AnnotateStamp.stickerIdea
-    case .sparkles: return L10n.AnnotateStamp.stickerSparkles
     case .pin: return L10n.AnnotateStamp.stickerPin
-    case .arrowRight: return L10n.AnnotateStamp.stickerArrowRight
-    case .arrowLeft: return L10n.AnnotateStamp.stickerArrowLeft
-    case .arrowUp: return L10n.AnnotateStamp.stickerArrowUp
-    case .arrowDown: return L10n.AnnotateStamp.stickerArrowDown
+    case .smile: return L10n.AnnotateStamp.stickerSmile
+    case .eyes: return L10n.AnnotateStamp.stickerEyes
+    case .party: return L10n.AnnotateStamp.stickerParty
+    case .fire: return L10n.AnnotateStamp.stickerFire
     }
   }
+}
+
+/// Friendly, saturated-but-not-neon sticker colors (sRGB).
+nonisolated enum StampPalette {
+  static let green = StampSticker.RGB(0x22C55E)
+  static let red = StampSticker.RGB(0xEF4444)
+  static let teal = StampSticker.RGB(0x14B8A6)
+  static let blue = StampSticker.RGB(0x3B82F6)
+  static let violet = StampSticker.RGB(0x8B5CF6)
+  static let orange = StampSticker.RGB(0xF97316)
+  static let yellow = StampSticker.RGB(0xFACC15)
+  static let pink = StampSticker.RGB(0xEC4899)
+  static let slate = StampSticker.RGB(0x64748B)
 }
 
 /// Proportions of a text badge, in units of the badge height (height = 1).

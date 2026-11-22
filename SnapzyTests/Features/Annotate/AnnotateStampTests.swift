@@ -52,6 +52,16 @@ final class AnnotateStampTests: XCTestCase {
 
   // MARK: - Placement
 
+  func testEveryStickerIsListedOnceAndHasItsSymbol() {
+    let listed = StampSticker.badges + StampSticker.icons
+    XCTAssertEqual(Set(listed), Set(StampSticker.allCases))
+    XCTAssertEqual(listed.count, StampSticker.allCases.count)
+    for sticker in StampSticker.allCases {
+      XCTAssertNotNil(NSImage(systemSymbolName: sticker.symbolName, accessibilityDescription: nil), sticker.rawValue)
+      XCTAssertEqual(sticker.label != nil, StampSticker.badges.contains(sticker), sticker.rawValue)
+    }
+  }
+
   func testClickPlacesDefaultSizeCenteredOnPoint() throws {
     let stamp = StampAnnotation(content: .emoji("🔥"))
     let item = try XCTUnwrap(AnnotationFactory.createAnnotation(

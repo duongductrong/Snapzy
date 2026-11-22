@@ -79,7 +79,7 @@ extension L10n {
     )
     static let stickerStyleHelp = L10n.string(
       "annotate.stamp.sticker-style-help",
-      defaultValue: "White outline and soft shadow",
+      defaultValue: "White outline and drop shadow",
       comment: "Tooltip for the sticker style toggle"
     )
     static let opacity = L10n.string(
@@ -192,34 +192,49 @@ extension L10n {
       defaultValue: "Idea",
       comment: "Stamp picker: name of a sticker, shown as its tooltip"
     )
-    static let stickerSparkles = L10n.string(
-      "annotate.stamp.sticker.sparkles",
-      defaultValue: "Sparkles",
-      comment: "Stamp picker: name of a sticker, shown as its tooltip"
-    )
     static let stickerPin = L10n.string(
       "annotate.stamp.sticker.pin",
       defaultValue: "Pin",
       comment: "Stamp picker: name of a sticker, shown as its tooltip"
     )
-    static let stickerArrowRight = L10n.string(
-      "annotate.stamp.sticker.arrow-right",
-      defaultValue: "Arrow Right",
+    static let stickerDone = L10n.string(
+      "annotate.stamp.sticker.done",
+      defaultValue: "Done",
       comment: "Stamp picker: name of a sticker, shown as its tooltip"
     )
-    static let stickerArrowLeft = L10n.string(
-      "annotate.stamp.sticker.arrow-left",
-      defaultValue: "Arrow Left",
+    static let stickerBlocked = L10n.string(
+      "annotate.stamp.sticker.blocked",
+      defaultValue: "Blocked",
       comment: "Stamp picker: name of a sticker, shown as its tooltip"
     )
-    static let stickerArrowUp = L10n.string(
-      "annotate.stamp.sticker.arrow-up",
-      defaultValue: "Arrow Up",
+    static let stickerNote = L10n.string(
+      "annotate.stamp.sticker.note",
+      defaultValue: "Note",
       comment: "Stamp picker: name of a sticker, shown as its tooltip"
     )
-    static let stickerArrowDown = L10n.string(
-      "annotate.stamp.sticker.arrow-down",
-      defaultValue: "Arrow Down",
+    static let stickerFYI = L10n.string(
+      "annotate.stamp.sticker.fyi",
+      defaultValue: "For Your Information",
+      comment: "Stamp picker: name of a sticker, shown as its tooltip"
+    )
+    static let stickerSmile = L10n.string(
+      "annotate.stamp.sticker.smile",
+      defaultValue: "Smile",
+      comment: "Stamp picker: name of a sticker, shown as its tooltip"
+    )
+    static let stickerEyes = L10n.string(
+      "annotate.stamp.sticker.eyes",
+      defaultValue: "Eyes",
+      comment: "Stamp picker: name of a sticker, shown as its tooltip"
+    )
+    static let stickerParty = L10n.string(
+      "annotate.stamp.sticker.party",
+      defaultValue: "Party",
+      comment: "Stamp picker: name of a sticker, shown as its tooltip"
+    )
+    static let stickerFire = L10n.string(
+      "annotate.stamp.sticker.fire",
+      defaultValue: "Fire",
       comment: "Stamp picker: name of a sticker, shown as its tooltip"
     )
   }

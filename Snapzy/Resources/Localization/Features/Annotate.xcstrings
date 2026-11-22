@@ -12432,67 +12432,67 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Weißer Rand und weicher Schatten"
+            "value": "Weißer Rand und Schlagschatten"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "White outline and soft shadow"
+            "value": "White outline and drop shadow"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Contorno blanco y sombra suave"
+            "value": "Contorno blanco y sombra"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Contour blanc et ombre douce"
+            "value": "Contour blanc et ombre portée"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "קו מתאר לבן וצל רך"
+            "value": "קו מתאר לבן וצל"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "白いフチと柔らかな影"
+            "value": "白いフチと影"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "흰색 테두리와 부드러운 그림자"
+            "value": "흰색 테두리와 그림자"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Белый контур и мягкая тень"
+            "value": "Белый контур и тень"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Viền trắng và bóng đổ mềm"
+            "value": "Viền trắng và bóng đổ"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "白色描边和柔和阴影"
+            "value": "白色描边和投影"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "白色描邊與柔和陰影"
+            "value": "白色描邊與投影"
           }
         }
       }
@@ -12987,6 +12987,426 @@
         }
       }
     },
+    "annotate.stamp.sticker.done": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erledigt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hecho"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בוצע"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Готово"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xong"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
+        }
+      }
+    },
+    "annotate.stamp.sticker.todo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu erledigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To Do"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pendiente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À faire"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לביצוע"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "やること"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "할 일"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сделать"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cần làm"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待办"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待辦"
+          }
+        }
+      }
+    },
+    "annotate.stamp.sticker.wip": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Arbeit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work in Progress"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En curso"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En cours"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בעבודה"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "작업 중"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В работе"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang làm"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "进行中"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "進行中"
+          }
+        }
+      }
+    },
+    "annotate.stamp.sticker.blocked": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blockiert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocked"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloqueado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloqué"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חסום"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブロック中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "차단됨"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заблокировано"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bị chặn"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "受阻"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "受阻"
+          }
+        }
+      }
+    },
+    "annotate.stamp.sticker.bug": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehler"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bug"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bug"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "באג"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バグ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "버그"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Баг"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lỗi"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缺陷"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "錯誤"
+          }
+        }
+      }
+    },
+    "annotate.stamp.sticker.fixed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behoben"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixed"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corregido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corrigé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תוקן"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修正済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수정됨"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Исправлено"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã sửa"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已修复"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已修正"
+          }
+        }
+      }
+    },
     "annotate.stamp.sticker.new": {
       "localizations": {
         "de": {
@@ -13197,282 +13617,142 @@
         }
       }
     },
-    "annotate.stamp.sticker.todo": {
+    "annotate.stamp.sticker.note": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zu erledigen"
+            "value": "Notiz"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "To Do"
+            "value": "Note"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pendiente"
+            "value": "Nota"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "À faire"
+            "value": "Note"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "לביצוע"
+            "value": "הערה"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "やること"
+            "value": "メモ"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "할 일"
+            "value": "메모"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Сделать"
+            "value": "Заметка"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cần làm"
+            "value": "Ghi chú"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "待办"
+            "value": "备注"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "待辦"
+            "value": "備註"
           }
         }
       }
     },
-    "annotate.stamp.sticker.wip": {
+    "annotate.stamp.sticker.fyi": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "In Arbeit"
+            "value": "Zur Info"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Work in Progress"
+            "value": "For Your Information"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "En curso"
+            "value": "Para tu información"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "En cours"
+            "value": "Pour information"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "בעבודה"
+            "value": "לידיעתך"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "作業中"
+            "value": "参考情報"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "작업 중"
+            "value": "참고"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "В работе"
+            "value": "К сведению"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Đang làm"
+            "value": "Để bạn biết"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "进行中"
+            "value": "供参考"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "進行中"
-          }
-        }
-      }
-    },
-    "annotate.stamp.sticker.bug": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fehler"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bug"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Error"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bug"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "באג"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バグ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "버그"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Баг"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lỗi"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "缺陷"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "錯誤"
-          }
-        }
-      }
-    },
-    "annotate.stamp.sticker.fixed": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Behoben"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fixed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Corregido"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Corrigé"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "תוקן"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "修正済み"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수정됨"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Исправлено"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Đã sửa"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已修复"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已修正"
+            "value": "供參考"
           }
         }
       }
@@ -14037,76 +14317,6 @@
         }
       }
     },
-    "annotate.stamp.sticker.sparkles": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Funkeln"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sparkles"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Destellos"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Étincelles"
-          }
-        },
-        "he": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ניצוצות"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "キラキラ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "반짝임"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Блёстки"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lấp lánh"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "闪光"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "閃亮"
-          }
-        }
-      }
-    },
     "annotate.stamp.sticker.pin": {
       "localizations": {
         "de": {
@@ -14177,282 +14387,282 @@
         }
       }
     },
-    "annotate.stamp.sticker.arrow-right": {
+    "annotate.stamp.sticker.smile": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pfeil nach rechts"
+            "value": "Lächeln"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arrow Right"
+            "value": "Smile"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flecha a la derecha"
+            "value": "Sonrisa"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flèche vers la droite"
+            "value": "Sourire"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "חץ ימינה"
+            "value": "חיוך"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "右矢印"
+            "value": "スマイル"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "오른쪽 화살표"
+            "value": "미소"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Стрелка вправо"
+            "value": "Улыбка"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mũi tên phải"
+            "value": "Mặt cười"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "向右箭头"
+            "value": "微笑"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "向右箭頭"
+            "value": "微笑"
           }
         }
       }
     },
-    "annotate.stamp.sticker.arrow-left": {
+    "annotate.stamp.sticker.eyes": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pfeil nach links"
+            "value": "Augen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arrow Left"
+            "value": "Eyes"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flecha a la izquierda"
+            "value": "Ojos"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flèche vers la gauche"
+            "value": "Yeux"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "חץ שמאלה"
+            "value": "עיניים"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "左矢印"
+            "value": "目"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "왼쪽 화살표"
+            "value": "눈"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Стрелка влево"
+            "value": "Глаза"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mũi tên trái"
+            "value": "Đôi mắt"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "向左箭头"
+            "value": "眼睛"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "向左箭頭"
+            "value": "眼睛"
           }
         }
       }
     },
-    "annotate.stamp.sticker.arrow-up": {
+    "annotate.stamp.sticker.party": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pfeil nach oben"
+            "value": "Party"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arrow Up"
+            "value": "Party"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flecha hacia arriba"
+            "value": "Fiesta"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flèche vers le haut"
+            "value": "Fête"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "חץ למעלה"
+            "value": "מסיבה"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "上矢印"
+            "value": "お祝い"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "위쪽 화살표"
+            "value": "축하"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Стрелка вверх"
+            "value": "Праздник"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mũi tên lên"
+            "value": "Ăn mừng"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "向上箭头"
+            "value": "庆祝"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "向上箭頭"
+            "value": "慶祝"
           }
         }
       }
     },
-    "annotate.stamp.sticker.arrow-down": {
+    "annotate.stamp.sticker.fire": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pfeil nach unten"
+            "value": "Feuer"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arrow Down"
+            "value": "Fire"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flecha hacia abajo"
+            "value": "Fuego"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Flèche vers le bas"
+            "value": "Feu"
           }
         },
         "he": {
           "stringUnit": {
             "state": "translated",
-            "value": "חץ למטה"
+            "value": "אש"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "下矢印"
+            "value": "炎"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "아래쪽 화살표"
+            "value": "불꽃"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Стрелка вниз"
+            "value": "Огонь"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mũi tên xuống"
+            "value": "Lửa"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "向下箭头"
+            "value": "火"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "向下箭頭"
+            "value": "火"
           }
         }
       }

@@ -14,9 +14,10 @@ import ImageIO
 nonisolated enum AnnotateStampRenderer {
   /// Die-cut outline width, as a fraction of the stamp's shorter side.
   static let outlineFraction: CGFloat = 0.075
-  /// Shadow blur and drop, as fractions of the stamp's shorter side.
-  static let shadowBlurFraction: CGFloat = 0.11
-  static let shadowOffsetFraction: CGFloat = 0.035
+  /// Hard drop shadow (no blur): how far it falls, as a fraction of the stamp's shorter side,
+  /// and its opacity.
+  static let shadowOffsetFraction: CGFloat = 0.06
+  static let shadowAlpha: CGFloat = 0.18
 
   // MARK: - Geometry
 
@@ -29,7 +30,7 @@ nonisolated enum AnnotateStampRenderer {
   /// How far a sticker-style stamp's shadow reaches past its bounds.
   static func shadowOverhang(for bounds: CGRect) -> CGFloat {
     let side = min(abs(bounds.width), abs(bounds.height))
-    return side * (shadowBlurFraction * 1.5 + shadowOffsetFraction)
+    return side * shadowOffsetFraction
   }
 
   /// Bounds for a new stamp whose longer side is `size`, centered on `center`.
@@ -118,47 +119,10 @@ nonisolated enum AnnotateStampRenderer {
       context.fillPath()
     }
 
-    // Body: top-to-bottom gradient (annotation space is y-up).
-    let colors = sticker.gradient
-    context.saveGState()
+    // Body: one flat color. No gradient, gloss or inner highlight.
     context.addPath(shape)
-    context.clip()
-    if let gradient = CGGradient(
-      colorsSpace: CGColorSpace(name: CGColorSpace.sRGB),
-      colors: [colors.top.cgColor(), colors.bottom.cgColor()] as CFArray,
-      locations: [0, 1]
-    ) {
-      context.drawLinearGradient(
-        gradient,
-        start: CGPoint(x: rect.midX, y: rect.maxY),
-        end: CGPoint(x: rect.midX, y: rect.minY),
-        options: []
-      )
-    }
-    // Soft gloss on the upper half.
-    if let gloss = CGGradient(
-      colorsSpace: CGColorSpace(name: CGColorSpace.sRGB),
-      colors: [CGColor(gray: 1, alpha: 0.30), CGColor(gray: 1, alpha: 0)] as CFArray,
-      locations: [0, 1]
-    ) {
-      context.drawLinearGradient(
-        gloss,
-        start: CGPoint(x: rect.midX, y: rect.maxY),
-        end: CGPoint(x: rect.midX, y: rect.midY),
-        options: []
-      )
-    }
-    context.restoreGState()
-
-    // Inner hairline highlight gives the edge a crisp, printed feel.
-    context.saveGState()
-    context.addPath(shape)
-    context.clip()
-    context.addPath(shape)
-    context.setStrokeColor(CGColor(gray: 1, alpha: 0.28))
-    context.setLineWidth(max(rect.height * 0.035, 0.5))
-    context.strokePath()
-    context.restoreGState()
+    context.setFillColor(sticker.fill.cgColor())
+    context.fillPath()
 
     let foreground = sticker.foreground.cgColor()
     switch sticker.shape {
@@ -221,7 +185,7 @@ nonisolated enum AnnotateStampRenderer {
     context.restoreGState()
   }
 
-  /// Shadow offset and blur live in base space (y-up, unaffected by the CTM), so scale them by
+  /// Shadow offset lives in base space (y-up, unaffected by the CTM), so scale them by
   /// the CTM's scale: the canvas at any zoom and every export resolution then show the same
   /// shadow relative to the stamp. The drop always points down, even for a rotated stamp,
   /// like the light source of the other annotation shadows.
@@ -229,8 +193,8 @@ nonisolated enum AnnotateStampRenderer {
     let scale = deviceScale(of: context)
     context.setShadow(
       offset: CGSize(width: 0, height: -side * shadowOffsetFraction * scale),
-      blur: side * shadowBlurFraction * scale,
-      color: CGColor(gray: 0, alpha: 0.28)
+      blur: 0,
+      color: CGColor(gray: 0, alpha: shadowAlpha)
     )
   }
 
