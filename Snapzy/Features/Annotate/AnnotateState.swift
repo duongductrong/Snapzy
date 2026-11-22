@@ -3544,7 +3544,7 @@ final class AnnotateState: ObservableObject {
         AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
       })
 
-    case .text, .translation:
+    case .text, .translation, .stamp:
       rotated.bounds = AnnotateImageRotation.rotateLayoutRectPreservingSize(
         annotation.bounds,
         oldSize: oldSize,
@@ -3672,7 +3672,7 @@ final class AnnotateState: ObservableObject {
     case .magnifier(let geometry):
       flipped.type = .magnifier(geometry.movingSource(flipPoint))
 
-    case .text, .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight, .translation:
+    case .text, .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight, .translation, .stamp:
       // Bounds-only annotations: the mirrored `bounds` above is the full transform we need.
       // Embedded image bitmaps were mirrored with the assets above.
       break
@@ -4079,7 +4079,7 @@ final class AnnotateState: ObservableObject {
         // The lens follows its half; the source follows the pixels under it.
         moved.type = .magnifier(geometry.movingSource(shiftPoint))
         moved.bounds = shiftRect(item.bounds)
-      case .rectangle, .filledRectangle, .oval, .blur, .embeddedImage, .spotlight, .watermark, .translation:
+      case .rectangle, .filledRectangle, .oval, .blur, .embeddedImage, .spotlight, .watermark, .translation, .stamp:
         moved.bounds = shiftRect(item.bounds)
       }
 

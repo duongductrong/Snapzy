@@ -113,6 +113,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 - **Chú thích và chỉnh sửa**
   - Thêm mũi tên, hình khối, văn bản, watermark, làm mờ (blur) và pixel hóa. Phát hiện và che dữ liệu nhạy cảm ngay trên máy.
   - Đo khoảng cách và kích thước trong ảnh bằng công cụ Measure (`U`): số đo chỉnh sửa được và được xuất cùng ảnh.
+  - Dán nhãn bằng công cụ Stamp (`G`): huy hiệu thiết kế sẵn như Approved, LGTM hay Bug, emoji hoặc ảnh của bạn, kèm viền nhãn dán và bóng đổ mềm.
   - Cắt (crop) ảnh, xóa nền và tạo mockup 3D. Cắt ngắn video, thêm đoạn zoom hoặc đoạn đổi tốc độ, và dùng Theo chuột (Follow Mouse) để con trỏ luôn nằm trong khung hình.
 - **Truy cập nhanh và Lịch sử**
   - Sao chép, chỉnh sửa, kéo thả hoặc tải lên ảnh chụp ngay từ thẻ Truy cập nhanh nổi; ghim ảnh chụp màn hình lên màn hình.

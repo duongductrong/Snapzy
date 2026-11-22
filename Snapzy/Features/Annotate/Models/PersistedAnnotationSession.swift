@@ -146,6 +146,7 @@ struct PersistedAnnotationType: Codable, Equatable {
     case measurement
     case translation
     case magnifier
+    case stamp
     /// A kind written by a newer Snapzy. The item is skipped instead of failing the whole
     /// manifest, so a session keeps everything this build can draw.
     case unknown
@@ -168,6 +169,7 @@ struct PersistedAnnotationType: Codable, Equatable {
   var measure: PersistedMeasureGeometry?
   var translation: PersistedTranslatedTextBlock?
   var magnifier: PersistedMagnifierGeometry?
+  var stamp: PersistedStamp?
 
   init(annotationType: AnnotationType) {
     switch annotationType {
@@ -216,6 +218,9 @@ struct PersistedAnnotationType: Codable, Equatable {
     case .magnifier(let geometry):
       kind = .magnifier
       magnifier = PersistedMagnifierGeometry(geometry: geometry)
+    case .stamp(let value):
+      kind = .stamp
+      stamp = PersistedStamp(stamp: value)
     }
   }
 
@@ -255,6 +260,8 @@ struct PersistedAnnotationType: Codable, Equatable {
       return translation.map { .translation($0.block) }
     case .magnifier:
       return magnifier?.magnifierGeometry.map { .magnifier($0) }
+    case .stamp:
+      return stamp?.stampAnnotation.map { .stamp($0) }
     case .unknown:
       return nil
     }

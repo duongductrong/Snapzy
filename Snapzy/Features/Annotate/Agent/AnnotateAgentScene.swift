@@ -243,6 +243,7 @@ extension AnnotationType {
     case .measurement: "measure"
     case .magnifier: "magnifier"
     case .translation: "translation"
+    case .stamp: "stamp"
     }
   }
 }
