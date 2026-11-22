@@ -6,6 +6,23 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 2.3.0-beta.8</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>241</sparkle:version>
+      <sparkle:shortVersionString>2.3.0-beta.8</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 22 Nov 2026 12:53:24 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>🐛 Bug Fixes</h3><ul><li>keep the camera preview controller off the isolated deinit shim (efa0f5d1)</li><li>stop the status badges from painting over the duration readout (b96a6091)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v2.3.0-beta.8/Snapzy-v2.3.0-beta.8.dmg"
+        sparkle:edSignature="zApoi1LHk/1HKpVLgBIuXv66QTkGqRJQyv0r4NQBJfpt69Pz7kE4Llyc2xv/AXiqwO6cfDnX9VE/vFX+EIe5Cw=="
+        length="57604406"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 2.3.0-beta.7</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>240</sparkle:version>
