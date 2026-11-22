@@ -416,7 +416,11 @@ final class AnnotateState: ObservableObject {
   // MARK: - UI State
 
   @Published var showSidebar: Bool = false
-  @Published var zoomLevel: CGFloat = 1.0
+  @Published var zoomLevel: CGFloat = 1.0 {
+    didSet {
+      if zoomLevel != oldValue { refreshZoomDisplay() }
+    }
+  }
   @Published var isPinned: Bool = false
   @Published private(set) var dragToAppPreparationState: DragToAppPreparationState
 
@@ -905,10 +909,30 @@ final class AnnotateState: ObservableObject {
   }
 
   /// Base fitted canvas size before zoom is applied.
-  @Published private(set) var baseCanvasDisplaySize: CGSize = .zero
+  ///
+  /// Not `@Published`: it changes on every frame of a live window resize, and publishing it
+  /// re-rendered every view observing `AnnotateState` (toolbar, properties bar, sidebar, bottom
+  /// bar) per frame. The only UI that depends on it is the zoom readout, which observes
+  /// `zoomDisplay` instead.
+  private(set) var baseCanvasDisplaySize: CGSize = .zero
 
-  /// Fit scale used to derive a dynamic max zoom for very long captures.
-  @Published private(set) var fitScale: CGFloat = 1.0
+  /// Fit scale used to derive a dynamic max zoom for very long captures. Not `@Published`; see
+  /// `baseCanvasDisplaySize`.
+  private(set) var fitScale: CGFloat = 1.0
+
+  /// Publishes only when the fit-scale-derived zoom readout actually changes.
+  let zoomDisplay = AnnotateZoomDisplayModel()
+
+  /// Keeps `zoomDisplay` in sync with `fitScale` and `zoomLevel`, so its change detection never
+  /// compares against a stale value.
+  private func refreshZoomDisplay() {
+    zoomDisplay.update(
+      AnnotateZoomDisplayModel.Signature(
+        displayedPercent: currentDisplayedZoomPercent,
+        presetPercents: zoomMenuPresetPercents
+      )
+    )
+  }
 
   var effectiveMaximumZoomLevel: CGFloat {
     guard fitScale > 0 else { return Self.defaultMaximumZoomLevel }
@@ -990,6 +1014,8 @@ final class AnnotateState: ObservableObject {
 
     guard metricsChanged else { return }
 
+    refreshZoomDisplay()
+
     let clampedLevel = clampedZoom(zoomLevel)
     if abs(clampedLevel - zoomLevel) > 0.0001 {
       zoomLevel = clampedLevel
@@ -1012,8 +1038,10 @@ final class AnnotateState: ObservableObject {
   /// Reset pan when content no longer overflows.
   func resetPanIfNeeded() {
     if !canPanInteractively {
-      panOffset = .zero
-      isCanvasPanningMode = false
+      // Guarded: `@Published` notifies even when assigning an equal value, and this runs on
+      // every resize frame.
+      if panOffset != .zero { panOffset = .zero }
+      if isCanvasPanningMode { isCanvasPanningMode = false }
     } else {
       clampPanOffset()
     }
@@ -1024,7 +1052,7 @@ final class AnnotateState: ObservableObject {
   func clampPanOffset() {
     let overflow = panOverflow(at: zoomLevel)
     guard overflow.width > 0 || overflow.height > 0 else {
-      panOffset = .zero
+      if panOffset != .zero { panOffset = .zero }
       return
     }
 
@@ -1033,8 +1061,12 @@ final class AnnotateState: ObservableObject {
     let maxPanX = overflow.width + marginX
     let maxPanY = overflow.height + marginY
 
-    panOffset.width = min(max(panOffset.width, -maxPanX), maxPanX)
-    panOffset.height = min(max(panOffset.height, -maxPanY), maxPanY)
+    // One assignment, and only when clamping changes it (each `@Published` write notifies).
+    let clamped = CGSize(
+      width: min(max(panOffset.width, -maxPanX), maxPanX),
+      height: min(max(panOffset.height, -maxPanY), maxPanY)
+    )
+    if clamped != panOffset { panOffset = clamped }
   }
 
   private func panOverflow(at zoomLevel: CGFloat) -> CGSize {
@@ -7416,5 +7448,25 @@ nonisolated enum AnnotateTextLayout {
       .font: font,
       .paragraphStyle: paragraphStyle
     ]
+  }
+}
+
+// MARK: - Zoom Display
+
+/// Observable carrier for the bottom-bar zoom readout. Kept separate from `AnnotateState` so
+/// fit-scale changes during a live resize re-render only the zoom pill, and only when the
+/// rounded percentage or preset list changes.
+@MainActor
+final class AnnotateZoomDisplayModel: ObservableObject {
+  struct Signature: Equatable {
+    var displayedPercent: Int
+    var presetPercents: [Int]
+  }
+
+  @Published private(set) var signature = Signature(displayedPercent: 100, presetPercents: [])
+
+  func update(_ newSignature: Signature) {
+    guard newSignature != signature else { return }
+    signature = newSignature
   }
 }
