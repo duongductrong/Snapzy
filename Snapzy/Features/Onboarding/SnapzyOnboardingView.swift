@@ -58,6 +58,8 @@ struct SnapzyOnboardingView: View {
       if isFlowMounted {
         VStack(spacing: 0) {
           header
+            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+            .padding(.top, SnapzyOnboardingMetrics.gutter - 10)
             .opacity(isLaunchingFinale ? 0 : 1)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: isLaunchingFinale)
 
@@ -65,20 +67,7 @@ struct SnapzyOnboardingView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .animation(SnapzyMotionPreferences.shared.spec(.morph).animation, value: state.currentStep)
             .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: isShowingCompletion)
-
-          // Liquid Glass Golden Rule: never animate `.opacity` on a view containing `.glassEffect`
-          // (`SnapzyOnboardingActionBar`). Keep it cleanly tucked beneath the window's bottom clip
-          // during prewarm and slide smoothly into place as the aurora contracts to the logo.
-          footer
-            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 64))
-            .animation(
-              reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.84).delay(0.10),
-              value: isFlowSettled
-            )
         }
-        .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
-        .padding(.top, SnapzyOnboardingMetrics.gutter - 10)
-        .padding(.bottom, SnapzyOnboardingMetrics.gutter - 12)
       }
 
       if isShowingWelcome {
@@ -126,16 +115,28 @@ struct SnapzyOnboardingView: View {
           onBack: retreat
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+        .padding(.bottom, SnapzyOnboardingMetrics.gutter)
         .transition(.opacity.combined(with: .scale(scale: 0.98)))
         .zIndex(2)
       } else if state.currentStep.usesWideLayout {
-        SnapzyOnboardingPermissionsView(state: state)
-          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-          .transition(stepTransition)
-          .zIndex(1)
+        VStack(spacing: 0) {
+          SnapzyOnboardingPermissionsView(state: state)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+          footer
+            .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 64))
+            .animation(
+              reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.84).delay(0.10),
+              value: isFlowSettled
+            )
+        }
+        .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+        .padding(.bottom, SnapzyOnboardingMetrics.gutter - 12)
+        .transition(stepTransition)
+        .zIndex(1)
       } else {
         stepColumns
-          .compositingGroup()
           .transition(stepTransition)
           .zIndex(0)
       }
@@ -159,31 +160,56 @@ struct SnapzyOnboardingView: View {
   }
 
   private var stepColumns: some View {
-    HStack(alignment: .top, spacing: SnapzyOnboardingMetrics.columnGap) {
-      SnapzyOnboardingInstructionPanel(state: state, isRevealed: isFlowSettled)
-        .frame(width: SnapzyOnboardingMetrics.railWidth, alignment: .topLeading)
-        .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : -22))
-        .animation(
-          reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.78),
-          value: isFlowSettled
-        )
-        // Re-identified per step: the page is a document that gets replaced, and the fresh
-        // identity is what lets its own staged entrance replay instead of firing once ever. The
-        // replacement travels with the flow's direction, not always the same way.
-        .id(state.currentStep)
-        .transition(stepTransition)
+    HStack(alignment: .top, spacing: 0) {
+      // Left Column: instruction rail + bottom-left escape hint
+      VStack(alignment: .leading, spacing: 0) {
+        SnapzyOnboardingInstructionPanel(state: state, isRevealed: isFlowSettled)
+          .padding(.top, 10)
+          // Re-identified per step so each step's entrance replays cleanly in flow direction.
+          .id(state.currentStep)
+          .transition(stepTransition)
 
-      SnapzyOnboardingMockHost(state: state)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .opacity(isFlowSettled ? 1 : 0)
-        .scaleEffect(reduceMotion ? 1.0 : (isFlowSettled ? 1.0 : 0.965))
-        .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 14))
-        .animation(
-          reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.86).delay(0.06),
-          value: isFlowSettled
-        )
+        Spacer(minLength: 16)
+
+        SnapzyOnboardingEscapeHint(text: escapeHintText)
+          .frame(height: SnapzyOnboardingMetrics.footerHeight, alignment: .leading)
+          .padding(.bottom, SnapzyOnboardingMetrics.gutter - 12)
+      }
+      .frame(width: SnapzyOnboardingMetrics.railWidth, alignment: .topLeading)
+      .padding(.leading, SnapzyOnboardingMetrics.gutter)
+      .padding(.trailing, SnapzyOnboardingMetrics.columnGap)
+      .offset(x: reduceMotion ? 0 : (isFlowSettled ? 0 : -22))
+      .animation(
+        reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.78),
+        value: isFlowSettled
+      )
+
+      // Right Column: full-bleed cropped macOS screen stage with floating Liquid Glass Action Bar
+      ZStack(alignment: .bottomTrailing) {
+        SnapzyOnboardingMockHost(state: state)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .padding(.top, 6)
+          .opacity(isFlowSettled ? 1 : 0)
+          .scaleEffect(reduceMotion ? 1.0 : (isFlowSettled ? 1.0 : 0.965))
+          .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 14))
+          .animation(
+            reduceMotion ? .easeOut(duration: 0.20) : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.86).delay(0.06),
+            value: isFlowSettled
+          )
+
+        // Liquid Glass Golden Rule: never animate `.opacity` on a view containing `.glassEffect`.
+        actionBar
+          .padding(.trailing, SnapzyOnboardingMetrics.gutter)
+          .padding(.bottom, SnapzyOnboardingMetrics.gutter - 12)
+          .offset(y: reduceMotion ? 0 : (isFlowSettled ? 0 : 64))
+          .animation(
+            reduceMotion ? nil : .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.84).delay(0.10),
+            value: isFlowSettled
+          )
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
 
   // MARK: - Header

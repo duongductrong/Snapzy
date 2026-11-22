@@ -48,6 +48,7 @@ struct SnapzyMockShortcutsView: View {
       }
       .padding(.horizontal, 16)
       .padding(.top, SnapzyMockMenuBar.barHeight + 6)
+      .padding(.bottom, 76)
 
       // 3. macOS Menu Bar & Camera Notch
       if showMenuBar {

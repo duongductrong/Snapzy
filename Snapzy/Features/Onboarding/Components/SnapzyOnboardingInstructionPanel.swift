@@ -45,12 +45,13 @@ struct SnapzyOnboardingInstructionPanel: View {
           .entrance(trailingIndex, appeared: hasAppeared)
       }
 
-      Spacer(minLength: SnapzySpace.xxl)
-
       if !state.currentStep.tip.isEmpty {
         tip
+          .padding(.top, SnapzySpace.xxl)
           .entrance(trailingIndex + 1, appeared: hasAppeared)
       }
+
+      Spacer(minLength: 0)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .onAppear {
@@ -147,29 +148,18 @@ struct SnapzyOnboardingInstructionPanel: View {
     Button {
       triggerNextStage()
     } label: {
-      VStack(alignment: .leading, spacing: SnapzySpace.md) {
-        HStack {
-          SnapzyOnboardingOverline(
-            L10n.Onboarding.demoOverline,
-            tint: SnapzyGlassInk.muted,
-            rule: true
-          )
-
-          Spacer(minLength: 0)
-
-          Image(systemName: "arrow.right")
-            .font(.system(size: 10.5, weight: .semibold))
-            .foregroundStyle(SnapzyGlassInk.muted)
-        }
+      VStack(alignment: .leading, spacing: SnapzySpace.lg) {
+        SnapzyOnboardingOverline(L10n.Onboarding.demoOverline, tint: SnapzyGlassInk.muted)
 
         Text(promptText)
-          .font(.system(size: SnapzyOnboardingType.challenge))
-          .foregroundStyle(SnapzyGlassInk.primary.opacity(0.95))
+          .font(.system(size: SnapzyOnboardingType.lede - 0.5).italic())
+          .foregroundStyle(SnapzyGlassInk.primary.opacity(0.94))
           .multilineTextAlignment(.leading)
-          .lineSpacing(5)
+          .lineSpacing(4)
           .fixedSize(horizontal: false, vertical: true)
       }
-      .padding(SnapzySpace.xxl)
+      .padding(.horizontal, SnapzySpace.xxl + SnapzySpace.xs)
+      .padding(.vertical, SnapzySpace.xxl)
       .frame(maxWidth: .infinity, alignment: .leading)
       .background(cardShape.fill(SnapzyGlassInk.fillQuiet))
       .overlay(cardShape.strokeBorder(SnapzyGlassInk.hairline, lineWidth: SnapzySurfaceGlass.specularLineWidth))
@@ -219,26 +209,19 @@ struct SnapzyOnboardingInstructionPanel: View {
   // MARK: - Tip
 
   private var tip: some View {
-    VStack(alignment: .leading, spacing: SnapzySpace.xl) {
-      Rectangle()
-        .fill(SnapzyGlassInk.hairline)
-        .frame(height: SnapzySurfaceGlass.specularLineWidth)
+    HStack(alignment: .top, spacing: SnapzySpace.lg) {
+      Image(systemName: "info.circle")
+        .font(.system(size: 12))
+        .foregroundStyle(SnapzyGlassInk.faint)
+        .accessibilityHidden(true)
 
-      HStack(alignment: .firstTextBaseline, spacing: SnapzySpace.md) {
-        Image(systemName: "lightbulb")
-          .font(.system(size: 11))
-          .foregroundStyle(SnapzyGlassInk.faint)
-          .accessibilityHidden(true)
-
-        Text(state.currentStep.tip)
-          .font(.system(size: SnapzyOnboardingType.caption))
-          .foregroundStyle(SnapzyGlassInk.muted)
-          .lineSpacing(4)
-          .fixedSize(horizontal: false, vertical: true)
-      }
+      Text(state.currentStep.tip)
+        .font(.system(size: SnapzyOnboardingType.caption))
+        .foregroundStyle(SnapzyGlassInk.muted)
+        .lineSpacing(3)
+        .fixedSize(horizontal: false, vertical: true)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.top, SnapzySpace.xxl)
   }
 }
 

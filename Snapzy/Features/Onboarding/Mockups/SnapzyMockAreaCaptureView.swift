@@ -189,7 +189,7 @@ struct SnapzyMockAreaCaptureView: View {
           .transition(SnapzyMockScene.hudTransition)
       }
     }
-    .padding(.bottom, 20)
+    .padding(.bottom, state.step1Stage == .quickAccessFloating ? 24 : 78)
     .frame(maxWidth: .infinity)
   }
 

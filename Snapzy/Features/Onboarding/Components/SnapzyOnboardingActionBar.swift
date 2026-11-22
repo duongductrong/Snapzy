@@ -106,10 +106,10 @@ private struct SnapzyOnboardingBarSegment: View {
     if !isEnabled {
       return Color.white.opacity(0.30)
     }
-    if showsHint {
-      return Color(red: 0.04, green: 0.08, blue: 0.22)
+    if isHovered || showsHint {
+      return SnapzyGlassInk.primary
     }
-    return isHovered ? SnapzyGlassInk.primary : SnapzyGlassInk.body
+    return SnapzyGlassInk.body
   }
 
   var body: some View {
@@ -121,7 +121,7 @@ private struct SnapzyOnboardingBarSegment: View {
         if isBusy {
           ProgressView()
             .controlSize(.small)
-            .tint(showsHint ? Color(red: 0.04, green: 0.08, blue: 0.22) : SnapzyGlassInk.primary)
+            .tint(SnapzyGlassInk.primary)
         }
 
         Text(title)
@@ -131,37 +131,18 @@ private struct SnapzyOnboardingBarSegment: View {
           .foregroundStyle(labelInk)
 
         if let trailingKey, !isBusy {
-          if showsHint {
-            Text(trailingKey)
-              .font(.system(size: SnapzyOnboardingType.keycap + 1, weight: .semibold, design: .rounded))
-              .foregroundStyle(Color(red: 0.04, green: 0.08, blue: 0.22).opacity(0.75))
-              .padding(.horizontal, 5.5)
-              .frame(minWidth: 19, minHeight: 19)
-              .background(
-                Radius.rect(Radius.ornament)
-                  .fill(Color(red: 0.04, green: 0.08, blue: 0.22).opacity(0.10))
-              )
-              .fixedSize()
-          } else {
-            SnapzyKeycapChip(label: trailingKey, emphasis: isHovered && isEnabled)
-              .opacity(isEnabled ? 1.0 : 0.35)
-          }
+          SnapzyKeycapChip(label: trailingKey, emphasis: (isHovered || showsHint) && isEnabled)
+            .opacity(isEnabled ? 1.0 : 0.35)
         }
       }
       .padding(.horizontal, SnapzySpace.xl + 1)
       .frame(maxHeight: .infinity)
-      .background {
-        if showsHint {
-          Capsule(style: .continuous)
-            .fill(isHovered ? Color(red: 0.90, green: 0.93, blue: 1.0) : Color.white)
-        }
-      }
       .liquidGlassSurface(
         shape: Capsule(style: .continuous),
-        // Match Ruru's onboarding action bar: the group owns the resting surface, while a
-        // button gets its own glass plane only while hovered. `isVisible` keeps the native
-        // identity stable instead of inserting/removing an effect view on every pointer move.
-        isVisible: !showsHint && isHovered && isEnabled && !isBusy,
+        // Keep authentic Dark Liquid Glass on all onboarding primary buttons (including
+        // "Start Using Snapzy" and ready "Continue"). The group owns the resting surface,
+        // while a button materializes its own glass plane on hover.
+        isVisible: isHovered && isEnabled && !isBusy,
         substrate: SnapzySurfaceGlass.controlSubstrateHover,
         tint: 0.10,
         // The hotter diagonal hairline is the hover affordance on both paths. Native glass gets
@@ -172,7 +153,6 @@ private struct SnapzyOnboardingBarSegment: View {
         nativeGlassTint: SnapzyOnboardingGlassAppearance.segmentActiveTint,
         nativeHighlight: .custom(top: 0.24, bottom: 0.08)
       )
-      .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: showsHint)
       .contentShape(Capsule(style: .continuous))
     }
     .buttonStyle(SnapzyInteractiveButtonStyle(isEnabled: isEnabled && !isBusy))

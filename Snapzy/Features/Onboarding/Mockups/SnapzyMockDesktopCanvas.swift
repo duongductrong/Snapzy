@@ -199,49 +199,51 @@ private struct MacBookNotchShape: Shape {
   }
 }
 
-// MARK: - Menu Bar
+// MARK: - Menu Bar (Cropped Real-Scale MacBook Display)
 
 struct SnapzyMockMenuBar: View, Equatable {
   var app: SnapzyMockApp = .notes
 
-  static let barHeight: CGFloat = 26
+  static let barHeight: CGFloat = 28
 
   var body: some View {
-    ZStack(alignment: .top) {
-      // Seamless frosted macOS translucent menu bar over the light studio wallpaper
-      ZStack {
-        LinearGradient(
-          colors: [
-            Color.white.opacity(0.68),
-            Color.white.opacity(0.54),
-          ],
-          startPoint: .top,
-          endPoint: .bottom
-        )
+    GeometryReader { proxy in
+      let visibleWidth = proxy.size.width
+      // The right-column stage is a cropped frame onto a full-width Mac screen, so the camera
+      // notch sits shifted toward the virtual display center and right status icons crop naturally.
+      let notchShift = max(100, visibleWidth * 0.21)
+      let notchCenterX = (visibleWidth / 2) + notchShift
+      let notchWidth: CGFloat = 96
+      let notchRightEdge = notchCenterX + (notchWidth / 2)
 
-        HStack(spacing: 0) {
-          leadingCluster
-            .padding(.leading, 12)
-
-          Spacer(minLength: 96)
-
-          trailingCluster
-            .padding(.trailing, 12)
-        }
-      }
-      .frame(height: Self.barHeight)
-      .overlay(alignment: .bottom) {
+      ZStack(alignment: .topLeading) {
+        // Translucent frosted menu bar strip
         Rectangle()
-          .fill(Color.black.opacity(0.05))
-          .frame(height: 0.5)
-      }
+          .fill(Color.white.opacity(0.84))
+          .frame(height: Self.barHeight)
+          .overlay(
+            Rectangle()
+              .fill(Color.black.opacity(0.06))
+              .frame(height: 0.5),
+            alignment: .bottom
+          )
 
-      // Authentic MacBook hardware camera notch: anchored flush at y = 0, matte black bezel,
-      // smooth concave shoulders meeting the screen top edge cleanly.
-      cameraNotch
+        // 1. Left Menu Items ( + App Title + full macOS menus at real scale)
+        leadingCluster
+          .padding(.leading, 18)
+          .frame(height: Self.barHeight, alignment: .leading)
+
+        // 2. Camera Notch (shifted right to virtual display center, flush at y = 0)
+        cameraNotch
+          .position(x: notchCenterX, y: 10.5)
+
+        // 3. Right Status Bar Items (extending naturally past the cropped right edge)
+        trailingCluster
+          .frame(height: Self.barHeight, alignment: .leading)
+          .offset(x: notchRightEdge + 22)
+      }
     }
-    .frame(maxWidth: .infinity)
-    .frame(height: Self.barHeight, alignment: .top)
+    .frame(height: Self.barHeight)
     .accessibilityHidden(true)
   }
 
@@ -249,44 +251,44 @@ struct SnapzyMockMenuBar: View, Equatable {
     HStack(spacing: 11) {
       Image(systemName: "apple.logo")
         .font(.system(size: 11.5, weight: .semibold))
+        .foregroundStyle(Color.black.opacity(0.90))
         .offset(y: -0.5)
 
       HStack(spacing: 11) {
         Text(app.menuTitle)
-          .font(.system(size: 10.5, weight: .bold))
-          .tracking(-0.1)
+          .font(.system(size: 11.5, weight: .bold))
+          .foregroundStyle(Color.black.opacity(0.92))
 
         ForEach(app.menus, id: \.self) { menu in
           Text(menu)
-            .tracking(-0.08)
         }
       }
       .id(app)
       .transition(.opacity.combined(with: .offset(y: 2)))
       .animation(.timingCurve(0.20, 0.0, 0.12, 1.0, duration: 0.34), value: app)
     }
-    .font(.system(size: 10.5, weight: .medium))
-    .foregroundStyle(SnapzyMockPalette.ink.opacity(0.90))
+    .font(.system(size: 11.5, weight: .regular))
+    .foregroundStyle(Color.black.opacity(0.82))
     .fixedSize()
   }
 
   private var trailingCluster: some View {
-    HStack(spacing: 9) {
+    HStack(spacing: 11) {
       // Snapzy's actual 4-petal menu bar glyph rendered as a crisp macOS template icon
       Image("WelcomeMark")
         .renderingMode(.template)
         .resizable()
         .interpolation(.high)
         .aspectRatio(contentMode: .fit)
-        .frame(width: 10.5, height: 10.5)
+        .frame(width: 11, height: 11)
 
       Image(systemName: "wifi")
-        .font(.system(size: 10, weight: .semibold))
+        .font(.system(size: 10.5, weight: .semibold))
 
       MacOSMenuBarBattery()
 
       Image(systemName: "magnifyingglass")
-        .font(.system(size: 9.5, weight: .semibold))
+        .font(.system(size: 10, weight: .semibold))
 
       MacOSControlCenterGlyph()
 
@@ -295,7 +297,7 @@ struct SnapzyMockMenuBar: View, Equatable {
         .tracking(-0.1)
         .monospacedDigit()
     }
-    .foregroundStyle(SnapzyMockPalette.ink.opacity(0.90))
+    .foregroundStyle(Color.black.opacity(0.84))
     .fixedSize()
   }
 
@@ -304,18 +306,17 @@ struct SnapzyMockMenuBar: View, Equatable {
       MacBookNotchShape(shoulderRadius: 5, bottomRadius: 6.5)
         .fill(SnapzyMockPalette.bezel)
 
-      // Subtle recessed FaceTime HD camera optics (quiet dark glass, no cartoonish glow)
       Circle()
         .fill(Color(white: 0.12))
-        .frame(width: 5, height: 5)
+        .frame(width: 4.5, height: 4.5)
         .overlay(
           Circle()
             .fill(Color(red: 0.04, green: 0.05, blue: 0.08))
-            .frame(width: 3, height: 3)
+            .frame(width: 2.5, height: 2.5)
         )
         .offset(y: -0.5)
     }
-    .frame(width: 90, height: 22)
+    .frame(width: 96, height: 21)
   }
 }
 

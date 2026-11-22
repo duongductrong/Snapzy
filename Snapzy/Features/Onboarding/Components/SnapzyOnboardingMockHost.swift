@@ -45,8 +45,15 @@ struct SnapzyOnboardingMockHost: View {
     }
   }
 
-  private var stageShape: RoundedRectangle {
-    Radius.rect(SnapzyOnboardingMetrics.stageRadius)
+  private var viewportShape: SnapzyUnevenRoundedRectangle {
+    SnapzyUnevenRoundedRectangle(
+      cornerRadii: SnapzyCornerRadii(
+        topLeading: 18,
+        bottomLeading: 0,
+        bottomTrailing: SnapzyOnboardingMetrics.windowRadius,
+        topTrailing: 0
+      )
+    )
   }
 
   var body: some View {
@@ -71,43 +78,31 @@ struct SnapzyOnboardingMockHost: View {
           SnapzyMockShortcutsView(state: state, showMenuBar: false)
         }
 
-        // Physical MacBook hardware camera notch & macOS menu bar remain locked at top-center
-        // while Desktop Spaces glide smoothly beneath them — only the active app title crossfades.
+        // Cropped real-scale macOS menu bar & shifted hardware notch stay anchored while
+        // Desktop Spaces glide smoothly beneath them.
         SnapzyMockMenuBar(app: currentMockApp)
           .allowsHitTesting(false)
       }
       .frame(width: proxy.size.width, height: proxy.size.height)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .clipShape(stageShape)
+    .clipShape(viewportShape)
     .overlay(
-      stageShape.strokeBorder(
-        Color.black.opacity(0.35),
-        lineWidth: 1.5
-      )
-    )
-    .overlay(
-      stageShape.strokeBorder(
+      viewportShape.strokeBorder(
         LinearGradient(
-          colors: SnapzySurfaceGlass.stageEdgeColors,
+          colors: [
+            Color.white.opacity(0.24),
+            Color.white.opacity(0.09),
+            Color.white.opacity(0.02),
+          ],
           startPoint: .topLeading,
           endPoint: .bottomTrailing
         ),
-        lineWidth: SnapzySurfaceGlass.stageEdgeWidth
+        lineWidth: 0.75
       )
     )
-    .shadow(
-      color: SnapzyGlassShadow.stageColor,
-      radius: SnapzyGlassShadow.stageRadius,
-      x: -6,
-      y: SnapzyGlassShadow.stageY
-    )
-    .shadow(
-      color: SnapzyGlassShadow.stageAmbientColor,
-      radius: SnapzyGlassShadow.stageAmbientRadius,
-      x: -2,
-      y: 2
-    )
+    .shadow(color: Color.black.opacity(0.38), radius: 28, x: -6, y: 8)
+    .shadow(color: Color.black.opacity(0.16), radius: 6, x: -2, y: 2)
     .onAppear {
       activeSpaceIndex = CGFloat(currentSpaceInt)
     }
