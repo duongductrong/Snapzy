@@ -120,11 +120,15 @@ struct VideoEditorCursorOverlayView: View {
         settings: state.motionBlurSettings
       )
       if shutterTaps.count >= 2 {
-        for tap in shutterTaps {
-          context.opacity = Double(frame.opacity * min(1.0, tap.weight * 1.85))
-          context.draw(cursorImage, in: cursorRect(at: tap.position))
+        let totalWeight = shutterTaps.reduce(CGFloat(0)) { $0 + max(0, $1.weight) }
+        if totalWeight > 0 {
+          for tap in shutterTaps {
+            let normalizedWeight = max(0, tap.weight) / totalWeight
+            context.opacity = Double(frame.opacity * normalizedWeight)
+            context.draw(cursorImage, in: cursorRect(at: tap.position))
+          }
+          return
         }
-        return
       }
     }
 

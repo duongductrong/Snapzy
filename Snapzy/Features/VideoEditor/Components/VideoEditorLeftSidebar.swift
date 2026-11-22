@@ -344,15 +344,23 @@ struct ZoomSettingsContent: View {
               value: Binding(
                 get: { state.motionBlurSettings.shutterStrength },
                 set: { newValue in
+                  // Capture the pre-edit value before mutating so direct track clicks
+                  // (which can invoke `set` before `onEditingChanged(true)`) still commit
+                  // a single undo step on release.
+                  if motionBlurDragStart == nil {
+                    motionBlurDragStart = state.motionBlurSettings
+                  }
                   var updated = state.motionBlurSettings
                   updated.shutterStrength = VideoEditorMotionBlurSettings.clampStrength(newValue)
-                  state.setMotionBlurSettings(updated, recordUndo: motionBlurDragStart == nil)
+                  state.setMotionBlurSettings(updated, recordUndo: false)
                 }
               ),
               in: VideoEditorMotionBlurSettings.strengthRange
             ) { editing in
               if editing {
-                motionBlurDragStart = state.motionBlurSettings
+                if motionBlurDragStart == nil {
+                  motionBlurDragStart = state.motionBlurSettings
+                }
               } else if let start = motionBlurDragStart {
                 motionBlurDragStart = nil
                 state.commitMotionBlurSettings(from: start)
