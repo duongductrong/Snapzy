@@ -2020,6 +2020,8 @@ final class AnnotateState: ObservableObject {
   /// Replace the backing screenshot while keeping editable annotations.
   /// Used by inline area annotate when the selected region moves or resizes.
   func replaceSourceImagePreservingAnnotations(_ image: NSImage, annotationOffset: CGPoint = .zero) {
+    // An auto-redact scan in flight was computed against the old image's coordinates.
+    cancelSensitiveRedactionScan()
     sourceImage = image
     if annotationOffset != .zero {
       translateAnnotations(dx: annotationOffset.x, dy: annotationOffset.y)
@@ -2418,6 +2420,36 @@ final class AnnotateState: ObservableObject {
   }
 
   func autoRedactSensitiveData() {
+    let preferredLanguageIdentifier = AppLanguageManager.shared.activeOCRLanguageIdentifier
+    runAutoRedactionScan(
+      scanningMessage: L10n.AnnotateUI.autoRedactionScanning,
+      noMatchesMessage: L10n.AnnotateUI.autoRedactionNoMatches,
+      logName: "Sensitive redaction scan"
+    ) { image in
+      try await AnnotateSensitiveRedactionService.shared.detectRegions(
+        in: image,
+        preferredLanguageIdentifier: preferredLanguageIdentifier
+      )
+    }
+  }
+
+  /// Vision face/person detection → one blur item per detection, in one undo checkpoint.
+  func autoRedactVisual(_ target: AnnotateVisualRedactionTarget) {
+    runAutoRedactionScan(
+      scanningMessage: L10n.AnnotateUI.autoRedactionScanning(target),
+      noMatchesMessage: L10n.AnnotateUI.autoRedactionNoMatches(target),
+      logName: "Visual redaction scan (\(target.rawValue))"
+    ) { image in
+      try await AnnotateSensitiveRedactionService.shared.detectVisualRegions(in: image, target: target)
+    }
+  }
+
+  private func runAutoRedactionScan(
+    scanningMessage: String,
+    noMatchesMessage: String,
+    logName: String,
+    detect: @escaping (NSImage) async throws -> AnnotateSensitiveRedactionResult
+  ) {
     guard !isSensitiveRedactionScanning else { return }
     guard let image = effectiveSourceImage else {
       showSensitiveRedactionToast(message: L10n.AnnotateUI.autoRedactionImageUnavailable, style: .warning)
@@ -2432,7 +2464,7 @@ final class AnnotateState: ObservableObject {
     activeSensitiveRedactionOperationID = operationID
     isSensitiveRedactionScanning = true
     sensitiveRedactionToast = AppToastManager.shared.show(
-      message: L10n.AnnotateUI.autoRedactionScanning,
+      message: scanningMessage,
       style: .info,
       duration: nil,
       variant: .compact,
@@ -2441,10 +2473,7 @@ final class AnnotateState: ObservableObject {
 
     Task {
       do {
-        let result = try await AnnotateSensitiveRedactionService.shared.detectRegions(
-          in: image,
-          preferredLanguageIdentifier: AppLanguageManager.shared.activeOCRLanguageIdentifier
-        )
+        let result = try await detect(image)
         guard activeSensitiveRedactionOperationID == operationID else { return }
 
         isSensitiveRedactionScanning = false
@@ -2452,7 +2481,7 @@ final class AnnotateState: ObservableObject {
 
         let insertedCount = applySensitiveRedactionRegions(result.regions)
         if insertedCount == 0 {
-          updateSensitiveRedactionToast(message: L10n.AnnotateUI.autoRedactionNoMatches, style: .warning)
+          updateSensitiveRedactionToast(message: noMatchesMessage, style: .warning)
         } else {
           updateSensitiveRedactionToast(
             message: L10n.AnnotateUI.autoRedactionComplete(insertedCount),
@@ -2460,7 +2489,7 @@ final class AnnotateState: ObservableObject {
           )
         }
 
-        DiagnosticLogger.shared.log(.info, .annotate, "Sensitive redaction scan completed", context: [
+        DiagnosticLogger.shared.log(.info, .annotate, "\(logName) completed", context: [
           "regions": "\(insertedCount)"
         ])
       } catch {
@@ -2470,7 +2499,7 @@ final class AnnotateState: ObservableObject {
         activeSensitiveRedactionOperationID = nil
         let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         updateSensitiveRedactionToast(message: message, style: .error)
-        DiagnosticLogger.shared.log(.error, .annotate, "Sensitive redaction scan failed", context: [
+        DiagnosticLogger.shared.log(.error, .annotate, "\(logName) failed", context: [
           "error": String(describing: type(of: error))
         ])
       }

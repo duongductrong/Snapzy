@@ -6422,6 +6422,54 @@ nonisolated enum L10n {
       defaultValue: "No image available to scan.",
       comment: "Toast shown when automatic sensitive-data redaction cannot run because no image is loaded"
     )
+    static let autoRedactFaces = string(
+      "annotate.auto-redact-faces",
+      defaultValue: "Auto Redact Faces",
+      comment: "Tooltip for blurring every face Vision detects in the image"
+    )
+    static let autoRedactPeople = string(
+      "annotate.auto-redact-people",
+      defaultValue: "Auto Redact People",
+      comment: "Tooltip for blurring every person Vision detects in the image"
+    )
+    static func autoRedact(_ target: AnnotateVisualRedactionTarget) -> String {
+      switch target {
+      case .faces: return autoRedactFaces
+      case .people: return autoRedactPeople
+      }
+    }
+    static func autoRedactionScanning(_ target: AnnotateVisualRedactionTarget) -> String {
+      switch target {
+      case .faces:
+        return string(
+          "annotate.auto-redaction-scanning-faces",
+          defaultValue: "Detecting faces...",
+          comment: "Toast shown while annotate detects faces locally for redaction"
+        )
+      case .people:
+        return string(
+          "annotate.auto-redaction-scanning-people",
+          defaultValue: "Detecting people...",
+          comment: "Toast shown while annotate detects people locally for redaction"
+        )
+      }
+    }
+    static func autoRedactionNoMatches(_ target: AnnotateVisualRedactionTarget) -> String {
+      switch target {
+      case .faces:
+        return string(
+          "annotate.auto-redaction-no-faces",
+          defaultValue: "No faces found.",
+          comment: "Toast shown when automatic face redaction finds no faces"
+        )
+      case .people:
+        return string(
+          "annotate.auto-redaction-no-people",
+          defaultValue: "No people found.",
+          comment: "Toast shown when automatic people redaction finds no people"
+        )
+      }
+    }
     static func autoRedactionComplete(_ count: Int) -> String {
       format(
         "annotate.auto-redaction-complete",

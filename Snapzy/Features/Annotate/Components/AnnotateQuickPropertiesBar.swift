@@ -1914,25 +1914,56 @@ private struct QuickAutoRedactControl: View {
   let buttonWidth: CGFloat
   let groupSpacing: CGFloat
 
+  private var isDisabled: Bool {
+    !state.hasImage || state.isSensitiveRedactionScanning || state.editorMode != .annotate || state.isCropInteractionActive
+  }
+
   var body: some View {
     QuickPropertiesGroup(title: L10n.AnnotateUI.autoRedact, spacing: groupSpacing) {
-      Button {
-        state.autoRedactSensitiveData()
-      } label: {
-        Image(systemName: state.isSensitiveRedactionScanning ? "hourglass" : "shield.lefthalf.filled")
-          .font(.system(size: 12, weight: .semibold))
-          .foregroundColor(state.isSensitiveRedactionScanning ? .accentColor : .secondary)
-          .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
-          .liquidGlassControl(isActive: false)
-      }
-      .buttonStyle(.plain)
-      .disabled(!state.hasImage || state.isSensitiveRedactionScanning || state.editorMode != .annotate || state.isCropInteractionActive)
-      .opacity((!state.hasImage || state.isSensitiveRedactionScanning || state.editorMode != .annotate || state.isCropInteractionActive) ? 0.4 : 1)
-      .help(
-        state.isSensitiveRedactionScanning
+      redactButton(
+        icon: state.isSensitiveRedactionScanning ? "hourglass" : "shield.lefthalf.filled",
+        tint: state.isSensitiveRedactionScanning ? .accentColor : .secondary,
+        help: state.isSensitiveRedactionScanning
           ? L10n.AnnotateUI.autoRedactionScanning
           : L10n.AnnotateUI.autoRedactSensitiveData
-      )
+      ) {
+        state.autoRedactSensitiveData()
+      }
+
+      ForEach(AnnotateVisualRedactionTarget.allCases, id: \.self) { target in
+        redactButton(icon: target.quickPropertiesIcon, tint: .secondary, help: L10n.AnnotateUI.autoRedact(target)) {
+          state.autoRedactVisual(target)
+        }
+      }
+    }
+  }
+
+  private func redactButton(
+    icon: String,
+    tint: Color,
+    help: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Image(systemName: icon)
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundColor(tint)
+        .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
+        .liquidGlassControl(isActive: false)
+    }
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
+    .opacity(isDisabled ? 0.4 : 1)
+    .help(help)
+    .accessibilityLabel(help)
+  }
+}
+
+extension AnnotateVisualRedactionTarget {
+  var quickPropertiesIcon: String {
+    switch self {
+    case .faces: return "face.dashed"
+    case .people: return "figure.stand"
     }
   }
 }
