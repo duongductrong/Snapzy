@@ -160,15 +160,18 @@ struct ZoomableVideoPlayerSection: View {
         .offset(zoomOffset(in: displayedVideoRect.size))
         .clipped()
 
-      // Full-Retina Metal shutter-angle overlay: visible ONLY during active fast camera motion,
-      // rendering straight from full-resolution native CVPixelBuffers with zero pixelation.
-      MetalShutterPreviewView(
-        player: state.player,
-        shutterPlan: currentShutterPlan,
-        isPlaying: playbackState.isPlaying
-      )
-      .frame(width: displayedVideoRect.width, height: displayedVideoRect.height)
-      .allowsHitTesting(false)
+      // Full-Retina Metal shutter-angle overlay: mounted ONLY when camera motion blur is active
+      // (so sessions with motion blur off pay zero AVPlayerItemVideoOutput frame-conversion cost).
+      // Unmounting automatically triggers `dismantleNSView` to detach the video output.
+      if state.motionBlurSettings.effectiveCameraStrength > 0.001 {
+        MetalShutterPreviewView(
+          player: state.player,
+          shutterPlan: currentShutterPlan,
+          isPlaying: playbackState.isPlaying
+        )
+        .frame(width: displayedVideoRect.width, height: displayedVideoRect.height)
+        .allowsHitTesting(false)
+      }
 
       // Studio source-space layers (cursor with curved shutter blur, clicks): zoomed on top.
       VideoEditorStudioOverlayHost(space: .source, size: displayedVideoRect.size, state: state)
@@ -360,7 +363,9 @@ struct ZoomableVideoPlayerSection: View {
 
   private func updateZoomState(at time: TimeInterval) {
     let cameraState = state.cameraState(at: time)
-    let shutterPlan: VideoEditorMotionBlurEngine.ShutterPlan = playbackState.isPlaying
+    let isCameraBlurEnabled = state.motionBlurSettings.effectiveCameraStrength > 0.001
+    let shutterPlan: VideoEditorMotionBlurEngine.ShutterPlan =
+      (playbackState.isPlaying && isCameraBlurEnabled)
       ? state.previewShutterPlan(at: time)
       : .inactive
 
