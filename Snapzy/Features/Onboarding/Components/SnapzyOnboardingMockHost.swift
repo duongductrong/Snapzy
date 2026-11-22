@@ -13,10 +13,19 @@ struct SnapzyOnboardingMockHost: View {
   @Environment(\.accessibilityReduceMotion) private var envReduceMotion
 
   @State private var activeSpaceIndex: CGFloat
+  /// The Space the deck last came to rest on (`-1` while the stage itself is still arriving).
+  /// Until a glide lands, the departing Space stays live so it keeps moving naturally while it
+  /// slides out; after that only the current Space is live.
+  @State private var settledSpaceIndex: Int
+  /// Every Space the current glide sweeps across, so a Space passing through the middle of a
+  /// two-step jump keeps moving as it did before it was paused off-stage.
+  @State private var glideRange: ClosedRange<Int>?
+  @State private var settleTask: Task<Void, Never>?
 
   init(state: SnapzyOnboardingState) {
     self.state = state
     _activeSpaceIndex = State(initialValue: CGFloat(Self.spaceIndex(for: state.currentStep)))
+    _settledSpaceIndex = State(initialValue: -1)
   }
 
   private var reduceMotion: Bool {
@@ -45,6 +54,8 @@ struct SnapzyOnboardingMockHost: View {
     }
   }
 
+  private static let gutterColor = Color(red: 0.045, green: 0.050, blue: 0.065)
+
   private var viewportShape: SnapzyUnevenRoundedRectangle {
     SnapzyUnevenRoundedRectangle(
       cornerRadii: SnapzyCornerRadii(
@@ -62,7 +73,7 @@ struct SnapzyOnboardingMockHost: View {
 
       ZStack(alignment: .top) {
         // Deep obsidian Spaces gutter visible cleanly between desktop cards mid-swipe
-        Color(red: 0.045, green: 0.050, blue: 0.065)
+        Self.gutterColor
 
         // Persistent 3-Space macOS Desktop Deck: zero view-tree teardown on step switches,
         // pure GPU 120fps horizontal swipe with Mission Control depth recession & perspective tilt.
@@ -101,27 +112,65 @@ struct SnapzyOnboardingMockHost: View {
         lineWidth: 0.75
       )
     )
-    .shadow(color: Color.black.opacity(0.38), radius: 28, x: -6, y: 8)
-    .shadow(color: Color.black.opacity(0.16), radius: 6, x: -2, y: 2)
+    // The stage casts its shadow from a static plate of the same shape. The stage is opaque
+    // inside `viewportShape`, so the result is identical, but the blur no longer has to be
+    // recomputed from the gliding Spaces on every frame.
+    .background(
+      viewportShape
+        .fill(Self.gutterColor)
+        .shadow(color: Color.black.opacity(0.38), radius: 28, x: -6, y: 8)
+        .shadow(color: Color.black.opacity(0.16), radius: 6, x: -2, y: 2)
+    )
     .onAppear {
       activeSpaceIndex = CGFloat(currentSpaceInt)
+      // The stage arrives with the page transition (or the welcome reveal); it counts as at rest
+      // once that entrance has played.
+      settle(on: currentSpaceInt, after: Self.entranceSettleDelay)
+    }
+    .onDisappear {
+      settleTask?.cancel()
+      // Leaving for the wide Permissions page: there is no stage left to be in flight.
+      state.isStageInFlight = false
     }
     .onChange(of: state.currentStep) { newStep in
-      guard newStep != .permissions else { return }
+      guard newStep != .permissions else {
+        settleTask?.cancel()
+        return
+      }
       let target = CGFloat(Self.spaceIndex(for: newStep))
+      let origin = Int(activeSpaceIndex.rounded())
+      glideRange = min(origin, Int(target))...max(origin, Int(target))
       let jump = abs(target - activeSpaceIndex)
+      let duration: Double
       if reduceMotion {
-        withAnimation(.easeInOut(duration: 0.22)) {
+        duration = 0.22
+        withAnimation(.easeInOut(duration: duration)) {
           activeSpaceIndex = target
         }
       } else {
         // Smooth MacBook Spaces trackpad glide with pillowy deceleration tail; slightly longer
         // sweep when jumping 2 Spaces so Space 2 visibly flows past through center.
-        let duration = jump > 1.5 ? 0.80 : 0.64
+        duration = jump > 1.5 ? 0.80 : 0.64
         withAnimation(.timingCurve(0.20, 0.0, 0.10, 1.0, duration: duration)) {
           activeSpaceIndex = target
         }
       }
+      settle(on: Int(target), after: duration)
+    }
+  }
+
+  /// Longest entrance the stage can arrive with: the welcome reveal (0.86s after a 0.06s delay)
+  /// outlasts the page transition's spring.
+  private static let entranceSettleDelay: Double = 0.95
+
+  private func settle(on index: Int, after delay: Double) {
+    settleTask?.cancel()
+    settleTask = Task { @MainActor in
+      try? await Task.sleep(for: .seconds(delay))
+      guard !Task.isCancelled else { return }
+      settledSpaceIndex = index
+      glideRange = nil
+      state.isStageInFlight = false
     }
   }
 
@@ -132,6 +181,14 @@ struct SnapzyOnboardingMockHost: View {
   ) -> some View {
     content()
       .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .environment(
+        \.snapzyMockSceneIsLive,
+        index == currentSpaceInt || index == settledSpaceIndex || glideRange?.contains(index) == true
+      )
+      .environment(
+        \.snapzyMockSceneIsSettled,
+        !state.isStageInFlight && index == currentSpaceInt && index == settledSpaceIndex
+      )
       .allowsHitTesting(currentSpaceInt == index)
       .accessibilityHidden(currentSpaceInt != index)
       .modifier(
@@ -199,18 +256,20 @@ private struct MacOSSpacesParallaxModifier: ViewModifier, Animatable {
       .clipShape(cardShape)
       .overlay {
         if isMoving {
-          cardShape.strokeBorder(
-            LinearGradient(
-              colors: [
-                Color.white.opacity(rimOpacity),
-                Color.white.opacity(rimOpacity * 0.30),
-              ],
-              startPoint: .top,
-              endPoint: .bottom
-            ),
-            lineWidth: 0.75
-          )
-          .allowsHitTesting(false)
+          // A solid stroke under a fixed gradient mask, faded with layer opacity: the same
+          // white `rimOpacity → rimOpacity × 0.30` rim as a gradient stroke, but the changing
+          // path renders as a plain shape layer instead of re-rasterizing a full-card gradient
+          // on the CPU every frame.
+          cardShape.strokeBorder(Color.white, lineWidth: 0.75)
+            .mask(
+              LinearGradient(
+                colors: [Color.white, Color.white.opacity(0.30)],
+                startPoint: .top,
+                endPoint: .bottom
+              )
+            )
+            .opacity(rimOpacity)
+            .allowsHitTesting(false)
         }
       }
       .scaleEffect(scale)

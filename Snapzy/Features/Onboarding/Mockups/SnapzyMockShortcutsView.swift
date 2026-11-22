@@ -14,6 +14,17 @@ struct SnapzyMockShortcutsView: View {
   @State private var screenFlashOpacity: Double = 0
   @State private var triggeredMode: String? = nil
   @State private var hoveredMode: String? = nil
+  @Environment(\.snapzyMockSceneIsSettled) private var isSceneSettled
+
+  /// While the scene glides, the native switch (an AppKit view) is replaced by a static face
+  /// measured against the macOS 26 mini switch. Earlier systems draw a different switch, so they
+  /// keep the native control throughout.
+  private var usesSwitchStandIn: Bool {
+    if #available(macOS 26.0, *) {
+      return !isSceneSettled
+    }
+    return false
+  }
 
   private static let columnWidth: CGFloat = 512
 
@@ -147,10 +158,25 @@ struct SnapzyMockShortcutsView: View {
 
           Spacer(minLength: 4)
 
-          Toggle("", isOn: $state.diagnosticsOptIn)
-            .labelsHidden()
-            .toggleStyle(.switch)
-            .controlSize(.mini)
+          Group {
+            if usesSwitchStandIn {
+              // Clickable like the real switch, so a click mid-glide is never lost.
+              SnapzyMockMiniSwitchFace(isOn: state.diagnosticsOptIn)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                  withAnimation(SnapzyMotionPreferences.shared.spec(.hover).animation) {
+                    state.diagnosticsOptIn.toggle()
+                  }
+                }
+            } else {
+              Toggle("", isOn: $state.diagnosticsOptIn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+            }
+          }
+          // Instant swap; an animated removal would keep the AppKit switch alive mid-glide.
+          .animation(nil, value: usesSwitchStandIn)
         }
         .frame(maxWidth: .infinity)
       }
@@ -266,5 +292,26 @@ struct SnapzyMockShortcutsView: View {
     }
 
     state.completeChallenge(.checkShortcuts)
+  }
+}
+
+/// Static face of the macOS 26 `.mini` switch, matched against captures of the native control in
+/// this panel: a 40×24 layout box holding a trailing-aligned 36×16 track and a 21×13 knob inset
+/// 1.5pt. It stands in for the native `Toggle` only while the scene is moving.
+struct SnapzyMockMiniSwitchFace: View {
+  var isOn: Bool
+
+  var body: some View {
+    ZStack(alignment: isOn ? .trailing : .leading) {
+      Capsule(style: .continuous)
+        .fill(isOn ? Color(nsColor: .controlAccentColor) : Color.white.opacity(0.10))
+      Capsule(style: .continuous)
+        .fill(isOn ? Color(red: 0.882, green: 0.922, blue: 0.996) : Color(white: 0.886))
+        .frame(width: 21, height: 13)
+        .shadow(color: .black.opacity(0.22), radius: 1, y: 0.5)
+        .padding(.horizontal, 1.5)
+    }
+    .frame(width: 36, height: 16)
+    .frame(width: 40, height: 24, alignment: .trailing)
   }
 }

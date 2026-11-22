@@ -182,9 +182,16 @@ struct SnapzyOnboardingEscapeHint: View {
   var body: some View {
     HStack(spacing: SnapzySpace.md) {
       SnapzyKeycapChip(label: "esc")
-      Text(text)
-        .font(.system(size: SnapzyOnboardingType.caption))
-        .foregroundStyle(SnapzyGlassInk.muted)
+      // "Close" ↔ "Go back" swaps inside a step transition. Each string is its own view so the
+      // swap is a layer-opacity cross-fade; interpolating one Text in place re-rasterizes it on
+      // the CPU every frame and stalls the main thread on each redraw.
+      ZStack(alignment: .leading) {
+        Text(text)
+          .font(.system(size: SnapzyOnboardingType.caption))
+          .foregroundStyle(SnapzyGlassInk.muted)
+          .id(text)
+          .transition(.opacity)
+      }
     }
   }
 }

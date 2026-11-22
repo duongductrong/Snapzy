@@ -29,7 +29,9 @@ final class SnapzyOnboardingWelcomeAudio {
 
   private var ambientPlayer: AVAudioPlayer?
   private var fadingPlayers: [ObjectIdentifier: (player: AVAudioPlayer, task: Task<Void, Never>)] = [:]
-  private var effectPlayers: [AVAudioPlayer] = []
+  /// One-shot cues start off the main thread: creating and starting an `AVAudioPlayer` costs
+  /// several milliseconds, and cues fire on the same frame a step transition begins.
+  private let effectVoices = OnboardingEffectVoicePool()
   private var synthesisTask: Task<Void, Never>?
   private var prewarmTask: Task<Void, Never>?
 
@@ -84,9 +86,9 @@ final class SnapzyOnboardingWelcomeAudio {
     }
   }
 
-  /// Pre-renders all tiny interactive onboarding WAV buffers off-main (pure Swift DSP only;
-  /// `AVAudioPlayer` always initializes on `@MainActor` so CoreAudio run-loop affinity stays safe
-  /// and no idle AudioQueues remain open after onboarding closes).
+  /// Pre-renders all tiny interactive onboarding WAV buffers off-main (pure Swift DSP only).
+  /// Playback of these cues happens on `OnboardingEffectVoicePool`'s queue, which releases its
+  /// players after a quiet period so no idle AudioQueues remain open after onboarding closes.
   func prewarmInteractionEffects() {
     guard soundsEnabled else { return }
     guard prewarmTask == nil, cachedCueWAVs.count < 9 else { return }
@@ -193,7 +195,7 @@ final class SnapzyOnboardingWelcomeAudio {
     guard soundsEnabled else { return }
 
     if let data = cachedCueWAVs[key] {
-      playOneShot(data: data, volume: volume)
+      effectVoices.play(key: key, data: data, volume: volume)
       return
     }
 
@@ -203,7 +205,7 @@ final class SnapzyOnboardingWelcomeAudio {
       }.value
       guard let self, self.soundsEnabled else { return }
       self.cachedCueWAVs[key] = wav
-      self.playOneShot(data: wav, volume: volume)
+      self.effectVoices.play(key: key, data: wav, volume: volume)
     }
   }
 
@@ -260,22 +262,67 @@ final class SnapzyOnboardingWelcomeAudio {
       )
     }
   }
+}
 
-  private func playOneShot(data: Data, volume: Float) {
-    effectPlayers.removeAll { !$0.isPlaying }
-    do {
-      let player = try AVAudioPlayer(data: data, fileTypeHint: AVFileType.wav.rawValue)
+// MARK: - Effect Voice Pool
+
+/// Plays short cues on a private serial queue, reusing an idle prepared player per cue so a repeat
+/// play only rewinds it. Every player is touched only on `queue`, which is why the type opts out
+/// of the target's default main-actor isolation. Players are dropped after a short quiet period,
+/// so no idle AudioQueue outlives the onboarding session.
+private nonisolated final class OnboardingEffectVoicePool: @unchecked Sendable {
+  private let queue = DispatchQueue(label: "com.snapzy.onboarding.effect-audio", qos: .userInteractive)
+  private var voices: [AnyHashable: [AVAudioPlayer]] = [:]
+  private var releaseWork: DispatchWorkItem?
+  /// Caps how many players one cue may hold, so rapid repeats overlap a little but never pile up.
+  private let maxVoicesPerCue = 3
+  private let idleRelease: TimeInterval = 10
+
+  func play(key: AnyHashable, data: Data, volume: Float) {
+    queue.async { [self] in
+      var pool = voices[key] ?? []
+      let player: AVAudioPlayer
+      if let idle = pool.first(where: { !$0.isPlaying }) {
+        player = idle
+      } else if pool.count >= maxVoicesPerCue {
+        // Every voice is busy: restart the one that began longest ago rather than adding more.
+        player = pool.removeFirst()
+        pool.append(player)
+        voices[key] = pool
+      } else {
+        do {
+          let created = try AVAudioPlayer(data: data, fileTypeHint: AVFileType.wav.rawValue)
+          created.prepareToPlay()
+          player = created
+          pool.append(created)
+          voices[key] = pool
+        } catch {
+          let message = error.localizedDescription
+          DispatchQueue.main.async {
+            DiagnosticLogger.shared.log(.debug, .ui, "Welcome effect audio failed to initialize: \(message)")
+          }
+          return
+        }
+      }
+      player.currentTime = 0
       player.volume = volume
-      player.prepareToPlay()
       player.play()
-      effectPlayers.append(player)
-    } catch {
-      DiagnosticLogger.shared.log(
-        .debug,
-        .ui,
-        "Welcome effect audio failed to initialize: \(error.localizedDescription)"
-      )
+      scheduleRelease()
     }
+  }
+
+  private func scheduleRelease() {
+    releaseWork?.cancel()
+    let work = DispatchWorkItem { [weak self] in
+      guard let self else { return }
+      self.voices = self.voices.compactMapValues { pool in
+        let playing = pool.filter(\.isPlaying)
+        return playing.isEmpty ? nil : playing
+      }
+      if !self.voices.isEmpty { self.scheduleRelease() }
+    }
+    releaseWork = work
+    queue.asyncAfter(deadline: .now() + idleRelease, execute: work)
   }
 }
 

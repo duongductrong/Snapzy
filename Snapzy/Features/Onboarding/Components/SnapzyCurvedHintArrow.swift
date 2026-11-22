@@ -21,6 +21,7 @@ struct SnapzyCurvedHintArrow: View {
   var color: Color = .white
 
   @State private var floatOffset: CGFloat = 0
+  @Environment(\.snapzyMockSceneIsLive) private var isSceneLive
 
   var body: some View {
     Group {
@@ -34,12 +35,32 @@ struct SnapzyCurvedHintArrow: View {
       }
     }
     .onAppear {
-      withAnimation(
-        Animation.easeInOut(duration: 1.6)
-          .repeatForever(autoreverses: true)
-      ) {
-        floatOffset = -3
+      if isSceneLive { startFloating() }
+    }
+    .onChange(of: isSceneLive) { isLive in
+      if isLive {
+        startFloating()
+      } else {
+        stopFloating()
       }
+    }
+  }
+
+  private func startFloating() {
+    withAnimation(
+      Animation.easeInOut(duration: 1.6)
+        .repeatForever(autoreverses: true)
+    ) {
+      floatOffset = -3
+    }
+  }
+
+  /// Replacing the value inside an animation-free transaction ends the repeating animation.
+  private func stopFloating() {
+    var transaction = Transaction()
+    transaction.disablesAnimations = true
+    withTransaction(transaction) {
+      floatOffset = 0
     }
   }
 

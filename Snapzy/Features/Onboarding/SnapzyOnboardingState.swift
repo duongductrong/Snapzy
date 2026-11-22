@@ -69,6 +69,10 @@ final class SnapzyOnboardingState: ObservableObject {
   private(set) var navigationDirection: NavigationDirection = .forward
   /// How many steps the last change jumped, so a long click-back travels further than an advance.
   private(set) var navigationDistance: Int = 1
+  /// True from the moment a step change starts until the mock stage reports its glide landed.
+  /// Set outside the animated transaction so AppKit-backed controls on the stage swap for their
+  /// stand-ins immediately instead of lingering until the page animation ends.
+  @Published var isStageInFlight: Bool = false
 
   init(restoreSavedStep: Bool = true) {
     if restoreSavedStep,
@@ -174,11 +178,18 @@ final class SnapzyOnboardingState: ObservableObject {
     } else {
       SnapzyOnboardingWelcomeAudio.shared.playStepBackward()
     }
-    withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
-      currentStep = step
-      UserDefaults.standard.set(step.rawValue, forKey: PreferencesKeys.onboardingActiveStep)
+    // The arriving scene is reset before the page moves and without animation, so it glides in
+    // already at rest instead of replaying its own window transitions mid-flight.
+    var reset = Transaction()
+    reset.disablesAnimations = true
+    withTransaction(reset) {
+      isStageInFlight = true
       resetStateForStep(step)
     }
+    withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
+      currentStep = step
+    }
+    UserDefaults.standard.set(step.rawValue, forKey: PreferencesKeys.onboardingActiveStep)
   }
 
   private func resetStateForStep(_ step: SnapzyOnboardingStep) {
@@ -190,7 +201,7 @@ final class SnapzyOnboardingState: ObservableObject {
       selectedTool = nil
       annotationItems = []
     case .quickAccess:
-      resetStep2Flow()
+      resetStep2Flow(animated: false)
     case .shortcuts:
       hasFullscreenConflict = true
       hasAreaConflict = true
@@ -338,7 +349,7 @@ final class SnapzyOnboardingState: ObservableObject {
     }
   }
 
-  func resetStep2Flow() {
+  func resetStep2Flow(animated: Bool = true) {
     recordingTimer?.invalidate()
     recordingTimer = nil
     isRecordingTimerRunning = false
@@ -348,7 +359,11 @@ final class SnapzyOnboardingState: ObservableObject {
     quickAccessFeedbackText = nil
     isCardPinned = false
 
-    withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
+    if animated {
+      withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
+        step2Stage = .readyToRecord
+      }
+    } else {
       step2Stage = .readyToRecord
     }
   }

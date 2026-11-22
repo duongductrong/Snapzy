@@ -19,6 +19,7 @@ struct SnapzyMockVideoEditorWindow: View {
   @State private var playbackTimer: Timer? = nil
   @State private var isExportHovered: Bool = false
   @State private var isReplayHovered: Bool = false
+  @Environment(\.snapzyMockSceneIsLive) private var isSceneLive
 
   private var formattedCurrentTime: String {
     let secs = Double(playProgress * 3.0)
@@ -62,13 +63,21 @@ struct SnapzyMockVideoEditorWindow: View {
     .shadow(color: Color.black.opacity(0.15), radius: 6, y: 2)
     .onAppear {
       if !SnapzyMotionPreferences.shared.reduceMotion {
-        startPlaybackTimer()
+        if isSceneLive { startPlaybackTimer() }
       } else {
         isPlaying = false
       }
     }
     .onDisappear {
       stopPlaybackTimer()
+    }
+    // The playhead holds its place while the scene is off-stage and resumes when it returns.
+    .onChange(of: isSceneLive) { isLive in
+      if isLive && isPlaying {
+        startPlaybackTimer()
+      } else {
+        stopPlaybackTimer()
+      }
     }
   }
 
@@ -387,7 +396,7 @@ struct SnapzyMockVideoEditorWindow: View {
 
   private func togglePlayback() {
     isPlaying.toggle()
-    if isPlaying {
+    if isPlaying && isSceneLive {
       startPlaybackTimer()
     } else {
       stopPlaybackTimer()

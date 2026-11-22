@@ -36,6 +36,33 @@ enum SnapzyMockScene {
   )
 }
 
+/// Whether the mock scene is the one on screen. The Spaces deck keeps every scene mounted, so a
+/// scene that slid off-stage would otherwise keep its timers and looping animations running and
+/// redraw for nobody. Looping motion reads this and pauses while the scene is off-stage.
+private struct SnapzyMockSceneIsLiveKey: EnvironmentKey {
+  static let defaultValue = true
+}
+
+/// Whether the mock scene is on stage and at rest. AppKit-backed controls inside a scene (a
+/// scroll view, a switch) are swapped for identical-looking SwiftUI stand-ins while the scene is
+/// gliding or being inserted/removed: a platform view inside the 3D-transformed, clipped Spaces
+/// deck forces a full geometry sync every animation frame.
+private struct SnapzyMockSceneIsSettledKey: EnvironmentKey {
+  static let defaultValue = true
+}
+
+extension EnvironmentValues {
+  var snapzyMockSceneIsLive: Bool {
+    get { self[SnapzyMockSceneIsLiveKey.self] }
+    set { self[SnapzyMockSceneIsLiveKey.self] = newValue }
+  }
+
+  var snapzyMockSceneIsSettled: Bool {
+    get { self[SnapzyMockSceneIsSettledKey.self] }
+    set { self[SnapzyMockSceneIsSettledKey.self] = newValue }
+  }
+}
+
 /// Shared native macOS window traffic lights so every simulated app shares identical Apple chrome.
 struct SnapzyMockTrafficLights: View {
   var size: CGFloat = 10
