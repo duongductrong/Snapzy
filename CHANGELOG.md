@@ -4,6 +4,28 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.7] - 2026-11-22
+
+### Features
+- Enhance zoom functionality and toolbar performance with new zoom display model (99bdde2f)
+- Added image adjustments and filter presets in Annotate (#793) (620bdbac)
+- add Stamp tool with sticker badges, emoji and image stamps (#794) (71558237)
+- improve magnifier UX with drag-to-call-out, callout cone and quick zoom (635f69b2)
+- add Magnifier (loupe) annotation tool (#795) (4a6b7907)
+- add imgbb as a cloud upload provider (#791) (dd22293f)
+- Export screenshots as HEIC and AVIF (#792) (b8c47731)
+- Auto-redact faces and people with on-device Vision (#790) (1d6fe506)
+- Collapse Quick Access cards to the screen edge (#591) (#782) (1bc88796)
+- fly pins out of and back into where they came from (#781) (550e7a19)
+
+### Bug Fixes
+- stop pin window crashing on update constraints loop during flight (76dbe423)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @williamcachamwri
+
 ## [2.3.0-beta.6] - 2026-11-21
 
 ### Bug Fixes
