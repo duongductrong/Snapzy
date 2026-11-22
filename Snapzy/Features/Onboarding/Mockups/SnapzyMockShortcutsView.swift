@@ -10,6 +10,7 @@ import SwiftUI
 
 struct SnapzyMockShortcutsView: View {
   @ObservedObject var state: SnapzyOnboardingState
+  var showMenuBar: Bool = true
   @State private var screenFlashOpacity: Double = 0
   @State private var triggeredMode: String? = nil
   @State private var hoveredMode: String? = nil
@@ -49,7 +50,9 @@ struct SnapzyMockShortcutsView: View {
       .padding(.top, SnapzyMockMenuBar.barHeight + 6)
 
       // 3. macOS Menu Bar & Camera Notch
-      SnapzyMockMenuBar(app: .settings).equatable()
+      if showMenuBar {
+        SnapzyMockMenuBar(app: .settings).equatable()
+      }
 
       // 4. Camera Shutter Flash Effect
       Color.white

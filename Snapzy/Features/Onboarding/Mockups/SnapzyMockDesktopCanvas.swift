@@ -251,14 +251,19 @@ struct SnapzyMockMenuBar: View, Equatable {
         .font(.system(size: 11.5, weight: .semibold))
         .offset(y: -0.5)
 
-      Text(app.menuTitle)
-        .font(.system(size: 10.5, weight: .bold))
-        .tracking(-0.1)
+      HStack(spacing: 11) {
+        Text(app.menuTitle)
+          .font(.system(size: 10.5, weight: .bold))
+          .tracking(-0.1)
 
-      ForEach(app.menus, id: \.self) { menu in
-        Text(menu)
-          .tracking(-0.08)
+        ForEach(app.menus, id: \.self) { menu in
+          Text(menu)
+            .tracking(-0.08)
+        }
       }
+      .id(app)
+      .transition(.opacity.combined(with: .offset(y: 2)))
+      .animation(.timingCurve(0.20, 0.0, 0.12, 1.0, duration: 0.34), value: app)
     }
     .font(.system(size: 10.5, weight: .medium))
     .foregroundStyle(SnapzyMockPalette.ink.opacity(0.90))

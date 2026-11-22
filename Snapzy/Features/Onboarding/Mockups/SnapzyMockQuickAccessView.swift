@@ -15,6 +15,7 @@ import SwiftUI
 
 struct SnapzyMockQuickAccessView: View {
   @ObservedObject var state: SnapzyOnboardingState
+  var showMenuBar: Bool = true
   @State private var feedbackMessage: String? = nil
 
   // Framed area sizing
@@ -30,7 +31,9 @@ struct SnapzyMockQuickAccessView: View {
       desktopContent
 
       // 3. macOS Menu Bar & Camera Notch
-      SnapzyMockMenuBar(app: .finder).equatable()
+      if showMenuBar {
+        SnapzyMockMenuBar(app: .finder).equatable()
+      }
 
       // 4. Dimmed Fullscreen Overlay (covers 100% of demo screen in prerecord and recording stages)
       if state.step2Stage == .prerecordArea || state.step2Stage == .recordingActive {

@@ -10,6 +10,7 @@ import SwiftUI
 
 struct SnapzyMockAreaCaptureView: View {
   @ObservedObject var state: SnapzyOnboardingState
+  var showMenuBar: Bool = true
 
   @State private var feedbackToast: String?
   @State private var selectionProgress: CGFloat = 0
@@ -28,7 +29,9 @@ struct SnapzyMockAreaCaptureView: View {
         .padding(.top, SnapzyMockScene.windowTopInset)
         .padding(.horizontal, SnapzyMockScene.windowInset)
 
-      SnapzyMockMenuBar(app: .notes).equatable()
+      if showMenuBar {
+        SnapzyMockMenuBar(app: .notes).equatable()
+      }
 
       if state.step1Stage == .selectingArea {
         Color.black.opacity(0.34)

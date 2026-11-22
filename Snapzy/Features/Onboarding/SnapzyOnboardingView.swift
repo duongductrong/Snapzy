@@ -114,25 +114,33 @@ struct SnapzyOnboardingView: View {
 
   // MARK: - Content
 
-  @ViewBuilder
   private var content: some View {
-    if isShowingCompletion {
-      SnapzyOnboardingCompletionCard(
-        externalLaunchTrigger: completionLaunchTrigger,
-        onBeginLaunch: { isLaunchingFinale = true },
-        onFinish: { iconFrame in
-          finish(launchIconWindowFrame: iconFrame)
-        },
-        onBack: retreat
-      )
-      .transition(.opacity.combined(with: .scale(scale: 0.98)))
-    } else if state.currentStep.usesWideLayout {
-      SnapzyOnboardingPermissionsView(state: state)
-        .transition(stepTransition)
-    } else {
-      stepColumns
-        .transition(stepTransition)
+    ZStack(alignment: .top) {
+      if isShowingCompletion {
+        SnapzyOnboardingCompletionCard(
+          externalLaunchTrigger: completionLaunchTrigger,
+          onBeginLaunch: { isLaunchingFinale = true },
+          onFinish: { iconFrame in
+            finish(launchIconWindowFrame: iconFrame)
+          },
+          onBack: retreat
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+        .zIndex(2)
+      } else if state.currentStep.usesWideLayout {
+        SnapzyOnboardingPermissionsView(state: state)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+          .transition(stepTransition)
+          .zIndex(1)
+      } else {
+        stepColumns
+          .compositingGroup()
+          .transition(stepTransition)
+          .zIndex(0)
+      }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
   }
 
   /// Steps tell which way they moved: the new page arrives from the side the target step lives
