@@ -6,6 +6,40 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 2.3.0-beta.7</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>240</sparkle:version>
+      <sparkle:shortVersionString>2.3.0-beta.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 22 Nov 2026 10:11:13 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Enhance zoom functionality and toolbar performance with new zoom display model (99bdde2f)</li><li>Added image adjustments and filter presets in Annotate (620bdbac)</li><li>add Stamp tool with sticker badges, emoji and image stamps (71558237)</li><li>improve magnifier UX with drag-to-call-out, callout cone and quick zoom (635f69b2)</li><li>add Magnifier (loupe) annotation tool (4a6b7907)</li><li>add imgbb as a cloud upload provider (dd22293f)</li><li>Export screenshots as HEIC and AVIF (b8c47731)</li><li>Auto-redact faces and people with on-device Vision (1d6fe506)</li><li>Collapse Quick Access cards to the screen edge (1bc88796)</li><li>fly pins out of and back into where they came from (550e7a19)</li></ul><h3>🐛 Bug Fixes</h3><ul><li>stop pin window crashing on update constraints loop during flight (76dbe423)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v2.3.0-beta.7/Snapzy-v2.3.0-beta.7.dmg"
+        sparkle:edSignature="iKH9s2D/vwshoWuHl0elxzDEcBUmlvE2KR2dcaQgcW/7PO+m1aafWyKxVqyYnKTE3TkLuofkeQ1ja7LV5wKPDw=="
+        length="57613391"
+        type="application/octet-stream"/>
+    </item>
+    <item>
+      <title>Version 2.3.0-beta.6</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>239</sparkle:version>
+      <sparkle:shortVersionString>2.3.0-beta.6</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 21 Nov 2026 12:02:12 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>🐛 Bug Fixes</h3><ul><li>re-check app identity when a capture is blocked by it (2ee3e982)</li><li>stop re-checking app identity before every capture (876f8b13)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v2.3.0-beta.6/Snapzy-v2.3.0-beta.6.dmg"
+        sparkle:edSignature="lLP0eSUjrdxqpAwL8LtMsqNtl7FkckBEMYNQUCYJHiHQF++lrs9ZWRSWjMOx/rONspI2vdY+KMd8WZEPacMBDA=="
+        length="56931266"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 2.3.0-beta.5</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>238</sparkle:version>

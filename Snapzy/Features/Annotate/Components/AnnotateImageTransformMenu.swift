@@ -82,7 +82,10 @@ struct AnnotateImageTransformMenuItems: View {
 /// re-rendered by AppKit (thinner, dimmer glyph, no hover glass) and drops shortcut hints,
 /// so the toolbar slot uses a native menu instead to match its neighbours exactly.
 struct AnnotateImageTransformToolbarButton: View {
-  @ObservedObject var state: AnnotateState
+  /// Not observed: the toolbar passes `isEnabled` from its snapshot so this button does not
+  /// re-render on every `AnnotateState` publish.
+  let state: AnnotateState
+  let isEnabled: Bool
   @State private var anchor = MenuAnchor()
   @State private var isMenuOpen = false
 
@@ -96,7 +99,7 @@ struct AnnotateImageTransformToolbarButton: View {
       presentMenu()
     }
     .background(MenuAnchorView(anchor: anchor))
-    .disabled(!state.canRotateImage)
+    .disabled(!isEnabled)
   }
 
   private func presentMenu() {

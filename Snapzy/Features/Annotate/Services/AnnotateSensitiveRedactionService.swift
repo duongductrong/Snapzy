@@ -19,6 +19,21 @@ enum AnnotateSensitiveDataKind: String, CaseIterable, Sendable {
   case paymentCardholderName
   case credential
   case accessToken
+  case face
+  case person
+}
+
+/// What the Vision-based (non-text) auto-redaction looks for.
+enum AnnotateVisualRedactionTarget: String, CaseIterable, Sendable {
+  case faces
+  case people
+
+  var regionKind: AnnotateSensitiveDataKind {
+    switch self {
+    case .faces: return .face
+    case .people: return .person
+    }
+  }
 }
 
 struct AnnotateSensitiveTextMatch: Equatable, Sendable {
@@ -50,6 +65,7 @@ struct AnnotateSensitiveOCRLine: Equatable, Sendable {
 enum AnnotateSensitiveRedactionError: LocalizedError {
   case imageUnavailable
   case textRecognitionFailed
+  case visualDetectionFailed
 
   var errorDescription: String? {
     switch self {
@@ -57,6 +73,8 @@ enum AnnotateSensitiveRedactionError: LocalizedError {
       return "Unable to load image data for sensitive-data detection."
     case .textRecognitionFailed:
       return "Unable to recognize text for sensitive-data detection."
+    case .visualDetectionFailed:
+      return "Unable to detect faces or people in this image."
     }
   }
 }
@@ -347,6 +365,102 @@ final class AnnotateSensitiveRedactionService {
         }
       }
     }
+  }
+
+  /// Detects faces or people with on-device Vision and returns padded regions in
+  /// annotate image space (bottom-left origin). No image data leaves the device.
+  func detectVisualRegions(
+    in image: NSImage,
+    target: AnnotateVisualRedactionTarget
+  ) async throws -> AnnotateSensitiveRedactionResult {
+    guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+      throw AnnotateSensitiveRedactionError.imageUnavailable
+    }
+
+    let imageSize = image.size.width > 0 && image.size.height > 0
+      ? image.size
+      : CGSize(width: cgImage.width, height: cgImage.height)
+
+    return try await withCheckedThrowingContinuation { continuation in
+      DispatchQueue.global(qos: .userInitiated).async {
+        let request: VNImageBasedRequest
+        switch target {
+        case .faces:
+          request = VNDetectFaceRectanglesRequest()
+        case .people:
+          let humanRequest = VNDetectHumanRectanglesRequest()
+          // macOS 12+: full-body boxes. Earlier systems only report upper bodies.
+          if #available(macOS 12.0, *) {
+            humanRequest.upperBodyOnly = false
+          }
+          request = humanRequest
+        }
+
+        do {
+          try VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
+        } catch {
+          continuation.resume(throwing: error)
+          return
+        }
+
+        guard let observations = request.results as? [VNDetectedObjectObservation] else {
+          continuation.resume(throwing: AnnotateSensitiveRedactionError.visualDetectionFailed)
+          return
+        }
+
+        let regions = Self.visualRegions(
+          fromVisionBoundingBoxes: observations.map { ($0.boundingBox, $0.confidence) },
+          target: target,
+          imageSize: imageSize
+        )
+        continuation.resume(returning: AnnotateSensitiveRedactionResult(regions: regions))
+      }
+    }
+  }
+
+  /// Normalized Vision boxes → padded, clamped annotate-space regions (bottom-left origin),
+  /// ordered top-to-bottom then left-to-right. Faces get extra room above the box because
+  /// Vision's face rectangle stops at the brow line and leaves out forehead and hair.
+  static func visualRegions(
+    fromVisionBoundingBoxes boxes: [(boundingBox: CGRect, confidence: Float)],
+    target: AnnotateVisualRedactionTarget,
+    imageSize: CGSize
+  ) -> [AnnotateSensitiveRedactionRegion] {
+    guard imageSize.width > 0, imageSize.height > 0 else { return [] }
+    let imageBounds = CGRect(origin: .zero, size: imageSize)
+
+    return boxes
+      .compactMap { box -> AnnotateSensitiveRedactionRegion? in
+        let rect = VisionImageGeometry.annotateRect(fromVisionBoundingBox: box.boundingBox, imageSize: imageSize)
+        guard rect.width >= 2, rect.height >= 2 else { return nil }
+
+        let padded: CGRect
+        switch target {
+        case .faces:
+          let horizontal = rect.width * 0.2
+          let above = rect.height * 0.45
+          let below = rect.height * 0.15
+          // Annotate space is bottom-left: "above" grows maxY.
+          padded = CGRect(
+            x: rect.minX - horizontal,
+            y: rect.minY - below,
+            width: rect.width + horizontal * 2,
+            height: rect.height + above + below
+          )
+        case .people:
+          padded = rect.insetBy(dx: -max(4, rect.width * 0.06), dy: -max(4, rect.height * 0.04))
+        }
+
+        let clamped = padded.standardized.intersection(imageBounds).standardized
+        guard !clamped.isNull, clamped.width >= 2, clamped.height >= 2 else { return nil }
+        return AnnotateSensitiveRedactionRegion(kind: target.regionKind, bounds: clamped, confidence: box.confidence)
+      }
+      .sorted {
+        if abs($0.bounds.maxY - $1.bounds.maxY) > 0.5 {
+          return $0.bounds.maxY > $1.bounds.maxY
+        }
+        return $0.bounds.minX < $1.bounds.minX
+      }
   }
 
   /// Top-left image rect (y grows downward), used for the internal analysis only.

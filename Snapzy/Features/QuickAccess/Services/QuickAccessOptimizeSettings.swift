@@ -16,8 +16,23 @@ nonisolated enum QuickAccessOptimizeFormat: String, Codable, CaseIterable, Ident
   case png
   case jpeg
   case webp
+  case heic
+  case avif
 
   var id: String { rawValue }
+
+  /// Formats this Mac can write; AVIF needs a macOS release with an ImageIO AVIF encoder.
+  static var availableCases: [QuickAccessOptimizeFormat] {
+    allCases.filter(\.isEncoderAvailable)
+  }
+
+  var isEncoderAvailable: Bool {
+    switch self {
+    case .original, .png, .jpeg, .webp: true
+    case .heic: ImageEncoderSupport.canEncodeHEIC
+    case .avif: ImageEncoderSupport.canEncodeAVIF
+    }
+  }
 
   /// Extension written for this format, given the file's current one.
   func fileExtension(forOriginal originalExtension: String) -> String {
@@ -28,14 +43,25 @@ nonisolated enum QuickAccessOptimizeFormat: String, Codable, CaseIterable, Ident
       // Keep "jpeg" when the original already used it, so nothing gets renamed.
       originalExtension.lowercased() == "jpeg" ? "jpeg" : "jpg"
     case .webp: "webp"
+    case .heic:
+      originalExtension.lowercased() == "heif" ? "heif" : "heic"
+    case .avif: "avif"
     }
   }
 
   static func isLossy(fileExtension: String) -> Bool {
-    ["jpg", "jpeg", "webp"].contains(fileExtension.lowercased())
+    ImageEncoderSupport.isLossy(fileExtension: fileExtension)
   }
 
-  /// "PNG", "JPEG", "WebP"; `.original` shows the file's own format.
+  /// Fixed lossy formats; `.original` depends on the file, so it is `false` here.
+  var isLossy: Bool {
+    switch self {
+    case .jpeg, .webp, .heic, .avif: true
+    case .original, .png: false
+    }
+  }
+
+  /// "PNG", "JPEG", "WebP", "HEIC", "AVIF"; `.original` shows the file's own format.
   func displayName(originalExtension: String?) -> String {
     switch self {
     case .original:
@@ -44,6 +70,8 @@ nonisolated enum QuickAccessOptimizeFormat: String, Codable, CaseIterable, Ident
     case .png: return "PNG"
     case .jpeg: return "JPEG"
     case .webp: return "WebP"
+    case .heic: return "HEIC"
+    case .avif: return "AVIF"
     }
   }
 
@@ -52,6 +80,8 @@ nonisolated enum QuickAccessOptimizeFormat: String, Codable, CaseIterable, Ident
     case "png": "PNG"
     case "jpg", "jpeg": "JPEG"
     case "webp": "WebP"
+    case "heic", "heif": "HEIC"
+    case "avif": "AVIF"
     default: fileExtension.uppercased()
     }
   }
@@ -86,6 +116,8 @@ nonisolated struct QuickAccessOptimizeSettings: Codable, Equatable, Hashable, Se
   }
 
   /// Values outside the editor's ranges (e.g. from a hand-edited defaults file) are clamped.
+  /// The format is kept even when this Mac cannot encode it, so a synced AVIF preset
+  /// survives edits on an older macOS; `render` falls back to PNG instead.
   var clamped: QuickAccessOptimizeSettings {
     QuickAccessOptimizeSettings(
       scalePercent: min(max(scalePercent, Self.scaleRange.lowerBound), Self.scaleRange.upperBound),
@@ -104,7 +136,7 @@ nonisolated struct QuickAccessOptimizeSettings: Codable, Equatable, Hashable, Se
     var parts = ["\(settings.scalePercent)%"]
     let formatName = settings.format.displayName(originalExtension: originalExtension)
     let outputExtension = originalExtension.map { settings.format.fileExtension(forOriginal: $0) }
-    let showsQuality = settings.format == .jpeg || settings.format == .webp
+    let showsQuality = settings.format.isLossy
       || (outputExtension.map(QuickAccessOptimizeFormat.isLossy(fileExtension:)) ?? false)
     parts.append(showsQuality ? "\(formatName) \(settings.qualityPercent)" : formatName)
     if let maxFileSize = settings.maxFileSize {
@@ -158,7 +190,11 @@ nonisolated extension QuickAccessImageOptimizer {
     originalExtension: String,
     isCancelled: () -> Bool = { false }
   ) -> QuickAccessOptimizeRendering? {
-    let settings = settings.clamped
+    var settings = settings.clamped
+    if !settings.format.isEncoderAvailable {
+      // An AVIF preset on a macOS without the AVIF encoder.
+      settings.format = .png
+    }
     let fileExtension = settings.format.fileExtension(forOriginal: originalExtension)
     let isLossy = QuickAccessOptimizeFormat.isLossy(fileExtension: fileExtension)
     let longEdge = CGFloat(max(source.pixelWidth, source.pixelHeight))
@@ -242,6 +278,6 @@ nonisolated extension QuickAccessImageOptimizer {
   }
 
   static func supportsAlpha(fileExtension: String) -> Bool {
-    !["jpg", "jpeg"].contains(fileExtension.lowercased())
+    ImageEncoderSupport.supportsAlpha(fileExtension: fileExtension)
   }
 }

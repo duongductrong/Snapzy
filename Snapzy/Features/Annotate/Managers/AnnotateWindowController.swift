@@ -93,6 +93,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
         autoAppliedCropRect: sessionData.cutoutAutoAppliedCropRect
       )
       self.state.restoreCropBaselineFootprints(sessionData.cropBaselineFootprints)
+      self.state.restoreImageAdjustments(sessionData.imageAdjustments)
       if let combineSession = sessionData.combineSession {
         self.state.restoreCombineSession(combineSession)
       }
@@ -205,6 +206,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
         autoAppliedCropRect: sessionData.cutoutAutoAppliedCropRect
       )
       self.state.restoreCropBaselineFootprints(sessionData.cropBaselineFootprints)
+      self.state.restoreImageAdjustments(sessionData.imageAdjustments)
       if let combineSession = sessionData.combineSession {
         self.state.restoreCombineSession(combineSession)
       }
@@ -421,6 +423,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     NSPasteboard.PasteboardType(UTType.gif.identifier),
     NSPasteboard.PasteboardType(UTType.bmp.identifier),
     NSPasteboard.PasteboardType(UTType.heic.identifier),
+    NSPasteboard.PasteboardType(UTType.snapzyAVIF.identifier),
     NSPasteboard.PasteboardType(UTType.webP.identifier),
   ]
 
@@ -984,7 +987,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     let panel = NSOpenPanel()
     panel.title = L10n.Combine.pickerTitle
     panel.prompt = L10n.Combine.pickerConfirm
-    panel.allowedContentTypes = [.png, .jpeg, .webP, .gif, .tiff, .heic]
+    panel.allowedContentTypes = [.png, .jpeg, .webP, .gif, .tiff, .heic, .snapzyAVIF]
     panel.allowsMultipleSelection = true
     panel.canChooseDirectories = false
     panel.beginSheetModal(for: window) { [weak self] response in
@@ -1097,7 +1100,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     guard state.hasImage else { return }
 
     let panel = NSSavePanel()
-    panel.allowedContentTypes = [.png, .jpeg, .webP]
+    panel.allowedContentTypes = ImageFormatOption.savePanelContentTypes
     panel.nameFieldStringValue = generateFileName()
     panel.canCreateDirectories = true
 

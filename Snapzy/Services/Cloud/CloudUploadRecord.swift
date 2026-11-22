@@ -20,6 +20,8 @@ struct CloudUploadRecord: Identifiable, Codable, Equatable, FetchableRecord, Per
   let expireTime: CloudExpireTime
   /// MIME type of the uploaded file (e.g. "image/png"). Optional for backward compatibility.
   let contentType: String?
+  /// Web page that deletes the upload (imgbb). Nil for providers deleted through their API.
+  var deleteURL: URL? = nil
 
   /// Human-readable file size
   var formattedFileSize: String {
@@ -47,7 +49,7 @@ struct CloudUploadRecord: Identifiable, Codable, Equatable, FetchableRecord, Per
     }
     // Fallback: infer from file extension
     let ext = (fileName as NSString).pathExtension.lowercased()
-    return ["png", "jpg", "jpeg", "webp", "gif", "tiff", "tif", "bmp"].contains(ext)
+    return ["png", "jpg", "jpeg", "webp", "heic", "heif", "avif", "gif", "tiff", "tif", "bmp"].contains(ext)
   }
 
   /// Local thumbnail URL in App Support, if the thumbnail file exists

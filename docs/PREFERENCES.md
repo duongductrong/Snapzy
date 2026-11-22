@@ -1,6 +1,6 @@
 # Preferences
 
-Reference for the Settings window: tab structure, every section, and how preferences are stored. Verified against `Snapzy/Features/Preferences/` at HEAD (`v2.3.0-beta.5`).
+Reference for the Settings window: tab structure, every section, and how preferences are stored. Verified against `Snapzy/Features/Preferences/` at HEAD (`v2.3.0-beta.7`).
 
 ## Root
 
@@ -49,7 +49,7 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
   - Output Naming: screenshot/recording file-name templates (`screenshot.fileNameTemplate`, `recording.fileNameTemplate`) with token list + live preview + reset.
   - After Capture: action matrix (see below) + Auto-Crop Subject (`backgroundCutout.autoCropEnabled`).
 - **Screenshot pane**:
-  - Format: Show Cursor (`screenshot.showCursor`), Freeze Area (`screenshot.freezeArea`), Hover Passthrough (`screenshot.livePassthrough`, requires Accessibility), Image Format (`screenshot.format`, `ImageFormatOption`; WebP shows a warning, JPEG a cutout note), Clipboard Content (`clipboard.imageContent`, `ClipboardImageContentOption`: Image and file (default) / Image only).
+  - Format: Show Cursor (`screenshot.showCursor`), Freeze Area (`screenshot.freezeArea`), Hover Passthrough (`screenshot.livePassthrough`, requires Accessibility), Image Format (`screenshot.format`, `ImageFormatOption`: PNG / JPEG / WebP / HEIC / AVIF; WebP shows a warning, JPEG a cutout note; a format this Mac cannot encode, usually AVIF on older macOS, is listed as "not supported on this Mac" and disabled, and a stored unsupported value shows a note that captures save as PNG), Clipboard Content (`clipboard.imageContent`, `ClipboardImageContentOption`: Image and file (default) / Image only).
   - Preset: default annotate canvas preset (`PreferencesScreenshotDefaultPresetPicker`).
   - Scrolling Capture: Show Session Hints (`scrollingCapture.showHints`) + info note.
 - **Recording pane**:
@@ -91,7 +91,7 @@ Sidebar tab after Annotate (deep link `snapzy://settings/ai`, aliases `ask`, `as
 - **Pinned Image**: clickable tiles — selecting `Resize window with image` (default `fixedViewport` alternative `windowFollowsImage`) directly on the animated side-by-side preview applies the mode to pinned windows; key `quickAccess.pin.zoom.mode`.
 - **Position**: screen edge left/right (`floatingScreenshot.position`).
 - **Appearance**: overlay size slider 0.75–1.5 (`floatingScreenshot.overlayScale`).
-- **Behaviors**: floating overlay enable (`floatingScreenshot.enabled`), Auto-Close toggle + 3–30 s slider (default 10, `floatingScreenshot.autoDismiss*`) + Pause on Hover, Hide Card When Window Open (`quickAccess.hideCardWhenWindowOpen`), Animation Style (`quickAccess.animationStyle`), Sound Effects (`quickAccess.playSounds`), Drag & Drop (`floatingScreenshot.dragDropEnabled`), Open in Finder After Saving (`quickAccess.openInFinderAfterSave`), Two-Finger Swipe to Dismiss + sensitivity 0.5–3.0 (`floatingScreenshot.twoFingerSwipe*`).
+- **Behaviors**: floating overlay enable (`floatingScreenshot.enabled`), Auto-Close toggle + 3–30 s slider (default 10, `floatingScreenshot.autoDismiss*`) + Pause on Hover, Hide Card When Window Open (`quickAccess.hideCardWhenWindowOpen`), Animation Style (`quickAccess.animationStyle`), Sound Effects (`quickAccess.playSounds`), Drag & Drop (`floatingScreenshot.dragDropEnabled`), Open in Finder After Saving (`quickAccess.openInFinderAfterSave`), Two-Finger Swipe to Dismiss + sensitivity 0.5–3.0 (`floatingScreenshot.twoFingerSwipe*`), Swipe Toward Edge to Collapse (`quickAccess.swipeTowardEdgeCollapses`, default off; see [QUICK_ACCESS.md](QUICK_ACCESS.md#collapse-to-edge-591)).
 - **Trackpad Swipe Mode**: mode picker (`quickAccess.trackpad.swipe.mode`) + swipe-action hints; visible when swipe-to-dismiss is on.
 
 ### History (`PreferencesHistorySettingsView.swift`)

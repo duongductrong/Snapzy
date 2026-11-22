@@ -13,8 +13,10 @@ struct QuickAccessStackView: View {
   @Environment(\.accessibilityReduceMotion) var reduceMotion
 
   var body: some View {
-    let visibleItems = manager.items.filter { !(manager.hideCardWhenWindowOpen && $0.isWindowOpen) }
-    
+    let visibleItems = manager.items.filter {
+      $0.isShownInPanel(hideCardWhenWindowOpen: manager.hideCardWhenWindowOpen)
+    }
+
     VStack(spacing: QuickAccessLayout.cardSpacing) {
       Spacer(minLength: 0)
       ForEach(visibleItems) { item in

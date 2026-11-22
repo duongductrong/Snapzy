@@ -23,6 +23,8 @@ nonisolated enum HeadlessCapturePostProcessor {
     case png
     case jpeg(quality: Double)
     case webp
+    case heic(quality: Double)
+    case avif(quality: Double)
   }
 
   /// Applies `maxDimension` and returns the final file's info. WebP carries
@@ -91,15 +93,25 @@ nonisolated enum HeadlessCapturePostProcessor {
       guard WebPEncoderService.write(image, to: temporary) else {
         throw HeadlessCaptureError.captureFailed("Could not encode the downscaled WebP")
       }
-    case .png, .jpeg:
-      let type: UTType = format == .png ? .png : .jpeg
+    case .png, .jpeg, .heic, .avif:
+      let typeIdentifier: String
       let dpi = scale * 72
       var properties: [CFString: Any] = [kCGImagePropertyDPIWidth: dpi, kCGImagePropertyDPIHeight: dpi]
-      if case .jpeg(let quality) = format {
+      switch format {
+      case .jpeg(let quality):
+        typeIdentifier = ImageEncoderSupport.jpegType
         properties[kCGImageDestinationLossyCompressionQuality] = quality
+      case .heic(let quality):
+        typeIdentifier = ImageEncoderSupport.heicType
+        properties[kCGImageDestinationLossyCompressionQuality] = quality
+      case .avif(let quality):
+        typeIdentifier = ImageEncoderSupport.avifType
+        properties[kCGImageDestinationLossyCompressionQuality] = quality
+      case .png, .webp:
+        typeIdentifier = ImageEncoderSupport.pngType
       }
       guard
-        let destination = CGImageDestinationCreateWithURL(temporary as CFURL, type.identifier as CFString, 1, nil)
+        let destination = CGImageDestinationCreateWithURL(temporary as CFURL, typeIdentifier as CFString, 1, nil)
       else {
         throw HeadlessCaptureError.captureFailed("Could not create the downscaled image")
       }

@@ -25,6 +25,9 @@ struct QuickAccessCardView: View {
   @State private var isDragging = false
   @State private var isSwiping = false
   @State private var isDismissing = false
+  @State private var isCollapsing = false
+  /// 0...1 progress of a live two-finger move down toward the edge (#591).
+  @State private var collapseSwipeProgress: CGFloat = 0
   @State private var swipeOffset: CGFloat = 0
   @State private var isCloudUploading = false
   @State private var cloudUploadProgress: Double = 0
@@ -73,33 +76,28 @@ struct QuickAccessCardView: View {
 
       // Hover overlay with staggered buttons (hidden while swiping so it does not
       // visually fight the swipe gesture).
-      if isHovering && !isSwiping && canPerformCardActions && hasVisibleOverlayActions {
+      if isHovering && !isSwiping && collapseSwipeProgress == 0 && canPerformCardActions && hasVisibleOverlayActions {
         hoverOverlay
           .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95)))
       }
 
       // Corner buttons (only visible on hover, hidden during cloud upload and swipe).
-      if isHovering && !isSwiping && canPerformCardActions && !cornerOverlayActions.isEmpty {
+      if isHovering && !isSwiping && collapseSwipeProgress == 0 && canPerformCardActions && !cornerOverlayActions.isEmpty {
         cornerButtons
       }
     }
     .frame(width: scaledWidth, height: scaledHeight)
-    .clipShape(cardShape)
-    .contentShape(cardShape)
-    .background(
-      cardShape
-        .fill(Color.black.opacity(0.1))
-    )
-    // GPU-cached drop shadow (furthest back). Replaces per-frame SwiftUI `.shadow()`
-    // blur that lagged when many stacked cards recomposited during capture-area mode.
-    .background(QuickAccessCardShadowView(cornerRadius: cornerRadius))
-    .overlay(
-      cardShape
-        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+    .quickAccessCardSurface(cornerRadius: cornerRadius)
+    .scaleEffect(
+      reduceMotion ? 1 : QuickAccessCollapseSwipePolicy.cardScale(progress: collapseSwipeProgress),
+      anchor: manager.position.isLeftSide ? .leading : .trailing
     )
     .opacity(cardOpacity)
-    .offset(x: reduceMotion ? 0 : swipeOffset)
-    .rotationEffect(.degrees(reduceMotion ? 0 : Double(swipeOffset) * 0.03))
+    .offset(
+      x: reduceMotion ? 0 : swipeOffset + collapseSwipeDrift,
+      y: reduceMotion ? 0 : QuickAccessCollapseSwipePolicy.cardDrop(progress: collapseSwipeProgress)
+    )
+    .rotationEffect(.degrees(reduceMotion || isCollapseMotion ? 0 : Double(swipeOffset) * 0.03))
     .onHover { hovering in
       withAnimation(QuickAccessAnimations.hoverOverlay) {
         isHovering = hovering
@@ -140,6 +138,8 @@ struct QuickAccessCardView: View {
     }
     .onAppear {
       isDismissing = false
+      isCollapsing = false
+      collapseSwipeProgress = 0
       swipeOffset = 0
       isSwiping = false
       isDragging = false
@@ -147,7 +147,7 @@ struct QuickAccessCardView: View {
     }
     .onReceive(manager.$items) { updatedItems in
       guard let currentItem = updatedItems.first(where: { $0.id == item.id }) else { return }
-      if !currentItem.isWindowOpen && swipeOffset != 0 && !isSwiping && !isDismissing {
+      if !currentItem.isWindowOpen && swipeOffset != 0 && !isSwiping && !isDismissing && !isCollapsing {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
           swipeOffset = 0
         }
@@ -167,7 +167,17 @@ struct QuickAccessCardView: View {
     if isDismissing { return 0 }
 
     if reduceMotion { return 1.0 }
+    // Collapsing slides the card into the edge intact; it does not fade like a dismiss.
+    if isCollapseMotion { return 1.0 }
     return 1.0 - Double(abs(swipeOffset)) / 200.0
+  }
+
+  /// True while the card is (or is being swiped toward) collapsing into its edge.
+  private var isCollapseMotion: Bool {
+    if isCollapsing { return true }
+    guard swipeOffset != 0 else { return false }
+    if manager.swipeTowardEdgeCollapses && swipeOffset * dismissDirection > 0 { return true }
+    return swipeActionStore.action(for: swipeOffset > 0 ? .right : .left) == .collapseToEdge
   }
 
   private var captureType: CaptureType {
@@ -207,10 +217,6 @@ struct QuickAccessCardView: View {
 
   private var canPerformCardActions: Bool {
     item.processingState == .idle && !isCloudUploading
-  }
-
-  private var cardShape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
   }
 
   private var orderedEnabledActions: [QuickAccessActionKind] {
@@ -261,12 +267,7 @@ struct QuickAccessCardView: View {
       },
       onSwipeChanged: { translation in
         guard !reduceMotion else { return }
-        var finalTranslation = translation
-        if finalTranslation > 0 && swipeActionStore.action(for: .right) == nil {
-          finalTranslation = 0
-        } else if finalTranslation < 0 && swipeActionStore.action(for: .left) == nil {
-          finalTranslation = 0
-        }
+        let finalTranslation = swipeResolver.liveTranslation(translation)
 
         guard finalTranslation != 0 else {
           swipeOffset = 0
@@ -279,46 +280,77 @@ struct QuickAccessCardView: View {
       },
       onSwipeEnded: { translation, velocity in
         isSwiping = false
-        var finalTranslation = translation
-        var finalVelocity = velocity
-        if finalTranslation > 0 && swipeActionStore.action(for: .right) == nil {
-          finalTranslation = 0
-          finalVelocity = 0
-        } else if finalTranslation < 0 && swipeActionStore.action(for: .left) == nil {
-          finalTranslation = 0
-          finalVelocity = 0
-        }
-
-        handleSwipeEnded(translation: finalTranslation, velocity: finalVelocity)
+        handleSwipeEnded(translation: translation, velocity: velocity)
       },
       swipeSensitivity: CGFloat(manager.swipeSensitivity),
       dragOnly: false,
-      reservedScrollAxis: nil
+      reservedScrollAxis: nil,
+      onVerticalSwipe: collapseSwipeHandler
     )
   }
 
+  private var swipeResolver: QuickAccessSwipeResolver {
+    QuickAccessSwipeResolver(
+      leftAction: swipeActionStore.action(for: .left),
+      rightAction: swipeActionStore.action(for: .right),
+      hideCardWhenWindowOpen: manager.hideCardWhenWindowOpen,
+      collapsesTowardEdge: manager.swipeTowardEdgeCollapses,
+      edgeDirection: dismissDirection
+    )
+  }
+
+  // MARK: - Two-finger move down to collapse (#591)
+
+  private var collapseSwipeHandler: ((QuickAccessVerticalSwipeTracker.Update) -> Void)? {
+    guard actionConfiguration.isEnabled(.collapseToEdge), canPerformCardActions else { return nil }
+    return { update in handleCollapseSwipe(update) }
+  }
+
+  private var collapseSwipeDrift: CGFloat {
+    QuickAccessCollapseSwipePolicy.cardDrift(progress: collapseSwipeProgress, edgeDirection: dismissDirection)
+  }
+
+  /// The card follows the fingers down, shrinking toward its edge; releasing
+  /// past the threshold (or flicking) tucks it in, otherwise it springs back.
+  private func handleCollapseSwipe(_ update: QuickAccessVerticalSwipeTracker.Update) {
+    switch update {
+    case let .changed(distance):
+      guard !reduceMotion else { return }
+      // Live tracking: no animation, the card is glued to the fingers.
+      collapseSwipeProgress = QuickAccessCollapseSwipePolicy.collapseProgress(distance: distance)
+    case let .ended(distance, velocity):
+      if QuickAccessCollapseSwipePolicy.shouldCollapse(distance: distance, velocity: velocity) {
+        collapseToEdge()
+      } else {
+        withAnimation(QuickAccessEdgePeekView.motion) {
+          collapseSwipeProgress = 0
+        }
+      }
+    case .cancelled:
+      withAnimation(QuickAccessEdgePeekView.motion) {
+        collapseSwipeProgress = 0
+      }
+    }
+  }
+
   private func handleSwipeEnded(translation: CGFloat, velocity: CGFloat) {
-    let distanceThreshold = QuickAccessCardDragPolicy.dismissDistanceThreshold
-    let velocityThreshold = QuickAccessCardDragPolicy.dismissVelocityThreshold
+    let outcome = swipeResolver.resolveEnd(
+      translation: translation,
+      velocity: velocity,
+      isActionEnabled: isActionEnabled
+    )
 
-    guard abs(translation) > distanceThreshold || abs(velocity) > velocityThreshold else {
+    if outcome == .collapse {
+      collapseToEdge()
+      return
+    }
+
+    guard case let .perform(configuredAction, willHideCard) = outcome else {
       withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
         swipeOffset = 0
       }
       return
     }
-
-    let direction: QuickAccessSwipeDirection = translation > 0 ? .right : .left
-    guard let configuredAction = swipeActionStore.action(for: direction),
-          isActionEnabled(configuredAction) else {
-      withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-        swipeOffset = 0
-      }
-      return
-    }
-
-    let willHideCard = configuredAction == .dismiss || configuredAction == .delete ||
-      (manager.hideCardWhenWindowOpen && (configuredAction == .pinToScreen || configuredAction == .edit))
 
     if willHideCard {
       let offScreenOffset: CGFloat = translation > 0 ? scaledWidth + 200 : -(scaledWidth + 200)
@@ -358,6 +390,8 @@ struct QuickAccessCardView: View {
       return item.isPinned ? L10n.PreferencesQuickAccess.unpinAction : L10n.PreferencesQuickAccess.pinToScreenAction
     case .optimize:
       return L10n.PreferencesQuickAccess.optimizeAction
+    case .collapseToEdge:
+      return L10n.QuickAccess.collapseToEdge
     }
   }
 
@@ -382,6 +416,8 @@ struct QuickAccessCardView: View {
       return cloudActionIcon
     case .pinToScreen:
       return item.isPinned ? "pin.fill" : "pin"
+    case .collapseToEdge:
+      return manager.position.isLeftSide ? "arrow.left.to.line" : "arrow.right.to.line"
     default:
       return action.systemImage
     }
@@ -404,6 +440,8 @@ struct QuickAccessCardView: View {
       return true
     case .optimize:
       return QuickAccessOptimizeStore.shared.canOptimize(item)
+    case .collapseToEdge:
+      return true
     }
   }
 
@@ -417,7 +455,7 @@ struct QuickAccessCardView: View {
       // An open editor would write its own pixels back over the optimized file.
       let isEditorOpen = item.isWindowOpen && !item.isPinned
       return QuickAccessOptimizeStore.shared.canOptimize(item) && !isEditorOpen
-    case .copy, .saveOrOpen, .dismiss, .delete, .edit:
+    case .copy, .saveOrOpen, .dismiss, .delete, .edit, .collapseToEdge:
       return true
     }
   }
@@ -440,9 +478,11 @@ struct QuickAccessCardView: View {
       uploadToCloud()
     case .pinToScreen:
       guard !item.isVideo else { return }
-      manager.togglePin(id: item.id)
+      manager.togglePin(id: item.id, entranceFrom: cardAnchor.screenFrame)
     case .optimize:
       presentOptimizeMenu()
+    case .collapseToEdge:
+      collapseToEdge()
     }
   }
 
@@ -500,6 +540,18 @@ struct QuickAccessCardView: View {
     manager.deleteItem(id: item.id)
   }
 
+  /// Slide the card into its screen edge, where it continues as a peek strip.
+  private func collapseToEdge() {
+    isCollapsing = true
+    if !reduceMotion {
+      // Same spring as the peek, so a swipe flows straight into the edge.
+      withAnimation(QuickAccessEdgePeekView.motion) {
+        swipeOffset = dismissDirection * (scaledWidth + 200)
+      }
+    }
+    manager.collapseItem(id: item.id)
+  }
+
   // MARK: - Subviews
 
   private var thumbnailLayer: some View {
@@ -549,7 +601,7 @@ struct QuickAccessCardView: View {
       .padding(6)
       .contentShape(Circle())
       .onTapGesture {
-        manager.togglePin(id: item.id)
+        manager.togglePin(id: item.id, entranceFrom: cardAnchor.screenFrame)
       }
       .help(item.isPinned ? L10n.PreferencesQuickAccess.unpinAction : L10n.PreferencesQuickAccess.pinToScreenAction)
   }

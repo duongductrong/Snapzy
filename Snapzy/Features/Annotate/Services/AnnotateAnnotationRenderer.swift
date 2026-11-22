@@ -23,6 +23,12 @@ nonisolated struct AnnotationRenderer {
   var interactiveEmbeddedImageAnnotationId: UUID?
   var embeddedImageProvider: ((UUID) -> NSImage?)?
   var embeddedCGImageProvider: ((UUID) -> CGImage?)?
+  /// Where `sourceImage`'s bottom-left corner sits in this context. Export paths shift
+  /// annotations by the crop origin and padding; magnifiers use this to find source pixels.
+  var sourceImageOrigin: CGPoint
+  /// Blur/redact annotations in image space, baked into magnified pixels so a lens never
+  /// reveals what a blur hides. Empty for renderers that draw no magnifiers.
+  var magnifierBlurItems: [AnnotationItem]
 
   init(
     context: CGContext,
@@ -34,7 +40,9 @@ nonisolated struct AnnotationRenderer {
     interactiveBlurAnnotationIds: Set<UUID> = [],
     interactiveEmbeddedImageAnnotationId: UUID? = nil,
     embeddedImageProvider: ((UUID) -> NSImage?)? = nil,
-    embeddedCGImageProvider: ((UUID) -> CGImage?)? = nil
+    embeddedCGImageProvider: ((UUID) -> CGImage?)? = nil,
+    sourceImageOrigin: CGPoint = .zero,
+    magnifierBlurItems: [AnnotationItem] = []
   ) {
     self.context = context
     self.editingTextId = editingTextId
@@ -49,6 +57,8 @@ nonisolated struct AnnotationRenderer {
     self.interactiveEmbeddedImageAnnotationId = interactiveEmbeddedImageAnnotationId
     self.embeddedImageProvider = embeddedImageProvider
     self.embeddedCGImageProvider = embeddedCGImageProvider
+    self.sourceImageOrigin = sourceImageOrigin
+    self.magnifierBlurItems = magnifierBlurItems
   }
 
   func draw(_ annotation: AnnotationItem) {
@@ -139,8 +149,21 @@ nonisolated struct AnnotationRenderer {
     case .measurement:
       AnnotateMeasureRenderer.draw(annotation, color: strokeColor, in: context)
 
+    case .magnifier:
+      AnnotateMagnifierRenderer.draw(
+        annotation,
+        sourceImage: sourceImage,
+        sourceCGImage: sourceCGImage ?? sourceImage?.cgImage(forProposedRect: nil, context: nil, hints: nil),
+        sourceImageOrigin: sourceImageOrigin,
+        blurItems: magnifierBlurItems,
+        in: context
+      )
+
     case .translation(let block):
       drawTranslation(block, annotation: annotation)
+
+    case .stamp(let stamp):
+      AnnotateStampRenderer.draw(stamp, in: annotation.bounds, opacity: annotation.properties.opacity, context: context)
     }
   }
 

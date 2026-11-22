@@ -413,6 +413,36 @@ class AnnotateWindow: NSWindow {
     return false
   }
 
+  /// Trackpad scroll distance that steps a magnifier one zoom preset.
+  private static let magnifierScrollStep: CGFloat = 24
+  private var magnifierScrollAccumulator: CGFloat = 0
+
+  private func shouldZoomMagnifierForScrollEvent(_ event: NSEvent) -> Bool {
+    guard !event.modifierFlags.contains(.command),
+          !isTextInputActive,
+          let state = interactionState,
+          state.isPointerOverSelectedMagnifier else { return false }
+    return event.scrollingDeltaY != 0 || !event.momentumPhase.isEmpty
+  }
+
+  /// A mouse wheel notch is one zoom step; a trackpad steps every `magnifierScrollStep` points.
+  /// Momentum after the fingers lift is swallowed so the zoom stops where the user stopped.
+  private func handleMagnifierZoomScroll(_ event: NSEvent) {
+    guard let state = interactionState, event.momentumPhase.isEmpty else { return }
+    if event.phase == .began { magnifierScrollAccumulator = 0 }
+    guard event.hasPreciseScrollingDeltas else {
+      state.stepSelectedMagnifierZoom(up: event.scrollingDeltaY > 0)
+      return
+    }
+    magnifierScrollAccumulator += event.scrollingDeltaY
+    while abs(magnifierScrollAccumulator) >= Self.magnifierScrollStep {
+      let up = magnifierScrollAccumulator > 0
+      state.stepSelectedMagnifierZoom(up: up)
+      magnifierScrollAccumulator -= up ? Self.magnifierScrollStep : -Self.magnifierScrollStep
+    }
+    if event.phase == .ended || event.phase == .cancelled { magnifierScrollAccumulator = 0 }
+  }
+
   private func shouldPanForScrollEvent(_ event: NSEvent) -> Bool {
     guard !event.modifierFlags.contains(.command),
           !isTextInputActive,
@@ -512,6 +542,11 @@ class AnnotateWindow: NSWindow {
         userInfo: ["delta": delta]
       )
       return  // Consume event
+
+    case .scrollWheel where shouldZoomMagnifierForScrollEvent(event):
+      // Scroll over a selected magnifier changes its zoom instead of panning.
+      handleMagnifierZoomScroll(event)
+      return
 
     case .scrollWheel where shouldPanForScrollEvent(event):
       let delta = gesturePanDelta(for: event)

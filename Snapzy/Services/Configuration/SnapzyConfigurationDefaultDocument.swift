@@ -138,6 +138,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("overlay_scale", 1.0)
     writer.value("drag_drop", true)
     writer.value("two_finger_swipe_to_dismiss", true)
+    writer.value("swipe_toward_edge_collapses", false)
     writer.value("swipe_sensitivity", 1.0)
     writer.value("trackpad_swipe_mode", QuickAccessTrackpadSwipeMode.inverted.rawValue)
     writer.value("pin_zoom_mode", QuickAccessPinZoomMode.defaultMode.rawValue)

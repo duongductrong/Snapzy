@@ -29,6 +29,15 @@ private struct AnnotateBottomBarWidthPreferenceKey: PreferenceKey {
   }
 }
 
+/// Re-renders `content` when the zoom readout changes. The bottom bar observes `AnnotateState`,
+/// which no longer publishes fit-scale changes, so the zoom pill subscribes here instead.
+private struct AnnotateZoomDisplayObserver<Content: View>: View {
+  @ObservedObject var display: AnnotateZoomDisplayModel
+  @ViewBuilder let content: () -> Content
+
+  var body: some View { content() }
+}
+
 private extension View {
   func measuredBottomBarWidth(_ side: AnnotateBottomBarMeasuredSide) -> some View {
     background(
@@ -160,7 +169,7 @@ struct AnnotateBottomBarView: View {
 
   private var leftSection: some View {
     HStack(spacing: 10) {
-      zoomPicker
+      AnnotateZoomDisplayObserver(display: state.zoomDisplay) { zoomPicker }
       modeToggle
     }
   }

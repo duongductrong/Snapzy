@@ -3171,6 +3171,16 @@ nonisolated enum L10n {
       defaultValue: "Swipe horizontally on the preview to close it",
       comment: "Quick access preferences setting description"
     )
+    static let swipeTowardEdgeCollapsesTitle = string(
+      "preferences-quick-access.swipe-toward-edge-collapses-title",
+      defaultValue: "Swipe Toward Edge to Collapse",
+      comment: "Quick access preferences setting title"
+    )
+    static let swipeTowardEdgeCollapsesDescription = string(
+      "preferences-quick-access.swipe-toward-edge-collapses-description",
+      defaultValue: "Tuck the preview into the screen edge instead of running the swipe action for that side. Click the strip to bring it back.",
+      comment: "Quick access preferences setting description"
+    )
     static let swipeSensitivityTitle = string(
       "preferences-quick-access.swipe-sensitivity-title",
       defaultValue: "Swipe Sensitivity",
@@ -3718,6 +3728,22 @@ nonisolated enum L10n {
       defaultValue: "WebP encoding is slower than other formats. For faster capture speed, consider using PNG or JPEG.",
       comment: "Warning shown when WebP screenshot format is selected"
     )
+    static func imageFormatUnavailableOption(_ format: String) -> String {
+      L10n.format(
+        "preferences-capture.image-format-unavailable-option",
+        defaultValue: "%@ (not supported on this Mac)",
+        comment: "Screenshot format menu item for a format this macOS cannot encode. %@ is the format name, e.g. AVIF.",
+        format
+      )
+    }
+    static func imageFormatUnavailableNote(_ format: String) -> String {
+      L10n.format(
+        "preferences-capture.image-format-unavailable-note",
+        defaultValue: "This version of macOS can't encode %@ images. Snapzy saves screenshots as PNG until you choose another format.",
+        comment: "Warning shown when the saved screenshot format cannot be encoded on this macOS. %@ is the format name, e.g. AVIF.",
+        format
+      )
+    }
     static let jpegCutoutNote = string(
       "preferences-capture.jpeg-cutout-note",
       defaultValue: "Object cutout captures require transparency. Snapzy will save them as PNG even when JPEG is selected.",
@@ -5327,6 +5353,11 @@ nonisolated enum L10n {
       defaultValue: "Google Drive",
       comment: "Cloud provider display name"
     )
+    static let imgbb = string(
+      "cloud-provider.imgbb",
+      defaultValue: "imgbb",
+      comment: "Cloud provider display name for the imgbb image host"
+    )
   }
 
   enum CloudExpire {
@@ -5425,6 +5456,25 @@ nonisolated enum L10n {
       defaultValue: "Invalid response from cloud provider.",
       comment: "Error shown when the cloud provider response is invalid"
     )
+    static func unsupportedFileType(_ provider: String) -> String {
+      format(
+        "cloud-operation.unsupported-file-type",
+        defaultValue: "%@ only accepts images. Videos can't be uploaded there.",
+        comment: "Error shown when a video is uploaded to an image-only cloud provider. %@ is the provider name.",
+        provider
+      )
+    }
+
+    static func fileTooLarge(_ provider: String, limit: String) -> String {
+      format(
+        "cloud-operation.file-too-large",
+        defaultValue: "This file is too large for %1$@, which accepts files up to %2$@.",
+        comment: "Error shown when a file exceeds the provider size limit. %1$@ is the provider name. %2$@ is the size limit, e.g. 32 MB.",
+        provider,
+        limit
+      )
+    }
+
     static func keychainError(_ reason: String) -> String {
       format(
         "cloud-operation.keychain-error",
@@ -5727,6 +5777,41 @@ nonisolated enum L10n {
       "cloud-settings.google-setup-guide",
       defaultValue: "Bring your own credentials to protect privacy. Create a Desktop App OAuth Client ID in your Google Cloud Console.",
       comment: "Google Drive client setup guide text"
+    )
+    static let imgbbCredentialsSection = string(
+      "cloud-settings.imgbb-credentials-section",
+      defaultValue: "imgbb API Key",
+      comment: "Section title for the imgbb API key"
+    )
+    static let imgbbAPIKey = string(
+      "cloud-settings.imgbb-api-key",
+      defaultValue: "API Key",
+      comment: "Label for the imgbb API key field"
+    )
+    static let imgbbAPIKeyTooltip = string(
+      "cloud-settings.imgbb-api-key-tooltip",
+      defaultValue: "Your imgbb API key. Snapzy stores it only in the macOS Keychain.",
+      comment: "Tooltip for the imgbb API key field"
+    )
+    static let imgbbGetAPIKey = string(
+      "cloud-settings.imgbb-get-api-key",
+      defaultValue: "Get an API key",
+      comment: "Link that opens the imgbb API key page"
+    )
+    static let imgbbPublicWarning = string(
+      "cloud-settings.imgbb-public-warning",
+      defaultValue: "imgbb links are public. Anyone with the link can view the image, so don't upload anything private.",
+      comment: "Warning that images uploaded to imgbb are publicly accessible"
+    )
+    static let imgbbExpirationInfo = string(
+      "cloud-settings.imgbb-expiration-info",
+      defaultValue: "imgbb deletes each image after the selected period. Permanent keeps images until you delete them.",
+      comment: "Note about how imgbb expiration works"
+    )
+    static let imgbbDeleteInfo = string(
+      "cloud-settings.imgbb-delete-info",
+      defaultValue: "imgbb has no delete API. Deleting an upload in Snapzy opens its imgbb delete page in your browser. imgbb accepts images up to 32 MB, not videos.",
+      comment: "Note about deleting imgbb uploads and imgbb limits"
     )
     static let googleAuthSection = string(
       "cloud-settings.google-auth-section",
@@ -6412,6 +6497,54 @@ nonisolated enum L10n {
       defaultValue: "No image available to scan.",
       comment: "Toast shown when automatic sensitive-data redaction cannot run because no image is loaded"
     )
+    static let autoRedactFaces = string(
+      "annotate.auto-redact-faces",
+      defaultValue: "Auto Redact Faces",
+      comment: "Tooltip for blurring every face Vision detects in the image"
+    )
+    static let autoRedactPeople = string(
+      "annotate.auto-redact-people",
+      defaultValue: "Auto Redact People",
+      comment: "Tooltip for blurring every person Vision detects in the image"
+    )
+    static func autoRedact(_ target: AnnotateVisualRedactionTarget) -> String {
+      switch target {
+      case .faces: return autoRedactFaces
+      case .people: return autoRedactPeople
+      }
+    }
+    static func autoRedactionScanning(_ target: AnnotateVisualRedactionTarget) -> String {
+      switch target {
+      case .faces:
+        return string(
+          "annotate.auto-redaction-scanning-faces",
+          defaultValue: "Detecting faces...",
+          comment: "Toast shown while annotate detects faces locally for redaction"
+        )
+      case .people:
+        return string(
+          "annotate.auto-redaction-scanning-people",
+          defaultValue: "Detecting people...",
+          comment: "Toast shown while annotate detects people locally for redaction"
+        )
+      }
+    }
+    static func autoRedactionNoMatches(_ target: AnnotateVisualRedactionTarget) -> String {
+      switch target {
+      case .faces:
+        return string(
+          "annotate.auto-redaction-no-faces",
+          defaultValue: "No faces found.",
+          comment: "Toast shown when automatic face redaction finds no faces"
+        )
+      case .people:
+        return string(
+          "annotate.auto-redaction-no-people",
+          defaultValue: "No people found.",
+          comment: "Toast shown when automatic people redaction finds no people"
+        )
+      }
+    }
     static func autoRedactionComplete(_ count: Int) -> String {
       format(
         "annotate.auto-redaction-complete",
@@ -6535,6 +6668,41 @@ nonisolated enum L10n {
       "annotate.measure-unit.pixels",
       defaultValue: "Pixels",
       comment: "Measure unit option: image pixels"
+    )
+    static let magnifierGestureHint = string(
+      "annotate.magnifier-gesture-hint",
+      defaultValue: "Click to magnify in place · Drag around an area to call it out · Scroll or +/− to zoom",
+      comment: "Hint for the Magnifier tool: a click puts the lens over the spot; dragging a box around an area places a zoomed lens beside it; scroll wheel or + / - over a selected lens changes its zoom"
+    )
+    static let magnifierZoom = string(
+      "annotate.magnifier-zoom",
+      defaultValue: "Zoom",
+      comment: "Quick properties group title: how much the Magnifier lens enlarges"
+    )
+    static let magnifierShape = string(
+      "annotate.magnifier-shape",
+      defaultValue: "Shape",
+      comment: "Quick properties group title: shape of the Magnifier lens"
+    )
+    static let magnifierShapeCircle = string(
+      "annotate.magnifier-shape.circle",
+      defaultValue: "Circle",
+      comment: "Magnifier lens shape option"
+    )
+    static let magnifierShapeRoundedRect = string(
+      "annotate.magnifier-shape.rounded-rect",
+      defaultValue: "Rounded Rectangle",
+      comment: "Magnifier lens shape option"
+    )
+    static let magnifierShadow = string(
+      "annotate.magnifier-shadow",
+      defaultValue: "Shadow",
+      comment: "Magnifier toggle: draw a drop shadow under the lens"
+    )
+    static let magnifierConnector = string(
+      "annotate.magnifier-connector",
+      defaultValue: "Connector",
+      comment: "Magnifier toggle: outline the magnified area and connect it to the lens with a line"
     )
     static let counterGestureHint = string(
       "annotate.counter-gesture-hint",
@@ -9044,6 +9212,11 @@ nonisolated enum L10n {
       defaultValue: "Measure",
       comment: "Annotation tool display name: measures distances and sizes in the image"
     )
+    static let magnifierTool = string(
+      "annotate.tool.magnifier",
+      defaultValue: "Magnifier",
+      comment: "Annotation tool display name: a loupe that shows a zoomed-in copy of part of the image"
+    )
     static let watermarkTool = string(
       "annotate.tool.watermark",
       defaultValue: "Watermark",
@@ -9062,6 +9235,16 @@ nonisolated enum L10n {
   }
 
   enum QuickAccess {
+    static let collapseToEdge = string(
+      "quick-access.collapse-to-edge",
+      defaultValue: "Collapse to Edge",
+      comment: "Quick Access card context menu item that tucks the card into the screen edge"
+    )
+    static let restoreCollapsedCard = string(
+      "quick-access.restore-collapsed-card",
+      defaultValue: "Click to restore",
+      comment: "Tooltip on a collapsed Quick Access card peeking out of the screen edge"
+    )
     static let optimizeMenuTitle = string(
       "quick-access.optimize.title",
       defaultValue: "Optimize",

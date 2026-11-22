@@ -56,6 +56,10 @@ nonisolated enum VideoEditorVisionError: Error, Equatable {
 
 @MainActor
 final class VideoEditorAgentVision {
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   /// `@concurrent`: a nonsending async closure type stored as a value pulls in
   /// swift_getExtendedFunctionTypeMetadata (macOS 15+ only), which crashes Release builds on 13/14 (#725).
   typealias Recognizer = @concurrent @Sendable (CGImage) async throws -> [VideoEditorScreenText]

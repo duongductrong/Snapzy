@@ -449,11 +449,7 @@ enum ClipboardHelper {
 
   /// Read the user's preferred screenshot format from UserDefaults
   private static func currentFormat() -> ImageFormatOption {
-    if let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
-       let option = ImageFormatOption(rawValue: raw) {
-      return option
-    }
-    return .png
+    ImageFormatOption.current
   }
 
   // MARK: - Pasteboard reference tracking

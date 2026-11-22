@@ -37,6 +37,9 @@ private struct AnnotateSidebarSnapshot: Equatable {
   let isCombineMode: Bool
   let combineMode: CombineImagesMode
   let combineGap: CGFloat
+  let canAdjustImage: Bool
+  let imageAdjustments: ImageAdjustments
+  let imageFilterPresetThumbnailIDs: [ImageFilterPreset: ObjectIdentifier]
 
   init(state: AnnotateState) {
     editorMode = state.editorMode
@@ -59,6 +62,9 @@ private struct AnnotateSidebarSnapshot: Equatable {
     isCombineMode = state.isCombineMode
     combineMode = state.combineMode
     combineGap = state.combineGap
+    canAdjustImage = state.canAdjustImage
+    imageAdjustments = state.imageAdjustments
+    imageFilterPresetThumbnailIDs = state.imageFilterPresetThumbnails.mapValues(ObjectIdentifier.init)
   }
 }
 
@@ -67,6 +73,7 @@ struct AnnotateSidebarView: View, Equatable {
   let state: AnnotateState
   private let snapshot: AnnotateSidebarSnapshot
   @State private var isPresetDropdownPresented = false
+  @State private var selectedTab: AnnotateSidebarTab = .style
 
   init(state: AnnotateState) {
     self.state = state
@@ -78,53 +85,92 @@ struct AnnotateSidebarView: View, Equatable {
   }
 
   var body: some View {
-    ScrollView(.vertical, showsIndicators: true) {
-      VStack(alignment: .leading, spacing: Spacing.md) {
-        presetControlsSection
-
-        // Compact gradient section
-        gradientSection
-
-        // Wallpaper section
-        wallpaperSection
-
-        // Blurred background section
-        blurredSection
-
-        // Compact color section
-        colorSection
-
-        Divider().background(Color(nsColor: .separatorColor))
-
-        // Sliders section
-        slidersSection
-
-        // Ratio section
-        if !state.isCombineMode {
-          ratioSection
-        }
-
-        // Alignment section
-        if !state.isCombineMode {
-          alignmentSection
-        }
-
-        // Mockup section (shown when mockup mode is active)
-        if state.editorMode == .mockup {
-          Divider().background(Color(nsColor: .separatorColor))
-          MockupControlsSection(state: state)
-        }
-
-        if state.isCombineMode {
-          AnnotateCombineControlsView(state: state)
-        }
-
-        Spacer(minLength: Spacing.lg)
+    VStack(spacing: 0) {
+      if snapshot.canAdjustImage {
+        tabBar
+          .padding(.horizontal, Spacing.md)
+          .padding(.top, Spacing.md)
+          .padding(.bottom, Spacing.xs)
       }
-      .padding(Spacing.md)
+
+      ScrollView(.vertical, showsIndicators: true) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+          switch visibleTab {
+          case .style:
+            styleTabContent
+          case .adjust:
+            AnnotateImageAdjustmentsSection(
+              state: state,
+              adjustments: snapshot.imageAdjustments,
+              thumbnails: state.imageFilterPresetThumbnails
+            )
+          }
+
+          Spacer(minLength: Spacing.lg)
+        }
+        .padding(Spacing.md)
+      }
+      // Each tab keeps its own scroll position instead of inheriting the other's offset.
+      .id(visibleTab)
+
+      if visibleTab == .adjust {
+        AnnotateImageAdjustmentsResetBar(state: state, adjustments: snapshot.imageAdjustments)
+          .padding(.horizontal, Spacing.md)
+          .padding(.vertical, Spacing.sm)
+      }
     }
     .frame(maxHeight: .infinity)
-//    .background(Color(nsColor: .scrubberTexturedBackground))
+  }
+
+  /// Adjust is only offered when the image can be adjusted (not in combine layouts).
+  private var visibleTab: AnnotateSidebarTab {
+    snapshot.canAdjustImage ? selectedTab : .style
+  }
+
+  private var tabBar: some View {
+    AnnotateSidebarTabBar(selection: $selectedTab)
+  }
+
+  @ViewBuilder
+  private var styleTabContent: some View {
+    presetControlsSection
+
+    // Compact gradient section
+    gradientSection
+
+    // Wallpaper section
+    wallpaperSection
+
+    // Blurred background section
+    blurredSection
+
+    // Compact color section
+    colorSection
+
+    Divider().background(Color(nsColor: .separatorColor))
+
+    // Sliders section
+    slidersSection
+
+    // Ratio section
+    if !state.isCombineMode {
+      ratioSection
+    }
+
+    // Alignment section
+    if !state.isCombineMode {
+      alignmentSection
+    }
+
+    // Mockup section (shown when mockup mode is active)
+    if state.editorMode == .mockup {
+      Divider().background(Color(nsColor: .separatorColor))
+      MockupControlsSection(state: state)
+    }
+
+    if state.isCombineMode {
+      AnnotateCombineControlsView(state: state)
+    }
   }
 
   // MARK: - Preset Controls

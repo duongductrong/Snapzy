@@ -127,6 +127,9 @@ enum PreferencesKeys {
   static let annotateMeasureUnit = "annotate.measureUnit"
   /// Annotate Measure tool axis for click spans (`MeasureAxis` raw value, default both).
   static let annotateMeasureAxis = "annotate.measureAxis"
+  /// Annotate Magnifier tool style for new loupes (JSON `MagnifierStyle`: zoom, shape,
+  /// connector, shadow).
+  static let annotateMagnifierStyle = "annotate.magnifierStyle"
   static let annotateCombineSaveAsEdit = "annotate.combineSaveAsEdit"
   static let annotateCustomColors = "annotate.customColors.v1"
   static let annotateFavoriteColors = "annotate.favoriteColors.v1"

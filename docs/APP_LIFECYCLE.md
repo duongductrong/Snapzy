@@ -2,7 +2,7 @@
 
 How Snapzy launches, runs onboarding, lives in the menu bar, and shuts down. Covers `Snapzy/App/`, splash/onboarding, app identity, theme, data migrations, and the entitlements/Info.plist contract.
 
-Current as of HEAD (`v2.3.0-beta.5`, build 238, macOS 13.0+ deployment target).
+Current as of HEAD (`v2.3.0-beta.7`, build 240, macOS 13.0+ deployment target).
 
 ## Platform shape
 
@@ -123,6 +123,8 @@ Known leftover: `reportProblemAction` (calls `CrashReportService.presentAlert()`
 - `unexpectedBundleIdentifier` — bundle ID ≠ expected (`com.trongduong.snapzy` / `.debug`).
 - `invalidBundleSignature` — strict `SecStaticCode` validation (release builds only; debug skips since Xcode ad-hoc signing fails `kSecCSStrictValidate`).
 - `outsideApplications` + `quarantined` — only flagged together when the app has the quarantine xattr **and** runs outside `/Applications` and `~/Applications`. Quarantine inside Applications folders is intentionally ignored (Homebrew Cask upgrades preserve the xattr; Gatekeeper clears it on first launch — issue #337).
+
+`refresh()` memoizes the result and reuses it while the bundle executable fingerprint (path, modification date, size) is unchanged, because strict validation costs hundreds of milliseconds on the main actor — un-memoized it stalled every capture and ran three times during launch (issue #509). Callers that ask the system a fresh question (Onboarding and Permissions "Check", `ScreenCaptureManager.requestPermission`) pass `refresh(force: true)`; an unreadable fingerprint falls back to revalidating every call.
 
 The Permissions tab reflects unhealthy identity as `grantedButUnavailableDueToAppIdentity`.
 

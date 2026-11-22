@@ -18,6 +18,41 @@ final class QuickAccessOptimizeSettingsTests: XCTestCase {
     XCTAssertEqual(QuickAccessOptimizeFormat.webp.fileExtension(forOriginal: "png"), "webp")
     XCTAssertEqual(QuickAccessOptimizeFormat.jpeg.fileExtension(forOriginal: "png"), "jpg")
     XCTAssertEqual(QuickAccessOptimizeFormat.jpeg.fileExtension(forOriginal: "jpeg"), "jpeg")
+    XCTAssertEqual(QuickAccessOptimizeFormat.heic.fileExtension(forOriginal: "png"), "heic")
+    XCTAssertEqual(QuickAccessOptimizeFormat.heic.fileExtension(forOriginal: "heif"), "heif")
+    XCTAssertEqual(QuickAccessOptimizeFormat.avif.fileExtension(forOriginal: "png"), "avif")
+  }
+
+  func testHEICAndAVIFAreLossyAndKeepAlpha() {
+    XCTAssertTrue(QuickAccessOptimizeFormat.heic.isLossy)
+    XCTAssertTrue(QuickAccessOptimizeFormat.avif.isLossy)
+    XCTAssertTrue(QuickAccessOptimizeFormat.isLossy(fileExtension: "AVIF"))
+    XCTAssertTrue(QuickAccessImageOptimizer.supportsAlpha(fileExtension: "heic"))
+    XCTAssertTrue(QuickAccessImageOptimizer.supportsAlpha(fileExtension: "avif"))
+    XCTAssertFalse(QuickAccessImageOptimizer.supportsAlpha(fileExtension: "jpg"))
+  }
+
+  func testClampedKeepsAVIFSoSyncedPresetsSurvive() {
+    let settings = QuickAccessOptimizeSettings(scalePercent: 50, format: .avif, qualityPercent: 80, maxFileSize: nil)
+    XCTAssertEqual(settings.clamped.format, .avif)
+  }
+
+  func testCustomRenderWritesHEICWithDPI() throws {
+    try XCTSkipUnless(ImageEncoderSupport.canEncodeHEIC, "No HEIC encoder on this macOS")
+    let original = try XCTUnwrap(makeNoisyImage(width: 1200, height: 800))
+    let settings = QuickAccessOptimizeSettings(scalePercent: 50, format: .heic, qualityPercent: 70, maxFileSize: nil)
+
+    let rendering = try XCTUnwrap(
+      QuickAccessImageOptimizer.render(settings, from: original, source: source, originalExtension: "png")
+    )
+
+    XCTAssertEqual(rendering.fileExtension, "heic")
+    XCTAssertEqual(rendering.qualityPercent, 70)
+    let imageSource = try XCTUnwrap(CGImageSourceCreateWithData(rendering.data as CFData, nil))
+    XCTAssertEqual(CGImageSourceGetType(imageSource) as String?, "public.heic")
+    let properties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any])
+    XCTAssertEqual(properties[kCGImagePropertyPixelWidth] as? Int, 600)
+    XCTAssertEqual((properties[kCGImagePropertyDPIWidth] as? NSNumber)?.doubleValue ?? 0, 72, accuracy: 0.5)
   }
 
   func testClampedKeepsValuesInRange() {

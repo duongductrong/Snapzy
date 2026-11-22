@@ -207,9 +207,13 @@ enum SnapzyConfigurationImporter {
       defaults.set($0, forKey: PreferencesKeys.recordingFileNameTemplate)
     }
     if let format = reader.string("capture", "screenshot", "format") {
-      guard ImageFormatOption(rawValue: format) != nil else {
-        reader.error("capture.screenshot.format must be png, jpeg, or webp")
+      guard let option = ImageFormatOption(rawValue: format) else {
+        reader.error("capture.screenshot.format must be png, jpeg, webp, heic, or avif")
         return
+      }
+      if !option.isEncoderAvailable {
+        // Keep the value so a config synced from a newer Mac round-trips; captures fall back to PNG here.
+        reader.warning("capture.screenshot.format \(format) can't be encoded on this macOS; screenshots save as PNG")
       }
       mutations.append { defaults.set(format, forKey: PreferencesKeys.screenshotFormat) }
     }
@@ -410,6 +414,7 @@ enum SnapzyConfigurationImporter {
     collectDouble(&reader, "quick_access", "overlay_scale", range: 0.75...1.5, mutations: &mutations) { manager.overlayScale = $0 }
     collectBool(&reader, "quick_access", "drag_drop", mutations: &mutations) { manager.dragDropEnabled = $0 }
     collectBool(&reader, "quick_access", "two_finger_swipe_to_dismiss", mutations: &mutations) { manager.twoFingerSwipeToDismissEnabled = $0 }
+    collectBool(&reader, "quick_access", "swipe_toward_edge_collapses", mutations: &mutations) { manager.swipeTowardEdgeCollapses = $0 }
     collectDouble(&reader, "quick_access", "swipe_sensitivity", range: 0.5...3.0, mutations: &mutations) { manager.swipeSensitivity = $0 }
 
     if let swipeModeStr = reader.string("quick_access", "trackpad_swipe_mode") {

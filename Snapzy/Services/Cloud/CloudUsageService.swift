@@ -168,7 +168,7 @@ private actor CloudUsageWorker {
     case .awsS3:
       let configuredRegion = config.region.trimmingCharacters(in: .whitespacesAndNewlines)
       region = configuredRegion.isEmpty ? "us-east-1" : configuredRegion
-    case .googleDrive:
+    case .googleDrive, .imgbb:
       region = ""
     }
 
@@ -283,7 +283,7 @@ final class CloudUsageService: ObservableObject {
       return
     }
 
-    if config.providerType == .googleDrive {
+    if !config.providerType.usesObjectStorage {
       usageInfo = nil
       error = nil
       return
@@ -545,7 +545,7 @@ final class CloudUsageService: ObservableObject {
     case .awsS3:
       let configuredRegion = config.region.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
       region = configuredRegion.isEmpty ? "us-east-1" : configuredRegion
-    case .googleDrive:
+    case .googleDrive, .imgbb:
       region = ""
     }
     let endpoint = (config.endpoint ?? "").trimmingCharacters(in: .whitespacesAndNewlines)

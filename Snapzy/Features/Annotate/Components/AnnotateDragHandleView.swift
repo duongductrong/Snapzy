@@ -451,20 +451,12 @@ extension DragHandleNSView {
 
   /// Resolve the user's preferred screenshot format as UTType
   static func preferredUTType() -> UTType {
-    guard let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
-          let option = ImageFormatOption(rawValue: raw) else { return .png }
-    switch option {
-    case .png:  return .png
-    case .jpeg: return .jpeg
-    case .webp: return .webP
-    }
+    ImageFormatOption.current.utType
   }
 
   /// Resolve the user's preferred screenshot format file extension
   static func preferredFormatExtension() -> String {
-    guard let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
-          let option = ImageFormatOption(rawValue: raw) else { return "png" }
-    return option.format.fileExtension
+    ImageFormatOption.current.format.fileExtension
   }
 }
 
@@ -594,8 +586,18 @@ private struct DragFallbackSignature: Equatable {
       return "spotlight"
     case .measurement(let geometry):
       return "measurement|\(geometry.kind.rawValue)|\(geometry.axis.rawValue)|\(pointSignature(geometry.origin))|\(geometry.unit.rawValue)"
+    case .magnifier(let geometry):
+      return "magnifier|\(pointSignature(geometry.sourceCenter))|\(geometry.zoom)|\(geometry.shape.rawValue)|\(geometry.showsConnector)|\(geometry.showsShadow)"
     case .translation(let block):
       return "translation|\(block.translatedText)|\(block.cover.rawValue)|\(block.alignment.rawValue)|\(block.isBold)"
+    case .stamp(let stamp):
+      let content: String
+      switch stamp.content {
+      case .sticker(let sticker): content = "sticker|\(sticker.rawValue)"
+      case .emoji(let emoji): content = "emoji|\(emoji)"
+      case .image(let image): content = "image|\(image.id.uuidString)"
+      }
+      return "stamp|\(content)|\(stamp.isStickerStyle)"
     }
   }
 

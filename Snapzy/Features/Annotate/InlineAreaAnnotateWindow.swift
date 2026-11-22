@@ -1965,6 +1965,7 @@ private struct InlineAreaDivider: View {
 
 private struct InlineAreaPropertiesBar: View {
   @ObservedObject var state: AnnotateState
+  @ObservedObject private var stampStore = AnnotateStampStore.shared
   let maxWidth: CGFloat
   let popoverEdge: Edge
   let onContentWidthChange: (CGFloat) -> Void
@@ -2032,6 +2033,8 @@ private struct InlineAreaPropertiesBar: View {
               icon: { $0.icon },
               tooltip: \.displayName
             )
+
+            InlineAreaAutoRedactControl(state: state)
           }
 
           if state.quickPropertiesSupportsArrowStyle {
@@ -2128,6 +2131,40 @@ private struct InlineAreaPropertiesBar: View {
 
           if state.quickPropertiesSupportsLineStyle {
             InlineAreaLineStylePicker(selection: state.quickLineStyleBinding)
+          }
+
+          if state.quickPropertiesSupportsStamp {
+            InlineAreaPropertyGroup(title: L10n.Annotate.stampTool) {
+              AnnotateStampPickerButton(
+                state: state,
+                height: InlineAreaChrome.propertyControlHeight,
+                openPanelLevel: NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1),
+                popoverEdge: popoverEdge,
+                usesGlassChrome: false
+              )
+            }
+
+            InlineAreaSliderControl(
+              title: L10n.Common.size,
+              icon: "arrow.up.left.and.arrow.down.right",
+              value: state.quickStampSizeBinding,
+              range: AnnotateStampStore.sizeRange,
+              step: 1,
+              displayText: "\(Int(state.quickStampSize.rounded()))",
+              onEditingChanged: state.setQuickStampSliderEditing
+            )
+
+            InlineAreaSliderControl(
+              title: L10n.AnnotateStamp.opacity,
+              icon: "circle.lefthalf.filled",
+              value: state.quickStampOpacityBinding,
+              range: AnnotateStampStore.opacityRange,
+              step: 0.01,
+              displayText: "\(Int((state.quickStampOpacity * 100).rounded()))%",
+              onEditingChanged: state.setQuickStampSliderEditing
+            )
+
+            AnnotateStampStyleToggle(state: state)
           }
 
           if state.quickPropertiesSupportsWatermark {
@@ -2909,6 +2946,46 @@ private struct InlineAreaSegmentedPicker<Item: Identifiable & Equatable>: View {
   }
 }
 
+
+private struct InlineAreaAutoRedactControl: View {
+  @ObservedObject var state: AnnotateState
+
+  var body: some View {
+    InlineAreaPropertyGroup(title: L10n.AnnotateUI.autoRedact) {
+      HStack(spacing: 4) {
+        button(
+          icon: state.isSensitiveRedactionScanning ? "hourglass" : "shield.lefthalf.filled",
+          help: state.isSensitiveRedactionScanning
+            ? L10n.AnnotateUI.autoRedactionScanning
+            : L10n.AnnotateUI.autoRedactSensitiveData
+        ) {
+          state.autoRedactSensitiveData()
+        }
+
+        ForEach(AnnotateVisualRedactionTarget.allCases, id: \.self) { target in
+          button(icon: target.quickPropertiesIcon, help: L10n.AnnotateUI.autoRedact(target)) {
+            state.autoRedactVisual(target)
+          }
+        }
+      }
+      .disabled(!state.hasImage || state.isSensitiveRedactionScanning)
+      .opacity(!state.hasImage || state.isSensitiveRedactionScanning ? 0.4 : 1)
+    }
+  }
+
+  private func button(icon: String, help: String, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Image(systemName: icon)
+        .font(.system(size: 12, weight: .medium))
+        .foregroundColor(InlineAreaChrome.secondaryText)
+        .frame(width: 25, height: InlineAreaChrome.propertyControlHeight)
+        .liquidGlassControl(isActive: false, activeGlassTint: nil)
+    }
+    .buttonStyle(.plain)
+    .help(help)
+    .accessibilityLabel(help)
+  }
+}
 
 private struct InlineAreaArrowBendControl: View {
   @Binding var bendDirection: ArrowBendDirection

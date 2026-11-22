@@ -119,7 +119,7 @@ enum CaptureError: Error, LocalizedError {
   }
 }
 
-enum ScreenRecordingPermissionStatus: Equatable {
+nonisolated enum ScreenRecordingPermissionStatus: Equatable {
   case notGranted
   case granted
   case grantedButUnavailableDueToAppIdentity(String)
@@ -246,7 +246,7 @@ final class ScreenCaptureManager: ObservableObject {
   ///    `CGRequestScreenCaptureAccess()` which opens System Settings on
   ///    macOS 15+ so the user can manually toggle the app on.
   func requestPermission() async -> Bool {
-    AppIdentityManager.shared.refresh()
+    AppIdentityManager.shared.refresh(force: true)
 
     // Fast path: already granted by the system.
     if CGPreflightScreenCaptureAccess() {
@@ -1198,7 +1198,8 @@ final class ScreenCaptureManager: ObservableObject {
           format: format,
           scaleFactor: compositeResult.scaleFactor,
           emitCompletion: invocation.emitsCompletion,
-          context: context
+          context: context,
+          captureOrigin: rect
         )
       }
 
@@ -1226,7 +1227,8 @@ final class ScreenCaptureManager: ObservableObject {
         format: format,
         scaleFactor: captured.scaleFactor,
         emitCompletion: invocation.emitsCompletion,
-        context: context
+        context: context,
+        captureOrigin: rect
       )
 
     } catch {
@@ -1293,7 +1295,8 @@ final class ScreenCaptureManager: ObservableObject {
           format: format,
           scaleFactor: windowImage.scaleFactor,
           emitCompletion: invocation.emitsCompletion,
-          context: context
+          context: context,
+          captureOrigin: target.frame
         )
       } catch {
         DiagnosticLogger.shared.logError(
@@ -1315,7 +1318,8 @@ final class ScreenCaptureManager: ObservableObject {
         format: format,
         scaleFactor: immediateMenuBarPopoverCapture.scaleFactor,
         emitCompletion: invocation.emitsCompletion,
-        context: context
+        context: context,
+        captureOrigin: target.frame
       )
 
     case .coreGraphicsWindow:
@@ -1327,7 +1331,8 @@ final class ScreenCaptureManager: ObservableObject {
           format: format,
           scaleFactor: windowImage.scaleFactor,
           emitCompletion: invocation.emitsCompletion,
-          context: context
+          context: context,
+          captureOrigin: target.frame
         )
       }
       DiagnosticLogger.shared.log(
@@ -1393,6 +1398,9 @@ final class ScreenCaptureManager: ObservableObject {
   // MARK: - Image Saving
 
   /// Save a CGImage to disk with write verification
+  ///
+  /// - Parameter captureOrigin: the captured region in screen coordinates, remembered so a later
+  ///   pin can animate out of the place the shot was taken rather than out of the screen center.
   private func saveImage(
     _ image: CGImage,
     to directory: URL,
@@ -1400,8 +1408,22 @@ final class ScreenCaptureManager: ObservableObject {
     format: ImageFormat,
     scaleFactor: CGFloat? = nil,
     emitCompletion: Bool = true,
-    context: CaptureContext = .empty
+    context: CaptureContext = .empty,
+    captureOrigin: CGRect? = nil
   ) async -> CaptureResult {
+    // Settings and config only offer formats this Mac can encode, but a synced or
+    // hand-edited preference can still name one (AVIF on an older macOS). Fall back to PNG.
+    let requestedFormat = format
+    let format: ImageFormat = requestedFormat.isEncoderAvailable ? requestedFormat : .png
+    if !requestedFormat.isEncoderAvailable {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .capture,
+        "Image encoder unavailable, saving PNG instead",
+        context: ["requested": requestedFormat.fileExtension]
+      )
+    }
+
     let directoryAccess = SandboxFileAccessManager.shared.beginAccessingURL(directory)
     defer { directoryAccess.stop() }
     let scopedDirectory = directoryAccess.url
@@ -1444,7 +1466,7 @@ final class ScreenCaptureManager: ObservableObject {
           return .failure(.saveFailed(L10n.ScreenCapture.webpEncodingFailed))
         }
       } else {
-        // PNG/JPEG: use CGImageDestination
+        // PNG/JPEG/HEIC/AVIF: use CGImageDestination
         guard
           let destination = CGImageDestinationCreateWithURL(
             fileURL as CFURL,
@@ -1474,6 +1496,9 @@ final class ScreenCaptureManager: ObservableObject {
 
     switch writeResult {
     case .success(let url):
+      if let captureOrigin {
+        CaptureOriginStore.shared.record(url: url, screenRect: captureOrigin)
+      }
       DiagnosticLogger.shared.log(.info, .capture, "Capture saved: \(url.lastPathComponent)")
       if emitCompletion {
         captureCompletedSubject.send(url)
@@ -1547,7 +1572,7 @@ final class ScreenCaptureManager: ObservableObject {
         kCGImagePropertyPNGXPixelsPerMeter: pixelsPerMeter,
         kCGImagePropertyPNGYPixelsPerMeter: pixelsPerMeter
       ] as CFDictionary
-    case .jpeg(let quality):
+    case .jpeg(let quality), .heic(let quality), .avif(let quality):
       properties[kCGImageDestinationLossyCompressionQuality] = quality
     case .webp:
       break
@@ -2702,6 +2727,24 @@ final class ScreenCaptureManager: ObservableObject {
   }
 
   private func ensureCaptureAvailability(promptsForPermission: Bool = true) async -> CaptureError? {
+    // The full permission check re-reads app identity — strict bundle signature
+    // validation, hundreds of milliseconds on the main actor whenever the bundle
+    // changed — and churns published state, so it used to freeze the UI in front
+    // of every capture (issue #509). A cached grant the system still confirms is
+    // enough to keep going; anything else takes the full path, so revoked access
+    // and identity changes are still detected and surfaced.
+    if Self.canTrustGrantedStatus(permissionStatus, systemGranted: CGPreflightScreenCaptureAccess()) {
+      return nil
+    }
+
+    // A capture blocked by app identity may follow the user fixing the cause
+    // (clearing quarantine, moving the app), so re-evaluate instead of serving
+    // the cached result. Only blocked users pay for this; they cannot capture
+    // until it passes anyway.
+    if Self.needsFreshIdentityCheck(permissionStatus) {
+      AppIdentityManager.shared.refresh(force: true)
+    }
+
     await checkPermission()
 
     switch permissionStatus {
@@ -2717,6 +2760,25 @@ final class ScreenCaptureManager: ObservableObject {
     case .grantedButUnavailableDueToAppIdentity(let reason):
       return .unavailable(reason)
     }
+  }
+
+  /// Only a cached grant that the system still confirms is worth skipping a full
+  /// check for; the other statuses need the real permission flow.
+  nonisolated static func canTrustGrantedStatus(
+    _ status: ScreenRecordingPermissionStatus,
+    systemGranted: Bool
+  ) -> Bool {
+    status == .granted && systemGranted
+  }
+
+  /// A capture blocked by app identity must not be answered from the cached
+  /// identity evaluation, or a fix the user just made would go unnoticed until
+  /// relaunch or a visit to Preferences.
+  nonisolated static func needsFreshIdentityCheck(_ status: ScreenRecordingPermissionStatus) -> Bool {
+    if case .grantedButUnavailableDueToAppIdentity = status {
+      return true
+    }
+    return false
   }
 
   private func updatePermissionStatus(systemGranted: Bool) {
@@ -2886,20 +2948,43 @@ enum ImageFormat {
   case png
   case jpeg(quality: CGFloat)
   case webp
+  case heic(quality: CGFloat)
+  case avif(quality: CGFloat)
 
   var fileExtension: String {
     switch self {
     case .png: return "png"
     case .jpeg: return "jpg"
     case .webp: return "webp"
+    case .heic: return "heic"
+    case .avif: return "avif"
     }
   }
 
   var utType: CFString {
     switch self {
-    case .png: return "public.png" as CFString
-    case .jpeg: return "public.jpeg" as CFString
+    case .png: return ImageEncoderSupport.pngType as CFString
+    case .jpeg: return ImageEncoderSupport.jpegType as CFString
     case .webp: return "org.webmproject.webp" as CFString
+    case .heic: return ImageEncoderSupport.heicType as CFString
+    case .avif: return ImageEncoderSupport.avifType as CFString
+    }
+  }
+
+  /// Encoder quality for lossy ImageIO formats; `nil` for PNG and WebP.
+  var lossyQuality: CGFloat? {
+    switch self {
+    case .jpeg(let quality), .heic(let quality), .avif(let quality): return quality
+    case .png, .webp: return nil
+    }
+  }
+
+  /// Whether this Mac has an encoder for the format (AVIF depends on the macOS release).
+  var isEncoderAvailable: Bool {
+    switch self {
+    case .png, .jpeg, .webp: return true
+    case .heic: return ImageEncoderSupport.canEncodeHEIC
+    case .avif: return ImageEncoderSupport.canEncodeAVIF
     }
   }
 }

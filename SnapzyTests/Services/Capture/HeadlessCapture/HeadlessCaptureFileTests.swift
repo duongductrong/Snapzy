@@ -158,4 +158,31 @@ final class HeadlessCapturePostProcessorTests: XCTestCase {
     let leftovers = try FileManager.default.contentsOfDirectory(atPath: directory.path).filter { $0.hasPrefix(".") }
     XCTAssertEqual(leftovers, [])
   }
+
+  func testDownscaleKeepsHEICAndDPI() throws {
+    try XCTSkipUnless(ImageEncoderSupport.canEncodeHEIC, "No HEIC encoder on this macOS")
+    let url = try writeImage(width: 400, height: 200, scale: 2, type: .heic, name: "f.heic")
+
+    try HeadlessCapturePostProcessor.downscale(fileAt: url, format: .heic(quality: 0.8), maxDimension: 200)
+
+    let source = try XCTUnwrap(CGImageSourceCreateWithURL(url as CFURL, nil))
+    XCTAssertEqual(CGImageSourceGetType(source) as String?, UTType.heic.identifier)
+    let info = try HeadlessCapturePostProcessor.fileInfo(at: url)
+    XCTAssertEqual(info.pixelWidth, 200)
+    XCTAssertEqual(info.scale, 1, accuracy: 0.01)
+  }
+
+  func testDownscaleKeepsAVIFAndDPI() throws {
+    try XCTSkipUnless(ImageEncoderSupport.canEncodeAVIF, "No AVIF encoder on this macOS")
+    let avif = UTType.snapzyAVIF
+    let url = try writeImage(width: 400, height: 200, scale: 2, type: avif, name: "g.avif")
+
+    try HeadlessCapturePostProcessor.downscale(fileAt: url, format: .avif(quality: 0.8), maxDimension: 200)
+
+    let source = try XCTUnwrap(CGImageSourceCreateWithURL(url as CFURL, nil))
+    XCTAssertEqual(CGImageSourceGetType(source) as String?, avif.identifier)
+    let info = try HeadlessCapturePostProcessor.fileInfo(at: url)
+    XCTAssertEqual(info.pixelWidth, 200)
+    XCTAssertEqual(info.scale, 1, accuracy: 0.01)
+  }
 }

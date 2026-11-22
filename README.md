@@ -105,12 +105,14 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 - **Annotate and edit**
   - Add arrows, shapes, text, watermarks, blur, and pixelation. Detect and redact sensitive data on-device.
   - Measure distances and sizes in the image with the Measure tool (`U`): editable measurements that export with it.
+  - Drop stamps with the Stamp tool (`G`): designed sticker badges like Approved, LGTM or Bug, emoji, or your own image, with a sticker outline and soft shadow.
   - Crop images, remove backgrounds, and create 3D mockups. Trim clips, add zoom or speed segments, and use Follow Mouse to keep the cursor in view.
 - **Quick Access and History**
   - Copy, edit, drag, or upload captures from their floating Quick Access cards; pin screenshots on screen.
   - Search screenshots, videos, and GIFs by filename, type, or time, then reopen them in the editors.
 - **Cloud Upload**
-  - Manually upload from Quick Access, Annotate, Video Editor, or History to AWS S3, Cloudflare R2, or Google Drive.
+  - Manually upload from Quick Access, Annotate, Video Editor, or History to AWS S3, Cloudflare R2, Google Drive, or imgbb.
+  - imgbb gives a quick public image link (images only, up to 32 MB, optional expiration). imgbb links are public.
   - Uploads go directly to the selected provider. Snapzy does not auto-upload after capture or relay files through its own servers.
 - **App localization**: Native macOS per-app language support in 10 languages: English, Vietnamese, Simplified Chinese, Traditional Chinese, Spanish, Japanese, Korean, Russian, French, and German.
 
@@ -150,6 +152,7 @@ Hover a Quick Access card, then press the key. Active only while the pointer is 
 | Pin screenshot to screen | `⌘P` |
 | Delete | `⌘⌫` |
 | Close | `⌘W` |
+| Collapse to screen edge | `⌥H` |
 
 ## Command line tools
 
@@ -206,9 +209,9 @@ See [Shortcuts and URL scheme](docs/SHORTCUTS.md) for details.
 
 ## Security and privacy
 
-Snapzy is not sandboxed and runs with the privileges of the user account that launched it. It uses the macOS Hardened Runtime, Developer ID signing, and Apple notarization; library validation stays enabled so only code signed by Snapzy or Apple can load. Captures and recordings are stored locally, and users initiate uploads to their own AWS S3, Cloudflare R2, or Google Drive storage. Built-in OCR uses Apple Vision on-device; if a custom OpenAI-compatible OCR endpoint is configured, OCR requests include the captured image and are sent to that endpoint. Snapzy collects no telemetry.
+Snapzy is not sandboxed and runs with the privileges of the user account that launched it. It uses the macOS Hardened Runtime, Developer ID signing, and Apple notarization; library validation stays enabled so only code signed by Snapzy or Apple can load. Captures and recordings are stored locally, and users initiate uploads to their own AWS S3, Cloudflare R2, Google Drive, or imgbb account. Built-in OCR uses Apple Vision on-device; if a custom OpenAI-compatible OCR endpoint is configured, OCR requests include the captured image and are sent to that endpoint. Snapzy collects no telemetry.
 
-Cloud credentials, OAuth tokens, and custom OCR API keys are stored exclusively in the macOS Keychain. The optional cloud-credential protection password is SHA-256 hashed and never stored in plaintext. Cloud credentials can be transferred only through a manual, passphrase-encrypted export/import, and custom OCR API keys are excluded from configuration and credential exports. The portable TOML configuration contains preferences only; it excludes secrets, capture and upload history, caches, CLI approvals, and security-scoped bookmarks. See [SECURITY.md](SECURITY.md) for network-request details and the full security policy, and the [configuration guide](docs/CONFIGURATION.md) for portable settings.
+Cloud credentials (including the imgbb API key), OAuth tokens, and custom OCR API keys are stored exclusively in the macOS Keychain. The optional cloud-credential protection password is SHA-256 hashed and never stored in plaintext. Cloud credentials can be transferred only through a manual, passphrase-encrypted export/import, and custom OCR API keys are excluded from configuration and credential exports. The portable TOML configuration contains preferences only; it excludes secrets, capture and upload history, caches, CLI approvals, and security-scoped bookmarks. See [SECURITY.md](SECURITY.md) for network-request details and the full security policy, and the [configuration guide](docs/CONFIGURATION.md) for portable settings.
 
 To report a vulnerability, use a [GitHub Security Advisory](https://github.com/duongductrong/Snapzy/security/advisories/new) or contact the maintainer privately. See [SECURITY.md](SECURITY.md) for reporting details.
 

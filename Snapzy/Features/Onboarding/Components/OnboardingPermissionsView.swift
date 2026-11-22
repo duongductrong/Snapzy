@@ -218,7 +218,7 @@ struct PermissionsView: View {
 
   private func refreshPermissions() async {
     fileAccessManager.ensureExportLocationInitialized()
-    AppIdentityManager.shared.refresh()
+    AppIdentityManager.shared.refresh(force: true)
     await screenCaptureManager.checkPermission()
     checkMicrophonePermission()
     checkAccessibilityPermission()

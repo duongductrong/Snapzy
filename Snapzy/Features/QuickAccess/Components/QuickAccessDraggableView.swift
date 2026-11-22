@@ -156,6 +156,9 @@ struct QuickAccessDraggableView: NSViewRepresentable {
   let swipeSensitivity: CGFloat
   let dragOnly: Bool
   let reservedScrollAxis: QuickAccessDragScrollAxis?
+  /// Two-finger vertical move that starts over the card (#591). Off unless a
+  /// handler is given; horizontal swipes are unaffected either way.
+  var onVerticalSwipe: ((QuickAccessVerticalSwipeTracker.Update) -> Void)? = nil
 
   func makeNSView(context: Context) -> QuickAccessDragMonitorView {
     QuickAccessDragMonitorView(
@@ -171,7 +174,8 @@ struct QuickAccessDraggableView: NSViewRepresentable {
       onSwipeChanged: onSwipeChanged,
       onSwipeEnded: onSwipeEnded,
       dragOnly: dragOnly,
-      reservedScrollAxis: reservedScrollAxis
+      reservedScrollAxis: reservedScrollAxis,
+      onVerticalSwipe: onVerticalSwipe
     )
   }
 
@@ -189,6 +193,7 @@ struct QuickAccessDraggableView: NSViewRepresentable {
     nsView.onDragEnded = onDragEnded
     nsView.onSwipeChanged = onSwipeChanged
     nsView.onSwipeEnded = onSwipeEnded
+    nsView.onVerticalSwipe = onVerticalSwipe
   }
 }
 
@@ -206,8 +211,17 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
   var onDragEnded: (Bool) -> Void
   var onSwipeChanged: (CGFloat) -> Void
   var onSwipeEnded: (CGFloat, CGFloat) -> Void
+  var onVerticalSwipe: ((QuickAccessVerticalSwipeTracker.Update) -> Void)? {
+    didSet {
+      // Handler dropped mid-move (upload started, action disabled): release the card.
+      if onVerticalSwipe == nil { cancelVerticalSwipe(notifying: oldValue) }
+    }
+  }
 
   private var isDragging = false
+  private var verticalSwipe = QuickAccessVerticalSwipeTracker()
+  /// A scroll gesture began over this card and may still become a vertical move.
+  private var isVerticalSwipeCandidate = false
   private var eventMonitor: Any?
   private var mouseDownLocation: NSPoint?
   private var mouseDownEvent: NSEvent?
@@ -233,7 +247,8 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
     onSwipeChanged: @escaping (CGFloat) -> Void,
     onSwipeEnded: @escaping (CGFloat, CGFloat) -> Void,
     dragOnly: Bool = false,
-    reservedScrollAxis: QuickAccessDragScrollAxis? = nil
+    reservedScrollAxis: QuickAccessDragScrollAxis? = nil,
+    onVerticalSwipe: ((QuickAccessVerticalSwipeTracker.Update) -> Void)? = nil
   ) {
     self.fileURL = fileURL
     self.thumbnail = thumbnail
@@ -248,6 +263,7 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
     self.onDragEnded = onDragEnded
     self.onSwipeChanged = onSwipeChanged
     self.onSwipeEnded = onSwipeEnded
+    self.onVerticalSwipe = onVerticalSwipe
 
     super.init(frame: .zero)
   }
@@ -403,6 +419,10 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
   }
 
   private func handleScrollWheel(_ event: NSEvent) {
+    if handleVerticalSwipe(event) {
+      return
+    }
+
     guard containsEventLocation(event) else {
       finishTrackpadSwipe(cancelled: true)
       return
@@ -462,6 +482,89 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
 
     if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
       finishTrackpadSwipe(cancelled: event.phase.contains(.cancelled))
+    }
+  }
+
+  // MARK: - Vertical move (collapse to edge, #591)
+
+  /// Claims two-finger vertical moves that begin over this card. Returns true
+  /// when the event was consumed; anything else (horizontal swipes, scrolls
+  /// that began elsewhere, momentum) falls through to the existing handling.
+  private func handleVerticalSwipe(_ event: NSEvent) -> Bool {
+    guard let onVerticalSwipe else {
+      isVerticalSwipeCandidate = false
+      return false
+    }
+
+    if verticalSwipe.isTracking {
+      let disallowedModifiers: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
+      if !event.momentumPhase.isEmpty {
+        // Fingers lifted into a fling: the release velocity decides.
+        finishVerticalSwipe(cancelled: false)
+      } else if !event.modifierFlags.intersection(disallowedModifiers).isEmpty {
+        finishVerticalSwipe(cancelled: true)
+      } else {
+        let delta = QuickAccessVerticalSwipeHelpers.fingerDeltaY(
+          scrollingDeltaY: event.scrollingDeltaY,
+          isDirectionInvertedFromDevice: event.isDirectionInvertedFromDevice
+        )
+        if let update = verticalSwipe.add(fingerDelta: delta, timestamp: event.timestamp) {
+          onVerticalSwipe(update)
+        }
+        if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
+          finishVerticalSwipe(cancelled: event.phase.contains(.cancelled))
+        }
+      }
+      return true
+    }
+
+    if event.phase.contains(.began) {
+      isVerticalSwipeCandidate =
+        containsEventLocation(event) && event.momentumPhase.isEmpty && !isDragging
+          && mouseDownLocation == nil && !isTrackpadSwipeTracking
+          && event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty
+    }
+
+    guard isVerticalSwipeCandidate, !isTrackpadSwipeTracking, event.momentumPhase.isEmpty else {
+      return false
+    }
+    if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
+      isVerticalSwipeCandidate = false
+      return false
+    }
+    guard event.scrollingDeltaX != 0 || event.scrollingDeltaY != 0 else { return false }
+
+    // The first real movement picks the axis for the whole gesture.
+    isVerticalSwipeCandidate = false
+    guard QuickAccessVerticalSwipeHelpers.isVerticalDominant(
+      scrollingDeltaX: event.scrollingDeltaX,
+      scrollingDeltaY: event.scrollingDeltaY,
+      hasPreciseScrollingDeltas: event.hasPreciseScrollingDeltas
+    ) else {
+      return false
+    }
+
+    verticalSwipe.begin(timestamp: event.timestamp)
+    let delta = QuickAccessVerticalSwipeHelpers.fingerDeltaY(
+      scrollingDeltaY: event.scrollingDeltaY,
+      isDirectionInvertedFromDevice: event.isDirectionInvertedFromDevice
+    )
+    if let update = verticalSwipe.add(fingerDelta: delta, timestamp: event.timestamp) {
+      onVerticalSwipe(update)
+    }
+    return true
+  }
+
+  private func finishVerticalSwipe(cancelled: Bool) {
+    if let update = verticalSwipe.finish(cancelled: cancelled) {
+      onVerticalSwipe?(update)
+    }
+  }
+
+  private func cancelVerticalSwipe(notifying handler: ((QuickAccessVerticalSwipeTracker.Update) -> Void)?) {
+    isVerticalSwipeCandidate = false
+    if verticalSwipe.finish(cancelled: true) != nil {
+      handler?(.cancelled)
     }
   }
 

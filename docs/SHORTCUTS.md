@@ -2,7 +2,7 @@
 
 Global keyboard shortcuts, in-overlay capture shortcuts, Annotate editor shortcuts, conflict detection, the cheat-sheet overlay, and the `snapzy://` deep-link route table.
 
-Verified against `Snapzy/Services/Shortcuts/`, `Snapzy/Features/Shortcuts/`, `Snapzy/Features/Annotate/Services/AnnotateShortcutManager.swift`, `Snapzy/App/SnapzyDeepLinkHandler.swift`, `Snapzy/Services/Capture/CaptureOverlayShortcutSettings.swift` at HEAD (`v2.3.0-beta.5`).
+Verified against `Snapzy/Services/Shortcuts/`, `Snapzy/Features/Shortcuts/`, `Snapzy/Features/Annotate/Services/AnnotateShortcutManager.swift`, `Snapzy/App/SnapzyDeepLinkHandler.swift`, `Snapzy/Services/Capture/CaptureOverlayShortcutSettings.swift` at HEAD (`v2.3.0-beta.7`).
 
 ## Global shortcut mechanism
 
@@ -92,7 +92,7 @@ While recording annotations are enabled, hold the configured annotation shortcut
 `QuickAccessActionShortcutStore` (`Snapzy/Features/QuickAccess/Models/QuickAccessActionShortcutStore.swift`) +
 `QuickAccessHoverShortcutRegistry` (`Snapzy/Features/QuickAccess/Services/QuickAccessHoverShortcutRegistry.swift`).
 
-Hover a Quick Access card, press the key, the card runs that action. All seven `QuickAccessActionKind`s are bound:
+Hover a Quick Access card, press the key, the card runs that action. Every `QuickAccessActionKind` is bound:
 
 | Action | Default | Key |
 | --- | --- | --- |
@@ -103,6 +103,8 @@ Hover a Quick Access card, press the key, the card runs that action. All seven `
 | `pinToScreen` | ⌘P | `quickAccess.action.shortcut.pinToScreen` |
 | `delete` | ⌘⌫ | `quickAccess.action.shortcut.delete` |
 | `dismiss` | ⌘W | `quickAccess.action.shortcut.dismiss` |
+| `optimize` | ⌘O | `quickAccess.action.shortcut.optimize` |
+| `collapseToEdge` | ⌥H | `quickAccess.action.shortcut.collapseToEdge` |
 
 - Master toggle `quickAccess.action.shortcuts.enabled` (default on); per-action disable set `quickAccess.action.shortcuts.disabled`. Cleared bindings persist the `"null"` sentinel so they do not fall back to the default on reload.
 - **Delivery**: a session-level `CGEventTap` is installed when the first card is hovered and removed 250ms after hover ends. The tap converts each key-down to `NSEvent` and compares the complete key code + modifier set via `ShortcutConfig.matches(event:)`; only an exact registered binding is consumed. Every unregistered combination — including `⌘⇧P` when the card binding is `⌘P` — is returned unchanged to the focused app. This replaces the previous Carbon-by-action-ID path with an explicit exact-match/pass-through boundary. If Accessibility is unavailable, the code falls back to passive global/local `NSEvent` monitors: they never consume events, and external-app delivery/action triggering is best-effort because macOS may withhold those events. The panel is a `.nonactivatingPanel` with `canBecomeKey == false`, so keyboard events never route to it.
@@ -116,7 +118,7 @@ Hover a Quick Access card, press the key, the card runs that action. All seven `
 
 `AnnotateShortcutManager` (`Snapzy/Features/Annotate/Services/AnnotateShortcutManager.swift`):
 
-- 15 tool single-key shortcuts (`AnnotationToolType.defaultShortcut`, remappable): crop, selection, rectangle, filledRectangle, oval, arrow, line, text, highlighter, blur, spotlight, counter, measure (`u`), watermark, pencil. (`mockup` excluded — internal only.)
+- 17 tool single-key shortcuts (`AnnotationToolType.defaultShortcut`, remappable): crop, selection, rectangle, filledRectangle, oval, arrow, line, text, highlighter, blur, spotlight, counter, measure (`u`), magnifier (`z`), stamp (`g`), watermark, pencil. (`mockup` excluded — internal only.)
 - Tool keys stored per-tool under prefix `annotate.shortcut.`; per-tool disable set `shortcuts.disabledAnnotateToolShortcuts`.
 - Action shortcuts (`AnnotateActionShortcutKind`, modifier combos as `ShortcutConfig`):
 

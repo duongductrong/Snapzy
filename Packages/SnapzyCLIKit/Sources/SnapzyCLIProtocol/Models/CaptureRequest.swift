@@ -11,12 +11,17 @@ public enum CLIImageFormat: String, Codable, Sendable, CaseIterable {
   case png
   case jpeg
   case webp
+  case heic
+  /// Needs a macOS release with an ImageIO AVIF encoder; the app rejects it otherwise.
+  case avif
 
   public init?(fileExtension: String) {
     switch fileExtension.lowercased() {
     case "png": self = .png
     case "jpg", "jpeg": self = .jpeg
     case "webp": self = .webp
+    case "heic", "heif": self = .heic
+    case "avif": self = .avif
     default: return nil
     }
   }
@@ -26,13 +31,23 @@ public enum CLIImageFormat: String, Codable, Sendable, CaseIterable {
     case .png: "png"
     case .jpeg: "jpg"
     case .webp: "webp"
+    case .heic: "heic"
+    case .avif: "avif"
+    }
+  }
+
+  /// Formats that take `quality`.
+  public var acceptsQuality: Bool {
+    switch self {
+    case .jpeg, .heic, .avif: true
+    case .png, .webp: false
     }
   }
 }
 
 public struct CaptureOptions: Codable, Sendable, Equatable {
   public let format: CLIImageFormat
-  /// 0…1, JPEG only. `nil` uses the app default.
+  /// 0…1, JPEG, HEIC and AVIF only. `nil` uses the app default.
   public let quality: Double?
   /// Downscale so the longest edge is at most this many pixels. Never upscales.
   public let maxDimension: Int?

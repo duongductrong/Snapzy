@@ -113,12 +113,13 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 - **Chú thích và chỉnh sửa**
   - Thêm mũi tên, hình khối, văn bản, watermark, làm mờ (blur) và pixel hóa. Phát hiện và che dữ liệu nhạy cảm ngay trên máy.
   - Đo khoảng cách và kích thước trong ảnh bằng công cụ Measure (`U`): số đo chỉnh sửa được và được xuất cùng ảnh.
+  - Dán nhãn bằng công cụ Stamp (`G`): huy hiệu thiết kế sẵn như Approved, LGTM hay Bug, emoji hoặc ảnh của bạn, kèm viền nhãn dán và bóng đổ mềm.
   - Cắt (crop) ảnh, xóa nền và tạo mockup 3D. Cắt ngắn video, thêm đoạn zoom hoặc đoạn đổi tốc độ, và dùng Theo chuột (Follow Mouse) để con trỏ luôn nằm trong khung hình.
 - **Truy cập nhanh và Lịch sử**
   - Sao chép, chỉnh sửa, kéo thả hoặc tải lên ảnh chụp ngay từ thẻ Truy cập nhanh nổi; ghim ảnh chụp màn hình lên màn hình.
   - Tìm ảnh chụp màn hình, video và GIF theo tên file, loại hoặc thời gian, rồi mở lại trong trình chỉnh sửa.
 - **Tải lên cloud**
-  - Tải lên thủ công từ Truy cập nhanh, Chú thích (Annotate), Trình sửa video (Video Editor) hoặc Lịch sử tới AWS S3, Cloudflare R2 hoặc Google Drive.
+  - Tải lên thủ công từ Truy cập nhanh, Chú thích (Annotate), Trình sửa video (Video Editor) hoặc Lịch sử tới AWS S3, Cloudflare R2, Google Drive hoặc imgbb. Liên kết imgbb là công khai, ai có liên kết cũng xem được (chỉ ảnh, tối đa 32 MB).
   - File được tải thẳng lên nhà cung cấp bạn chọn. Snapzy không tự động tải lên sau khi chụp và không chuyển file qua máy chủ của Snapzy.
 - **Ngôn ngữ ứng dụng**: hỗ trợ chọn ngôn ngữ riêng cho từng ứng dụng theo cơ chế native của macOS, với 10 ngôn ngữ: tiếng Anh, tiếng Việt, tiếng Trung giản thể, tiếng Trung phồn thể, tiếng Tây Ban Nha, tiếng Nhật, tiếng Hàn, tiếng Nga, tiếng Pháp và tiếng Đức.
 
@@ -162,6 +163,7 @@ Rê chuột lên một thẻ Truy cập nhanh rồi nhấn phím. Các phím nà
 | Ghim ảnh chụp lên màn hình | `⌘P` |
 | Xóa | `⌘⌫` |
 | Đóng | `⌘W` |
+| Thu vào cạnh màn hình | `⌥H` |
 
 <a id="command-line-tools"></a>
 

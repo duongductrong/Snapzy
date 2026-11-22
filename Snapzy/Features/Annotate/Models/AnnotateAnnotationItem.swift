@@ -1261,6 +1261,10 @@ extension AnnotationItem {
       translated.type = .highlight(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
     case .measurement(let geometry):
       translated.type = .measurement(geometry.translated(dx: dx, dy: dy))
+    case .magnifier(let geometry):
+      // A rigid move (export offset, paste, nudge) carries the source along. Dragging the
+      // lens goes through `applyingResizeBounds`, which leaves the source where it is.
+      translated.type = .magnifier(geometry.translated(dx: dx, dy: dy))
     default:
       break
     }
@@ -1342,6 +1346,17 @@ extension AnnotationItem {
         let dy = normalizedBounds.minY - oldBounds.minY
         copy = translatedBy(dx: dx, dy: dy)
       }
+    case .stamp(let stamp):
+      // Keep the box tight around the aspect-fit content, anchored on the edges that stayed put.
+      let fitted = AnnotateStampRenderer.fittedRect(for: stamp.content, in: normalizedBounds)
+      let anchorsRight = abs(normalizedBounds.maxX - oldBounds.maxX) < abs(normalizedBounds.minX - oldBounds.minX)
+      let anchorsTop = abs(normalizedBounds.maxY - oldBounds.maxY) < abs(normalizedBounds.minY - oldBounds.minY)
+      copy.bounds = CGRect(
+        x: anchorsRight ? normalizedBounds.maxX - fitted.width : normalizedBounds.minX,
+        y: anchorsTop ? normalizedBounds.maxY - fitted.height : normalizedBounds.minY,
+        width: fitted.width,
+        height: fitted.height
+      )
     default:
       break
     }
@@ -1416,8 +1431,12 @@ nonisolated enum AnnotationType: Equatable {
   case embeddedImage(UUID)
   case spotlight
   case measurement(MeasureGeometry)
+  /// Loupe: `bounds` is the lens, the geometry holds the magnified source and style.
+  case magnifier(MagnifierGeometry)
   /// Auto Translate overlay: cover + translated text over a source text block.
   case translation(TranslatedTextBlock)
+  /// Sticker badge, emoji or image stamp.
+  case stamp(StampAnnotation)
 
   /// Corresponding toolbar tool type for this annotation
   var toolType: AnnotationToolType {
@@ -1436,7 +1455,9 @@ nonisolated enum AnnotationType: Equatable {
     case .embeddedImage: .selection
     case .spotlight: .spotlight
     case .measurement: .measure
+    case .magnifier: .magnifier
     case .translation: .selection
+    case .stamp: .stamp
     }
   }
 
@@ -1452,6 +1473,11 @@ nonisolated enum AnnotationType: Equatable {
 
   var supportsQuickPropertiesBar: Bool {
     supportsPropertyEditing && toolType.supportsQuickPropertiesBar
+  }
+
+  var magnifierGeometry: MagnifierGeometry? {
+    if case .magnifier(let geometry) = self { return geometry }
+    return nil
   }
 
   var supportsQuickStrokeColor: Bool {
@@ -1604,7 +1630,7 @@ extension AnnotationType {
   /// keeps its own in-bounds rotation and is not part of this.
   nonisolated var supportsRotation: Bool {
     switch self {
-    case .text, .embeddedImage, .rectangle, .filledRectangle, .oval:
+    case .text, .embeddedImage, .rectangle, .filledRectangle, .oval, .stamp:
       true
     default:
       false
@@ -1753,8 +1779,18 @@ extension AnnotationItem {
   /// the measured extent. Used for redraw culling, export culling and hit-test quick rejects;
   /// selection geometry (paste/duplicate clamping) keeps `selectionBounds`.
   var renderBounds: CGRect {
-    guard let label = AnnotateMeasureRenderer.labelRect(for: self) else { return selectionBounds }
-    return selectionBounds.union(label.insetBy(dx: -2, dy: -2))
+    var result = selectionBounds
+    if case .stamp(let stamp) = type, stamp.isStickerStyle {
+      let overhang = AnnotateStampRenderer.shadowOverhang(for: bounds)
+      result = result.insetBy(dx: -overhang, dy: -overhang)
+    }
+    if let label = AnnotateMeasureRenderer.labelRect(for: self) {
+      result = result.union(label.insetBy(dx: -2, dy: -2))
+    }
+    if let magnifierExtent = AnnotateMagnifierRenderer.drawnBounds(for: self) {
+      result = result.union(magnifierExtent)
+    }
+    return result
   }
 
   var selectionDecorationBounds: CGRect {
@@ -1778,7 +1814,7 @@ extension AnnotationItem {
     let tolerance = baseTolerance + properties.strokeWidth / 2
 
     switch type {
-    case .rectangle, .filledRectangle, .blur(_), .watermark, .embeddedImage, .spotlight, .translation:
+    case .rectangle, .filledRectangle, .blur(_), .watermark, .embeddedImage, .spotlight, .translation, .stamp:
       return bounds.contains(point)
 
     case .oval:
@@ -1812,6 +1848,11 @@ extension AnnotationItem {
 
     case .measurement(let geometry):
       return measurementContains(point, geometry: geometry, tolerance: tolerance)
+
+    case .magnifier(let geometry):
+      // The lens is opaque, so its whole face is the hit area.
+      let outer = bounds.insetBy(dx: -baseTolerance, dy: -baseTolerance)
+      return MagnifierGeometry.path(for: geometry.shape, in: outer).contains(point)
 
     case .counter:
       let counterBounds = bounds.isEmpty ? Self.counterBounds(center: bounds.origin, properties: properties) : bounds
@@ -1898,7 +1939,7 @@ extension AnnotationItem {
     case .embeddedImage:
       return false
 
-    case .arrow, .line, .path, .highlight, .text, .counter, .measurement, .translation:
+    case .arrow, .line, .path, .highlight, .text, .counter, .measurement, .magnifier, .translation, .stamp:
       return containsPoint(point, baseTolerance: baseTolerance)
     }
   }

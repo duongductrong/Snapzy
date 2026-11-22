@@ -45,13 +45,15 @@ nonisolated enum QuickAccessImageOptimizer {
   static let minimumLongEdge = 320
 
   /// File types the action can rewrite in place.
-  static let supportedExtensions: Set<String> = ["png", "jpg", "jpeg", "webp"]
+  static let supportedExtensions: Set<String> = ["png", "jpg", "jpeg", "webp", "heic", "heif", "avif"]
 
   static let jpegQuality: CGFloat = 0.9
   static let webpQuality: CGFloat = 0.85
 
+  /// Rewriting in place re-encodes the file, so an AVIF on a Mac without the encoder is skipped.
   static func supports(url: URL) -> Bool {
-    supportedExtensions.contains(url.pathExtension.lowercased())
+    let ext = url.pathExtension.lowercased()
+    return supportedExtensions.contains(ext) && ImageEncoderSupport.canEncode(fileExtension: ext)
   }
 
   // MARK: - Levels
@@ -118,7 +120,7 @@ nonisolated enum QuickAccessImageOptimizer {
     )
   }
 
-  /// Snapzy writes DPI = 72 × backing scale for PNG and JPEG. WebP carries no DPI.
+  /// Snapzy writes DPI = 72 × backing scale for PNG, JPEG, HEIC and AVIF. WebP carries no DPI.
   static func nativeScale(from properties: [CFString: Any]) -> CGFloat? {
     guard let dpi = (properties[kCGImagePropertyDPIWidth] as? NSNumber)?.doubleValue,
           dpi > 0 else {
@@ -177,12 +179,11 @@ nonisolated enum QuickAccessImageOptimizer {
       return WebPEncoderService.encode(image, quality: quality ?? webpQuality)
     }
 
-    let utType: CFString
-    switch ext {
-    case "png": utType = "public.png" as CFString
-    case "jpg", "jpeg": utType = "public.jpeg" as CFString
-    default: return nil
+    guard let type = ImageEncoderSupport.typeIdentifier(forExtension: ext),
+          ImageEncoderSupport.canEncode(typeIdentifier: type) else {
+      return nil
     }
+    let utType = type as CFString
 
     let data = NSMutableData()
     guard let destination = CGImageDestinationCreateWithData(data as CFMutableData, utType, 1, nil) else {
@@ -226,7 +227,7 @@ nonisolated enum QuickAccessImageOptimizer {
         kCGImagePropertyPNGXPixelsPerMeter: pixelsPerMeter,
         kCGImagePropertyPNGYPixelsPerMeter: pixelsPerMeter,
       ] as CFDictionary
-    case "jpg", "jpeg":
+    case "jpg", "jpeg", "heic", "heif", "avif":
       properties[kCGImageDestinationLossyCompressionQuality] = quality ?? jpegQuality
     default:
       break

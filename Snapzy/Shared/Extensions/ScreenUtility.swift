@@ -40,4 +40,23 @@ enum ScreenUtility {
   static func screen(withDisplayID displayID: CGDirectDisplayID) -> NSScreen? {
     NSScreen.screens.first { self.displayID(of: $0) == displayID }
   }
+
+  /// The screen holding most of a region, or `nil` when the region overlaps none of them.
+  ///
+  /// Used to place a surface back on the display its content came from; the cursor-driven
+  /// `activeScreen()` would move it to whichever display the pointer drifted to.
+  static func screen(containing rect: CGRect) -> NSScreen? {
+    var best: (screen: NSScreen, overlapArea: CGFloat)?
+    for screen in NSScreen.screens {
+      let overlap = screen.frame.intersection(rect)
+      // A disjoint `intersection` returns the null rect, whose infinite components must not
+      // reach the area product — test each dimension before multiplying them.
+      guard overlap.width > 0, overlap.height > 0 else { continue }
+      let area = overlap.width * overlap.height
+      if area > (best?.overlapArea ?? 0) {
+        best = (screen, area)
+      }
+    }
+    return best?.screen
+  }
 }

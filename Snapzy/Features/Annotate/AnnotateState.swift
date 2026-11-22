@@ -81,6 +81,8 @@ final class AnnotateState: ObservableObject {
   private enum UndoEntry {
     case annotations(AnnotationSnapshot)
     case imageTransform(ImageTransformSnapshot)
+    /// Image adjustments before the change (see AnnotateState+ImageAdjustments.swift).
+    case imageAdjustments(ImageAdjustments)
   }
 
   private struct TextEditingUndoTransaction {
@@ -179,7 +181,10 @@ final class AnnotateState: ObservableObject {
   // MARK: - Source Image
 
   @Published var sourceImage: NSImage? {
-    didSet { invalidateImageAnalysisProfiles() }
+    didSet {
+      invalidateImageAnalysisProfiles()
+      imageAdjustmentBaseDidChange()
+    }
   }
   @Published var sourceURL: URL?
 
@@ -206,11 +211,37 @@ final class AnnotateState: ObservableObject {
   }
 
   @Published private(set) var cutoutImage: NSImage? {
-    didSet { invalidateImageAnalysisProfiles() }
+    didSet {
+      invalidateImageAnalysisProfiles()
+      imageAdjustmentBaseDidChange()
+    }
   }
   @Published private(set) var isCutoutApplied: Bool = false {
-    didSet { invalidateImageAnalysisProfiles() }
+    didSet {
+      invalidateImageAnalysisProfiles()
+      imageAdjustmentBaseDidChange()
+    }
   }
+
+  // MARK: Image Adjustments (managed by AnnotateState+ImageAdjustments.swift)
+  /// Tone sliders + filter preset; identity = original pixels.
+  @Published var imageAdjustments: ImageAdjustments = .identity
+  /// Latest rendered adjusted image and what it was rendered from.
+  @Published var adjustedSourceRender: AnnotateAdjustedImageRender?
+  /// Preset thumbnails for the sidebar, rendered from the current base image.
+  @Published var imageFilterPresetThumbnails: [ImageFilterPreset: NSImage] = [:]
+  var imageFilterPresetThumbnailsBase: NSImage?
+  var imageAdjustmentRenderTask: Task<Void, Never>?
+  var imageAdjustmentRenderGeneration = 0
+  /// Value at the start of a slider drag; the drag commits one undo step on release.
+  var imageAdjustmentGestureStart: ImageAdjustments?
+  /// Live slider value during a drag. Not published: the slider shows its own value and the
+  /// canvas follows `adjustedSourceRender`, so a drag doesn't re-render every observer per tick.
+  var imageAdjustmentGestureValue: ImageAdjustments?
+  /// Coalescing low-resolution render loop that runs while a slider drags.
+  var imageAdjustmentPreviewTask: Task<Void, Never>?
+  /// Downscaled copy of the base reused by every drag preview.
+  var imageAdjustmentPreviewBase: AnnotateAdjustmentPreviewBase?
   @Published private(set) var isCutoutProcessing: Bool = false
   @Published var cutoutErrorMessage: String?
   private var activeCutoutOperationID: UUID?
@@ -261,8 +292,15 @@ final class AnnotateState: ObservableObject {
   /// Whether an image is loaded
   var hasImage: Bool { sourceImage != nil }
 
-  /// Image currently used by preview/export. Cutout is non-destructive and overlays the original source image.
+  /// Image currently used by preview/export. Cutout is non-destructive and overlays the original
+  /// source image; image adjustments are applied on top of that (see `adjustmentBaseImage`).
   var effectiveSourceImage: NSImage? {
+    let base = adjustmentBaseImage
+    return currentAdjustedImage(for: base) ?? base
+  }
+
+  /// Source image with the background cutout applied, before image adjustments.
+  var adjustmentBaseImage: NSImage? {
     if isCutoutApplied {
       return cutoutImage ?? sourceImage
     }
@@ -378,7 +416,11 @@ final class AnnotateState: ObservableObject {
   // MARK: - UI State
 
   @Published var showSidebar: Bool = false
-  @Published var zoomLevel: CGFloat = 1.0
+  @Published var zoomLevel: CGFloat = 1.0 {
+    didSet {
+      if zoomLevel != oldValue { refreshZoomDisplay() }
+    }
+  }
   @Published var isPinned: Bool = false
   @Published private(set) var dragToAppPreparationState: DragToAppPreparationState
 
@@ -528,7 +570,7 @@ final class AnnotateState: ObservableObject {
       rect = annotation.bounds
     case .highlight:
       rect = annotation.selectionDecorationBounds
-    case .rectangle, .oval, .line, .path, .measurement:
+    case .rectangle, .oval, .line, .path, .measurement, .magnifier:
       rect = annotation.resizeBounds.insetBy(dx: -strokeWidth / 2, dy: -strokeWidth / 2)
     case .arrow:
       // Matches the arrowhead width used by AnnotationItem.containsPoint.
@@ -867,10 +909,30 @@ final class AnnotateState: ObservableObject {
   }
 
   /// Base fitted canvas size before zoom is applied.
-  @Published private(set) var baseCanvasDisplaySize: CGSize = .zero
+  ///
+  /// Not `@Published`: it changes on every frame of a live window resize, and publishing it
+  /// re-rendered every view observing `AnnotateState` (toolbar, properties bar, sidebar, bottom
+  /// bar) per frame. The only UI that depends on it is the zoom readout, which observes
+  /// `zoomDisplay` instead.
+  private(set) var baseCanvasDisplaySize: CGSize = .zero
 
-  /// Fit scale used to derive a dynamic max zoom for very long captures.
-  @Published private(set) var fitScale: CGFloat = 1.0
+  /// Fit scale used to derive a dynamic max zoom for very long captures. Not `@Published`; see
+  /// `baseCanvasDisplaySize`.
+  private(set) var fitScale: CGFloat = 1.0
+
+  /// Publishes only when the fit-scale-derived zoom readout actually changes.
+  let zoomDisplay = AnnotateZoomDisplayModel()
+
+  /// Keeps `zoomDisplay` in sync with `fitScale` and `zoomLevel`, so its change detection never
+  /// compares against a stale value.
+  private func refreshZoomDisplay() {
+    zoomDisplay.update(
+      AnnotateZoomDisplayModel.Signature(
+        displayedPercent: currentDisplayedZoomPercent,
+        presetPercents: zoomMenuPresetPercents
+      )
+    )
+  }
 
   var effectiveMaximumZoomLevel: CGFloat {
     guard fitScale > 0 else { return Self.defaultMaximumZoomLevel }
@@ -952,6 +1014,8 @@ final class AnnotateState: ObservableObject {
 
     guard metricsChanged else { return }
 
+    refreshZoomDisplay()
+
     let clampedLevel = clampedZoom(zoomLevel)
     if abs(clampedLevel - zoomLevel) > 0.0001 {
       zoomLevel = clampedLevel
@@ -974,8 +1038,10 @@ final class AnnotateState: ObservableObject {
   /// Reset pan when content no longer overflows.
   func resetPanIfNeeded() {
     if !canPanInteractively {
-      panOffset = .zero
-      isCanvasPanningMode = false
+      // Guarded: `@Published` notifies even when assigning an equal value, and this runs on
+      // every resize frame.
+      if panOffset != .zero { panOffset = .zero }
+      if isCanvasPanningMode { isCanvasPanningMode = false }
     } else {
       clampPanOffset()
     }
@@ -986,7 +1052,7 @@ final class AnnotateState: ObservableObject {
   func clampPanOffset() {
     let overflow = panOverflow(at: zoomLevel)
     guard overflow.width > 0 || overflow.height > 0 else {
-      panOffset = .zero
+      if panOffset != .zero { panOffset = .zero }
       return
     }
 
@@ -995,8 +1061,12 @@ final class AnnotateState: ObservableObject {
     let maxPanX = overflow.width + marginX
     let maxPanY = overflow.height + marginY
 
-    panOffset.width = min(max(panOffset.width, -maxPanX), maxPanX)
-    panOffset.height = min(max(panOffset.height, -maxPanY), maxPanY)
+    // One assignment, and only when clamping changes it (each `@Published` write notifies).
+    let clamped = CGSize(
+      width: min(max(panOffset.width, -maxPanX), maxPanX),
+      height: min(max(panOffset.height, -maxPanY), maxPanY)
+    )
+    if clamped != panOffset { panOffset = clamped }
   }
 
   private func panOverflow(at zoomLevel: CGFloat) -> CGSize {
@@ -1847,6 +1917,12 @@ final class AnnotateState: ObservableObject {
   /// Edge tolerance, shared with Screen Ruler.
   var measureTolerance: Int { ScreenRulerPreferences(defaults: defaults).edgeTolerance }
 
+  // MARK: - Magnifier State
+
+  /// Style for new magnifiers (persisted). Editing it with magnifiers selected restyles them too
+  /// (see `updateMagnifierStyle`).
+  @Published private(set) var magnifierStyle = MagnifierStyle()
+
   // MARK: - Cut Out State
 
   /// Whether cut-out mode is actively editing (a strip can be drawn/committed).
@@ -1959,6 +2035,7 @@ final class AnnotateState: ObservableObject {
     self.isHighlighterTextSnappingEnabled =
       defaults.object(forKey: PreferencesKeys.annotateHighlighterTextSnappingEnabled) as? Bool ?? true
     self.measureAxis = defaults.string(forKey: PreferencesKeys.annotateMeasureAxis).flatMap(MeasureAxis.init(rawValue:)) ?? .both
+    self.magnifierStyle = Self.loadMagnifierStyle(from: defaults)
     self.measureUnit = defaults.string(forKey: PreferencesKeys.annotateMeasureUnit).flatMap(MeasureUnit.init(rawValue:)) ?? .points
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
@@ -1988,6 +2065,7 @@ final class AnnotateState: ObservableObject {
     self.isHighlighterTextSnappingEnabled =
       defaults.object(forKey: PreferencesKeys.annotateHighlighterTextSnappingEnabled) as? Bool ?? true
     self.measureAxis = defaults.string(forKey: PreferencesKeys.annotateMeasureAxis).flatMap(MeasureAxis.init(rawValue:)) ?? .both
+    self.magnifierStyle = Self.loadMagnifierStyle(from: defaults)
     self.measureUnit = defaults.string(forKey: PreferencesKeys.annotateMeasureUnit).flatMap(MeasureUnit.init(rawValue:)) ?? .points
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
@@ -2020,6 +2098,8 @@ final class AnnotateState: ObservableObject {
   /// Replace the backing screenshot while keeping editable annotations.
   /// Used by inline area annotate when the selected region moves or resizes.
   func replaceSourceImagePreservingAnnotations(_ image: NSImage, annotationOffset: CGPoint = .zero) {
+    // An auto-redact scan in flight was computed against the old image's coordinates.
+    cancelSensitiveRedactionScan()
     sourceImage = image
     if annotationOffset != .zero {
       translateAnnotations(dx: annotationOffset.x, dy: annotationOffset.y)
@@ -2155,7 +2235,8 @@ final class AnnotateState: ObservableObject {
   /// off the main actor. Warms lazy caches (embedded CGImage) and resolves main-bound
   /// resources (sandboxed wallpaper disk access, CI blur) before copying.
   func makeRenderSnapshot() -> AnnotateRenderSnapshot? {
-    guard let sourceImage = effectiveSourceImage else { return nil }
+    // Full-resolution adjusted pixels, never a live-preview downscale: preview matches export.
+    guard let sourceImage = exportSourceImage() else { return nil }
 
     // Warm the lazy CGImage cache for every embedded asset referenced by annotations,
     // then freeze plain dictionary copies (off-main render must be read-only).
@@ -2285,6 +2366,7 @@ final class AnnotateState: ObservableObject {
   private func resetCanvasForNewBaseImage(image: NSImage, url: URL?) {
     let shouldApplyDefaultPreset = !hasImage
     resetBackgroundCutoutState(markUnsaved: false)
+    resetImageAdjustmentsForNewImage()
     cancelSensitiveRedactionScan()
     cancelAutoTranslate()
     endTranslateAreaSelection()
@@ -2418,6 +2500,36 @@ final class AnnotateState: ObservableObject {
   }
 
   func autoRedactSensitiveData() {
+    let preferredLanguageIdentifier = AppLanguageManager.shared.activeOCRLanguageIdentifier
+    runAutoRedactionScan(
+      scanningMessage: L10n.AnnotateUI.autoRedactionScanning,
+      noMatchesMessage: L10n.AnnotateUI.autoRedactionNoMatches,
+      logName: "Sensitive redaction scan"
+    ) { image in
+      try await AnnotateSensitiveRedactionService.shared.detectRegions(
+        in: image,
+        preferredLanguageIdentifier: preferredLanguageIdentifier
+      )
+    }
+  }
+
+  /// Vision face/person detection → one blur item per detection, in one undo checkpoint.
+  func autoRedactVisual(_ target: AnnotateVisualRedactionTarget) {
+    runAutoRedactionScan(
+      scanningMessage: L10n.AnnotateUI.autoRedactionScanning(target),
+      noMatchesMessage: L10n.AnnotateUI.autoRedactionNoMatches(target),
+      logName: "Visual redaction scan (\(target.rawValue))"
+    ) { image in
+      try await AnnotateSensitiveRedactionService.shared.detectVisualRegions(in: image, target: target)
+    }
+  }
+
+  private func runAutoRedactionScan(
+    scanningMessage: String,
+    noMatchesMessage: String,
+    logName: String,
+    detect: @escaping (NSImage) async throws -> AnnotateSensitiveRedactionResult
+  ) {
     guard !isSensitiveRedactionScanning else { return }
     guard let image = effectiveSourceImage else {
       showSensitiveRedactionToast(message: L10n.AnnotateUI.autoRedactionImageUnavailable, style: .warning)
@@ -2432,7 +2544,7 @@ final class AnnotateState: ObservableObject {
     activeSensitiveRedactionOperationID = operationID
     isSensitiveRedactionScanning = true
     sensitiveRedactionToast = AppToastManager.shared.show(
-      message: L10n.AnnotateUI.autoRedactionScanning,
+      message: scanningMessage,
       style: .info,
       duration: nil,
       variant: .compact,
@@ -2441,10 +2553,7 @@ final class AnnotateState: ObservableObject {
 
     Task {
       do {
-        let result = try await AnnotateSensitiveRedactionService.shared.detectRegions(
-          in: image,
-          preferredLanguageIdentifier: AppLanguageManager.shared.activeOCRLanguageIdentifier
-        )
+        let result = try await detect(image)
         guard activeSensitiveRedactionOperationID == operationID else { return }
 
         isSensitiveRedactionScanning = false
@@ -2452,7 +2561,7 @@ final class AnnotateState: ObservableObject {
 
         let insertedCount = applySensitiveRedactionRegions(result.regions)
         if insertedCount == 0 {
-          updateSensitiveRedactionToast(message: L10n.AnnotateUI.autoRedactionNoMatches, style: .warning)
+          updateSensitiveRedactionToast(message: noMatchesMessage, style: .warning)
         } else {
           updateSensitiveRedactionToast(
             message: L10n.AnnotateUI.autoRedactionComplete(insertedCount),
@@ -2460,7 +2569,7 @@ final class AnnotateState: ObservableObject {
           )
         }
 
-        DiagnosticLogger.shared.log(.info, .annotate, "Sensitive redaction scan completed", context: [
+        DiagnosticLogger.shared.log(.info, .annotate, "\(logName) completed", context: [
           "regions": "\(insertedCount)"
         ])
       } catch {
@@ -2470,7 +2579,7 @@ final class AnnotateState: ObservableObject {
         activeSensitiveRedactionOperationID = nil
         let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         updateSensitiveRedactionToast(message: message, style: .error)
-        DiagnosticLogger.shared.log(.error, .annotate, "Sensitive redaction scan failed", context: [
+        DiagnosticLogger.shared.log(.error, .annotate, "\(logName) failed", context: [
           "error": String(describing: type(of: error))
         ])
       }
@@ -3206,6 +3315,17 @@ final class AnnotateState: ObservableObject {
     hasUnsavedChanges = true
   }
 
+  /// Records `previous` as one image-adjustment undo step (see AnnotateState+ImageAdjustments.swift).
+  func pushImageAdjustmentsUndo(_ previous: ImageAdjustments) {
+    DiagnosticLogger.shared.log(.debug, .annotate, "Undo checkpoint", context: ["kind": "imageAdjustments"])
+    undoStack.append(.imageAdjustments(previous))
+    capUndoStack()
+    redoStack.removeAll()
+    canUndo = true
+    canRedo = false
+    hasUnsavedChanges = true
+  }
+
   private func capUndoStack() {
     if undoStack.count > Self.maxUndoStackSize {
       undoStack.removeFirst(undoStack.count - Self.maxUndoStackSize)
@@ -3227,6 +3347,9 @@ final class AnnotateState: ObservableObject {
     case .imageTransform(let snapshot):
       redoStack.append(.imageTransform(currentImageTransformSnapshot()))
       applyImageTransformSnapshot(snapshot)
+    case .imageAdjustments(let previous):
+      redoStack.append(.imageAdjustments(imageAdjustments))
+      applyImageAdjustmentsFromUndo(previous)
     }
     canUndo = !undoStack.isEmpty
     canRedo = true
@@ -3246,6 +3369,9 @@ final class AnnotateState: ObservableObject {
     case .imageTransform(let snapshot):
       undoStack.append(.imageTransform(currentImageTransformSnapshot()))
       applyImageTransformSnapshot(snapshot)
+    case .imageAdjustments(let next):
+      undoStack.append(.imageAdjustments(imageAdjustments))
+      applyImageAdjustmentsFromUndo(next)
     }
     canUndo = true
     canRedo = !redoStack.isEmpty
@@ -3507,7 +3633,7 @@ final class AnnotateState: ObservableObject {
         AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
       })
 
-    case .text, .translation:
+    case .text, .translation, .stamp:
       rotated.bounds = AnnotateImageRotation.rotateLayoutRectPreservingSize(
         annotation.bounds,
         oldSize: oldSize,
@@ -3521,6 +3647,12 @@ final class AnnotateState: ObservableObject {
 
     case .measurement(let geometry):
       rotated.type = .measurement(geometry.rotated {
+        AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
+      })
+
+    case .magnifier(let geometry):
+      // The lens is the rotated `bounds` above; the source turns with the pixels.
+      rotated.type = .magnifier(geometry.movingSource {
         AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
       })
 
@@ -3626,7 +3758,10 @@ final class AnnotateState: ObservableObject {
     case .measurement(let geometry):
       flipped.type = .measurement(geometry.mirrored(flipPoint))
 
-    case .text, .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight, .translation:
+    case .magnifier(let geometry):
+      flipped.type = .magnifier(geometry.movingSource(flipPoint))
+
+    case .text, .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight, .translation, .stamp:
       // Bounds-only annotations: the mirrored `bounds` above is the full transform we need.
       // Embedded image bitmaps were mirrored with the assets above.
       break
@@ -4029,7 +4164,11 @@ final class AnnotateState: ObservableObject {
           dy: shiftedBounds.minY - item.bounds.minY
         ))
         moved.bounds = CGRect(origin: shiftedBounds.origin, size: item.bounds.size)
-      case .rectangle, .filledRectangle, .oval, .blur, .embeddedImage, .spotlight, .watermark, .translation:
+      case .magnifier(let geometry):
+        // The lens follows its half; the source follows the pixels under it.
+        moved.type = .magnifier(geometry.movingSource(shiftPoint))
+        moved.bounds = shiftRect(item.bounds)
+      case .rectangle, .filledRectangle, .oval, .blur, .embeddedImage, .spotlight, .watermark, .translation, .stamp:
         moved.bounds = shiftRect(item.bounds)
       }
 
@@ -4157,6 +4296,80 @@ final class AnnotateState: ObservableObject {
     annotations.append(item)
     hasUnsavedChanges = true
     return item
+  }
+
+  // MARK: - Magnifier
+
+  private static func loadMagnifierStyle(from defaults: UserDefaults) -> MagnifierStyle {
+    guard let data = defaults.data(forKey: PreferencesKeys.annotateMagnifierStyle),
+          var style = try? JSONDecoder().decode(MagnifierStyle.self, from: data) else { return MagnifierStyle() }
+    style.zoom = MagnifierGeometry.clampedZoom(style.zoom)
+    return style
+  }
+
+  /// Changes the magnifier style for new items, and for the selected magnifiers as one undo step.
+  func updateMagnifierStyle(_ change: (inout MagnifierStyle) -> Void) {
+    let targets = selectedAnnotationIds
+    let indices = annotations.indices.filter { index in
+      guard targets.contains(annotations[index].id), case .magnifier = annotations[index].type else { return false }
+      return true
+    }
+    if indices.isEmpty {
+      change(&magnifierStyle)
+      magnifierStyle.zoom = MagnifierGeometry.clampedZoom(magnifierStyle.zoom)
+      if let data = try? JSONEncoder().encode(magnifierStyle) {
+        defaults.set(data, forKey: PreferencesKeys.annotateMagnifierStyle)
+      }
+      return
+    }
+    var updated: [(Int, MagnifierGeometry)] = []
+    for index in indices {
+      guard case .magnifier(var geometry) = annotations[index].type else { continue }
+      var style = geometry.style
+      change(&style)
+      geometry.style = style
+      if geometry != (annotations[index].type.magnifierGeometry) {
+        updated.append((index, geometry))
+      }
+    }
+    guard !updated.isEmpty else { return }
+    saveState()
+    for (index, geometry) in updated {
+      annotations[index].type = .magnifier(geometry)
+    }
+    hasUnsavedChanges = true
+  }
+
+  /// Selected magnifiers, in drawing order.
+  var selectedMagnifiers: [AnnotationItem] {
+    annotations.filter { selectedAnnotationIds.contains($0.id) && $0.type.magnifierGeometry != nil }
+  }
+
+  /// Steps each selected magnifier to its next zoom preset (scroll wheel, `+` / `−`), as one undo
+  /// step. False when no magnifier is selected, so the caller can let the event through.
+  @discardableResult
+  func stepSelectedMagnifierZoom(up: Bool) -> Bool {
+    guard !selectedMagnifiers.isEmpty else { return false }
+    updateMagnifierStyle { style in
+      style.zoom = MagnifierGeometry.steppedZoom(from: style.zoom, up: up)
+    }
+    return true
+  }
+
+  /// Whether the pointer is over a selected magnifier's lens, where the scroll wheel zooms it.
+  var isPointerOverSelectedMagnifier: Bool {
+    guard let point = canvasMouseLocation else { return false }
+    return selectedMagnifiers.contains { $0.bounds.standardized.contains(point) }
+  }
+
+  /// Moves a magnifier's source area. Gestures checkpoint undo themselves.
+  func updateMagnifierSource(id: UUID, center: CGPoint) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }),
+          case .magnifier(var geometry) = annotations[index].type,
+          geometry.sourceCenter != center else { return }
+    geometry.sourceCenter = center
+    annotations[index].type = .magnifier(geometry)
+    hasUnsavedChanges = true
   }
 
   /// Kick off content-border detection for the current image unless a profile
@@ -6753,6 +6966,18 @@ final class AnnotateState: ObservableObject {
     )
   }
 
+  var quickPropertiesSupportsMagnifier: Bool {
+    quickPropertiesTool == .magnifier
+  }
+
+  /// The first selected magnifier's style when one is selected, otherwise the tool's.
+  var quickMagnifierStyle: MagnifierStyle {
+    for annotation in quickPropertiesSelectionTargets {
+      if let geometry = annotation.type.magnifierGeometry { return geometry.style }
+    }
+    return magnifierStyle
+  }
+
   var quickHighlighterTextSnappingBinding: Binding<Bool> {
     Binding(
       get: { [weak self] in self?.isHighlighterTextSnappingEnabled ?? true },
@@ -7223,5 +7448,25 @@ nonisolated enum AnnotateTextLayout {
       .font: font,
       .paragraphStyle: paragraphStyle
     ]
+  }
+}
+
+// MARK: - Zoom Display
+
+/// Observable carrier for the bottom-bar zoom readout. Kept separate from `AnnotateState` so
+/// fit-scale changes during a live resize re-render only the zoom pill, and only when the
+/// rounded percentage or preset list changes.
+@MainActor
+final class AnnotateZoomDisplayModel: ObservableObject {
+  struct Signature: Equatable {
+    var displayedPercent: Int
+    var presetPercents: [Int]
+  }
+
+  @Published private(set) var signature = Signature(displayedPercent: 100, presetPercents: [])
+
+  func update(_ newSignature: Signature) {
+    guard newSignature != signature else { return }
+    signature = newSignature
   }
 }

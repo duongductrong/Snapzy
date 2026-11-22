@@ -7537,6 +7537,148 @@
         }
       }
     },
+    "preferences-capture.image-format-unavailable-option": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (auf diesem Mac nicht unterstützt)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (not supported on this Mac)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (no compatible con este Mac)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (non pris en charge sur ce Mac)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (לא נתמך ב־Mac הזה)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（この Mac では非対応）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (이 Mac에서 지원되지 않음)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (не поддерживается на этом Mac)"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (không hỗ trợ trên máy Mac này)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（此 Mac 不支持）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（此 Mac 不支援）"
+          }
+        }
+      }
+    },
+    "preferences-capture.image-format-unavailable-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese macOS-Version kann keine %@-Bilder kodieren. Snapzy speichert Bildschirmfotos als PNG, bis du ein anderes Format wählst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This version of macOS can't encode %@ images. Snapzy saves screenshots as PNG until you choose another format."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta versión de macOS no puede codificar imágenes %@. Snapzy guarda las capturas como PNG hasta que elijas otro formato."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette version de macOS ne peut pas encoder d'images %@. Snapzy enregistre les captures en PNG jusqu'à ce que vous choisissiez un autre format."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרסת macOS זו לא יכולה לקודד תמונות %@. Snapzy שומר צילומי מסך כ־PNG עד שתבחר פורמט אחר."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この macOS では %@ 画像をエンコードできません。別の形式を選ぶまで、Snapzy はスクリーンショットを PNG で保存します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 macOS 버전에서는 %@ 이미지를 인코딩할 수 없습니다. 다른 형식을 선택할 때까지 Snapzy는 스크린샷을 PNG로 저장합니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эта версия macOS не умеет кодировать изображения %@. Snapzy сохраняет снимки в PNG, пока вы не выберете другой формат."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phiên bản macOS này không mã hoá được ảnh %@. Snapzy sẽ lưu ảnh chụp dưới dạng PNG cho đến khi bạn chọn định dạng khác."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此版本的 macOS 无法编码 %@ 图像。在你选择其他格式之前，Snapzy 会将截图保存为 PNG。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此版本的 macOS 無法編碼 %@ 影像。在你選擇其他格式之前，Snapzy 會將截圖儲存為 PNG。"
+          }
+        }
+      }
+    },
     "preferences-capture.live-passthrough-description": {
       "extractionState": "manual",
       "localizations": {

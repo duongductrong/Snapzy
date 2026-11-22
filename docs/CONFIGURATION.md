@@ -48,7 +48,7 @@ The TOML file covers portable app preferences:
 - General settings: language, appearance, sounds, URL scheme integration, `snapzy` command line access (`cli_enabled`, default `true`), show menu bar icon, login item, export folder path.
 - Menu bar customization: icon style, item order, hidden items, and the macOS 27 "Show icons in menus" opt-in (`[menu_bar] show_item_icons`, default `false`; ignored on earlier macOS versions, which always show menu icons). The custom icon PNG file itself is not portable — `icon_style = "custom"` falls back to `default` on a Mac without a locally imported custom icon.
 - Updates: automatic check/download and the Sparkle update channel (`stable` or `beta`).
-- Capture settings: naming templates, screenshot format, clipboard content for copied images (`[capture.screenshot] clipboard_content`: `"image_and_file"` (default) or `"image_only"`, which drops the file reference for Citrix/RDP/terminal paste targets), cursor/app inclusion, freeze area, Delayed Capture countdown (`[capture.screenshot] delayed_capture_seconds`: `3`, `5`, or `10`, default `3`; shared by delayed area and delayed fullscreen), show selection area overlay, magnifier preferences (`[capture.screenshot] reverse_magnifier_zoom_direction`, `show_magnifier_by_default`, `show_magnifier_color_panel`, `magnifier_size`: `"small"`, `"medium"`, or `"large"`, default `"medium"`), window shadow in Application Capture (`[capture.screenshot] include_window_shadow`, default `true`), scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR provider selection (`[capture.ocr] selected_model`: `"builtin"` or `"custom:<uuid>"`), and custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), object cutout auto-crop.
+- Capture settings: naming templates, screenshot format (`[capture.screenshot] format`: `"png"`, `"jpeg"`, `"webp"`, `"heic"`, or `"avif"`; importing `"avif"` on a macOS without an AVIF encoder keeps the value but warns, and captures save as PNG there), clipboard content for copied images (`[capture.screenshot] clipboard_content`: `"image_and_file"` (default) or `"image_only"`, which drops the file reference for Citrix/RDP/terminal paste targets), cursor/app inclusion, freeze area, Delayed Capture countdown (`[capture.screenshot] delayed_capture_seconds`: `3`, `5`, or `10`, default `3`; shared by delayed area and delayed fullscreen), show selection area overlay, magnifier preferences (`[capture.screenshot] reverse_magnifier_zoom_direction`, `show_magnifier_by_default`, `show_magnifier_color_panel`, `magnifier_size`: `"small"`, `"medium"`, or `"large"`, default `"medium"`), window shadow in Application Capture (`[capture.screenshot] include_window_shadow`, default `true`), scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR provider selection (`[capture.ocr] selected_model`: `"builtin"` or `"custom:<uuid>"`), and custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), object cutout auto-crop.
 - After-capture actions for screenshot and recording: `save`, `quick_access`, `copy_file`, and `open_annotate` under `[capture.after.screenshot]` / `[capture.after.recording]`. Cloud upload is not part of this matrix — it is manual-only from Quick Access, Annotate, Video Editor, and History surfaces.
 - Recording settings: format, quality, FPS, audio, microphone device id, cursor, click highlights, keystroke overlay, live annotation shortcuts, video editor zoom transition duration.
 - Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, pinned image zoom mode (`pin_zoom_mode`: `fixedViewport` by default or `windowFollowsImage`), swipe left/right actions, hide card when window open, animation style, open in Finder after saving (`[quick_access] open_in_finder_after_save`, default `true`), action order, enabled actions, card slots, hover-activated card action shortcuts.
@@ -59,7 +59,7 @@ The TOML file covers portable app preferences:
 
 The export intentionally excludes secrets and machine-private state:
 
-- Cloud access key and secret key are not exported. They remain in Keychain.
+- Cloud access key and secret key, and the imgbb API key, are not exported. They remain in Keychain. For imgbb the `[cloud]` table holds only `provider = "imgbb"` and `expire_time`.
 - Custom OCR endpoint API keys are not exported. They remain in Keychain
   (`capture.ocr.custom_models` carries endpoint metadata only).
 - Cloud credential archive transfer stays in the existing encrypted cloud
@@ -156,7 +156,7 @@ screenshot_template = "Screenshots/{appName}/{yearShort}/{monthName}/{day}/Snapz
 recording_template = "Recordings/{appName}/{year}/{monthShort}/Snapzy_Recording_{day}_{time}"
 
 [capture.screenshot]
-format = "png"
+format = "png" # "png" | "jpeg" | "webp" | "heic" | "avif"
 clipboard_content = "image_and_file" # "image_and_file" | "image_only"
 include_snapzy = false
 show_cursor = false
@@ -206,6 +206,7 @@ pause_countdown_on_hover = true
 overlay_scale = 1.0
 drag_drop = true
 two_finger_swipe_to_dismiss = true
+swipe_toward_edge_collapses = false
 trackpad_swipe_mode = "inverted"
 pin_zoom_mode = "fixedViewport"
 swipe_left_action = "dismiss"
@@ -297,8 +298,9 @@ key = "delete"
 modifiers = ["command"]
 ```
 
-`card_actions` covers all seven Quick Access card actions (`copy`, `save_or_open`,
-`dismiss`, `delete`, `edit`, `upload_to_cloud`, `pin_to_screen`). Each entry needs
+`card_actions` covers every Quick Access card action (`copy`, `save_or_open`,
+`dismiss`, `delete`, `edit`, `upload_to_cloud`, `pin_to_screen`, `optimize`,
+`collapse_to_edge`). Each entry needs
 `⌘`, `⌥`, or `⌃` in `modifiers` — bare and shift-only combos are rejected on import,
 as is `fn`. `key = ""` clears a binding. Named keys accept either the exported symbol
 or a readable word (`"delete"`/`"⌫"`, `"return"`/`"↩"`, `"esc"`/`"⎋"`, `"tab"`, arrows).

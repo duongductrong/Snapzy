@@ -148,6 +148,11 @@ struct QuickAccessSettingsView: View {
             .labelsHidden()
         }
 
+        SettingRow(title: L10n.PreferencesQuickAccess.swipeTowardEdgeCollapsesTitle, description: L10n.PreferencesQuickAccess.swipeTowardEdgeCollapsesDescription) {
+          Toggle("", isOn: $manager.swipeTowardEdgeCollapses)
+            .labelsHidden()
+        }
+
         if manager.twoFingerSwipeToDismissEnabled {
           SettingRow(title: L10n.PreferencesQuickAccess.swipeSensitivityTitle, description: L10n.PreferencesQuickAccess.swipeSensitivityDescription) {
             HStack(spacing: 8) {

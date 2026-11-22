@@ -43,6 +43,38 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.recordingFPS) as? Int, 60)
   }
 
+  func testImportAcceptsHEICAndAVIFScreenshotFormats() {
+    for format in ["heic", "avif"] {
+      let defaults = UserDefaultsFactory.make()
+      let source = """
+      schema_version = 1
+
+      [capture.screenshot]
+      format = "\(format)"
+      """
+
+      let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+      XCTAssertFalse(result.hasErrors, format)
+      XCTAssertEqual(defaults.string(forKey: PreferencesKeys.screenshotFormat), format)
+    }
+  }
+
+  func testImportRejectsUnknownScreenshotFormat() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [capture.screenshot]
+    format = "bmp"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertNil(defaults.string(forKey: PreferencesKeys.screenshotFormat))
+  }
+
   func testImportAppliesCloudShareLinkStyle() {
     let defaults = UserDefaultsFactory.make()
     let source = """

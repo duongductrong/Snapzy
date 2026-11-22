@@ -23,9 +23,8 @@ struct QuickAccessOptimizeSettingsForm: View {
 
   private var outputIsLossy: Bool {
     switch settings.format {
-    case .jpeg, .webp: true
-    case .png: false
     case .original: originalExtension.map(QuickAccessOptimizeFormat.isLossy(fileExtension:)) ?? true
+    default: settings.format.isLossy
     }
   }
 
@@ -47,12 +46,21 @@ struct QuickAccessOptimizeSettingsForm: View {
       row(L10n.QuickAccess.optimizeFormatLabel) {
         Picker("", selection: $settings.format) {
           ForEach(QuickAccessOptimizeFormat.allCases) { format in
-            Text(format == .original ? L10n.QuickAccess.optimizeFormatOriginal : format.displayName(originalExtension: nil))
-              .tag(format)
+            let name = format == .original
+              ? L10n.QuickAccess.optimizeFormatOriginal
+              : format.displayName(originalExtension: nil)
+            if format.isEncoderAvailable {
+              Text(name).tag(format)
+            } else {
+              Text(L10n.PreferencesCapture.imageFormatUnavailableOption(name))
+                .tag(format)
+                .disabled(true)
+            }
           }
         }
         .labelsHidden()
-        .pickerStyle(.segmented)
+        // Six formats no longer fit a segmented control in the 360pt popover.
+        .pickerStyle(.menu)
         .help(settings.format.displayName(originalExtension: originalExtension))
       }
 
