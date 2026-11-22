@@ -13,6 +13,7 @@ struct SnapzyMockRecordingStatusBar: View {
   let onStop: () -> Void
 
   @State private var indicatorOpacity: Double = 1.0
+  @Environment(\.snapzyMockSceneIsLive) private var isSceneLive
   @State private var hoveredButton: String? = nil
   @State private var isStopHovered = false
 
@@ -38,10 +39,15 @@ struct SnapzyMockRecordingStatusBar: View {
           .frame(width: 7, height: 7)
           .opacity(indicatorOpacity)
           .onAppear {
-            // A steady red dot carries the same meaning; the pulse is the motion-rich variant.
-            guard !SnapzyMotionPreferences.shared.reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
-              indicatorOpacity = 0.3
+            if isSceneLive { startPulse() }
+          }
+          .onChange(of: isSceneLive) { isLive in
+            if isLive {
+              startPulse()
+            } else {
+              var transaction = Transaction()
+              transaction.disablesAnimations = true
+              withTransaction(transaction) { indicatorOpacity = 1.0 }
             }
           }
 
@@ -125,6 +131,14 @@ struct SnapzyMockRecordingStatusBar: View {
           .fill(hoveredButton == id ? SnapzyGlassInk.fillHover : Color.clear)
       )
       .onHover { h in hoveredButton = h ? id : nil }
+  }
+
+  /// A steady red dot carries the same meaning; the pulse is the motion-rich variant.
+  private func startPulse() {
+    guard !SnapzyMotionPreferences.shared.reduceMotion else { return }
+    withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
+      indicatorOpacity = 0.3
+    }
   }
 
   private var divider: some View {

@@ -185,6 +185,39 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     waitForExpectations(timeout: 1.0)
   }
 
+  func testTransitionMarksStageInFlightUntilTheStageSettles() {
+    let state = makeState()
+    XCTAssertFalse(state.isStageInFlight)
+
+    state.transition(to: .quickAccess)
+    // Raised outside the animated transaction; the mock stage clears it once its glide lands.
+    XCTAssertTrue(state.isStageInFlight)
+
+    state.isStageInFlight = false
+    state.transition(to: .quickAccess)
+    XCTAssertFalse(state.isStageInFlight, "A no-op transition must not start a flight")
+  }
+
+  func testArrivingStepIsResetBeforeItGlidesIn() {
+    let state = makeState()
+    state.transition(to: .quickAccess)
+    state.simulateStartPrerecord()
+    state.openVideoEditorFromQuickAccess()
+    XCTAssertEqual(state.step2Stage, .videoEditorOpen)
+
+    state.transition(to: .shortcuts)
+    state.transition(to: .quickAccess)
+
+    // The arriving scene is already at rest, and the step's progress is kept.
+    XCTAssertEqual(state.step2Stage, .readyToRecord)
+    XCTAssertFalse(state.isRecordingTimerRunning)
+    XCTAssertTrue(state.completedChallenges.contains(.openVideoEditor))
+    XCTAssertEqual(
+      UserDefaults.standard.string(forKey: PreferencesKeys.onboardingActiveStep),
+      SnapzyOnboardingStep.quickAccess.rawValue
+    )
+  }
+
   func testStep3ShortcutConflictResolution() {
     let state = makeState()
     state.transition(to: .shortcuts)

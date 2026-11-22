@@ -19,6 +19,7 @@ struct SnapzyMockSystemSettingsWindow: View {
   @State private var hoveredRow: String? = nil
   @State private var isOpenSettingsHovered: Bool = false
   @State private var isRestoreHovered: Bool = false
+  @Environment(\.snapzyMockSceneIsSettled) private var isSceneSettled
 
   var body: some View {
     ZStack(alignment: .top) {
@@ -237,26 +238,47 @@ struct SnapzyMockSystemSettingsWindow: View {
   // MARK: - Categories Sidebar
 
   private var sheetCategoriesSidebar: some View {
-    ScrollView(.vertical, showsIndicators: false) {
-      VStack(alignment: .leading, spacing: 1.5) {
-        sheetCategoryRow(title: "Dock", icon: "dock.rectangle", isSelected: false)
-        sheetCategoryRow(title: "Display", icon: "sun.max.fill", isSelected: false)
-        sheetCategoryRow(title: "Mission Control", icon: "rectangle.split.2x1", isSelected: false)
-        sheetCategoryRow(title: "Windows", icon: "macwindow.on.rectangle", isSelected: false)
-        sheetCategoryRow(title: "Keyboard", icon: "keyboard", isSelected: false)
-        sheetCategoryRow(title: "Input Sources", icon: "character.cursor.ibeam", isSelected: false)
-        sheetCategoryRow(title: "Screenshots", icon: "camera.viewfinder", isSelected: true)
-        sheetCategoryRow(title: "Presenter Overlay", icon: "person.crop.square", isSelected: false)
-        sheetCategoryRow(title: "Services", icon: "gearshape.2", isSelected: false)
-        sheetCategoryRow(title: "Spotlight", icon: "magnifyingglass", isSelected: false)
-        sheetCategoryRow(title: "Accessibility", icon: "figure.walk.circle", isSelected: false)
-        sheetCategoryRow(title: "App Shortcuts", icon: "slider.horizontal.3", isSelected: false)
-        sheetCategoryRow(title: "Function Keys", icon: "f.cursive", isSelected: false)
-        sheetCategoryRow(title: "Modifier Keys", icon: "command", isSelected: false)
+    Group {
+      if isSceneSettled {
+        ScrollView(.vertical, showsIndicators: false) {
+          sheetCategoryRows
+        }
+      } else {
+        // Stand-in for the scroll view at rest (no indicators, top offset) while the scene
+        // glides; see `snapzyMockSceneIsSettled`. It takes exactly the proposed size, as the
+        // scroll view does, and lets the rows overflow under the clip.
+        Color.clear
+          .overlay(alignment: .top) {
+            sheetCategoryRows
+              .fixedSize(horizontal: false, vertical: true)
+          }
+          .clipped()
       }
-      .padding(.vertical, 5)
     }
+    // The swap must be instant: an animated removal would keep the AppKit scroll view alive for
+    // the whole glide.
+    .animation(nil, value: isSceneSettled)
     .background(Color(red: 0.955, green: 0.958, blue: 0.965))
+  }
+
+  private var sheetCategoryRows: some View {
+    VStack(alignment: .leading, spacing: 1.5) {
+      sheetCategoryRow(title: "Dock", icon: "dock.rectangle", isSelected: false)
+      sheetCategoryRow(title: "Display", icon: "sun.max.fill", isSelected: false)
+      sheetCategoryRow(title: "Mission Control", icon: "rectangle.split.2x1", isSelected: false)
+      sheetCategoryRow(title: "Windows", icon: "macwindow.on.rectangle", isSelected: false)
+      sheetCategoryRow(title: "Keyboard", icon: "keyboard", isSelected: false)
+      sheetCategoryRow(title: "Input Sources", icon: "character.cursor.ibeam", isSelected: false)
+      sheetCategoryRow(title: "Screenshots", icon: "camera.viewfinder", isSelected: true)
+      sheetCategoryRow(title: "Presenter Overlay", icon: "person.crop.square", isSelected: false)
+      sheetCategoryRow(title: "Services", icon: "gearshape.2", isSelected: false)
+      sheetCategoryRow(title: "Spotlight", icon: "magnifyingglass", isSelected: false)
+      sheetCategoryRow(title: "Accessibility", icon: "figure.walk.circle", isSelected: false)
+      sheetCategoryRow(title: "App Shortcuts", icon: "slider.horizontal.3", isSelected: false)
+      sheetCategoryRow(title: "Function Keys", icon: "f.cursive", isSelected: false)
+      sheetCategoryRow(title: "Modifier Keys", icon: "command", isSelected: false)
+    }
+    .padding(.vertical, 5)
   }
 
   private func sheetCategoryRow(title: String, icon: String, isSelected: Bool) -> some View {

@@ -98,6 +98,9 @@ struct SnapzyOnboardingView: View {
     .background(keyboardShortcuts)
     .onAppear {
       SnapzyOnboardingWelcomeAudio.shared.prewarmInteractionEffects()
+      #if DEBUG
+      SnapzyOnboardingPerfHarness.startIfRequested(state: state)
+      #endif
     }
   }
 
@@ -123,6 +126,10 @@ struct SnapzyOnboardingView: View {
         VStack(spacing: 0) {
           SnapzyOnboardingPermissionsView(state: state)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            // Text-heavy and pure SwiftUI: one GPU layer instead of per-frame CPU text
+            // rasterization while the page slides in or out. Must stay free of AppKit-backed
+            // views, Liquid Glass and blend modes; the glass footer stays outside.
+            .drawingGroup()
             .padding(.top, 16)
 
           footer
@@ -165,6 +172,10 @@ struct SnapzyOnboardingView: View {
       // Left Column: instruction rail + bottom-left escape hint
       VStack(alignment: .leading, spacing: 0) {
         SnapzyOnboardingInstructionPanel(state: state, isRevealed: isFlowSettled)
+          // Text-heavy and pure SwiftUI, so each page renders as its own GPU layer and the page
+          // transition below moves and fades that layer instead of re-rasterizing every text
+          // block on the CPU per frame. Must stay free of AppKit-backed views and Liquid Glass.
+          .drawingGroup()
           .padding(.top, 10)
           // Re-identified per step so each step's entrance replays cleanly in flow direction.
           .id(state.currentStep)
