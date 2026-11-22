@@ -93,39 +93,20 @@ struct ZoomSettingsContent: View {
 
   var body: some View {
     ScrollView(.vertical, showsIndicators: true) {
-      VStack(alignment: .leading, spacing: 16) {
+      VStack(alignment: .leading, spacing: 10) {
         if state.hasMouseTrackingData {
           smartAutoZoomSection
-          Divider()
         }
 
         motionBlurSection
 
-        Divider()
-
         if let segment = selectedSegment {
-          modeSection(for: segment)
-
-          Divider()
-
-          zoomLevelSection
-          transitionSmoothnessSection
-
-          if segment.isAutoMode {
-            followSpeedSection
-            focusMarginSection
-          } else {
-            centerPickerSection
-          }
-
-          Divider()
-
-          actionsSection
+          selectedSegmentCard(for: segment)
         } else {
           emptyState
         }
 
-        Spacer(minLength: 20)
+        Spacer(minLength: 16)
       }
       .padding(12)
     }
@@ -408,20 +389,74 @@ struct ZoomSettingsContent: View {
     }
   }
 
+  // MARK: - Selected Zoom Segment Card
+
+  private func selectedSegmentCard(for segment: ZoomSegment) -> some View {
+    inspectorCard {
+      modeSection(for: segment)
+
+      Divider()
+        .opacity(0.6)
+
+      zoomLevelSection
+
+      transitionSmoothnessSection
+
+      if segment.isAutoMode {
+        followSpeedSection
+        focusMarginSection
+      } else {
+        centerPickerSection
+      }
+    }
+  }
+
   private func modeSection(for segment: ZoomSegment) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HStack {
-        Label(L10n.VideoEditor.zoomItem, systemImage: "plus.magnifyingglass")
-          .font(.system(size: 12, weight: .semibold))
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 6) {
+        Text(L10n.VideoEditor.zoomItem)
+          .font(Typography.sectionHeader)
+          .foregroundColor(SidebarColors.labelPrimary)
 
         Spacer()
 
-        Text(segment.isAutoMode ? L10n.VideoEditor.followMouse : L10n.VideoEditor.manual)
-          .font(.system(size: 9, weight: .semibold))
-          .padding(.horizontal, 6)
-          .padding(.vertical, 3)
-          .background(Capsule().fill((segment.isAutoMode ? Color.green : ZoomColors.primary).opacity(0.18)))
-          .foregroundColor(segment.isAutoMode ? .green : ZoomColors.primary)
+        Button {
+          if let id = state.selectedZoomId {
+            state.toggleZoomEnabled(id: id)
+          }
+        } label: {
+          Image(systemName: segment.isEnabled ? "eye" : "eye.slash")
+            .font(.system(size: 10.5, weight: .medium))
+            .foregroundColor(segment.isEnabled ? SidebarColors.labelSecondary : SidebarColors.labelTertiary)
+            .frame(width: 22, height: 22)
+            .background(
+              Radius.controlRect(forHeight: 22)
+                .fill(isHoveringEnableAction ? SidebarColors.itemHover : .clear)
+            )
+            .animation(.easeOut(duration: 0.10), value: isHoveringEnableAction)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHoveringEnableAction = $0 }
+        .help(segment.isEnabled ? L10n.VideoEditor.disableZoom : L10n.VideoEditor.enableZoom)
+
+        Button(role: .destructive) {
+          if let id = state.selectedZoomId {
+            state.removeZoom(id: id)
+          }
+        } label: {
+          Image(systemName: "trash")
+            .font(.system(size: 10.5, weight: .medium))
+            .foregroundColor(isHoveringDeleteAction ? .red : SidebarColors.labelSecondary)
+            .frame(width: 22, height: 22)
+            .background(
+              Radius.controlRect(forHeight: 22)
+                .fill(isHoveringDeleteAction ? Color.red.opacity(0.12) : .clear)
+            )
+            .animation(.easeOut(duration: 0.10), value: isHoveringDeleteAction)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHoveringDeleteAction = $0 }
+        .help(L10n.VideoEditor.deleteZoom)
       }
 
       HStack(spacing: 8) {
@@ -774,43 +809,6 @@ struct ZoomSettingsContent: View {
       Text(L10n.VideoEditor.manualCameraControlOnlyInManualMode)
         .font(.system(size: 10))
         .foregroundColor(.secondary.opacity(0.8))
-    }
-  }
-
-  private var actionsSection: some View {
-    HStack(spacing: 8) {
-      Button {
-        if let id = state.selectedZoomId {
-          state.toggleZoomEnabled(id: id)
-        }
-      } label: {
-        HStack(spacing: 4) {
-          Image(systemName: selectedSegment?.isEnabled == true ? "eye" : "eye.slash")
-          Text(selectedSegment?.isEnabled == true ? L10n.Common.enabled : L10n.Common.disabled)
-        }
-        .font(.system(size: 10))
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.white.opacity(0.1))
-        .clipShape(Radius.controlRect(forHeight: 20))
-      }
-      .buttonStyle(.plain)
-
-      Spacer()
-
-      Button(role: .destructive) {
-        if let id = state.selectedZoomId {
-          state.removeZoom(id: id)
-        }
-      } label: {
-        Image(systemName: "trash")
-          .font(.system(size: 10))
-          .foregroundColor(.red)
-          .padding(6)
-          .background(Color.red.opacity(0.1))
-          .clipShape(Radius.controlRect(forHeight: 24))
-      }
-      .buttonStyle(.plain)
     }
   }
 
