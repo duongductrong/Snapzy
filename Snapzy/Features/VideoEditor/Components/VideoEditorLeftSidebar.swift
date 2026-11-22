@@ -191,7 +191,7 @@ struct ZoomSettingsContent: View {
       .background(railBackground)
 
       Button {
-        state.generateSmartAutoZoom(style: state.smartAutoZoomStyle)
+        state.requestSmartAutoZoom(style: state.smartAutoZoomStyle)
       } label: {
         HStack(spacing: 6) {
           if state.isGeneratingSmartAutoZoom {
@@ -237,6 +237,14 @@ struct ZoomSettingsContent: View {
       .disabled(state.isGeneratingSmartAutoZoom)
       .opacity(state.isGeneratingSmartAutoZoom ? 0.72 : 1.0)
       .accessibilityIdentifier("video-editor.smart-auto-zoom")
+
+      if let notice = state.smartAutoZoomNotice {
+        Text(notice)
+          .font(.system(size: 10, weight: .medium))
+          .foregroundColor(SidebarColors.labelSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+          .transition(.opacity)
+      }
 
       Text(L10n.VideoEditor.smartAutoZoomDescription)
         .font(.system(size: 10))

@@ -416,7 +416,7 @@ struct ZoomTimelineTrack: View, Equatable {
 
     if state.hasMouseTrackingData {
       Button {
-        state.generateSmartAutoZoom(style: state.smartAutoZoomStyle)
+        state.requestSmartAutoZoom(style: state.smartAutoZoomStyle)
       } label: {
         Label(L10n.VideoEditor.smartAutoZoomGenerate, systemImage: "viewfinder")
       }
