@@ -540,6 +540,10 @@ final class DrawingCanvasNSView: NSView {
     state.$cutoutImage
       .sink { [weak self] _ in self?.invalidateDrawing() }
       .store(in: &stateObservers)
+    // Adjusted pixels changed: blur/pixelate annotations re-sample them.
+    state.$adjustedSourceRender
+      .sink { [weak self] _ in self?.invalidateDrawing() }
+      .store(in: &stateObservers)
     state.$isTranslateAreaSelecting
       .removeDuplicates()
       .sink { [weak self] _ in self?.refreshCursorAtPointer() }

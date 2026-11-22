@@ -81,6 +81,8 @@ struct AnnotationSessionData {
   /// Annotation footprints at the last applied crop (see `AnnotateState.cropBaselineFootprints`).
   /// nil for sessions cached before the canvas could auto-expand.
   var cropBaselineFootprints: [UUID: CGRect]? = nil
+  /// Non-destructive tone sliders + filter preset over the source image.
+  var imageAdjustments: ImageAdjustments = .identity
 }
 
 /// Manages annotation window instances
@@ -374,7 +376,8 @@ extension AnnotationSessionData {
       combineSession: state.combineSessionSnapshot(),
       sourceLogicalSize: state.sourceImage?.size,
       excludesTranslationsFromExport: !state.includesTranslationsInExport,
-      cropBaselineFootprints: state.cropBaselineFootprints
+      cropBaselineFootprints: state.cropBaselineFootprints,
+      imageAdjustments: state.imageAdjustments
     )
   }
 }

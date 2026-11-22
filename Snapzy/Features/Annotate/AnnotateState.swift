@@ -81,6 +81,8 @@ final class AnnotateState: ObservableObject {
   private enum UndoEntry {
     case annotations(AnnotationSnapshot)
     case imageTransform(ImageTransformSnapshot)
+    /// Image adjustments before the change (see AnnotateState+ImageAdjustments.swift).
+    case imageAdjustments(ImageAdjustments)
   }
 
   private struct TextEditingUndoTransaction {
@@ -179,7 +181,10 @@ final class AnnotateState: ObservableObject {
   // MARK: - Source Image
 
   @Published var sourceImage: NSImage? {
-    didSet { invalidateImageAnalysisProfiles() }
+    didSet {
+      invalidateImageAnalysisProfiles()
+      imageAdjustmentBaseDidChange()
+    }
   }
   @Published var sourceURL: URL?
 
@@ -206,11 +211,37 @@ final class AnnotateState: ObservableObject {
   }
 
   @Published private(set) var cutoutImage: NSImage? {
-    didSet { invalidateImageAnalysisProfiles() }
+    didSet {
+      invalidateImageAnalysisProfiles()
+      imageAdjustmentBaseDidChange()
+    }
   }
   @Published private(set) var isCutoutApplied: Bool = false {
-    didSet { invalidateImageAnalysisProfiles() }
+    didSet {
+      invalidateImageAnalysisProfiles()
+      imageAdjustmentBaseDidChange()
+    }
   }
+
+  // MARK: Image Adjustments (managed by AnnotateState+ImageAdjustments.swift)
+  /// Tone sliders + filter preset; identity = original pixels.
+  @Published var imageAdjustments: ImageAdjustments = .identity
+  /// Latest rendered adjusted image and what it was rendered from.
+  @Published var adjustedSourceRender: AnnotateAdjustedImageRender?
+  /// Preset thumbnails for the sidebar, rendered from the current base image.
+  @Published var imageFilterPresetThumbnails: [ImageFilterPreset: NSImage] = [:]
+  var imageFilterPresetThumbnailsBase: NSImage?
+  var imageAdjustmentRenderTask: Task<Void, Never>?
+  var imageAdjustmentRenderGeneration = 0
+  /// Value at the start of a slider drag; the drag commits one undo step on release.
+  var imageAdjustmentGestureStart: ImageAdjustments?
+  /// Live slider value during a drag. Not published: the slider shows its own value and the
+  /// canvas follows `adjustedSourceRender`, so a drag doesn't re-render every observer per tick.
+  var imageAdjustmentGestureValue: ImageAdjustments?
+  /// Coalescing low-resolution render loop that runs while a slider drags.
+  var imageAdjustmentPreviewTask: Task<Void, Never>?
+  /// Downscaled copy of the base reused by every drag preview.
+  var imageAdjustmentPreviewBase: AnnotateAdjustmentPreviewBase?
   @Published private(set) var isCutoutProcessing: Bool = false
   @Published var cutoutErrorMessage: String?
   private var activeCutoutOperationID: UUID?
@@ -261,8 +292,15 @@ final class AnnotateState: ObservableObject {
   /// Whether an image is loaded
   var hasImage: Bool { sourceImage != nil }
 
-  /// Image currently used by preview/export. Cutout is non-destructive and overlays the original source image.
+  /// Image currently used by preview/export. Cutout is non-destructive and overlays the original
+  /// source image; image adjustments are applied on top of that (see `adjustmentBaseImage`).
   var effectiveSourceImage: NSImage? {
+    let base = adjustmentBaseImage
+    return currentAdjustedImage(for: base) ?? base
+  }
+
+  /// Source image with the background cutout applied, before image adjustments.
+  var adjustmentBaseImage: NSImage? {
     if isCutoutApplied {
       return cutoutImage ?? sourceImage
     }
@@ -2165,7 +2203,8 @@ final class AnnotateState: ObservableObject {
   /// off the main actor. Warms lazy caches (embedded CGImage) and resolves main-bound
   /// resources (sandboxed wallpaper disk access, CI blur) before copying.
   func makeRenderSnapshot() -> AnnotateRenderSnapshot? {
-    guard let sourceImage = effectiveSourceImage else { return nil }
+    // Full-resolution adjusted pixels, never a live-preview downscale: preview matches export.
+    guard let sourceImage = exportSourceImage() else { return nil }
 
     // Warm the lazy CGImage cache for every embedded asset referenced by annotations,
     // then freeze plain dictionary copies (off-main render must be read-only).
@@ -2295,6 +2334,7 @@ final class AnnotateState: ObservableObject {
   private func resetCanvasForNewBaseImage(image: NSImage, url: URL?) {
     let shouldApplyDefaultPreset = !hasImage
     resetBackgroundCutoutState(markUnsaved: false)
+    resetImageAdjustmentsForNewImage()
     cancelSensitiveRedactionScan()
     cancelAutoTranslate()
     endTranslateAreaSelection()
@@ -3243,6 +3283,17 @@ final class AnnotateState: ObservableObject {
     hasUnsavedChanges = true
   }
 
+  /// Records `previous` as one image-adjustment undo step (see AnnotateState+ImageAdjustments.swift).
+  func pushImageAdjustmentsUndo(_ previous: ImageAdjustments) {
+    DiagnosticLogger.shared.log(.debug, .annotate, "Undo checkpoint", context: ["kind": "imageAdjustments"])
+    undoStack.append(.imageAdjustments(previous))
+    capUndoStack()
+    redoStack.removeAll()
+    canUndo = true
+    canRedo = false
+    hasUnsavedChanges = true
+  }
+
   private func capUndoStack() {
     if undoStack.count > Self.maxUndoStackSize {
       undoStack.removeFirst(undoStack.count - Self.maxUndoStackSize)
@@ -3264,6 +3315,9 @@ final class AnnotateState: ObservableObject {
     case .imageTransform(let snapshot):
       redoStack.append(.imageTransform(currentImageTransformSnapshot()))
       applyImageTransformSnapshot(snapshot)
+    case .imageAdjustments(let previous):
+      redoStack.append(.imageAdjustments(imageAdjustments))
+      applyImageAdjustmentsFromUndo(previous)
     }
     canUndo = !undoStack.isEmpty
     canRedo = true
@@ -3283,6 +3337,9 @@ final class AnnotateState: ObservableObject {
     case .imageTransform(let snapshot):
       undoStack.append(.imageTransform(currentImageTransformSnapshot()))
       applyImageTransformSnapshot(snapshot)
+    case .imageAdjustments(let next):
+      undoStack.append(.imageAdjustments(imageAdjustments))
+      applyImageAdjustmentsFromUndo(next)
     }
     canUndo = true
     canRedo = !redoStack.isEmpty

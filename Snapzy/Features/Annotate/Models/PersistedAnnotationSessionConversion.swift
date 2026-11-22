@@ -147,7 +147,8 @@ extension PersistedAnnotationSession {
       excludesTranslationsFromExport: sessionData.excludesTranslationsFromExport ? true : nil,
       cropBaselineFootprints: sessionData.cropBaselineFootprints.map { footprints in
         Dictionary(uniqueKeysWithValues: footprints.map { ($0.key.uuidString, $0.value) })
-      }
+      },
+      imageAdjustments: sessionData.imageAdjustments.isIdentity ? nil : sessionData.imageAdjustments
     )
   }
 
@@ -177,7 +178,8 @@ extension PersistedAnnotationSession {
           footprints.compactMap { key, rect in UUID(uuidString: key).map { ($0, rect) } },
           uniquingKeysWith: { first, _ in first }
         )
-      }
+      },
+      imageAdjustments: imageAdjustments ?? .identity
     )
   }
 }

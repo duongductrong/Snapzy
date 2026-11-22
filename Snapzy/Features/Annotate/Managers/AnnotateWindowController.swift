@@ -93,6 +93,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
         autoAppliedCropRect: sessionData.cutoutAutoAppliedCropRect
       )
       self.state.restoreCropBaselineFootprints(sessionData.cropBaselineFootprints)
+      self.state.restoreImageAdjustments(sessionData.imageAdjustments)
       if let combineSession = sessionData.combineSession {
         self.state.restoreCombineSession(combineSession)
       }
@@ -205,6 +206,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
         autoAppliedCropRect: sessionData.cutoutAutoAppliedCropRect
       )
       self.state.restoreCropBaselineFootprints(sessionData.cropBaselineFootprints)
+      self.state.restoreImageAdjustments(sessionData.imageAdjustments)
       if let combineSession = sessionData.combineSession {
         self.state.restoreCombineSession(combineSession)
       }
