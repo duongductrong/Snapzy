@@ -216,11 +216,12 @@ struct ZoomSettingsContent: View {
           if state.isGeneratingSmartAutoZoom {
             ProgressView()
               .controlSize(.small)
-              .scaleEffect(0.75)
+              .scaleEffect(0.7)
           } else {
-            Image(systemName: "wand.and.stars")
-              .font(.system(size: 10, weight: .semibold))
+            Image(systemName: hasZooms ? "arrow.clockwise" : "viewfinder")
+              .font(.system(size: 10.5, weight: .semibold))
           }
+
           Text(
             state.isGeneratingSmartAutoZoom
               ? L10n.VideoEditor.smartAutoZoomAnalyzing
@@ -228,20 +229,32 @@ struct ZoomSettingsContent: View {
                   ? L10n.VideoEditor.smartAutoZoomRegenerate
                   : L10n.VideoEditor.smartAutoZoomGenerate)
           )
-          .font(.system(size: 11, weight: .medium))
+          .font(.system(size: 11, weight: .semibold))
+          .lineLimit(1)
         }
+        .foregroundColor(hasZooms ? SidebarColors.labelPrimary : LiquidGlassTokens.inkOnAccent)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 6)
-        .background(ZoomColors.primary.opacity(0.22))
-        .foregroundColor(.primary)
-        .clipShape(Radius.controlRect(forHeight: 26))
-        .overlay(
-          Radius.controlRect(forHeight: 26)
-            .strokeBorder(ZoomColors.primary.opacity(0.42), lineWidth: 1)
-        )
+        .frame(height: 27)
+        .background {
+          if hasZooms {
+            Radius.controlRect(forHeight: 27)
+              .fill(Color.primary.opacity(isHoveringSmartAction ? 0.105 : 0.06))
+              .overlay(
+                Radius.controlRect(forHeight: 27)
+                  .strokeBorder(Color.primary.opacity(0.09), lineWidth: 0.5)
+              )
+          } else {
+            Radius.controlRect(forHeight: 27)
+              .fill(Color.accentColor.opacity(isHoveringSmartAction ? 0.90 : 1.0))
+          }
+        }
+        .animation(.easeOut(duration: 0.12), value: isHoveringSmartAction)
+        .contentShape(Radius.controlRect(forHeight: 27))
       }
       .buttonStyle(.plain)
+      .onHover { isHoveringSmartAction = $0 }
       .disabled(state.isGeneratingSmartAutoZoom)
+      .opacity(state.isGeneratingSmartAutoZoom ? 0.72 : 1.0)
       .accessibilityIdentifier("video-editor.smart-auto-zoom")
 
       Text(L10n.VideoEditor.smartAutoZoomDescription)
