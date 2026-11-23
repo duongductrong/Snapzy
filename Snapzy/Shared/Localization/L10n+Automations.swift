@@ -1610,6 +1610,11 @@ extension L10n {
       defaultValue: "Values are JSON-escaped in a JSON body. Put tokens in a secret and write {secret:NAME} so they stay out of your config file.",
       comment: "Webhook inspector footer; {secret:NAME} is syntax, keep it"
     )
+    static let webhookTestDescription = string(
+      "automations.inspector.webhook.test.description",
+      defaultValue: "Sends this webhook once with sample values.",
+      comment: "Explains what the webhook Test button sends"
+    )
     static let scriptLabel = string(
       "automations.inspector.script",
       defaultValue: "Script",

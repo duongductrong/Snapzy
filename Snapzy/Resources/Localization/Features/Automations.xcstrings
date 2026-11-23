@@ -12673,6 +12673,78 @@
         }
       }
     },
+    "automations.inspector.webhook.test.description": {
+      "comment": "Explains what the webhook Test button sends",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sendet diesen Webhook einmal mit Beispielwerten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sends this webhook once with sample values."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía este webhook una vez con valores de ejemplo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoie ce webhook une fois avec des valeurs d’exemple."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שולח את ה-webhook הזה פעם אחת עם ערכים לדוגמה."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サンプル値でこの Webhook を 1 回送信します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "샘플 값으로 이 웹훅을 한 번 보냅니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отправляет этот вебхук один раз с примерами значений."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gửi webhook này một lần với giá trị mẫu."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用示例值发送此 Webhook 一次。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用範例值傳送此 Webhook 一次。"
+          }
+        }
+      }
+    },
     "automations.inspector.webhook.url": {
       "comment": "Webhook URL field",
       "extractionState": "manual",

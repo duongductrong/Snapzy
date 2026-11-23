@@ -35,8 +35,65 @@ struct WebhookStepHandler: AutomationStepHandler {
     environment: AutomationRunEnvironment
   ) async throws {
     guard case .webhook(let config) = action else { return }
-    let variables = state.variables()
     var secretValues: [String] = []
+    // Masking starts as soon as a secret was resolved, whatever fails next.
+    defer { state.secretValues.formUnion(secretValues) }
+
+    let exchange = try await Self.send(
+      config,
+      files: files,
+      variables: state.variables(),
+      context: state.context,
+      environment: environment,
+      secretValues: &secretValues
+    )
+    try Task.checkCancellation()
+
+    let data = exchange.data
+    guard (200..<300).contains(exchange.response.statusCode) else {
+      let snippet = String(decoding: data.prefix(200), as: UTF8.self)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+      throw AutomationStepError.httpStatus(
+        exchange.response.statusCode,
+        AutomationSecretStore.mask(snippet, values: secretValues)
+      )
+    }
+
+    if config.responseToText {
+      let text = String(decoding: data.prefix(AutomationWebhookConfig.maxResponseTextBytes), as: UTF8.self)
+      state.payload.text = AutomationSecretStore.mask(text, values: secretValues)
+    }
+    if let path = config.trimmedResponseLinkPath {
+      let link = try Self.link(at: path, in: data)
+      state.payload.link = link
+      state.linkText = link.absoluteString
+      state.lastDelivery = .linkReady
+    }
+  }
+
+  /// Reads a web link at `path` in a JSON response.
+  static func link(at path: String, in data: Data) throws -> URL {
+    guard let value = AutomationJSONPath.string(at: path, in: data),
+          let link = URL(string: value.trimmingCharacters(in: .whitespacesAndNewlines)),
+          AutomationWebhookPolicy.isWebURL(link)
+    else {
+      throw AutomationStepError.failed(L10n.Automations.errorWebhookNoLink(path))
+    }
+    return link
+  }
+
+  /// Renders the request from `variables` and sends it. Resolved secrets are
+  /// appended to `secretValues` even when a later part fails.
+  static func send(
+    _ config: AutomationWebhookConfig,
+    files: [URL],
+    variables: AutomationVariables,
+    context: AutomationRunContext,
+    environment: AutomationRunEnvironment,
+    secretValues: inout [String]
+  ) async throws -> (data: Data, response: HTTPURLResponse) {
+    var resolved: [String] = []
+    defer { secretValues += resolved }
     let resolve: (String) -> String? = { environment.secretValue(named: $0) }
 
     func render(_ template: String, escape: AutomationEscape, secretEscape: AutomationEscape? = nil) throws -> String {
@@ -46,12 +103,9 @@ struct WebhookStepHandler: AutomationStepHandler {
         secretEscape: secretEscape,
         resolveSecret: resolve
       )
-      secretValues += rendered.secrets
+      resolved += rendered.secrets
       return rendered.text
     }
-
-    // Masking starts as soon as a secret was resolved, whatever fails next.
-    defer { state.secretValues.formUnion(secretValues) }
 
     // Payload values are percent-encoded; a secret may be the whole URL, so it goes in as is.
     let urlString = try render(config.url, escape: .url, secretEscape: AutomationEscape.none)
@@ -85,7 +139,7 @@ struct WebhookStepHandler: AutomationStepHandler {
           fields: fields,
           fileField: config.fileField.isEmpty ? "file" : config.fileField,
           file: file,
-          in: state.context
+          in: context
         )
         bodyFile = multipart.url
         request.setValue(multipart.contentType, forHTTPHeaderField: "Content-Type")
@@ -102,32 +156,7 @@ struct WebhookStepHandler: AutomationStepHandler {
     }
 
     let (data, response) = try await environment.send(request, bodyFile: bodyFile)
-    try Task.checkCancellation()
-
-    guard (200..<300).contains(response.statusCode) else {
-      let snippet = String(decoding: data.prefix(200), as: UTF8.self)
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-      throw AutomationStepError.httpStatus(
-        response.statusCode,
-        AutomationSecretStore.mask(snippet, values: secretValues)
-      )
-    }
-
-    if config.responseToText {
-      let text = String(decoding: data.prefix(AutomationWebhookConfig.maxResponseTextBytes), as: UTF8.self)
-      state.payload.text = AutomationSecretStore.mask(text, values: secretValues)
-    }
-    if let path = config.trimmedResponseLinkPath {
-      guard let value = AutomationJSONPath.string(at: path, in: data),
-            let link = URL(string: value.trimmingCharacters(in: .whitespacesAndNewlines)),
-            AutomationWebhookPolicy.isWebURL(link)
-      else {
-        throw AutomationStepError.failed(L10n.Automations.errorWebhookNoLink(path))
-      }
-      state.payload.link = link
-      state.linkText = link.absoluteString
-      state.lastDelivery = .linkReady
-    }
+    return (data, response)
   }
 }
 

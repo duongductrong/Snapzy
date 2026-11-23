@@ -44,6 +44,9 @@ struct UploadDestinationInspector: View {
 
 struct WebhookInspector: View {
   @Binding var config: AutomationWebhookConfig
+  @State private var isTesting = false
+  @State private var testOutcome: AutomationWebhookTestOutcome?
+  @State private var testTask: Task<Void, Never>?
 
   var body: some View {
     Section {
@@ -129,6 +132,100 @@ struct WebhookInspector: View {
         .foregroundStyle(.secondary)
         .fixedSize(horizontal: false, vertical: true)
     }
+
+    testSection
+      .onChange(of: config) { _ in
+        testTask?.cancel()
+        testTask = nil
+        isTesting = false
+        testOutcome = nil
+      }
+      .onDisappear { testTask?.cancel() }
+  }
+
+  private var canTest: Bool {
+    !config.url.trimmingCharacters(in: .whitespaces).isEmpty
+      && AutomationWebhookPolicy.isAcceptableTemplate(config.url)
+  }
+
+  private var testSection: some View {
+    Section {
+      HStack(spacing: 10) {
+        Button(action: runTest) {
+          if isTesting {
+            HStack(spacing: 6) {
+              ProgressView().controlSize(.small)
+              Text(L10n.CustomUploader.testing)
+            }
+          } else {
+            Label(L10n.CustomUploader.test, systemImage: "paperplane")
+          }
+        }
+        .disabled(!canTest || isTesting)
+
+        Text(L10n.Automations.webhookTestDescription)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+
+      if let testOutcome {
+        testOutcomeView(testOutcome)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func testOutcomeView(_ outcome: AutomationWebhookTestOutcome) -> some View {
+    if let status = outcome.statusCode {
+      LabeledContent(L10n.Common.status) {
+        Text(L10n.CustomUploader.testStatus(status))
+          .foregroundStyle((200..<300).contains(status) ? .green : .red)
+          .monospacedDigit()
+      }
+    }
+    if let body = outcome.responseBody {
+      VStack(alignment: .leading, spacing: 4) {
+        Text(L10n.CustomUploader.testResponseBody)
+        ScrollView {
+          Text(body.isEmpty ? L10n.CustomUploader.testEmptyBody : body)
+            .font(.system(size: 11, design: .monospaced))
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxHeight: 120)
+      }
+    }
+    if let link = outcome.extractedLink {
+      LabeledContent(L10n.CustomUploader.testExtractedURL) {
+        Text(link)
+          .font(.system(size: 11, design: .monospaced))
+          .textSelection(.enabled)
+          .lineLimit(2)
+          .truncationMode(.middle)
+      }
+    }
+    if let error = outcome.error {
+      LabeledContent(L10n.CustomUploader.testError) {
+        Text(error)
+          .foregroundStyle(.red)
+          .textSelection(.enabled)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+    }
+  }
+
+  private func runTest() {
+    testTask?.cancel()
+    testOutcome = nil
+    isTesting = true
+    let snapshot = config
+    testTask = Task {
+      let outcome = await AutomationWebhookTestRunner.run(snapshot)
+      guard !Task.isCancelled else { return }
+      testOutcome = outcome
+      isTesting = false
+    }
   }
 
   private var presetBinding: Binding<AutomationWebhookConfig.Preset?> {
@@ -151,6 +248,95 @@ struct WebhookInspector: View {
       resolveSecret: { _ in "secret" }
     ))?.text ?? config.jsonTemplate
     return (try? JSONSerialization.jsonObject(with: Data(rendered.utf8), options: [.fragmentsAllowed])) != nil
+  }
+}
+
+// MARK: - Webhook Test
+
+struct AutomationWebhookTestOutcome: Equatable {
+  var statusCode: Int?
+  var responseBody: String?
+  var extractedLink: String?
+  var error: String?
+}
+
+/// Sends the webhook once with sample template values (and a 1×1 PNG for
+/// multipart bodies); secrets resolve from the store and are masked out of
+/// the response shown.
+enum AutomationWebhookTestRunner {
+  static let responsePreviewBytes = 2048
+
+  /// A transparent 1×1 PNG.
+  private static let pngData = Data(
+    base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+  )!
+
+  static func run(
+    _ config: AutomationWebhookConfig,
+    environment: AutomationRunEnvironment? = nil
+  ) async -> AutomationWebhookTestOutcome {
+    let environment = environment ?? LiveAutomationRunEnvironment()
+    let runID = UUID()
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("SnapzyWebhookTest-\(runID.uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+
+    let context = AutomationRunContext(
+      runID: runID,
+      automationID: UUID(),
+      automationName: "Webhook Test",
+      invocation: .menuBar,
+      startedAt: Date(),
+      appName: nil,
+      windowTitle: nil,
+      workingDirectory: directory
+    )
+    var secrets: [String] = []
+    do {
+      try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+      let file = directory.appendingPathComponent("Snapzy_shot.png")
+      try pngData.write(to: file)
+      let exchange = try await WebhookStepHandler.send(
+        config,
+        files: [file],
+        variables: AutomationTemplatePreview.sample,
+        context: context,
+        environment: environment,
+        secretValues: &secrets
+      )
+      return outcome(config: config, data: exchange.data, statusCode: exchange.response.statusCode, secrets: secrets)
+    } catch {
+      return AutomationWebhookTestOutcome(
+        error: AutomationSecretStore.mask(error.localizedDescription, values: secrets)
+      )
+    }
+  }
+
+  static func outcome(
+    config: AutomationWebhookConfig,
+    data: Data,
+    statusCode: Int,
+    secrets: [String]
+  ) -> AutomationWebhookTestOutcome {
+    var outcome = AutomationWebhookTestOutcome(
+      statusCode: statusCode,
+      responseBody: AutomationSecretStore.mask(preview(of: data), values: secrets)
+    )
+    guard (200..<300).contains(statusCode) else { return outcome }
+    if let path = config.trimmedResponseLinkPath {
+      do {
+        outcome.extractedLink = try WebhookStepHandler.link(at: path, in: data).absoluteString
+      } catch {
+        outcome.error = error.localizedDescription
+      }
+    }
+    return outcome
+  }
+
+  /// The first 2 KB of the body as text.
+  static func preview(of body: Data) -> String {
+    let text = String(decoding: body.prefix(responsePreviewBytes), as: UTF8.self)
+    return body.count > responsePreviewBytes ? text + "…" : text
   }
 }
 

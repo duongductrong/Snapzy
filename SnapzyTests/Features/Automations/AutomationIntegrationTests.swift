@@ -328,6 +328,39 @@ final class AutomationIntegrationTests: XCTestCase {
     XCTAssertEqual(environment.sentRequests.count, before, "Never sent over plain HTTP")
   }
 
+  func testWebhookTestRunnerSendsSampleValuesAndMasksSecrets() async throws {
+    environment.secrets = ["TOKEN": "tok-123456"]
+    environment.sendBody = Data(#"{"echo":"tok-123456","data":{"url":"https://short.example/abc"}}"#.utf8)
+    let config = AutomationWebhookConfig(
+      url: "https://hooks.example.com/post",
+      headers: [.init(name: "Authorization", value: "Bearer {secret:TOKEN}")],
+      jsonTemplate: #"{"text": "{link}"}"#,
+      responseLinkPath: "data.url"
+    )
+    let outcome = await AutomationWebhookTestRunner.run(config, environment: environment)
+
+    let request = try XCTUnwrap(environment.sentRequests.last)
+    XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer tok-123456")
+    let decoded = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request.httpBody)) as? [String: String])
+    XCTAssertEqual(decoded["text"], "https://cdn.example.com/Snapzy_shot.png", "Sample link fills {link}")
+    XCTAssertEqual(outcome.statusCode, 200)
+    XCTAssertEqual(outcome.extractedLink, "https://short.example/abc")
+    XCTAssertNil(outcome.error)
+    XCTAssertFalse(outcome.responseBody?.contains("tok-123456") ?? true, "Secret masked in shown response")
+
+    environment.sendStatus = 500
+    let failed = await AutomationWebhookTestRunner.run(config, environment: environment)
+    XCTAssertEqual(failed.statusCode, 500)
+    XCTAssertNil(failed.extractedLink)
+
+    let multipart = await AutomationWebhookTestRunner.run(
+      AutomationWebhookConfig(url: "https://hooks.example.com/upload", bodyKind: .multipart),
+      environment: environment
+    )
+    XCTAssertEqual(multipart.statusCode, 500, "Multipart test sends a sample file")
+    XCTAssertNil(multipart.error)
+  }
+
   func testWebhookPolicy() {
     XCTAssertNotNil(AutomationWebhookPolicy.validatedURL("https://example.com/hook"))
     XCTAssertNotNil(AutomationWebhookPolicy.validatedURL("http://localhost:3000/hook"))
