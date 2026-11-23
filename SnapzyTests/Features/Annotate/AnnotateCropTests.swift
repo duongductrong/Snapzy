@@ -157,6 +157,29 @@ final class AnnotateCropTests: XCTestCase {
     XCTAssertEqual(state.selectedTool, .selection)
   }
 
+  /// Regression: confirming a crop must record an undo checkpoint so ⌘Z restores the previous crop state.
+  @MainActor
+  func testConfirmCropInteractionRecordsUndoAndRedo() throws {
+    let state = try makeLoadedState()
+    XCTAssertNil(state.cropRect)
+    XCTAssertFalse(state.canUndo)
+
+    state.beginCropInteraction()
+    let cropped = CGRect(x: 40, y: 30, width: 200, height: 150)
+    state.updateCropRect(cropped)
+    state.confirmCropInteraction()
+
+    XCTAssertEqual(state.cropRect, cropped)
+    XCTAssertTrue(state.canUndo)
+
+    state.undo()
+    XCTAssertNil(state.cropRect)
+    XCTAssertTrue(state.canRedo)
+
+    state.redo()
+    XCTAssertEqual(state.cropRect, cropped)
+  }
+
   // MARK: - Cancel / reset
 
   @MainActor

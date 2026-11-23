@@ -170,6 +170,23 @@ final class AnnotateMockupTests: XCTestCase {
     XCTAssertNil(state.selectedPresetId)
   }
 
+  /// Regression: MockupState.undo() and redo() must restore selectedPresetId alongside transforms.
+  func testMockupStateUndoRedoRestoresSelectedPresetId() {
+    let state = makeMockupState()
+    XCTAssertNil(state.selectedPresetId)
+
+    state.applyPreset(.dramatic)
+    XCTAssertEqual(state.selectedPresetId, MockupPreset.dramatic.id)
+
+    state.undo()
+    XCTAssertNil(state.selectedPresetId)
+    XCTAssertEqual(state.rotationX, 0)
+
+    state.redo()
+    XCTAssertEqual(state.selectedPresetId, MockupPreset.dramatic.id)
+    XCTAssertEqual(state.rotationY, MockupPreset.dramatic.rotationY)
+  }
+
   // MARK: - MockupExporter render (GPU path, CI-gated)
 
   func testMockupExporterRenderProducesImageWithSourceImage() throws {
