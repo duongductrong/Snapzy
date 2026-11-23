@@ -113,6 +113,35 @@ public struct OutputWriter {
     throw Self.existingFileError(url)
   }
 
+  /// Moves one staged file (a recording) to `destination` and returns its final path.
+  /// `.staging` leaves it where it is; stdout is not supported.
+  public func deliver(stagedPath: String, to destination: OutputDestination, force: Bool) throws -> String {
+    let source = URL(fileURLWithPath: stagedPath)
+    let target: URL
+    switch destination {
+    case .staging:
+      return stagedPath
+    case .standardOutput:
+      throw CLIError(.invalidArguments, "Cannot stream a recording to stdout", hint: "Pass a file or directory to --output")
+    case .directory(let directory):
+      target = directory.appendingPathComponent(source.lastPathComponent)
+    case .file(let url):
+      target = url
+    }
+
+    let staged = "The recording is still at \(stagedPath)"
+    if !force, fileManager.fileExists(atPath: target.path) {
+      throw CLIError(.invalidArguments, "\(target.path) already exists", hint: "\(Self.forceHint). \(staged)")
+    }
+    do {
+      try place(source, at: target)
+    } catch {
+      throw CLIError(.internal, "Could not write \(target.path): \(error.localizedDescription)", hint: staged)
+    }
+    try? fileManager.removeItem(at: source)
+    return target.path
+  }
+
   /// Copies, then removes the staged source best-effort: the caller may be
   /// sandboxed with read-only access to Snapzy's staging folder, and the app
   /// sweeps leftovers after 24 hours.

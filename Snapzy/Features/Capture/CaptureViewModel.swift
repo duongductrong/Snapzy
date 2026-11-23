@@ -2280,7 +2280,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   /// Reuses `RecordingCoordinator.stopFromStatusItem()` which is state-aware
   /// (`.recording`/`.paused` → stop, `.preparing` → cancel, `.idle`/`.stopping` → no-op).
   func toggleRecordingFromShortcut(initialInteractionMode: AreaSelectionInteractionMode) {
-    if RecordingCoordinator.shared.isActive {
+    if RecordingCoordinator.shared.isActive || HeadlessRecordingService.shared.isActive {
       DiagnosticLogger.shared.log(.info, .recording, "Recording shortcut: stop", context: [
         "recorderState": "\(ScreenRecordingManager.shared.state)",
         "initialMode": initialInteractionMode == .applicationWindow ? "application" : "manual",
@@ -2300,8 +2300,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       return
     }
 
-    // Check if already recording
-    guard !RecordingCoordinator.shared.isActive else { return }
+    // Check if already recording (including a `snapzy record` recording, which has no toolbar)
+    guard !RecordingCoordinator.shared.isActive, !ScreenRecordingManager.shared.isActive else { return }
 
     // Prevent multiple area selections
     guard !isAreaSelectionActive else {

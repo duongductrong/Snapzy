@@ -154,6 +154,11 @@ final class RecordingCoordinator: ObservableObject {
     DiagnosticLogger.shared.log(.debug, .recording, "Stop requested from status item", context: [
       "recorderState": "\(recorder.state)",
     ])
+    // A `snapzy record` recording has no toolbar; it keeps its file for the CLI.
+    if HeadlessRecordingService.shared.isActive {
+      HeadlessRecordingService.shared.stopFromUser()
+      return
+    }
     switch recorder.state {
     case .recording, .paused:
       stopRecording()

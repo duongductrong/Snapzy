@@ -14,6 +14,11 @@
 //  | capture.screen   | CaptureScreenParams | CLICaptureResult  |
 //  | capture.window   | CaptureWindowParams | CLICaptureResult  |
 //  | capture.area     | CaptureAreaParams   | CLICaptureResult  |
+//  | record.screen    | RecordScreenParams  | CLIRecordingInfo  |
+//  | record.window    | RecordWindowParams  | CLIRecordingInfo  |
+//  | record.area      | RecordAreaParams    | CLIRecordingInfo  |
+//  | record.stop      | RecordStopParams    | CLIRecordingResult |
+//  | record.status    | CLIEmpty            | CLIRecordingStatus |
 //  | agent.tools      | AgentToolsParams    | AgentToolList     |
 //  | agent.call       | AgentCallParams     | AgentCallResult   |
 //
@@ -29,6 +34,12 @@ public enum CLIMethod: String, Codable, Sendable, CaseIterable {
   case captureScreen = "capture.screen"
   case captureWindow = "capture.window"
   case captureArea = "capture.area"
+  /// Start a recording; `record.stop` ends it and returns the file.
+  case recordScreen = "record.screen"
+  case recordWindow = "record.window"
+  case recordArea = "record.area"
+  case recordStop = "record.stop"
+  case recordStatus = "record.status"
   /// Annotate AI tools for `snapzy mcp`; authorized by a session token (CLIAgentModels).
   case agentTools = "agent.tools"
   case agentCall = "agent.call"

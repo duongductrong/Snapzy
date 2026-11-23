@@ -138,6 +138,11 @@ final class CLIServer {
     router.register(.captureScreen, CLICaptureScreenHandler())
     router.register(.captureWindow, CLICaptureWindowHandler())
     router.register(.captureArea, CLICaptureAreaHandler())
+    router.register(.recordScreen, CLIRecordScreenHandler())
+    router.register(.recordWindow, CLIRecordWindowHandler())
+    router.register(.recordArea, CLIRecordAreaHandler())
+    router.register(.recordStop, CLIRecordStopHandler())
+    router.register(.recordStatus, CLIRecordStatusHandler())
     registerAgentRoutes(&router)
     return router
   }

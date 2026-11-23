@@ -15,7 +15,7 @@ import SnapzyCLIProtocol
 public struct SnapzyCommand: AsyncParsableCommand {
   public static let configuration = CommandConfiguration(
     commandName: "snapzy",
-    abstract: "Capture the screen with Snapzy from the command line.",
+    abstract: "Capture and record the screen with Snapzy from the command line.",
     discussion: """
     Output is JSON when stdout is not a terminal, or with --json.
 
@@ -24,7 +24,7 @@ public struct SnapzyCommand: AsyncParsableCommand {
       1  internal error
       2  invalid arguments
       3  Screen Recording permission or Snapzy onboarding missing
-      4  display, window, area or image file not found
+      4  display, window, area, image file or recording not found
       5  Snapzy unavailable, busy, disabled, or version mismatch
       7  this app is not allowed to use Snapzy
     """,
@@ -34,6 +34,7 @@ public struct SnapzyCommand: AsyncParsableCommand {
       VersionCommand.self,
       ListCommand.self,
       CaptureCommand.self,
+      RecordCommand.self,
       MeasureCommand.self,
       MCPCommand.self,
     ]

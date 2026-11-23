@@ -25,3 +25,7 @@ extension CLIImageFormat: ExpressibleByArgument {
     ["png", "jpg", "webp", "heic", "avif"]
   }
 }
+
+extension CLIVideoFormat: ExpressibleByArgument {}
+
+extension CLIVideoQuality: ExpressibleByArgument {}
