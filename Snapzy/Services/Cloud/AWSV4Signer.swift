@@ -32,7 +32,7 @@ nonisolated enum AWSV4Signer {
     payloadHash: String
   ) throws -> URLRequest {
     guard let url = request.url,
-      let host = url.host,
+      let hostHeader = hostHeaderValue(for: url),
       let method = request.httpMethod
     else {
       throw CloudError.signingFailed(L10n.CloudOperation.invalidRequestURLOrMethod)
@@ -49,7 +49,7 @@ nonisolated enum AWSV4Signer {
     let credentialScope = "\(dateStamp)/\(region)/\(service)/aws4_request"
 
     // Set required headers
-    signedRequest.setValue(host, forHTTPHeaderField: "Host")
+    signedRequest.setValue(hostHeader, forHTTPHeaderField: "Host")
     signedRequest.setValue(amzDate, forHTTPHeaderField: "x-amz-date")
     signedRequest.setValue(payloadHash, forHTTPHeaderField: "x-amz-content-sha256")
 
@@ -110,7 +110,7 @@ nonisolated enum AWSV4Signer {
     service: String = "s3",
     expireSeconds: Int = 3600
   ) throws -> URL {
-    guard let host = url.host else {
+    guard let hostHeader = hostHeaderValue(for: url) else {
       throw CloudError.signingFailed(L10n.CloudOperation.invalidURLForPresigning)
     }
 
@@ -143,7 +143,7 @@ nonisolated enum AWSV4Signer {
       "\(uriEncode(key))=\(uriEncode(value))"
     }.joined(separator: "&")
 
-    let canonicalHeaders = "host:\(host)\n"
+    let canonicalHeaders = "host:\(hostHeader)\n"
     let signedHeaders = "host"
 
     let canonicalRequest = [
@@ -172,7 +172,7 @@ nonisolated enum AWSV4Signer {
     let signature = hmacSHA256Hex(key: signingKey, data: stringToSign)
 
     let presignedURLString =
-      "\(url.scheme ?? "https")://\(host)\(canonicalURI)?\(canonicalQueryString)&X-Amz-Signature=\(signature)"
+      "\(url.scheme ?? "https")://\(hostHeader)\(canonicalURI)?\(canonicalQueryString)&X-Amz-Signature=\(signature)"
 
     guard let presignedURL = URL(string: presignedURLString) else {
       throw CloudError.signingFailed(L10n.CloudOperation.failedToConstructPresignedURL)
@@ -288,7 +288,18 @@ nonisolated enum AWSV4Signer {
 
   // MARK: - URI Encoding
 
-  private static func uriEncode(_ string: String) -> String {
+  /// Returns `host` or `host:port` when a non-default port is present (e.g. MinIO `:9000`).
+  private static func hostHeaderValue(for url: URL) -> String? {
+    guard let host = url.host else { return nil }
+    guard let port = url.port else { return host }
+    let scheme = url.scheme?.lowercased()
+    if (scheme == "http" && port == 80) || (scheme == "https" && port == 443) {
+      return host
+    }
+    return "\(host):\(port)"
+  }
+
+  static func uriEncode(_ string: String) -> String {
     var allowed = CharacterSet.alphanumerics
     allowed.insert(charactersIn: "-._~")
     return string.addingPercentEncoding(withAllowedCharacters: allowed) ?? string
