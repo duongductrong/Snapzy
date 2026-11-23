@@ -574,7 +574,7 @@ extension GlobalShortcutKind {
 }
 
 /// Shortcut action types
-enum ShortcutAction {
+enum ShortcutAction: Equatable {
   case captureFullscreen
   case captureArea
   case captureRepeatArea
@@ -601,6 +601,8 @@ enum ShortcutAction {
   case pickColor
   case measureScreen
   case captureTranslate
+  /// A user automation's keyboard trigger.
+  case runAutomation(UUID)
 }
 
 /// Protocol for handling shortcut events
@@ -710,6 +712,20 @@ final class KeyboardShortcutManager {
   private var measureScreenHotkeyRef: EventHotKeyRef?
   private var translateHotkeyRef: EventHotKeyRef?
 
+  /// Automation hotkeys: ids are assigned per registration pass, starting above
+  /// the fixed `ZSF*` ids, and mapped back to the automation that owns them.
+  private static let automationHotkeySignature = OSType(0x5A53_5700)  // "ZSW\0"
+  private static let automationHotkeyBaseID: UInt32 = 1000
+  private var automationHotkeyRefs: [EventHotKeyRef] = []
+  private var automationIDsByHotkeyID: [UInt32: UUID] = [:]
+  /// Each automation keeps its hotkey id for the app's lifetime, so a keypress
+  /// dispatched across a re-registration still reaches the same automation.
+  private var stableAutomationHotkeyIDs: [UUID: UInt32] = [:]
+  private let automationStore: AutomationStore = .shared
+  /// `@Published` emits on willSet: the store still holds the previous list while
+  /// the observer runs, so the emitted list is parked here for that refresh.
+  private var automationsOverride: [Automation]?
+
   /// Fn-containing bindings can't be expressed via Carbon `RegisterEventHotKey`;
   /// they are dispatched through key event monitors instead.
   private(set) var fnBindings: [(id: UInt32, config: ShortcutConfig)] = []
@@ -811,6 +827,7 @@ final class KeyboardShortcutManager {
     )
     setupEventHandler()
     observeRecordingSessionState()
+    observeAutomations()
 
     // Auto-enable if previously enabled
     if UserDefaults.standard.bool(forKey: shortcutsEnabledKey) {
@@ -891,11 +908,35 @@ final class KeyboardShortcutManager {
       .store(in: &cancellables)
   }
 
+  /// Re-register when automations change so their hotkeys follow edits immediately.
+  private func observeAutomations() {
+    automationStore.$automations
+      .removeDuplicates { lhs, rhs in
+        Self.hotkeySignature(lhs) == Self.hotkeySignature(rhs)
+      }
+      .dropFirst()
+      .sink { [weak self] automations in
+        guard let self else { return }
+        self.automationsOverride = automations
+        self.refreshShortcutRegistration()
+        self.automationsOverride = nil
+      }
+      .store(in: &cancellables)
+  }
+
+  private static func hotkeySignature(_ automations: [Automation]) -> [String] {
+    automations.map { "\($0.id.uuidString)|\($0.isEnabled)|\(String(describing: $0.hotkey))" }
+  }
+
   /// Exposed for the shortcuts settings UI: true when at least one enabled binding
   /// relies on the Fn modifier (and therefore on Accessibility permission).
   var hasFnBoundShortcuts: Bool {
-    GlobalShortcutKind.allCases.contains { kind in
+    let globalUsesFn = GlobalShortcutKind.allCases.contains { kind in
       guard isShortcutEnabled(for: kind), let config = shortcut(for: kind) else { return false }
+      return config.modifiers & ShortcutConfig.functionCarbonModifier != 0
+    }
+    return globalUsesFn || automationStore.automations.contains { automation in
+      guard automation.isEnabled, let config = automation.hotkey else { return false }
       return config.modifiers & ShortcutConfig.functionCarbonModifier != 0
     }
   }
@@ -1667,7 +1708,9 @@ final class KeyboardShortcutManager {
       actionName = "translate"
       action = .captureTranslate
     default:
-      return
+      guard let automationID = automationIDsByHotkeyID[id] else { return }
+      actionName = "automation:\(automationID.uuidString.prefix(8))"
+      action = .runAutomation(automationID)
     }
 
     DiagnosticLogger.shared.log(.info, .action, "Shortcut triggered: \(actionName)")
@@ -1682,6 +1725,7 @@ final class KeyboardShortcutManager {
 
   private func registerShortcuts() {
     guard shouldRegisterShortcuts else { return }
+    defer { registerAutomationShortcuts() }
 
     registerShortcutIfNeeded(
       kind: .fullscreen,
@@ -1872,6 +1916,49 @@ final class KeyboardShortcutManager {
     )
   }
 
+  private func registerAutomationShortcuts() {
+    for automation in automationsOverride ?? automationStore.automations {
+      guard automation.isEnabled, !automation.hasUnsupportedSource, let config = automation.hotkey else { continue }
+      let id = stableAutomationHotkeyIDs[automation.id]
+        ?? Self.automationHotkeyBaseID + UInt32(stableAutomationHotkeyIDs.count)
+      stableAutomationHotkeyIDs[automation.id] = id
+      let hotkeyID = EventHotKeyID(signature: Self.automationHotkeySignature, id: id)
+      automationIDsByHotkeyID[hotkeyID.id] = automation.id
+
+      guard config.modifiers & ShortcutConfig.functionCarbonModifier == 0 else {
+        fnBindings.append((id: hotkeyID.id, config: config))
+        continue
+      }
+      guard config.modifiers != 0 else { continue }
+
+      var ref: EventHotKeyRef?
+      let status = RegisterEventHotKey(
+        config.keyCode,
+        config.modifiers,
+        hotkeyID,
+        GetApplicationEventTarget(),
+        0,
+        &ref
+      )
+      if status == noErr, let ref {
+        automationHotkeyRefs.append(ref)
+        DiagnosticLogger.shared.log(
+          .info,
+          .action,
+          "Registered automation shortcut: \(config.displayString)",
+          context: ["automation": automation.id.uuidString]
+        )
+      } else {
+        DiagnosticLogger.shared.log(
+          .warning,
+          .action,
+          "Failed to register automation shortcut",
+          context: ["automation": automation.id.uuidString, "status": String(status)]
+        )
+      }
+    }
+  }
+
   private func registerShortcutIfNeeded(
     kind: GlobalShortcutKind,
     config: ShortcutConfig?,
@@ -2018,6 +2105,11 @@ final class KeyboardShortcutManager {
   }
 
   private func unregisterAllShortcuts() {
+    for ref in automationHotkeyRefs {
+      UnregisterEventHotKey(ref)
+    }
+    automationHotkeyRefs.removeAll()
+    automationIDsByHotkeyID.removeAll()
     if let ref = fullscreenHotkeyRef {
       UnregisterEventHotKey(ref)
       fullscreenHotkeyRef = nil

@@ -67,6 +67,13 @@ final class ShortcutValidationService {
       ))
     }
 
+    if let automation = conflictingAutomation(for: config, excluding: nil) {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.Automations.shortcutUsedByAutomation(automation.displayName)
+      ))
+    }
+
     if let conflictKind = conflictingAnnotateActionShortcut(for: config, excluding: nil) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
@@ -257,6 +264,58 @@ final class ShortcutValidationService {
     }
 
     return .accept(issue: nil)
+  }
+
+  /// Global hotkey for an automation: must not collide with any global action,
+  /// another automation, or an Annotate / Video Editor action shortcut.
+  func validateAutomationShortcut(
+    _ config: ShortcutConfig?,
+    for automationID: UUID
+  ) -> ShortcutValidationDecision {
+    guard let config else { return .accept(issue: nil) }
+
+    guard config.modifiers != 0 else {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.Automations.shortcutNeedsModifier
+      ))
+    }
+
+    if let conflictKind = conflictingGlobalShortcut(for: config, excluding: nil) {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName)
+      ))
+    }
+
+    if let automation = conflictingAutomation(for: config, excluding: automationID) {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.Automations.shortcutUsedByAutomation(automation.displayName)
+      ))
+    }
+
+    if let conflictKind = conflictingAnnotateActionShortcut(for: config, excluding: nil) {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.ShortcutValidation.alreadyUsedByInAnnotate(conflictKind.displayName)
+      ))
+    }
+
+    if let conflictKind = conflictingVideoEditorActionShortcut(for: config, excluding: nil) {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.ShortcutValidation.alreadyUsedByInVideoEditor(conflictKind.displayName)
+      ))
+    }
+
+    return .accept(issue: nil)
+  }
+
+  private func conflictingAutomation(for config: ShortcutConfig, excluding excludedID: UUID?) -> Automation? {
+    AutomationStore.shared.automations.first {
+      $0.id != excludedID && $0.isEnabled && $0.hotkey == config
+    }
   }
 
   private func conflictingGlobalShortcut(

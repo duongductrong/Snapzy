@@ -270,6 +270,7 @@ SnapzyUITests/
 | `Features/VideoEditor/` | Trim, zoom, speed (timelapse) segments, background, Smart Camera, GIF/video export |
 | `Features/Preferences/` | General, Capture, Quick Access, Shortcuts, Permissions, History storage/retention, Cloud, Advanced, About tabs |
 | `Features/Shortcuts/` | Keyboard shortcut cheat-sheet overlay |
+| `Features/Automations/` | Automation model, store, runner + step handlers, Settings → Automations (see [`AUTOMATIONS.md`](AUTOMATIONS.md)) |
 | `Features/Updates/` | Sparkle menu binding and update UI bridge |
 | `Features/CrashReport/` | Crash report prompt and diagnostics UX |
 | `Features/CommandLine/` | Approval prompt for apps using the `snapzy` command |

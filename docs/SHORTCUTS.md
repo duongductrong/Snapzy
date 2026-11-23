@@ -148,9 +148,15 @@ Hover a Quick Access card, press the key, the card runs that action. Every `Quic
 - Validation (`validateVideoEditorActionShortcut`): rejects the editor's fixed combos (`VideoEditorShortcutManager.reservedShortcuts`: ⌘Z, ⇧⌘Z, ⌘S, ⌘U, ⌘B, ⌘=, ⌘-, ⌘0, ⌘C/V/X/A, ⌘W/Q/M/H, ⌘,) and enabled global shortcuts (swap offered). Annotate keys may be reused: the two windows are never key at once. Setting a global shortcut to the Video Editor binding is rejected the other way round ("Already used by … in Video Editor").
 - Fixed editor keys (not remappable) are listed in [VIDEO_EDITOR.md](VIDEO_EDITOR.md#editor-shortcuts-video-only).
 
+## Automation shortcuts
+
+User automations ([AUTOMATIONS.md](AUTOMATIONS.md)) register their own global hotkeys after the fixed kinds: signature `0x5A535700` ("ZSW"), ids from 1000 assigned per registration pass and mapped back to the automation id; dispatched as `ShortcutAction.runAutomation(UUID)`. Fn combos use `fnBindings`. `KeyboardShortcutManager` re-registers whenever an automation's enabled state or hotkey changes, and `hasFnBoundShortcuts` includes them.
+
 ## Conflict detection
 
 `ShortcutValidationService` (`Snapzy/Services/Shortcuts/ShortcutValidationService.swift`):
+
+- Automations: `validateAutomationShortcut` requires a modifier and rejects collisions with enabled global shortcuts, other enabled automations, Annotate and Video Editor actions. `validateGlobalShortcut` rejects combos an enabled automation uses (no swap offer).
 
 - Cross-namespace duplicate checks (global ↔ annotate action ↔ video editor action ↔ independent overlay ↔ annotate tool): duplicate → `.reject` with `.error` severity, blocks assignment.
 - System screenshot conflicts: `SystemScreenshotShortcutManager` reads `com.apple.symbolichotkeys` via `UserDefaults(suiteName:)` (requires the shared-preference entitlement — see [APP_LIFECYCLE.md](APP_LIFECYCLE.md)). Symbolic hotkey IDs: 28 (save area), 29 (copy area), 30 (save screen), 31 (copy screen), 184 (screenshot options).

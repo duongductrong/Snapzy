@@ -10,6 +10,7 @@ import Foundation
 nonisolated enum L10n {
   private nonisolated static let tableMappings: [(prefix: String, tableName: String)] = [
     ("action.", "Common"),
+    ("automations.", "Automations"),
     ("combine.", "Combine"),
     ("command-line.", "CommandLine"),
     ("menu.", "Menubar"),
@@ -197,6 +198,11 @@ nonisolated enum L10n {
       "preferences.tab.ai",
       defaultValue: "AI",
       comment: "Preferences tab title for the Annotate AI prompt (Ask) settings"
+    )
+    static let automationsTab = string(
+      "preferences.tab.automations",
+      defaultValue: "Automations",
+      comment: "Settings sidebar tab title for automations"
     )
     static let commandLineTab = string(
       "preferences.tab.command-line",

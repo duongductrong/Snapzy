@@ -12,6 +12,8 @@ Verified against `Snapzy/Services/Cloud/`, `Snapzy/Features/Preferences/Componen
   - **Annotate** — bottom-bar button + ⌘U (`AnnotateShortcutManager.defaultCloudUpload`); re-upload on save/copy uploads the new render, then deletes the old cloud object in the background (`AnnotateWindowController`, `oldCloudKey` cleanup).
   - **Video Editor** — bottom-bar button (label flips to "Re-upload" once a `cloudKey` exists; overwrite path) + post-export upload offer via `.videoEditorCloudUpload` notification (`VideoEditorWindowController` guards).
   - **History** — context menu (`HistoryContextMenu`, gated on `CloudManager.shared.isConfigured`).
+- **Automations** — the `uploadAndCopyLink` step ([AUTOMATIONS.md](AUTOMATIONS.md)) uploads the capture right after it is saved and copies the link (URL or Markdown); failures fall back to copying the image and showing a Quick Access card.
+- `CloudShareService` (`Snapzy/Services/Cloud/CloudShareService.swift`) is the shared upload-and-share path for the Quick Access card and automations: scoped file access, `CloudManager.upload`, background delete of a replaced key, link text, pasteboard write.
 - Editor/card entry points are gated on `CloudManager.shared.isConfigured` **and** `QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud)` (Quick Access action customization can hide the action).
 
 ## Provider architecture

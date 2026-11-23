@@ -112,7 +112,7 @@ final class CLICaptureBridgeTests: XCTestCase {
     defer { try? FileManager.default.removeItem(at: directory) }
 
     var emitted: [URL] = []
-    let subscription = ScreenCaptureManager.shared.captureCompletedPublisher.sink { emitted.append($0) }
+    let subscription = ScreenCaptureManager.shared.captureCompletedPublisher.sink { emitted.append($0.url) }
     defer { subscription.cancel() }
 
     let result = await ScreenCaptureManager.shared.captureFullscreen(

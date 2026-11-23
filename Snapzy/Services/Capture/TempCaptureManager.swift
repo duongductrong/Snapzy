@@ -70,11 +70,14 @@ final class TempCaptureManager {
 
   /// Resolve save directory based on auto-save toggle state.
   /// Returns temp directory if auto-save is OFF, export directory if ON.
+  /// - Parameter saveOverride: an automation's own Save choice; `nil` uses the
+  ///   after-capture Save preference.
   func resolveSaveDirectory(
     for captureType: CaptureType,
-    exportDirectory: URL
+    exportDirectory: URL,
+    saveOverride: Bool? = nil
   ) -> URL {
-    let autoSaveEnabled = preferences.isActionEnabled(.save, for: captureType)
+    let autoSaveEnabled = saveOverride ?? preferences.isActionEnabled(.save, for: captureType)
     let typeLabel = captureType == .screenshot ? "screenshot" : "recording"
 
     if autoSaveEnabled {

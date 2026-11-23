@@ -340,6 +340,7 @@ extension PreferencesTab {
     case .capture: return .blue
     case .quickAccess: return PreferencesIconTint(hue: 262)
     case .shortcuts: return .periwinkle
+    case .automations: return PreferencesIconTint(hue: 52, saturation: 0.8)
     case .annotate: return PreferencesIconTint(hue: 350)
     case .ai: return PreferencesIconTint(hue: 282, saturation: 0.55)
     case .history: return PreferencesIconTint(hue: 40, saturation: 0.66)

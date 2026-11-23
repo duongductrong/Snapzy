@@ -248,4 +248,10 @@ enum PreferencesKeys {
   nonisolated static let cloudUploadsFloatingPosition = "cloud.uploads.floatingPosition"
   nonisolated static let cloudShareLinkStyle = "cloud.shareLinkStyle"
   static let cloudGoogleFolderId = "cloud.google.folderId"
+
+  // Automations
+  /// JSON `[Automation]`.
+  static let automations = "automations.items"
+  /// Built-in presets were seeded once; deleting them must not re-seed.
+  static let automationsSeeded = "automations.seeded"
 }

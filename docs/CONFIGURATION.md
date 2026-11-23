@@ -120,6 +120,36 @@ agent CLI (`claude_model`, `codex_model`, `opencode_model`; empty = the CLI's
 default). CLI paths, sending permissions and learned endpoint capabilities are
 per-Mac and never exported.
 
+## Automations configuration
+
+Automations ([AUTOMATIONS.md](AUTOMATIONS.md)) export as one keyed table each,
+`[automations.<uuid>]`, because the parser has no arrays of tables. `order`
+keeps the list order.
+
+```toml
+[automations.8f0c2a6e-5a1d-4b6c-9a3e-2f1b0c9d8e7a]
+order = 0
+name = "Cloud Share"
+preset = "cloud-share"
+enabled = true
+capture = "area"
+save_to_export = false
+steps = ["copy_image", "upload_copy_link:markdown", "notify"]
+shortcut_key = "4"
+shortcut_modifiers = ["control", "shift"]
+external_invocation = false
+```
+
+- `capture`: `area`, `fullscreen`, `active_window`, `application_window`.
+- `steps`: `copy_image`, `upload_copy_link` (`:url` / `:markdown`),
+  `show_quick_access`, `open_annotate`, `notify`.
+- Each table also has `data` (the full automation JSON) so details the flat
+  keys cannot express survive a round trip; edited flat keys win.
+- The `[automations]` header is always exported. When the file has it, import
+  replaces every automation (an empty section clears them); without it,
+  automations are left untouched. Bad entries, unknown
+  steps and modifier-less or duplicate shortcuts are warnings, never errors.
+
 ## Example
 
 ```toml

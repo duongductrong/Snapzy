@@ -10,6 +10,10 @@ Post-capture routing is everything that happens after a capture file exists: des
 - **OCR exception**: Capture Text is the only capture path that writes no file — recognized text/QR payloads go straight to the pasteboard as plain text, so no post-capture routing runs. See [`CAPTURE.md`](CAPTURE.md).
 - Scrolling capture saves through `saveProcessedImage`, so it enters routing through the same publisher as any screenshot. See [`SCROLLING_CAPTURE.md`](SCROLLING_CAPTURE.md).
 
+## Automation Routing
+
+Every interactive screenshot carries a `PostCaptureRouting` inside its `CaptureContext`; `ScreenCaptureManager` emits `CaptureCompletionEvent(url, routing)`. `.standard` runs the matrix below. `.automation(runID)` (set by `ScreenCaptureViewModel.runAutomation`) hands the files to `AutomationRunner` instead: the matrix — including Save, which the automation decides through `TempCaptureManager.resolveSaveDirectory(saveOverride:)` — is skipped, the default canvas preset is still applied, and history is still recorded. See [`AUTOMATIONS.md`](AUTOMATIONS.md).
+
 ## After-Capture Action Matrix
 
 `AfterCaptureAction` (`Snapzy/Features/Preferences/PreferencesManager.swift`) has 4 cases as of HEAD, each gated per `CaptureType` (`.screenshot`, `.recording`):

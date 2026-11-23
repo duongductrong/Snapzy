@@ -139,6 +139,10 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | Show shortcuts list                                      | `⇧⌘K`    |
 | History panel toggle                                     | `⇧⌘H`    |
 
+### Automations
+
+Run a whole capture flow from one shortcut in **Settings → Automations**. Built in: **Quick Copy** (select an area, image on the clipboard, no Quick Access card) and **Cloud Share** (select an area, upload, public link on the clipboard). Build your own from a capture mode and steps: copy image, upload and copy link (URL or Markdown), show Quick Access, open in Annotate, notification. If an upload fails, the image is still copied and a Quick Access card stays to retry.
+
 ## Quick Access card actions
 
 Hover a Quick Access card, then press the key. Active only while the pointer is over a card.

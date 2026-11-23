@@ -183,8 +183,8 @@ final class ScreenCaptureManager: ObservableObject {
   @Published private(set) var isCapturing: Bool = false
 
   /// Publisher for successful capture completions
-  private let captureCompletedSubject = PassthroughSubject<URL, Never>()
-  var captureCompletedPublisher: AnyPublisher<URL, Never> {
+  private let captureCompletedSubject = PassthroughSubject<CaptureCompletionEvent, Never>()
+  var captureCompletedPublisher: AnyPublisher<CaptureCompletionEvent, Never> {
     captureCompletedSubject.eraseToAnyPublisher()
   }
   private var standardShareableContentCache: ShareableContentCacheEntry?
@@ -1501,7 +1501,7 @@ final class ScreenCaptureManager: ObservableObject {
       }
       DiagnosticLogger.shared.log(.info, .capture, "Capture saved: \(url.lastPathComponent)")
       if emitCompletion {
-        captureCompletedSubject.send(url)
+        captureCompletedSubject.send(CaptureCompletionEvent(url: url, routing: context.postCaptureRouting))
       }
       return .success(url)
     case .failure(let error):

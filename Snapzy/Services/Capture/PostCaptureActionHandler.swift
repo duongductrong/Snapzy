@@ -45,7 +45,16 @@ final class PostCaptureActionHandler {
 
   /// Execute all enabled post-capture actions for a screenshot
   @discardableResult
-  func handleScreenshotCapture(url: URL, pinToScreen: Bool = false) async -> QuickAccessItem? {
+  func handleScreenshotCapture(
+    url: URL,
+    pinToScreen: Bool = false,
+    routing: PostCaptureRouting = .standard
+  ) async -> QuickAccessItem? {
+    if case .automation(let runID) = routing {
+      await AutomationRunner.shared.complete(runID: runID, capturedURLs: [url])
+      return nil
+    }
+
     let quickAccessItem = await executeActions(
       for: .screenshot,
       url: url,
@@ -60,7 +69,12 @@ final class PostCaptureActionHandler {
 
   /// Execute post-capture actions for a batch of screenshots, such as
   /// fullscreen capture across multiple displays.
-  func handleScreenshotCaptures(urls: [URL]) async {
+  func handleScreenshotCaptures(urls: [URL], routing: PostCaptureRouting = .standard) async {
+    if case .automation(let runID) = routing {
+      await AutomationRunner.shared.complete(runID: runID, capturedURLs: urls)
+      return
+    }
+
     let validURLs = urls.filter { FileManager.default.fileExists(atPath: $0.path) }
     guard !validURLs.isEmpty else {
       DiagnosticLogger.shared.log(
@@ -129,8 +143,18 @@ final class PostCaptureActionHandler {
     }
   }
 
+  /// Bake the default Annotate canvas preset into a fresh screenshot, as every
+  /// routed capture does, and persist the editable session. Shared with automations.
+  func applyDefaultPreset(toScreenshot url: URL) -> AnnotationSessionData? {
+    let sessionData = screenshotPresetAutoApplier.applyDefaultPresetIfNeeded(to: url)
+    if let sessionData {
+      persistAnnotationSessionIfNeeded(sessionData, for: url)
+    }
+    return sessionData
+  }
+
   /// Add a screenshot to capture history
-  private func addScreenshotToHistory(url: URL) async {
+  func addScreenshotToHistory(url: URL) async {
     guard FileManager.default.fileExists(atPath: url.path) else {
       DiagnosticLogger.shared.log(
         .warning,

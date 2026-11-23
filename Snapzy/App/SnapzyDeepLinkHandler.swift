@@ -283,6 +283,8 @@ enum SnapzyDeepLinkAction: Equatable {
       return .history
     case "shortcuts", "keyboard-shortcuts":
       return .shortcuts
+    case "automations", "automation", "workflows":
+      return .automations
     case "permissions", "privacy":
       return .permissions
     case "command-line", "commandline", "cli":

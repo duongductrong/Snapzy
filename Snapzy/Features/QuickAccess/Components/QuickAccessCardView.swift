@@ -839,30 +839,17 @@ struct QuickAccessCardView: View {
       }
 
       do {
-        let fileAccess = SandboxFileAccessManager.shared.beginAccessingURL(item.url)
-        defer { fileAccess.stop() }
-
-        // Always upload with a fresh key (new URL avoids CDN cache)
-        let result = try await cloudManager.upload(fileURL: item.url)
-
-        // Delete old cloud file in background (no garbage)
-        if let oldKey = oldCloudKey {
-          Task.detached(priority: .utility) {
-            do {
-              try await CloudManager.shared.deleteByKey(key: oldKey)
-            } catch {
-              DiagnosticLogger.shared.logError(.cloud, error, "Quick access old cloud object cleanup failed")
-            }
-          }
-        }
+        // Fresh key per upload (new URL avoids CDN cache); the old object is removed.
+        let shareService = CloudShareService.shared
+        let result = try await shareService.upload(fileURL: item.url, replacingKey: oldCloudKey)
 
         // Update item with new cloud URL and key
         manager.setCloudURL(id: item.id, url: result.publicURL, key: result.key)
 
         // Auto-copy cloud link
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(result.publicURL.absoluteString, forType: .string)
+        shareService.copyToPasteboard(
+          CloudShareService.linkText(for: result.publicURL, fileURL: item.url, format: .url)
+        )
 
         // Ensure minimum visual duration (~600ms total)
         let elapsed = Date().timeIntervalSince(uploadStartTime)

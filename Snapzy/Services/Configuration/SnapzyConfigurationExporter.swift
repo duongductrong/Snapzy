@@ -26,6 +26,7 @@ enum SnapzyConfigurationExporter {
     writeCloud(&writer, defaults: defaults)
     writeAnnotate(&writer, defaults: defaults)
     writeShortcuts(&writer)
+    SnapzyConfigurationAutomationsCodec.write(AutomationStore.shared.automations, to: &writer)
 
     return writer.output
   }

@@ -148,6 +148,10 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | 显示快捷键列表                                          | `⇧⌘K`     |
 | 显示/隐藏历史记录面板                                   | `⇧⌘H`     |
 
+### 自动化
+
+在 **设置 → 自动化** 中用一个快捷键完成整个截图流程。内置：**快速复制**（选择区域，图像进入剪贴板，不显示 Quick Access 卡片）和 **云端分享**（选择区域，上传，公开链接进入剪贴板）。也可以用截图模式和步骤自行组合：复制图像、上传并复制链接（URL 或 Markdown）、显示 Quick Access、在 Annotate 中打开、通知。上传失败时，图像仍会被复制，并保留 Quick Access 卡片以便重试。
+
 <a id="quick-access-card-actions"></a>
 
 ## 快速访问卡片操作

@@ -1,0 +1,143 @@
+//
+//  AutomationModelTests.swift
+//  SnapzyTests
+//
+//  Coding, forward compatibility and normalization of the automation model.
+//
+
+import Carbon.HIToolbox
+import XCTest
+@testable import Snapzy
+
+@MainActor
+final class AutomationModelTests: XCTestCase {
+  private func roundTrip(_ automation: Automation) throws -> Automation {
+    let data = try JSONEncoder().encode(automation)
+    return try JSONDecoder().decode(Automation.self, from: data)
+  }
+
+  func testRoundTripKeepsEveryField() throws {
+    var automation = AutomationPreset.cloudShare.makeAutomation()
+    automation.hotkey = ShortcutConfig(keyCode: UInt32(kVK_ANSI_4), modifiers: UInt32(controlKey | shiftKey))
+    automation.steps[1].onFailure = .continue
+    automation.steps[1].content = .action(.uploadAndCopyLink(.markdown))
+
+    XCTAssertEqual(try roundTrip(automation), automation)
+  }
+
+  func testUnknownPartsSurviveRoundTrip() throws {
+    let json = """
+    {
+      "id": "6B1E8A40-2C4B-4C59-9A0E-1A2B3C4D5E6F",
+      "name": "Future",
+      "isEnabled": true,
+      "triggers": [{"kind": "menuBar"}, {"kind": "hotkey", "shortcut": {"keyCode": 21, "modifiers": 4608}}],
+      "source": {"kind": "capture", "mode": "area", "saveToExportDirectory": true},
+      "steps": [
+        {"id": "11111111-1111-1111-1111-111111111111", "kind": "copyImage", "isEnabled": true, "onFailure": "stop"},
+        {"id": "22222222-2222-2222-2222-222222222222", "kind": "webhook", "url": "https://example.com/hook", "isEnabled": true}
+      ],
+      "externalInvocation": false,
+      "schemaVersion": 2
+    }
+    """
+    let automation = try JSONDecoder().decode(Automation.self, from: Data(json.utf8))
+
+    XCTAssertEqual(automation.steps.count, 2)
+    XCTAssertEqual(automation.activeActions, [.copyImage])
+    guard case .unsupported(let raw) = automation.steps[1].content else {
+      return XCTFail("Unknown step kind must be kept as unsupported")
+    }
+    XCTAssertEqual(raw.kind, "webhook")
+    XCTAssertEqual(automation.hotkey, ShortcutConfig(keyCode: 21, modifiers: 4608))
+    XCTAssertEqual(automation.triggers.count, 2)
+
+    let reencoded = try roundTrip(automation)
+    XCTAssertEqual(reencoded, automation)
+  }
+
+  func testUnknownSourceIsKeptAndMarkedUnsupported() throws {
+    let json = """
+    {"id": "6B1E8A40-2C4B-4C59-9A0E-1A2B3C4D5E6F", "name": "Rec", "source": {"kind": "recording", "fps": 60}, "steps": []}
+    """
+    let automation = try JSONDecoder().decode(Automation.self, from: Data(json.utf8))
+
+    XCTAssertTrue(automation.hasUnsupportedSource)
+    XCTAssertEqual(try roundTrip(automation).source, automation.source)
+  }
+
+  func testNormalizedPutsCopyBeforeUploadAndDedupes() {
+    let automation = Automation(
+      name: "  ",
+      source: .capture(AutomationCaptureSpec(mode: .area, saveToExportDirectory: false)),
+      steps: [
+        AutomationStep(.uploadAndCopyLink(.url)),
+        AutomationStep(.notify),
+        AutomationStep(.copyImage),
+        AutomationStep(.notify),
+      ]
+    ).normalized()
+
+    XCTAssertEqual(automation.activeActions, [.copyImage, .uploadAndCopyLink(.url), .notify])
+    XCTAssertEqual(automation.name, L10n.Automations.defaultName)
+  }
+
+  func testNormalizedAddsCopyImageWhenNoStep() {
+    let automation = Automation(
+      name: "Empty",
+      source: .capture(AutomationCaptureSpec(mode: .fullscreen, saveToExportDirectory: true)),
+      steps: []
+    ).normalized()
+
+    XCTAssertEqual(automation.activeActions, [.copyImage])
+  }
+
+  func testNormalizedTruncatesLongNamesAndKeepsOneHotkey() {
+    var automation = Automation(
+      name: String(repeating: "a", count: 100),
+      source: .capture(AutomationCaptureSpec(mode: .area, saveToExportDirectory: false)),
+      steps: [AutomationStep(.copyImage)]
+    )
+    automation.triggers = [
+      .hotkey(ShortcutConfig(keyCode: 1, modifiers: UInt32(cmdKey))),
+      .hotkey(ShortcutConfig(keyCode: 2, modifiers: UInt32(cmdKey))),
+    ]
+
+    let normalized = automation.normalized()
+
+    XCTAssertEqual(normalized.name.count, Automation.maxNameLength)
+    XCTAssertEqual(normalized.triggers.count, 1)
+    XCTAssertEqual(normalized.hotkey?.keyCode, 1)
+  }
+
+  func testHotkeySetterReplacesAndClears() {
+    var automation = AutomationPreset.quickCopy.makeAutomation()
+    XCTAssertNil(automation.hotkey)
+
+    automation.hotkey = ShortcutConfig(keyCode: 1, modifiers: UInt32(cmdKey))
+    automation.hotkey = ShortcutConfig(keyCode: 2, modifiers: UInt32(cmdKey))
+    XCTAssertEqual(automation.triggers.count, 1)
+    XCTAssertEqual(automation.hotkey?.keyCode, 2)
+
+    automation.hotkey = nil
+    XCTAssertTrue(automation.triggers.isEmpty)
+  }
+
+  func testPresetDisplayNameFollowsLanguageUntilRenamed() {
+    var automation = AutomationPreset.quickCopy.makeAutomation()
+    XCTAssertEqual(automation.displayName, AutomationPreset.quickCopy.localizedName)
+
+    automation.name = "My copy"
+    XCTAssertEqual(automation.displayName, "My copy")
+  }
+
+  func testPresetsShipWithoutShortcuts() {
+    for preset in AutomationPreset.allCases {
+      let automation = preset.makeAutomation()
+      XCTAssertNil(automation.hotkey)
+      XCTAssertEqual(automation.presetID, preset.rawValue)
+      XCTAssertEqual(automation.captureSpec?.mode, .area)
+      XCTAssertEqual(automation.activeActions.first, .copyImage)
+    }
+  }
+}

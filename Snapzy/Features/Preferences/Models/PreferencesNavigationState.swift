@@ -17,6 +17,7 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
   case quickAccess
   case history
   case shortcuts
+  case automations
   case permissions
   case commandLine
   case cloud
@@ -53,6 +54,8 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
       return L10n.Preferences.historyTab
     case .shortcuts:
       return L10n.Preferences.shortcutsTab
+    case .automations:
+      return L10n.Preferences.automationsTab
     case .permissions:
       return L10n.Preferences.permissionsTab
     case .commandLine:
@@ -86,6 +89,8 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
       return "clock.arrow.circlepath"
     case .shortcuts:
       return "command"
+    case .automations:
+      return "bolt.circle.fill"
     case .permissions:
       return "lock.shield.fill"
     case .commandLine:
@@ -102,7 +107,7 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
   /// Pages that open with their own icon hero, which already names the page, so the window
   /// header stays untitled.
   var showsHero: Bool {
-    self == .shortcuts
+    self == .shortcuts || self == .automations
   }
 
   /// Extra non-displayed terms the sidebar search matches besides the localized title;
@@ -125,6 +130,8 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
       return ["retention", "storage", "panel"]
     case .shortcuts:
       return ["keyboard", "hotkey", "keys"]
+    case .automations:
+      return ["automation", "workflow", "share", "upload", "copy link", "markdown", "one shortcut"]
     case .permissions:
       return ["accessibility", "screen recording", "privacy", "microphone"]
     case .commandLine:
@@ -141,7 +148,7 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
   /// The sidebar list, in unlabelled groups separated by whitespace.
   /// The profile header at the top of the sidebar also opens About.
   static let groups: [[PreferencesTab]] = [
-    [.general, .capture, .quickAccess, .shortcuts],
+    [.general, .capture, .quickAccess, .shortcuts, .automations],
     [.annotate, .ai, .history, .menuBar, .cloud],
     [.permissions, .commandLine, .advanced],
     [.about],

@@ -11,6 +11,12 @@
       ]
     },
     {
+      "file": "Features/Automations.xcstrings",
+      "prefixes": [
+        "automations."
+      ]
+    },
+    {
       "file": "Features/Capture.xcstrings",
       "prefixes": [
         "after-capture.",

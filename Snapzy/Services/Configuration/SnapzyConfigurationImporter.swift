@@ -81,8 +81,24 @@ enum SnapzyConfigurationImporter {
     collectCloud(&reader, defaults: defaults, mutations: &mutations)
     collectAnnotate(&reader, defaults: defaults, mutations: &mutations)
     collectShortcuts(&reader, mutations: &mutations)
+    collectAutomations(&reader, defaults: defaults, mutations: &mutations)
 
     return PreparedImport(issues: reader.issues, mutations: mutations)
+  }
+
+  private static func collectAutomations(
+    _ reader: inout SnapzyConfigurationReader,
+    defaults: UserDefaults,
+    mutations: inout [() -> Void]
+  ) {
+    let result = SnapzyConfigurationAutomationsCodec.parse(reader.document)
+    result.warnings.forEach { reader.warning($0) }
+    // AutomationStore tracks the standard defaults only; tests importing into
+    // isolated defaults must not rewrite the user's automations.
+    guard let automations = result.automations, defaults == UserDefaults.standard else { return }
+    mutations.append {
+      AutomationStore.shared.replaceAll(automations)
+    }
   }
 
   private static func validateSchema(_ reader: inout SnapzyConfigurationReader) {

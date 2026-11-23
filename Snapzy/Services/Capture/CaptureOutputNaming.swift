@@ -9,14 +9,23 @@ import AppKit
 import Foundation
 
 /// Contextual metadata about the capture source, used for template token replacement.
+/// It also carries the post-capture routing, because it already travels from the
+/// capture entry point through every selection path down to the file write.
 nonisolated struct CaptureContext: Equatable {
   let appName: String?
   let windowTitle: String?
+  var postCaptureRouting: PostCaptureRouting = .standard
 
   static let empty = CaptureContext(appName: nil, windowTitle: nil)
 
   /// Max characters for windowTitle in filenames to prevent excessively long paths.
   private static let maxTitleLength = 80
+
+  func withRouting(_ routing: PostCaptureRouting) -> CaptureContext {
+    var copy = self
+    copy.postCaptureRouting = routing
+    return copy
+  }
 
   var sanitizedWindowTitle: String? {
     guard let title = windowTitle, !title.isEmpty else { return nil }

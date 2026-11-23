@@ -148,6 +148,10 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | Hiện danh sách phím tắt                                          | `⇧⌘K`        |
 | Bật/tắt bảng Lịch sử                                             | `⇧⌘H`        |
 
+### Automation
+
+Chạy cả một luồng chụp chỉ bằng một phím tắt trong **Cài đặt → Automation**. Có sẵn: **Chụp nhanh để copy** (chọn vùng, ảnh vào clipboard, không hiện Quick Access) và **Chia sẻ qua Cloud** (chọn vùng, upload, link công khai vào clipboard). Bạn có thể tự tạo từ chế độ chụp và các bước: copy ảnh, upload và copy link (URL hoặc Markdown), hiện Quick Access, mở trong Annotate, thông báo. Nếu upload lỗi, ảnh vẫn được copy và card Quick Access vẫn còn để thử lại.
+
 <a id="quick-access-card-actions"></a>
 
 ## Thao tác trên thẻ Truy cập nhanh
