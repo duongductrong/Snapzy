@@ -17,6 +17,42 @@ final class VideoEditorCursorLayerTests: XCTestCase {
 
   // MARK: - Resolver
 
+  /// Pattern taken from a real beta recording: the I-beam (1) and a stale arrow (0) alternate
+  /// every poll while typing. Sub-100 ms flips are dropped; long shapes and hidden spans stay.
+  func testStabilizedAppearanceDropsPollRateFlickerButKeepsRealChanges() {
+    let flicker: [RecordedCursorChange] = [
+      .init(time: 0, imageID: 0, isHidden: false),
+      .init(time: 1.201, imageID: 1, isHidden: false),
+      .init(time: 1.235, imageID: 0, isHidden: false),
+      .init(time: 1.304, imageID: 1, isHidden: false),
+      .init(time: 1.368, imageID: 0, isHidden: false),
+      .init(time: 1.401, imageID: 1, isHidden: false),
+      .init(time: 1.990, imageID: 0, isHidden: false),
+      .init(time: 2.020, imageID: 1, isHidden: false),
+      .init(time: 3.000, imageID: nil, isHidden: true),
+      .init(time: 3.040, imageID: 1, isHidden: false),
+    ]
+    let stable = VideoEditorCursorResolver.stabilizedAppearance(flicker)
+    XCTAssertEqual(stable.map(\.imageID), [0, 1, nil, 1])
+    XCTAssertEqual(stable.map(\.time), [0, 1.401, 3.000, 3.040])
+
+    let resolver = VideoEditorCursorResolver(
+      samples: [sample(0, 0.5, 0.5), sample(4, 0.5, 0.5)],
+      capture: RecordingCursorCapture(appearance: flicker),
+      settings: .default
+    )
+    XCTAssertEqual(resolver.capture.appearance(at: 1.25)?.imageID, 0)
+    XCTAssertEqual(resolver.capture.appearance(at: 2.0)?.imageID, 1)
+
+    // Clean recordings are untouched.
+    let clean: [RecordedCursorChange] = [
+      .init(time: 0, imageID: 0, isHidden: false),
+      .init(time: 2, imageID: 1, isHidden: false),
+      .init(time: 3, imageID: nil, isHidden: true),
+    ]
+    XCTAssertEqual(VideoEditorCursorResolver.stabilizedAppearance(clean), clean)
+  }
+
   func testZeroSmoothingReturnsRawSamples() {
     var settings = VideoEditorCursorSettings.default
     settings.smoothing = 0

@@ -72,6 +72,40 @@ final class RecordingStudioCursorCaptureTests: XCTestCase {
     XCTAssertNotEqual(capture.appearance[0].imageID, capture.appearance[1].imageID)
   }
 
+  /// `NSCursor.currentSystem` returns a fresh object per call and freed addresses get reused.
+  /// An identity-keyed cache then mapped an I-beam to the stale arrow ID, so playback flickered.
+  func testFreshCursorObjectsPerPollResolveByImageNotIdentity() {
+    let mouse = makeMouseTracker()
+    var useIBeam = false
+    let tracker = RecordingCursorAppearanceTracker(mouseTracker: mouse, cursorProvider: {
+      let base: NSCursor = useIBeam ? .iBeam : .arrow
+      return NSCursor(image: base.image, hotSpot: base.hotSpot)
+    })
+    mouse.start()
+    tracker.start()
+
+    for _ in 0 ..< 15 {
+      uptime += 1.0 / 30.0
+      autoreleasepool { tracker.poll() }
+    }
+    useIBeam = true
+    for _ in 0 ..< 30 {
+      uptime += 1.0 / 30.0
+      autoreleasepool { tracker.poll() }
+    }
+
+    let capture = tracker.stop()
+    _ = mouse.stop()
+
+    // Exactly one arrow → I-beam change, no flicker back to the arrow while the I-beam is shown.
+    XCTAssertEqual(capture.images.count, 2)
+    XCTAssertEqual(capture.appearance.count, 2)
+    XCTAssertNotEqual(capture.appearance[0].imageID, capture.appearance[1].imageID)
+    // `start()` polls at 0, then 15 arrow polls: the first I-beam poll is #16 and must register
+    // immediately (the identity cache recorded it a poll late, as the stale arrow).
+    XCTAssertEqual(capture.appearance[1].time, 16.0 / 30.0, accuracy: 1e-6)
+  }
+
   func testUnmatchedMouseUpAndClicksOutsideCaptureAreIgnored() {
     let mouse = makeMouseTracker()
     let tracker = RecordingCursorAppearanceTracker(mouseTracker: mouse, cursorProvider: { .arrow })
