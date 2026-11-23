@@ -20,7 +20,7 @@ Read this when changing the CLI itself in the Snapzy repo. `docs/CLI.md` is the 
 | `…/SnapzyCLIDev/` | `snapzy-dev`, development executable only |
 | `SnapzyCLI/main.swift` | Xcode target `SnapzyCLI` → product `snapzy`, embedded at `Snapzy.app/Contents/Helpers/snapzy` |
 | `Snapzy/Services/CommandLine/` | App side: `CLIServer` (registers routes), `CLISocketListener`, `CLIConnection`, `CLIRequestRouter`, `CLIAuthorizationCoordinator`/`Store`, `CLIClientIdentityResolver`, `CLIToolInstaller`, `CLIActivityIndicator`, `Handlers/` |
-| `Snapzy/Services/Capture/HeadlessCapture/` | `HeadlessCaptureService`, `CaptureTargetResolver`, staging, `AppNameMatcher` |
+| `Snapzy/Services/Capture/HeadlessCapture/` | `HeadlessCaptureService`, `HeadlessRecordingService` (`record.*`; shares `ScreenRecordingManager` with the toolbar flow), `CaptureTargetResolver`, staging, `AppNameMatcher` |
 | `Snapzy/Features/CommandLine/` | Approval prompt UI |
 | `Snapzy/Features/Preferences/Components/PreferencesCommandLineSection.swift` | Settings → Command Line |
 
@@ -48,7 +48,7 @@ Agents depend on these, so treat them as API:
 - JSON on stdout when not a TTY or `--json`; errors (including ArgumentParser usage errors, mapped to exit 2) as JSON on stderr in the same mode. Sorted keys, unescaped slashes (`CLIJSON`).
 - Unknown error codes decode as `internal`, unknown `Authorization`/`Permission` values as their safe defaults — new values must stay forward-compatible.
 - Coordinates: global points, top-left origin of the main display (`CLICoordinateSpace`).
-- Headless captures never open Quick Access, touch the clipboard, add history, apply presets, play sounds, or prompt for permission.
+- Headless captures and recordings never open Quick Access, touch the clipboard, add history, apply presets, play sounds, or prompt for permission.
 - Socket path per bundle ID; Debug (`com.trongduong.snapzy.debug`) and release never share a socket or a PATH name (`snapzy-debug` vs `snapzy`).
 - Approval decisions live in `UserDefaults` key `cliApprovedCallers` and are never exported to `config.toml`.
 
@@ -62,7 +62,7 @@ swift test --package-path Packages/SnapzyCLIKit
 ./scripts/run-tests.sh -only-testing:SnapzyTests/CLIRequestRouterTests
 ```
 
-Package tests: `CommandParsingTests`, `OutputTests`, `DoctorTests`, `CLIClientSocketTests`, `AppDiscoveryTests`, plus protocol `EnvelopeContractTests`, `FrameTests`, `ProtocolModelTests`. App tests live in `SnapzyTests/Services/CommandLine/` and `SnapzyTests/Services/Capture/HeadlessCapture/`.
+Package tests: `CommandParsingTests`, `RecordCommandTests`, `OutputTests`, `DoctorTests`, `CLIClientSocketTests`, `AppDiscoveryTests`, plus protocol `EnvelopeContractTests`, `FrameTests`, `ProtocolModelTests`. App tests live in `SnapzyTests/Services/CommandLine/` and `SnapzyTests/Services/Capture/HeadlessCapture/`.
 
 End to end against a Debug build:
 

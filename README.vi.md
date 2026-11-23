@@ -177,6 +177,7 @@ Quyền truy cập được cấp riêng cho từng ứng dụng gọi lệnh. M
 snapzy list windows --app Safari
 snapzy capture window --app Safari --max-dimension 1568 -o shot.png
 snapzy capture area --rect 0,0,800,600 -o area.png
+snapzy record screen --duration 10 -o demo.mov
 snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
 ~~~
 

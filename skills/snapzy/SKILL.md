@@ -1,6 +1,6 @@
 ---
 name: snapzy
-description: "Take screenshots on macOS with the `snapzy` command line tool — a whole display, one window (even when covered), or a rectangle — and get back a file path plus JSON metadata, with no clicks or overlay. Use this whenever you need to see what is on the user's Mac screen: checking how an app or UI change looks, grabbing a window of a running app (simulator, browser, editor), capturing an error dialog, or giving yourself a screenshot to look at — even if the user just says \"take a screenshot\", \"look at my screen\" or \"what does the window look like\". Also use it when the user mentions Snapzy's CLI, `snapzy` / `snapzy-debug` exit codes or approval prompts, or is working on the CLI's code (SnapzyCLIKit, CLIServer, headless capture) in the Snapzy repo."
+description: "Take screenshots and screen recordings on macOS with the `snapzy` command line tool — a whole display, one window (even when covered), or a rectangle — and get back a file path plus JSON metadata, with no clicks or overlay. Use this whenever you need to see what is on the user's Mac screen: checking how an app or UI change looks, grabbing a window of a running app (simulator, browser, editor), capturing an error dialog, or giving yourself a screenshot to look at — or recording a demo video of it — even if the user just says \"take a screenshot\", \"record my screen\", \"look at my screen\" or \"what does the window look like\". Also use it when the user mentions Snapzy's CLI, `snapzy` / `snapzy-debug` exit codes or approval prompts, or is working on the CLI's code (SnapzyCLIKit, CLIServer, headless capture) in the Snapzy repo."
 ---
 
 # snapzy
@@ -42,6 +42,21 @@ Run commands one at a time: the app serves one capture at a time and answers `bu
 | Exact window | `snapzy capture window --id 195 -o …` (ID from `list windows`) |
 | Focused window | `snapzy capture window --active -o …` |
 | Rectangle | `snapzy capture area --rect 0,0,800,600 -o …` |
+
+### Recording video
+
+| Goal | Command |
+| --- | --- |
+| Record the main display for 10 s | `snapzy record screen --duration 10 -o /tmp/demo.mov` |
+| Record a window until you stop it | `snapzy record window --app Simulator --detach -o /tmp/sim.mp4`, then later `snapzy record stop` |
+| Record a rectangle | `snapzy record area --rect 0,0,1280,720 --duration 5 -o /tmp/area.mov` |
+| What is recording? | `snapzy record status` |
+
+- Without `--detach` the command blocks until `--duration` elapses or it gets Ctrl-C/SIGTERM, then prints `{"file":{"path":…,"durationSeconds":…,"width":…,"height":…,"bytes":…,"format":"mov"},"id":…}`. As an agent, prefer `--duration`, or `--detach` + `snapzy record stop`; don't leave an attached recording running in the background without a way to stop it.
+- `snapzy record stop` delivers the file to the `-o` given at start (or its own `-o`) and prints the same JSON.
+- `-o` must end in `.mov` or `.mp4` (or be a directory). Options: `--fps 30|60`, `--quality high|medium|low`, `--no-cursor`, `--system-audio`, `--mic` (only if Snapzy already has Microphone access).
+- One recording at a time; `busy` (exit 5) means one is already running. `targetNotFound` (exit 4) from `record stop` means nothing is recording.
+- A recording captures everything on that display or window for its whole length — record only what the task needs, keep it short, and tell the user you are recording.
 
 Useful options on every `capture`:
 

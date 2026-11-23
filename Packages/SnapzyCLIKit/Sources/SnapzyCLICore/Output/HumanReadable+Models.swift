@@ -95,3 +95,41 @@ extension CLIMeasureResult: HumanReadable {
     [extent.width, extent.height].compactMap { $0.map(CLIMeasureNumber.text) }.joined(separator: " × ")
   }
 }
+
+extension CLIRecordingInfo: HumanReadable {
+  /// `snapzy-cli-20261123-101500-a1b2c3  recording  00:12  0,0,1512,982  display 1`.
+  public var humanDescription: String {
+    var line = "\(id)  \(state.rawValue)  \(Self.clock(elapsedSeconds))  \(rect)"
+    if let window {
+      line += "  \(window.app.name)\(window.title.map { $0.isEmpty ? "" : " — \($0)" } ?? "")"
+    } else if let displayID {
+      line += "  display \(displayID)"
+    }
+    if let output {
+      line += "  → \(output.path)"
+    }
+    return line
+  }
+
+  static func clock(_ seconds: Int) -> String {
+    String(format: "%02d:%02d", seconds / 60, seconds % 60)
+  }
+}
+
+extension CLIRecordingStatus: HumanReadable {
+  public var humanDescription: String {
+    if let recording {
+      return recording.humanDescription
+    }
+    return interactiveRecordingActive
+      ? "No snapzy recording. Snapzy is recording from its own toolbar."
+      : "No snapzy recording."
+  }
+}
+
+extension CLIRecordingResult: HumanReadable {
+  public var humanDescription: String {
+    let size = ByteCountFormatter.string(fromByteCount: Int64(file.bytes), countStyle: .file)
+    return "\(file.path)  \(file.width)x\(file.height)  \(RecordingDuration.text(file.durationSeconds))  \(size)"
+  }
+}

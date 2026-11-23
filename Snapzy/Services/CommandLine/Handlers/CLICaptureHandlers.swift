@@ -130,7 +130,7 @@ enum CLICaptureBridge {
     return CLICaptureResult(files: files, durationMs: result.durationMs)
   }
 
-  private static func cliWindow(
+  static func cliWindow(
     _ window: HeadlessCaptureResult.CapturedWindow,
     mainDisplayHeight: CGFloat
   ) -> CLIWindow {

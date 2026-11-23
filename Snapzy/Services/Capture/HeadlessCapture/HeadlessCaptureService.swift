@@ -142,7 +142,7 @@ final class HeadlessCaptureService {
     )
   }
 
-  private func resolveWindow(
+  func resolveWindow(
     _ selection: HeadlessCaptureRequest.WindowSelection
   ) async throws -> HeadlessCaptureResult.CapturedWindow {
     if selection == .active {
@@ -180,7 +180,8 @@ final class HeadlessCaptureService {
 
   // MARK: - Helpers
 
-  private func checkReadiness() async throws {
+  /// Onboarding done, screen unlocked, Screen Recording usable. Never prompts.
+  func checkReadiness() async throws {
     guard OnboardingFlowView.hasCompletedOnboarding else { throw HeadlessCaptureError.onboardingIncomplete }
     guard !Self.isScreenLocked else { throw HeadlessCaptureError.screenLocked }
 

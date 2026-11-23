@@ -117,6 +117,42 @@ final class EnvelopeContractTests: XCTestCase {
     )
   }
 
+  func testRecordRequestAndResults() throws {
+    let request = CLIRequestEnvelope(
+      id: 3,
+      method: .recordArea,
+      params: RecordAreaParams(
+        rect: CLIRect(x: 0, y: 25, width: 800, height: 600),
+        options: RecordingOptions(format: .mp4, fps: 60),
+        output: CLIRecordingOutput(path: "/tmp/out/", force: true)
+      )
+    )
+    XCTAssertEqual(
+      try json(request),
+      #"{"id":3,"method":"record.area","params":{"options":{"format":"mp4","fps":60,"microphone":false,"#
+        + #""quality":"high","showCursor":true,"systemAudio":false},"output":{"force":true,"path":"/tmp/out/"},"#
+        + #""rect":{"height":600,"width":800,"x":0,"y":25}}}"#
+    )
+
+    let result = CLIRecordingResult(
+      id: "snapzy-cli-1",
+      file: CLIRecordedFile(path: "/tmp/a.mov", format: .mov, width: 1280, height: 720, durationSeconds: 2.5, bytes: 9)
+    )
+    XCTAssertEqual(
+      try json(result),
+      #"{"file":{"bytes":9,"durationSeconds":2.5,"format":"mov","height":720,"path":"/tmp/a.mov","width":1280},"#
+        + #""id":"snapzy-cli-1"}"#
+    )
+
+    XCTAssertEqual(try json(CLIRecordingStatus(recording: nil)), #"{"interactiveRecordingActive":false}"#)
+    XCTAssertEqual(try json(RecordStopParams()), "{}")
+    XCTAssertEqual(
+      try decode(CLIRecordingInfo.self, #"{"id":"x","state":"rewinding","format":"mov","#
+        + #""rect":{"x":0,"y":0,"width":1,"height":1},"elapsedSeconds":3}"#).state,
+      .recording
+    )
+  }
+
   func testUnknownValuesFromNewerAppDecodeToFallbacks() throws {
     let response = try decode(
       CLIResponseEnvelope<CLIEmpty>.self,
@@ -171,7 +207,9 @@ final class EnvelopeContractTests: XCTestCase {
       CLIMethod.allCases.map(\.rawValue),
       [
         "hello", "system.status", "list.displays", "list.windows", "list.apps",
-        "capture.screen", "capture.window", "capture.area", "agent.tools", "agent.call",
+        "capture.screen", "capture.window", "capture.area",
+        "record.screen", "record.window", "record.area", "record.stop", "record.status",
+        "agent.tools", "agent.call",
       ]
     )
   }

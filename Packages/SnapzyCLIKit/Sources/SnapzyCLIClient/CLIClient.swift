@@ -46,6 +46,16 @@ public final class CLIClient {
     try send(method, params: params, as: resultType, timeout: requestTimeout)
   }
 
+  /// For methods that legitimately take longer than `requestTimeout` (finishing a long recording).
+  public func call<Result: Codable & Sendable>(
+    _ method: CLIMethod,
+    params: some Codable & Sendable,
+    as resultType: Result.Type,
+    timeout: TimeInterval
+  ) throws -> Result {
+    try send(method, params: params, as: resultType, timeout: timeout)
+  }
+
   public func call<Result: Codable & Sendable>(_ method: CLIMethod, as resultType: Result.Type) throws -> Result {
     try call(method, params: CLIEmpty(), as: resultType)
   }
