@@ -6,6 +6,23 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 2.3.0-beta.10</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>243</sparkle:version>
+      <sparkle:shortVersionString>2.3.0-beta.10</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Mon, 23 Nov 2026 06:04:54 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>add Smart Auto-Zoom and physical Metal motion blur to Video Editor (7f51c2b9)</li><li>Improved smooth onboarding step transitions (7c7f41c5)</li></ul><h3>🐛 Bug Fixes</h3><ul><li>stop cursor shape flicker in Studio recordings and keep smart zooms on fill-gaps no-op (2f789dfe)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v2.3.0-beta.10/Snapzy-v2.3.0-beta.10.dmg"
+        sparkle:edSignature="UdMQlY2WWUr2KHZxWUdQJVDComzlj8qy41vmeDRJwgYhL/Z7MlFkk4W/E4V0he2Wb1fZZcRgzPvC8k7e7wtBAQ=="
+        length="58255129"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 2.3.0-beta.9</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>242</sparkle:version>
