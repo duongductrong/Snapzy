@@ -16,7 +16,7 @@ struct AutomationStepListView: View {
   var body: some View {
     VStack(spacing: 0) {
       List(selection: $selection) {
-        Label(L10n.Automations.triggersRow, systemImage: "bolt.circle")
+        AutomationListRowLayout(symbol: "bolt.circle", title: L10n.Automations.triggersRow)
           .tag(AutomationEditorSelection.triggers)
 
         Section(L10n.Automations.stepsLabel) {
@@ -116,38 +116,69 @@ struct AutomationStepListView: View {
   }
 }
 
-private struct AutomationStepRow: View {
-  @Binding var step: AutomationStep
-  let issue: AutomationChainIssue?
+/// Shared icon + title geometry so the "Source & Triggers" row and the step rows
+/// put their icons and titles on the same columns.
+private struct AutomationListRowLayout<Trailing: View>: View {
+  let symbol: String
+  let title: String
+  var subtitle: String? = nil
+  var isActive = true
+  @ViewBuilder var trailing: () -> Trailing
 
   var body: some View {
-    HStack(spacing: 8) {
-      Image(systemName: step.action?.kind.symbol ?? "questionmark.square.dashed")
-        .frame(width: 18)
-        .foregroundStyle(step.isEnabled ? .primary : .tertiary)
+    HStack(alignment: .center, spacing: 8) {
+      Image(systemName: symbol)
+        .font(.system(size: 13, weight: .medium))
+        .frame(width: 20, alignment: .center)
+        .foregroundStyle(isActive ? .primary : .tertiary)
       VStack(alignment: .leading, spacing: 1) {
-        Text(step.action?.kind.displayName ?? L10n.Automations.unsupported)
-          .foregroundStyle(step.isEnabled ? .primary : .secondary)
+        Text(title)
+          .foregroundStyle(isActive ? .primary : .secondary)
           .lineLimit(1)
-        if let summary = step.action?.configSummary, !summary.isEmpty {
-          Text(summary)
+        if let subtitle, !subtitle.isEmpty {
+          Text(subtitle)
             .font(.caption)
             .foregroundStyle(.secondary)
             .lineLimit(1)
         }
       }
       Spacer(minLength: 4)
-      if let issue {
-        Image(systemName: issue.blocksRun ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
-          .foregroundStyle(issue.blocksRun ? .red : .orange)
-          .help(issue.message)
-          .accessibilityLabel(issue.message)
+      trailing()
+    }
+    .padding(.vertical, 3)
+  }
+}
+
+extension AutomationListRowLayout where Trailing == EmptyView {
+  init(symbol: String, title: String) {
+    self.init(symbol: symbol, title: title, trailing: { EmptyView() })
+  }
+}
+
+private struct AutomationStepRow: View {
+  @Binding var step: AutomationStep
+  let issue: AutomationChainIssue?
+
+  var body: some View {
+    AutomationListRowLayout(
+      symbol: step.action?.kind.symbol ?? "questionmark.square.dashed",
+      title: step.action?.kind.displayName ?? L10n.Automations.unsupported,
+      subtitle: step.action?.configSummary,
+      isActive: step.isEnabled
+    ) {
+      HStack(spacing: 6) {
+        if let issue {
+          Image(systemName: issue.blocksRun ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
+            .foregroundStyle(issue.blocksRun ? .red : .orange)
+            .help(issue.message)
+            .accessibilityLabel(issue.message)
+        }
+        Toggle("", isOn: $step.isEnabled)
+          .labelsHidden()
+          .toggleStyle(.switch)
+          .controlSize(.mini)
+          .accessibilityLabel(L10n.Automations.stepEnabled)
       }
-      Toggle("", isOn: $step.isEnabled)
-        .labelsHidden()
-        .toggleStyle(.switch)
-        .controlSize(.mini)
-        .accessibilityLabel(L10n.Automations.stepEnabled)
     }
     .accessibilityElement(children: .combine)
   }

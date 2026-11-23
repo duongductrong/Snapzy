@@ -22,6 +22,11 @@ struct ShortcutRecorderView: View {
   /// Shown in the validation popover only when the issue carries a swap proposal.
   let onSwap: (() -> Void)?
   let onShortcutChanged: (ShortcutConfig?) -> Bool
+  /// Off when the host lays out its own title (e.g. a list row with a subtitle);
+  /// the recorder then renders only the keycap field (and options menu).
+  let showsLabel: Bool
+  /// Off when the host already offers enable / reset elsewhere.
+  let showsOptionsMenu: Bool
 
   @State private var isRecording = false
   @State private var eventMonitor: Any?
@@ -36,8 +41,12 @@ struct ShortcutRecorderView: View {
     isEnabled: Binding<Bool>? = nil,
     validationIssue: ShortcutValidationIssue? = nil,
     onSwap: (() -> Void)? = nil,
+    showsLabel: Bool = true,
+    showsOptionsMenu: Bool = true,
     onShortcutChanged: @escaping (ShortcutConfig?) -> Bool
   ) {
+    self.showsLabel = showsLabel
+    self.showsOptionsMenu = showsOptionsMenu
     self.label = label
     self.description = description
     self.footnote = footnote
@@ -51,14 +60,16 @@ struct ShortcutRecorderView: View {
 
   var body: some View {
     HStack(spacing: 12) {
-      if rowHelpText.isEmpty {
-        Text(label)
-      } else {
-        Text(label)
-          .hint(rowHelpText, variant: .icon(.info))
-      }
+      if showsLabel {
+        if rowHelpText.isEmpty {
+          Text(label)
+        } else {
+          Text(label)
+            .hint(rowHelpText, variant: .icon(.info))
+        }
 
-      Spacer()
+        Spacer()
+      }
 
       Button {
         startRecording()
@@ -76,12 +87,14 @@ struct ShortcutRecorderView: View {
       .disabled(!isInteractionEnabled)
       .help(isInteractionEnabled ? L10n.ShortcutRecorder.clickToRecord : L10n.ShortcutRecorder.turnOnToEdit)
 
-      ShortcutOptionsMenuButton(
-        isEnabled: toggleBinding,
-        isDefault: shortcut == defaultShortcut,
-        isBusy: isRecording,
-        onReset: resetToDefault
-      )
+      if showsOptionsMenu {
+        ShortcutOptionsMenuButton(
+          isEnabled: toggleBinding,
+          isDefault: shortcut == defaultShortcut,
+          isBusy: isRecording,
+          onReset: resetToDefault
+        )
+      }
     }
     .opacity(rowOpacity)
     .onChange(of: isInteractionEnabled) { newValue in

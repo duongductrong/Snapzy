@@ -26,16 +26,21 @@ struct AutomationsSettingsView: View {
     Form {
       Section {
       } header: {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 4) {
           PreferencesPageHero(tab: .automations, subtitle: L10n.Automations.heroSubtitle)
-          Picker("", selection: $navigation.page) {
-            Text(L10n.Automations.pageAutomations).tag(AutomationSettingsNavigation.Page.automations)
-            Text(L10n.Automations.pageActivity).tag(AutomationSettingsNavigation.Page.activity)
+          LiquidGlassSegmentedControl(
+            items: AutomationSettingsNavigation.Page.allCases,
+            selection: $navigation.page
+          ) { page in
+            Text(title(for: page))
+              .lineLimit(1)
+              .frame(minWidth: 96)
           }
-          .pickerStyle(.segmented)
-          .labelsHidden()
-          .frame(maxWidth: 320)
+          .fixedSize()
         }
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, 8)
+        .textCase(nil)
       }
 
       if navigation.page == .activity {
@@ -113,9 +118,11 @@ struct AutomationsSettingsView: View {
           Text(L10n.Automations.listTitle)
           Text(L10n.Automations.listDescription)
             .font(.caption)
+            .fontWeight(.regular)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }
+        .textCase(nil)
       } footer: {
         HStack(spacing: 12) {
           Button {
@@ -123,6 +130,8 @@ struct AutomationsSettingsView: View {
           } label: {
             Label(L10n.Automations.newButton, systemImage: "plus")
           }
+          .buttonStyle(.liquidGlass(emphasis: .secondary, capsule: true))
+          .fixedSize()
           .disabled(!store.canAdd)
 
           if !store.missingPresets.isEmpty {
@@ -143,6 +152,13 @@ struct AutomationsSettingsView: View {
         }
         .padding(.top, 4)
       }
+  }
+
+  private func title(for page: AutomationSettingsNavigation.Page) -> String {
+    switch page {
+    case .automations: L10n.Automations.pageAutomations
+    case .activity: L10n.Automations.pageActivity
+    }
   }
 
   private func makeNewAutomation() -> Automation {
@@ -180,6 +196,9 @@ struct AutomationsSettingsView: View {
 
 // MARK: - Row
 
+/// One automation: icon tile, name + summary (+ setup warning) on the left, and one
+/// vertically centered cluster of controls on the right — shortcut field, on/off
+/// switch, more menu — so every row lines up the same whatever its text height.
 private struct AutomationRow: View {
   let automation: Automation
   let isCloudConfigured: Bool
@@ -191,89 +210,151 @@ private struct AutomationRow: View {
   let onDuplicate: () -> Void
   let onDelete: () -> Void
 
+  @State private var isHovering = false
+
+  private var isEnabled: Binding<Bool> {
+    Binding(get: { automation.isEnabled }, set: onToggle)
+  }
+
   var body: some View {
-    HStack(alignment: .top, spacing: 8) {
-      Image(systemName: automation.symbol ?? automation.sourceSymbol)
-        .font(.system(size: 14, weight: .medium))
-        .foregroundStyle(.secondary)
-        .frame(width: 20, height: 22)
+    HStack(alignment: .center, spacing: 12) {
+      PreferencesSymbolTile(
+        symbol: automation.symbol ?? automation.sourceSymbol,
+        size: 30,
+        tint: automation.isEnabled ? .blue : .graphite,
+        duotone: true
+      )
+      .opacity(automation.isEnabled ? 1 : 0.55)
 
-      VStack(alignment: .leading, spacing: 3) {
-        if !automation.runsWithoutInput {
-          Toggle(isOn: Binding(get: { automation.isEnabled }, set: onToggle)) {
-            Text(automation.displayName)
-          }
-        } else {
-          ShortcutRecorderView(
-            label: automation.displayName,
-            shortcut: Binding(get: { automation.hotkey }, set: { _ in }),
-            isEnabled: Binding(get: { automation.isEnabled }, set: onToggle),
-            validationIssue: validationIssue,
-            onShortcutChanged: onShortcutChanged
-          )
-          .disabled(automation.hasUnsupportedSource)
-        }
+      details
+        .frame(maxWidth: .infinity, alignment: .leading)
 
-        HStack(spacing: 4) {
-          if automation.externalInvocation {
-            Image(systemName: "link")
-              .help(L10n.Automations.externalBadge)
-              .accessibilityLabel(L10n.Automations.externalBadge)
-          }
-          Text(automation.summary)
-            .lineLimit(2)
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-
-        if automation.hasUnsupportedSource {
-          warning(L10n.Automations.unsupported)
-        } else if automation.needsSetup {
-          HStack(spacing: 6) {
-            warning(L10n.Automations.needsSetupBadge)
-            Button(L10n.Automations.setUpButton, action: onEdit)
-              .buttonStyle(.link)
-              .font(.caption)
-          }
-        } else if automation.needsCloud && !isCloudConfigured {
-          HStack(spacing: 6) {
-            warning(L10n.Automations.cloudWarning)
-            Button(L10n.Automations.openCloudSettings) {
-              PreferencesNavigationState.shared.select(.cloud)
-            }
-            .buttonStyle(.link)
-            .font(.caption)
-          }
-        }
-      }
-
-      Menu {
-        Button(L10n.Common.edit, action: onEdit)
-          .disabled(automation.hasUnsupportedSource)
-        Button(L10n.Automations.duplicate, action: onDuplicate)
-          .disabled(!canDuplicate || automation.hasUnsupportedSource)
-        Divider()
-        Button(L10n.Common.delete, role: .destructive, action: onDelete)
-      } label: {
-        Image(systemName: "ellipsis.circle")
-      }
-      .menuStyle(.borderlessButton)
-      .menuIndicator(.hidden)
-      .fixedSize()
-      .padding(.top, 2)
-      .accessibilityLabel(L10n.Automations.moreActions)
+      controls
     }
+    .padding(.vertical, 4)
     .contentShape(Rectangle())
+    .onHover { isHovering = $0 }
     .onTapGesture(count: 2) {
       guard !automation.hasUnsupportedSource else { return }
       onEdit()
     }
+    .contextMenu { menuItems }
+  }
+
+  // MARK: Leading
+
+  private var details: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      Text(automation.displayName)
+        .font(.system(size: 13, weight: .medium))
+        .foregroundStyle(automation.isEnabled ? Color.primary : Color.secondary)
+        .lineLimit(1)
+
+      HStack(alignment: .firstTextBaseline, spacing: 4) {
+        if automation.externalInvocation {
+          Image(systemName: "link")
+            .imageScale(.small)
+            .help(L10n.Automations.externalBadge)
+            .accessibilityLabel(L10n.Automations.externalBadge)
+        }
+        Text(automation.summary)
+          .lineLimit(2)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .font(.system(size: 11))
+      .foregroundStyle(.secondary)
+
+      statusLine
+    }
+  }
+
+  @ViewBuilder
+  private var statusLine: some View {
+    if automation.hasUnsupportedSource {
+      warning(L10n.Automations.unsupported)
+    } else if automation.needsSetup {
+      warningWithAction(L10n.Automations.needsSetupBadge, action: L10n.Automations.setUpButton, perform: onEdit)
+    } else if automation.needsCloud && !isCloudConfigured {
+      warningWithAction(L10n.Automations.cloudWarning, action: L10n.Automations.openCloudSettings) {
+        PreferencesNavigationState.shared.select(.cloud)
+      }
+    }
   }
 
   private func warning(_ text: String) -> some View {
-    Label(text, systemImage: "exclamationmark.triangle.fill")
-      .font(.caption)
-      .foregroundStyle(.orange)
-      .labelStyle(.titleAndIcon)
+    Label {
+      Text(text)
+    } icon: {
+      Image(systemName: "exclamationmark.triangle.fill")
+        .imageScale(.small)
+    }
+    .font(.system(size: 11, weight: .medium))
+    .foregroundStyle(.orange)
+  }
+
+  private func warningWithAction(_ text: String, action: String, perform: @escaping () -> Void) -> some View {
+    HStack(alignment: .firstTextBaseline, spacing: 8) {
+      warning(text)
+      Button(action, action: perform)
+        .buttonStyle(.link)
+        .font(.system(size: 11, weight: .medium))
+    }
+    .padding(.top, 2)
+  }
+
+  // MARK: Trailing
+
+  private var controls: some View {
+    HStack(alignment: .center, spacing: 10) {
+      if automation.runsWithoutInput {
+        ShortcutRecorderView(
+          label: automation.displayName,
+          shortcut: Binding(get: { automation.hotkey }, set: { _ in }),
+          isEnabled: isEnabled,
+          validationIssue: validationIssue,
+          showsLabel: false,
+          showsOptionsMenu: false,
+          onShortcutChanged: onShortcutChanged
+        )
+        .fixedSize()
+        .disabled(automation.hasUnsupportedSource)
+      }
+
+      Toggle("", isOn: isEnabled)
+        .labelsHidden()
+        .toggleStyle(.switch)
+        .controlSize(.small)
+        .help(L10n.Common.enabled)
+        .accessibilityLabel(L10n.Common.enabled)
+
+      Menu {
+        menuItems
+      } label: {
+        Image(systemName: "ellipsis")
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundStyle(isHovering ? Color.primary : Color.secondary)
+          .frame(width: 24, height: 24)
+          .background(
+            Circle().fill(Color.primary.opacity(isHovering ? 0.08 : 0))
+          )
+          .contentShape(Circle())
+      }
+      .menuStyle(.borderlessButton)
+      .menuIndicator(.hidden)
+      .fixedSize()
+      .help(L10n.Automations.moreActions)
+      .accessibilityLabel(L10n.Automations.moreActions)
+    }
+    .animation(.easeOut(duration: 0.15), value: isHovering)
+  }
+
+  @ViewBuilder
+  private var menuItems: some View {
+    Button(L10n.Common.edit, action: onEdit)
+      .disabled(automation.hasUnsupportedSource)
+    Button(L10n.Automations.duplicate, action: onDuplicate)
+      .disabled(!canDuplicate || automation.hasUnsupportedSource)
+    Divider()
+    Button(L10n.Common.delete, role: .destructive, action: onDelete)
   }
 }
