@@ -960,7 +960,7 @@ struct ZoomSettingsContent: View {
   }
 
   private func applyTransitionDuration() {
-    state.zoomTransitionDuration = localTransitionDuration
+    state.setZoomTransitionDuration(localTransitionDuration)
   }
 
   private func zoomDisplayValue(for level: CGFloat) -> String {

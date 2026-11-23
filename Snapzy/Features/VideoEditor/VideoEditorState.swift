@@ -260,6 +260,7 @@ enum EditorAction: Equatable {
     newMotionBlur: VideoEditorMotionBlurSettings? = nil
   )
   case updateMotionBlur(old: VideoEditorMotionBlurSettings, new: VideoEditorMotionBlurSettings)
+  case updateZoomTransitionDuration(old: TimeInterval, new: TimeInterval)
   case addSpeed(segment: SpeedSegment)
   case removeSpeed(segment: SpeedSegment)
   case updateSpeed(old: SpeedSegment, new: SpeedSegment)
@@ -715,8 +716,11 @@ final class VideoEditorState: ObservableObject {
       }
 
       UserDefaults.standard.set(clamped, forKey: PreferencesKeys.videoEditorZoomTransitionDuration)
+      updateHasUnsavedChanges()
     }
   }
+  private var initialZoomTransitionDuration: TimeInterval = ZoomCalculator.defaultTransitionDuration
+  private var pendingFrameEditStart: VideoEditorFrameSettings?
 
   // MARK: - Auto Focus
 
@@ -1023,7 +1027,9 @@ final class VideoEditorState: ObservableObject {
     primaryPlayerItem = item
     player = AVPlayer(playerItem: item)
     previewRateController = VideoEditorPreviewRateController(player: player)
-    zoomTransitionDuration = Self.loadZoomTransitionDuration()
+    let loadedTransitionDuration = Self.loadZoomTransitionDuration()
+    initialZoomTransitionDuration = loadedTransitionDuration
+    zoomTransitionDuration = loadedTransitionDuration
     recordingMetadata = initialMetadata
     reloadCursorLayer()
 
@@ -2061,6 +2067,7 @@ final class VideoEditorState: ObservableObject {
     initialBackgroundAspectRatio = backgroundAspectRatio
     initialExportSettings = exportSettings
     initialMotionBlurSettings = motionBlurSettings
+    initialZoomTransitionDuration = zoomTransitionDuration
     initialCaptions = captions
     clearUndoHistory()
   }
@@ -2258,6 +2265,10 @@ final class VideoEditorState: ObservableObject {
     case .updateFrame(let old, let new):
       applyFrameSettings(old)
       return .updateFrame(old: new, new: old)
+
+    case .updateZoomTransitionDuration(let old, let new):
+      zoomTransitionDuration = old
+      return .updateZoomTransitionDuration(old: new, new: old)
 
     case .updateExportSettings(let old, let new):
       updateExportSettings(old)
@@ -3680,6 +3691,30 @@ final class VideoEditorState: ObservableObject {
     recordAction(.updateFrame(old: old, new: settings))
   }
 
+  /// Start a continuous background/frame slider drag so all live ticks collapse into one undo step.
+  func beginFrameEdit() {
+    guard pendingFrameEditStart == nil else { return }
+    pendingFrameEditStart = frameSettings
+  }
+
+  /// Commit a continuous background/frame slider drag as a single undoable step.
+  func endFrameEdit() {
+    guard let start = pendingFrameEditStart else { return }
+    pendingFrameEditStart = nil
+    let end = frameSettings
+    guard end != start else { return }
+    recordAction(.updateFrame(old: start, new: end))
+  }
+
+  /// Update zoom transition duration as an undoable edit.
+  func setZoomTransitionDuration(_ duration: TimeInterval) {
+    let old = zoomTransitionDuration
+    let clamped = ZoomCalculator.clampTransitionDuration(duration)
+    guard abs(clamped - old) > 0.0001 else { return }
+    zoomTransitionDuration = clamped
+    recordAction(.updateZoomTransitionDuration(old: old, new: clamped))
+  }
+
   private func applyFrameSettings(_ settings: VideoEditorFrameSettings) {
     if backgroundStyle != settings.style { backgroundStyle = settings.style }
     if backgroundPadding != settings.padding { backgroundPadding = settings.padding }
@@ -4097,6 +4132,7 @@ final class VideoEditorState: ObservableObject {
       || cursorSettings != initialCursorSettings
       || cameraSettings != initialCameraSettings
       || motionBlurSettings != initialMotionBlurSettings
+      || abs(zoomTransitionDuration - initialZoomTransitionDuration) > 0.0001
       || clips != initialClips
       || segments != initialZoomSegments
       || speedSegments != initialSpeedSegments
