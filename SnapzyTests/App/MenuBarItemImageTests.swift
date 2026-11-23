@@ -121,4 +121,57 @@ final class MenuBarItemImageTests: XCTestCase {
     MenuBarItemImage.enableIcons(in: nil)
     MenuBarItemImage.enableIcons(in: NSMenu())
   }
+
+  /// Regression: importing a high-resolution transparent PNG (e.g. 256×256 hollow ring)
+  /// must scale into the 18×18pt menu bar canvas rather than multiplying raw pixel dimensions.
+  func testCustomStatusImage_scalesHighResTransparentPNGInto18ptCanvas() throws {
+    let pixelSize = 256
+    let sourceImage = NSImage(size: NSSize(width: pixelSize, height: pixelSize))
+    sourceImage.lockFocus()
+    NSColor.clear.setFill()
+    NSRect(x: 0, y: 0, width: pixelSize, height: pixelSize).fill()
+    let ring = NSBezierPath()
+    ring.appendOval(in: NSRect(x: 28, y: 28, width: 200, height: 200))
+    ring.appendOval(in: NSRect(x: 84, y: 84, width: 88, height: 88))
+    ring.windingRule = .evenOdd
+    NSColor.black.setFill()
+    ring.fill()
+    sourceImage.unlockFocus()
+
+    let tiff = try XCTUnwrap(sourceImage.tiffRepresentation)
+    let bmp = try XCTUnwrap(NSBitmapImageRep(data: tiff))
+    let png = try XCTUnwrap(bmp.representation(using: .png, properties: [:]))
+
+    let customURL = try XCTUnwrap(MenuBarIconRenderer.shared.customIconURL)
+    let backupData = try? Data(contentsOf: customURL)
+    defer {
+      if let backupData {
+        try? backupData.write(to: customURL)
+      } else {
+        try? FileManager.default.removeItem(at: customURL)
+      }
+    }
+
+    try FileManager.default.createDirectory(
+      at: customURL.deletingLastPathComponent(),
+      withIntermediateDirectories: true
+    )
+    try png.write(to: customURL, options: .atomic)
+
+    let rendered = try XCTUnwrap(MenuBarIconRenderer.shared.statusImage(for: .custom))
+    XCTAssertEqual(rendered.size, NSSize(width: 18, height: 18))
+    XCTAssertTrue(rendered.isTemplate)
+
+    let cgRendered = try XCTUnwrap(rendered.cgImage(forProposedRect: nil, context: nil, hints: nil))
+    let alphaBounds = try XCTUnwrap(
+      MenuBarIconRenderer.alphaBoundingBox(of: cgRendered),
+      "Rendered 18pt icon must contain visible ring pixels, not a blank hollow crop"
+    )
+    let occupancy = max(
+      alphaBounds.width / CGFloat(cgRendered.width),
+      alphaBounds.height / CGFloat(cgRendered.height)
+    )
+    XCTAssertGreaterThan(occupancy, 0.75, "Visible ring should fill ~89% of the 18pt canvas")
+    XCTAssertLessThanOrEqual(occupancy, 1.0)
+  }
 }
