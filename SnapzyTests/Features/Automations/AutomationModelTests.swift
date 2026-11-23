@@ -20,7 +20,7 @@ final class AutomationModelTests: XCTestCase {
     var automation = AutomationPreset.cloudShare.makeAutomation()
     automation.hotkey = ShortcutConfig(keyCode: UInt32(kVK_ANSI_4), modifiers: UInt32(controlKey | shiftKey))
     automation.steps[1].onFailure = .continue
-    automation.steps[1].content = .action(.uploadAndCopyLink(.markdown))
+    automation.steps[2].content = .action(.copyLink(AutomationLinkTemplate(style: .markdown)))
 
     XCTAssertEqual(try roundTrip(automation), automation)
   }
@@ -66,7 +66,7 @@ final class AutomationModelTests: XCTestCase {
     XCTAssertEqual(try roundTrip(automation).source, automation.source)
   }
 
-  func testNormalizedPutsCopyBeforeUploadAndDedupes() {
+  func testNormalizedKeepsOrderAndDuplicatesAndMigratesLegacyUpload() {
     let automation = Automation(
       name: "  ",
       source: .capture(AutomationCaptureSpec(mode: .area, saveToExportDirectory: false)),
@@ -78,8 +78,22 @@ final class AutomationModelTests: XCTestCase {
       ]
     ).normalized()
 
-    XCTAssertEqual(automation.activeActions, [.copyImage, .uploadAndCopyLink(.url), .notify])
+    XCTAssertEqual(
+      automation.activeActions,
+      [.upload, .copyLink(AutomationLinkTemplate(style: .url)), .notify, .copyImage, .notify]
+    )
+    XCTAssertEqual(automation.schemaVersion, Automation.currentSchemaVersion)
     XCTAssertEqual(automation.name, L10n.Automations.defaultName)
+  }
+
+  func testNormalizedCapsStepCount() {
+    let automation = Automation(
+      name: "Many",
+      source: .capture(AutomationCaptureSpec(mode: .area, saveToExportDirectory: false)),
+      steps: (0..<30).map { _ in AutomationStep(.notify) }
+    ).normalized()
+
+    XCTAssertEqual(automation.steps.count, Automation.maxSteps)
   }
 
   func testNormalizedAddsCopyImageWhenNoStep() {
@@ -136,9 +150,10 @@ final class AutomationModelTests: XCTestCase {
       let automation = preset.makeAutomation()
       XCTAssertNil(automation.hotkey)
       XCTAssertEqual(automation.presetID, preset.rawValue)
-      XCTAssertEqual(automation.captureSpec?.mode, .area)
-      XCTAssertEqual(automation.activeActions.first, .copyImage)
+      XCTAssertTrue(automation.startsCapture)
+      XCTAssertEqual(automation.activeActions.last, .notify)
     }
+    XCTAssertEqual(AutomationPreset.quickCopy.makeAutomation().activeActions.first, .copyImage)
   }
 
   // MARK: - Milestone 2

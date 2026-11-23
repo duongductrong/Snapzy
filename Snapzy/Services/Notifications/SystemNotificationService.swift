@@ -47,10 +47,33 @@ final class SystemNotificationService {
     self.center = center
   }
 
+  /// Handles a tapped notification button: `(actionIdentifier, userInfo)`.
+  var actionHandler: (@MainActor (String, [String: String]) -> Void)? {
+    get { presentationDelegate.actionHandler }
+    set { presentationDelegate.actionHandler = newValue }
+  }
+
+  /// Registers notification categories (action buttons). Replaces earlier ones.
+  func registerCategories(_ categories: Set<UNNotificationCategory>) {
+    center?.setNotificationCategories(categories)
+  }
+
   /// Post a notification.
   /// - Returns: `true` when the request was handed to the notification center.
   @discardableResult
   func post(title: String, body: String) async -> Bool {
+    await post(title: title, body: body, categoryIdentifier: nil, userInfo: [:])
+  }
+
+  /// Post a notification whose buttons come from a registered category
+  /// (see `registerCategories`). `userInfo` reaches the action handler.
+  @discardableResult
+  func post(
+    title: String,
+    body: String,
+    categoryIdentifier: String?,
+    userInfo: [String: String]
+  ) async -> Bool {
     guard let center else {
       DiagnosticLogger.shared.log(.debug, .system, "System notification skipped: no bundle identifier")
       return false
@@ -65,6 +88,10 @@ final class SystemNotificationService {
     }
     // Snapzy plays its own capture sounds; a notification sound would double up.
     content.sound = nil
+    if let categoryIdentifier {
+      content.categoryIdentifier = categoryIdentifier
+      content.userInfo = userInfo
+    }
 
     // A fresh identifier per call keeps one notification per action instead of
     // replacing the previous one.
@@ -154,10 +181,28 @@ final class SystemNotificationService {
 /// Keeps banners visible while Snapzy is the frontmost app, which happens whenever a
 /// capture is triggered from the menu bar or an open Snapzy window.
 private final class ForegroundPresentationDelegate: NSObject, UNUserNotificationCenterDelegate {
+  var actionHandler: (@MainActor (String, [String: String]) -> Void)?
+
   func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     willPresent notification: UNNotification
   ) async -> UNNotificationPresentationOptions {
     [.banner, .list]
+  }
+
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse
+  ) async {
+    let identifier = response.actionIdentifier
+    var info: [String: String] = [:]
+    for (key, value) in response.notification.request.content.userInfo {
+      if let key = key as? String, let value = value as? String {
+        info[key] = value
+      }
+    }
+    await MainActor.run {
+      actionHandler?(identifier, info)
+    }
   }
 }

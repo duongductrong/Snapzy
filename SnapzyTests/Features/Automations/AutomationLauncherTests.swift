@@ -18,8 +18,8 @@ private final class FakeCaptureStarter: AutomationCaptureStarting {
 
   func automationCaptureBlocker() -> AutomationLaunchRejection? { blocker }
 
-  func startAutomationCapture(mode: AutomationCaptureMode, routing: PostCaptureRouting) {
-    started.append((mode, routing))
+  func startAutomationCapture(spec: AutomationCaptureSpec, routing: PostCaptureRouting) {
+    started.append((spec.mode, routing))
     onStart?(routing)
   }
 }
@@ -33,6 +33,7 @@ final class AutomationLauncherTests: XCTestCase {
   private var runner: AutomationRunner!
   private var starter: FakeCaptureStarter!
   private var urlSchemeEnabled = true
+  private var clipboardImage: URL?
   private var launcher: AutomationLauncher!
   private var directory: URL!
   private var image: URL!
@@ -47,7 +48,13 @@ final class AutomationLauncherTests: XCTestCase {
     runner = AutomationRunner(environment: environment)
     starter = FakeCaptureStarter()
     urlSchemeEnabled = true
-    launcher = AutomationLauncher(store: store, runner: runner, isURLSchemeEnabled: { [unowned self] in urlSchemeEnabled })
+    clipboardImage = nil
+    launcher = AutomationLauncher(
+      store: store,
+      runner: runner,
+      isURLSchemeEnabled: { [unowned self] in urlSchemeEnabled },
+      readClipboardImage: { [unowned self] in clipboardImage }
+    )
     launcher.captureStarter = starter
 
     directory = FileManager.default.temporaryDirectory.appendingPathComponent("AutomationLauncherTests-\(UUID().uuidString)")
@@ -210,6 +217,51 @@ final class AutomationLauncherTests: XCTestCase {
 
     let outcome = await launcher.launch(.id(automation.id), invocation: .hotkey)
 
+    XCTAssertEqual(outcome, .cancelled)
+  }
+
+  // MARK: - Milestone 3
+
+  func testInvalidChainIsRejectedBeforeCapture() async {
+    let automation = add(steps: [.translate(AutomationTranslateConfig()), .copyText(AutomationTextTemplate())])
+
+    let outcome = await launcher.launch(.id(automation.id), invocation: .hotkey)
+
+    XCTAssertEqual(rejection(outcome), .invalidChain)
+    XCTAssertTrue(starter.started.isEmpty, "An invalid chain never starts a capture")
+  }
+
+  func testClipboardSourceRunsOnClipboardImage() async throws {
+    let automation = add("Clip", source: .clipboardImage)
+    clipboardImage = image
+
+    let outcome = await launcher.launch(.id(automation.id), invocation: .hotkey)
+
+    guard case .finished(let report) = outcome else { return XCTFail("Expected a finished run, got \(outcome)") }
+    XCTAssertEqual(report.files, [image])
+    XCTAssertEqual(environment.copiedImages, [[image]])
+    XCTAssertEqual(environment.history, [image], "The clipboard image becomes a new capture")
+    XCTAssertTrue(starter.started.isEmpty)
+  }
+
+  func testClipboardSourceWithoutImageIsRejected() async {
+    let automation = add("Clip", source: .clipboardImage)
+
+    let outcome = await launcher.launch(.id(automation.id), invocation: .hotkey)
+
+    XCTAssertEqual(rejection(outcome), .clipboardEmpty)
+  }
+
+  func testRecordingSourceStartsRecordingCapture() async {
+    let automation = add(
+      source: .capture(AutomationCaptureSpec(mode: .recordingArea, saveToExportDirectory: false, recordingOutput: .gif)),
+      steps: [.upload, .copyLink(AutomationLinkTemplate())]
+    )
+    starter.onStart = { [runner] routing in runner!.abandon(routing: routing) }
+
+    let outcome = await launcher.launch(.id(automation.id), invocation: .hotkey)
+
+    XCTAssertEqual(starter.started.map(\.0), [.recordingArea])
     XCTAssertEqual(outcome, .cancelled)
   }
 

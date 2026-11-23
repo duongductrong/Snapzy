@@ -1277,9 +1277,7 @@ final class QuickAccessManager: ObservableObject {
       context: ["fileName": url.lastPathComponent]
     )
     Task { @MainActor in
-      let fileAccess = fileAccessManager.beginAccessingURL(url)
-      defer { fileAccess.stop() }
-      NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
+      FileRevealer.reveal([url])
     }
   }
 

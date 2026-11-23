@@ -12,7 +12,9 @@ Post-capture routing is everything that happens after a capture file exists: des
 
 ## Automation Routing
 
-Every interactive screenshot carries a `PostCaptureRouting` inside its `CaptureContext`; `ScreenCaptureManager` emits `CaptureCompletionEvent(url, routing)`. `.standard` runs the matrix below. `.automation(runID)` (set by `ScreenCaptureViewModel.runAutomation`) hands the files to `AutomationRunner` instead: the matrix — including Save, which the automation decides through `TempCaptureManager.resolveSaveDirectory(saveOverride:)` — is skipped, the default canvas preset is still applied, and history is still recorded. See [`AUTOMATIONS.md`](AUTOMATIONS.md).
+Every interactive screenshot carries a `PostCaptureRouting` inside its `CaptureContext`; `ScreenCaptureManager` emits `CaptureCompletionEvent(url, routing)`. `.standard` runs the matrix below. `.automation(runID)` (set by `AutomationLauncher` through `ScreenCaptureViewModel.startAutomationCapture`) hands the files to `AutomationRunner` instead: the matrix — including Save, which the automation decides through `TempCaptureManager.resolveSaveDirectory(saveOverride:)` — is skipped, the default canvas preset is still applied (unless the automation has an Apply canvas preset step), and history is still recorded. See [`AUTOMATIONS.md`](AUTOMATIONS.md).
+
+Scrolling captures pass the routing into `saveProcessedImage(context:)`, so the stitched image takes the same path. Recordings started by an automation keep the routing in `RecordingCoordinator`: on stop, GIF output is converted and studio recordings flattened without a Quick Access card, then `AutomationRunner.complete` runs the steps instead of `handleVideoCapture`; the recording's save folder follows the automation (`makeRecordingSavePlan(saveOverride:)`). Deleting or cancelling a recording, or cancelling a scrolling session, abandons the run.
 
 ## After-Capture Action Matrix
 

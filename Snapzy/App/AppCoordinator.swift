@@ -19,6 +19,7 @@ final class AppCoordinator {
   init(environment: AppEnvironment) {
     self.environment = environment
     AutomationLauncher.shared.captureStarter = environment.screenCaptureViewModel
+    AutomationNotificationRouter.install()
   }
 
   func applicationDidFinishLaunching() {
@@ -108,6 +109,7 @@ final class AppCoordinator {
   }
 
   func applicationWillTerminate() {
+    AutomationRunLog.shared.flush()
     flushConfigurationSyncBeforeTermination()
     CLIServer.shared.shutdown()
     DiagnosticLogger.shared.log(.info, .lifecycle, "App terminated normally")

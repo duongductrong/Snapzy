@@ -14,7 +14,7 @@ final class SnapzyConfigurationAutomationsTests: XCTestCase {
   func testRoundTripPreservesOrderFieldsAndShortcut() throws {
     var cloud = AutomationPreset.cloudShare.makeAutomation()
     cloud.hotkey = ShortcutConfig(keyCode: UInt32(kVK_ANSI_4), modifiers: UInt32(controlKey | shiftKey))
-    cloud.steps[1].content = .action(.uploadAndCopyLink(.markdown))
+    cloud.steps[2].content = .action(.copyLink(AutomationLinkTemplate(style: .markdown)))
     var custom = Automation(
       name: "Window \"docs\"",
       isEnabled: false,
@@ -33,7 +33,11 @@ final class SnapzyConfigurationAutomationsTests: XCTestCase {
     XCTAssertEqual(imported.map(\.id), [cloud.id, custom.id])
     XCTAssertEqual(imported[0].hotkey, cloud.hotkey)
     XCTAssertEqual(imported[0].presetID, AutomationPreset.cloudShare.rawValue)
-    XCTAssertEqual(imported[0].activeActions, [.copyImage, .uploadAndCopyLink(.markdown), .notify])
+    XCTAssertEqual(
+      imported[0].activeActions,
+      [.copyImage, .upload, .copyLink(AutomationLinkTemplate(style: .markdown)), .notify]
+    )
+    XCTAssertEqual(imported[0].steps.map(\.id), cloud.steps.map(\.id), "Step ids survive the round trip")
     XCTAssertEqual(imported[1].name, "Window \"docs\"")
     XCTAssertFalse(imported[1].isEnabled)
     XCTAssertTrue(imported[1].externalInvocation)
@@ -50,7 +54,7 @@ final class SnapzyConfigurationAutomationsTests: XCTestCase {
     [automations.first]
     order = 0
     name = "Bad capture"
-    capture = "scrolling"
+    capture = "teleport"
     steps = ["copy_image"]
 
     [automations.second]
@@ -106,18 +110,30 @@ final class SnapzyConfigurationAutomationsTests: XCTestCase {
     XCTAssertEqual(imported.first?.steps, automation.normalized().steps)
   }
 
-  func testEditedStepsInTOMLWinOverData() throws {
-    let automation = AutomationPreset.cloudShare.makeAutomation()
+  func testEditedStepTableWinsOverData() throws {
+    let automation = AutomationPreset.docsShot.makeAutomation()
     var writer = SimpleTOMLWriter()
     SnapzyConfigurationAutomationsCodec.write([automation], to: &writer)
-    let edited = writer.output.replacingOccurrences(
-      of: "steps = [\"copy_image\", \"upload_copy_link\", \"notify\"]",
-      with: "steps = [\"copy_image\", \"show_quick_access\"]"
-    )
-    XCTAssertNotEqual(edited, writer.output)
+    XCTAssertTrue(writer.output.contains("max_dimension = 1600"))
+    let edited = writer.output.replacingOccurrences(of: "max_dimension = 1600", with: "max_dimension = 800")
 
     let imported = try XCTUnwrap(SnapzyConfigurationAutomationsCodec.parse(try SimpleTOMLParser.parse(edited)).automations)
-    XCTAssertEqual(imported.first?.activeActions, [.copyImage, .showQuickAccess])
+    XCTAssertEqual(imported.first?.steps[1].action, .resize(AutomationResizeConfig(mode: .maxDimension, maxDimension: 800)))
+  }
+
+  func testLegacyStepsArrayIsStillRead() throws {
+    let source = """
+    [automations.a]
+    order = 0
+    capture = "area"
+    steps = ["copy_image", "upload_copy_link:markdown", "notify"]
+    """
+    let imported = try XCTUnwrap(SnapzyConfigurationAutomationsCodec.parse(try SimpleTOMLParser.parse(source)).automations)
+
+    XCTAssertEqual(
+      imported.first?.activeActions,
+      [.copyImage, .upload, .copyLink(AutomationLinkTemplate(style: .markdown)), .notify]
+    )
   }
 
   func testEmptyListRoundTripsAsEmpty() throws {
@@ -163,5 +179,109 @@ final class SnapzyConfigurationAutomationsTests: XCTestCase {
     XCTAssertTrue(imported.showsInMenuBar)
     XCTAssertFalse(imported.showsInHistory)
     XCTAssertTrue(imported.showsInQuickAccess, "Absent edits keep the stored value")
+  }
+
+  // MARK: - Milestone 3
+
+  private func makeFolderStore() -> AutomationFolderAccessStore {
+    let defaults = UserDefaults(suiteName: "SnapzyConfigurationAutomationsTests.\(UUID().uuidString)")!
+    return AutomationFolderAccessStore(defaults: defaults, exportDirectory: { nil })
+  }
+
+  func testStepTablesRoundTripEveryKind() throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent("toml-folder-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let folderStore = makeFolderStore()
+    let folderID = folderStore.register(folder)
+
+    var automation = Automation(
+      name: "Everything",
+      source: .capture(AutomationCaptureSpec(mode: .recordingWindow, saveToExportDirectory: false, recordingOutput: .gif)),
+      steps: [
+        AutomationStep(.convertToGIF(AutomationGIFConfig(fps: 24, maxWidth: 640)), onFailure: .continue),
+        AutomationStep(.upload),
+        AutomationStep(.copyLink(AutomationLinkTemplate(style: .custom, custom: "<{link}>"))),
+        AutomationStep(.ocr(AutomationOCRConfig(languageIdentifier: "vi", includeQR: true)), isEnabled: false),
+        AutomationStep(.translate(AutomationTranslateConfig(targetLanguage: "ja"))),
+        AutomationStep(.copyText(AutomationTextTemplate(template: "> {text}"))),
+        AutomationStep(.convert(AutomationConvertConfig(format: .jpeg, quality: 70, maxFileSizeKB: 500))),
+        AutomationStep(.resize(AutomationResizeConfig(mode: .scalePercent, scalePercent: 25))),
+        AutomationStep(.applyCanvasPreset(AutomationCanvasPresetConfig())),
+        AutomationStep(.stripMetadata),
+        AutomationStep(.saveToFolder(AutomationSaveToFolderConfig(
+          folder: .bookmark(folderID),
+          folderPath: folder.path,
+          nameTemplate: "{date}-{appName}",
+          conflict: .overwrite
+        ))),
+        AutomationStep(.saveToFolder(AutomationSaveToFolderConfig(folder: .exportDirectory))),
+        AutomationStep(.reveal),
+        AutomationStep(.pin),
+        AutomationStep(.copyFile),
+      ]
+    )
+    automation.steps.append(AutomationStep(.notify))
+    var future = AutomationStep(.notify)
+    future.content = .unsupported(.object(["kind": .string("webhook"), "url": .string("https://example.com")]))
+    automation.steps.append(future)
+
+    var writer = SimpleTOMLWriter()
+    SnapzyConfigurationAutomationsCodec.write([automation], to: &writer)
+    XCTAssertTrue(writer.output.contains(".steps.01]"))
+    XCTAssertFalse(writer.output.contains("steps = ["), "v2 writes sub-tables only")
+
+    // Drop `data` so only the step tables are read.
+    let withoutData = writer.output
+      .split(separator: "\n", omittingEmptySubsequences: false)
+      .filter { !$0.hasPrefix("data = ") }
+      .joined(separator: "\n")
+    let result = SnapzyConfigurationAutomationsCodec.parse(try SimpleTOMLParser.parse(withoutData), folderStore: folderStore)
+
+    XCTAssertTrue(result.warnings.isEmpty, "\(result.warnings)")
+    let imported = try XCTUnwrap(result.automations?.first)
+    XCTAssertEqual(imported.source, automation.source)
+    XCTAssertEqual(imported.steps.map(\.action), automation.steps.map(\.action))
+    XCTAssertEqual(imported.steps.map(\.isEnabled), automation.steps.map(\.isEnabled))
+    XCTAssertEqual(imported.steps.map(\.onFailure), automation.steps.map(\.onFailure))
+    XCTAssertEqual(imported.steps.last?.content, future.content, "Newer step kinds survive")
+  }
+
+  func testMissingFolderWarnsAndNeedsSetup() throws {
+    let source = """
+    [automations.a]
+    order = 0
+    capture = "active_window"
+
+    [automations.a.steps.01]
+    kind = "save_to_folder"
+    folder = "/definitely/not/here"
+    name = "{date}"
+    """
+    let result = SnapzyConfigurationAutomationsCodec.parse(try SimpleTOMLParser.parse(source), folderStore: makeFolderStore())
+    let imported = try XCTUnwrap(result.automations?.first)
+
+    XCTAssertEqual(result.warnings.count, 1)
+    guard case .saveToFolder(let config)? = imported.steps.first?.action else { return XCTFail("Expected save_to_folder") }
+    XCTAssertNil(config.folder)
+    XCTAssertEqual(config.folderPath, "/definitely/not/here")
+    XCTAssertTrue(imported.needsSetup)
+  }
+
+  func testUnknownStepKeysWarn() throws {
+    let source = """
+    [automations.a]
+    order = 0
+    capture = "area"
+
+    [automations.a.steps.01]
+    kind = "resize"
+    max_dimension = 900
+    colour = "red"
+    """
+    let result = SnapzyConfigurationAutomationsCodec.parse(try SimpleTOMLParser.parse(source))
+
+    XCTAssertEqual(result.warnings.count, 1)
+    XCTAssertEqual(result.automations?.first?.activeActions, [.resize(AutomationResizeConfig(maxDimension: 900))])
   }
 }

@@ -4,10 +4,33 @@
 //
 //  The app services automation steps touch, behind one seam so the runner and
 //  step handlers can be tested without a pasteboard, network or windows.
+//  Pure file transforms (resize, convert, strip metadata) don't go through
+//  here: `AutomationImageTransforms` is tested directly on real files.
 //
 
 import AppKit
 import Foundation
+
+/// Progress the runner reports for the run HUD.
+enum AutomationRunUpdate: Equatable {
+  case started(runID: UUID, name: String)
+  case step(runID: UUID, title: String)
+  case finished(runID: UUID)
+}
+
+/// What a notification's action buttons act on.
+struct AutomationNotificationContext: Equatable {
+  enum Outcome: Equatable {
+    case succeeded
+    case failed
+  }
+
+  let outcome: Outcome
+  let automationID: UUID
+  let inputFiles: [URL]
+  let link: URL?
+  let savedFile: URL?
+}
 
 @MainActor
 protocol AutomationRunEnvironment: AnyObject {
@@ -28,9 +51,24 @@ protocol AutomationRunEnvironment: AnyObject {
   func showQuickAccess(_ url: URL, kind: AutomationFileKind, sessionData: AnnotationSessionData?) async -> UUID?
   func setCloudLink(quickAccessItemID: UUID, result: CloudUploadResult)
   func openAnnotate(_ url: URL, quickAccessItemID: UUID?, sessionData: AnnotationSessionData?)
+  func pin(_ url: URL) async -> Bool
+  func reveal(_ urls: [URL])
+
+  /// Renders an Annotate canvas preset (`nil` = default preset) from `source` into `destination`.
+  func applyCanvasPreset(_ presetID: UUID?, source: URL, destination: URL) throws -> AnnotationSessionData?
+  /// Settings of a Quick Access Optimize preset, if it still exists.
+  func optimizeSettings(presetID: UUID) -> QuickAccessOptimizeSettings?
+  func recognizeText(in url: URL, config: AutomationOCRConfig) async throws -> String
+  func translate(_ text: String, targetLanguage: String?) async throws -> String
+  /// Converts a video to a GIF written next to it; returns the GIF's URL.
+  func convertToGIF(_ url: URL, config: AutomationGIFConfig) async throws -> URL
+  /// The folder's URL, or `AutomationStepError.folderUnavailable`.
+  func resolveFolder(_ ref: AutomationFolderRef) throws -> URL
 
   func recordHistory(_ url: URL, kind: AutomationFileKind) async
-  func notify(title: String, body: String, isError: Bool) async
+  func notify(title: String, body: String, isError: Bool, context: AutomationNotificationContext?) async
+  func runDidUpdate(_ update: AutomationRunUpdate)
+  func recordRun(_ record: AutomationRunRecord)
 }
 
 /// Production environment backed by the app's singletons.
@@ -55,7 +93,7 @@ final class LiveAutomationRunEnvironment: AutomationRunEnvironment {
   }
 
   func copyText(_ text: String) -> Int {
-    CloudShareService.shared.copyToPasteboard(text)
+    ClipboardHelper.copyText(text)
   }
 
   var pasteboardChangeCount: Int {
@@ -95,6 +133,48 @@ final class LiveAutomationRunEnvironment: AutomationRunEnvironment {
     }
   }
 
+  func pin(_ url: URL) async -> Bool {
+    await QuickAccessManager.shared.pinScreenshot(url: url) != nil
+  }
+
+  func reveal(_ urls: [URL]) {
+    FileRevealer.reveal(urls)
+  }
+
+  func applyCanvasPreset(_ presetID: UUID?, source: URL, destination: URL) throws -> AnnotationSessionData? {
+    let applier = ScreenshotPresetAutoApplier.shared
+    guard let preset = applier.preset(id: presetID) else {
+      throw AutomationStepError.canvasPresetMissing
+    }
+    return try applier.apply(preset, from: source, writingTo: destination)
+  }
+
+  func optimizeSettings(presetID: UUID) -> QuickAccessOptimizeSettings? {
+    QuickAccessOptimizePresetStore.shared.presets.first { $0.id == presetID }?.settings
+  }
+
+  func recognizeText(in url: URL, config: AutomationOCRConfig) async throws -> String {
+    try await AutomationTextRecognizer.recognize(url, config: config)
+  }
+
+  func translate(_ text: String, targetLanguage: String?) async throws -> String {
+    try await AutomationTranslator.translate(text, targetLanguage: targetLanguage)
+  }
+
+  func convertToGIF(_ url: URL, config: AutomationGIFConfig) async throws -> URL {
+    var options = GIFConverter.Options.default
+    options.fps = config.clampedFPS
+    options.maxWidth = CGFloat(config.clampedMaxWidth)
+    return try await GIFConverter.convert(videoURL: url, options: options, onProgress: { _ in })
+  }
+
+  func resolveFolder(_ ref: AutomationFolderRef) throws -> URL {
+    guard let url = AutomationFolderAccessStore.shared.resolve(ref) else {
+      throw AutomationStepError.folderUnavailable
+    }
+    return url
+  }
+
   func recordHistory(_ url: URL, kind: AutomationFileKind) async {
     // A file handed in from the CLI or Shortcuts may already have an entry.
     guard !CaptureHistoryStore.shared.hasRecord(forFilePath: url.path) else { return }
@@ -106,10 +186,24 @@ final class LiveAutomationRunEnvironment: AutomationRunEnvironment {
     }
   }
 
-  func notify(title: String, body: String, isError: Bool) async {
-    let delivered = await SystemNotificationService.shared.post(title: title, body: body)
+  func notify(title: String, body: String, isError: Bool, context: AutomationNotificationContext?) async {
+    let payload = context.flatMap(AutomationNotificationRouter.payload(for:))
+    let delivered = await SystemNotificationService.shared.post(
+      title: title,
+      body: body,
+      categoryIdentifier: payload?.category,
+      userInfo: payload?.userInfo ?? [:]
+    )
     if !delivered {
       AppToastManager.shared.show(message: body, style: isError ? .warning : .success)
     }
+  }
+
+  func runDidUpdate(_ update: AutomationRunUpdate) {
+    AutomationRunHUDController.shared.handle(update)
+  }
+
+  func recordRun(_ record: AutomationRunRecord) {
+    AutomationRunLog.shared.append(record)
   }
 }

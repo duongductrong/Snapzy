@@ -220,7 +220,7 @@ struct HistoryItemView: View, Equatable {
   }
 
   private func openInFinder() {
-    NSWorkspace.shared.activateFileViewerSelecting([record.fileURL])
+    FileRevealer.reveal([record.fileURL])
   }
 
   private func deleteRecord() {

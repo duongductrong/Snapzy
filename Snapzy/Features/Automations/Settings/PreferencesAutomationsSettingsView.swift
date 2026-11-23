@@ -17,6 +17,7 @@ private struct AutomationEditorDraft: Identifiable {
 struct AutomationsSettingsView: View {
   @ObservedObject private var store = AutomationStore.shared
   @ObservedObject private var cloudManager = CloudManager.shared
+  @ObservedObject private var navigation = AutomationSettingsNavigation.shared
   @State private var editorDraft: AutomationEditorDraft?
   @State private var pendingDelete: Automation?
   @State private var validationIssues: [UUID: ShortcutValidationIssue] = [:]
@@ -25,9 +26,65 @@ struct AutomationsSettingsView: View {
     Form {
       Section {
       } header: {
-        PreferencesPageHero(tab: .automations, subtitle: L10n.Automations.heroSubtitle)
+        VStack(alignment: .leading, spacing: 12) {
+          PreferencesPageHero(tab: .automations, subtitle: L10n.Automations.heroSubtitle)
+          Picker("", selection: $navigation.page) {
+            Text(L10n.Automations.pageAutomations).tag(AutomationSettingsNavigation.Page.automations)
+            Text(L10n.Automations.pageActivity).tag(AutomationSettingsNavigation.Page.activity)
+          }
+          .pickerStyle(.segmented)
+          .labelsHidden()
+          .frame(maxWidth: 320)
+        }
       }
 
+      if navigation.page == .activity {
+        AutomationActivitySection()
+      } else {
+        automationsSection
+      }
+    }
+    .formStyle(.grouped)
+    .sheet(item: $editorDraft) { draft in
+      AutomationEditorSheet(
+        automation: draft.automation,
+        isNew: draft.isNew,
+        isCloudConfigured: cloudManager.isConfigured,
+        onSave: { saved in
+          if draft.isNew {
+            store.add(saved)
+          } else {
+            store.update(saved)
+          }
+          validationIssues[saved.id] = nil
+          editorDraft = nil
+        },
+        onCancel: { editorDraft = nil }
+      )
+    }
+    .alert(
+      pendingDelete.map { L10n.Automations.deleteConfirmTitle($0.displayName) } ?? "",
+      isPresented: Binding(
+        get: { pendingDelete != nil },
+        set: { if !$0 { pendingDelete = nil } }
+      ),
+      presenting: pendingDelete
+    ) { automation in
+      Button(L10n.Common.delete, role: .destructive) {
+        store.delete(id: automation.id)
+        validationIssues[automation.id] = nil
+        pendingDelete = nil
+      }
+      Button(L10n.Common.cancel, role: .cancel) {
+        pendingDelete = nil
+      }
+    } message: { _ in
+      Text(L10n.Automations.deleteConfirmMessage)
+    }
+  }
+
+  @ViewBuilder
+  private var automationsSection: some View {
       Section {
         if store.automations.isEmpty {
           Text(L10n.Automations.emptyList)
@@ -86,44 +143,6 @@ struct AutomationsSettingsView: View {
         }
         .padding(.top, 4)
       }
-    }
-    .formStyle(.grouped)
-    .sheet(item: $editorDraft) { draft in
-      AutomationEditorSheet(
-        automation: draft.automation,
-        isNew: draft.isNew,
-        isCloudConfigured: cloudManager.isConfigured,
-        onSave: { saved in
-          if draft.isNew {
-            store.add(saved)
-          } else {
-            store.update(saved)
-          }
-          validationIssues[saved.id] = nil
-          editorDraft = nil
-        },
-        onCancel: { editorDraft = nil }
-      )
-    }
-    .alert(
-      pendingDelete.map { L10n.Automations.deleteConfirmTitle($0.displayName) } ?? "",
-      isPresented: Binding(
-        get: { pendingDelete != nil },
-        set: { if !$0 { pendingDelete = nil } }
-      ),
-      presenting: pendingDelete
-    ) { automation in
-      Button(L10n.Common.delete, role: .destructive) {
-        store.delete(id: automation.id)
-        validationIssues[automation.id] = nil
-        pendingDelete = nil
-      }
-      Button(L10n.Common.cancel, role: .cancel) {
-        pendingDelete = nil
-      }
-    } message: { _ in
-      Text(L10n.Automations.deleteConfirmMessage)
-    }
   }
 
   private func makeNewAutomation() -> Automation {
@@ -174,13 +193,13 @@ private struct AutomationRow: View {
 
   var body: some View {
     HStack(alignment: .top, spacing: 8) {
-      Image(systemName: automation.symbol ?? rowSymbol)
+      Image(systemName: automation.symbol ?? automation.sourceSymbol)
         .font(.system(size: 14, weight: .medium))
         .foregroundStyle(.secondary)
         .frame(width: 20, height: 22)
 
       VStack(alignment: .leading, spacing: 3) {
-        if automation.source == .input {
+        if !automation.runsWithoutInput {
           Toggle(isOn: Binding(get: { automation.isEnabled }, set: onToggle)) {
             Text(automation.displayName)
           }
@@ -209,6 +228,13 @@ private struct AutomationRow: View {
 
         if automation.hasUnsupportedSource {
           warning(L10n.Automations.unsupported)
+        } else if automation.needsSetup {
+          HStack(spacing: 6) {
+            warning(L10n.Automations.needsSetupBadge)
+            Button(L10n.Automations.setUpButton, action: onEdit)
+              .buttonStyle(.link)
+              .font(.caption)
+          }
         } else if automation.needsCloud && !isCloudConfigured {
           HStack(spacing: 6) {
             warning(L10n.Automations.cloudWarning)
@@ -241,14 +267,6 @@ private struct AutomationRow: View {
     .onTapGesture(count: 2) {
       guard !automation.hasUnsupportedSource else { return }
       onEdit()
-    }
-  }
-
-  private var rowSymbol: String {
-    switch automation.source {
-    case .capture(let spec): spec.mode.symbol
-    case .input: AutomationDisplay.inputSymbol
-    case .unsupported: "bolt.fill"
     }
   }
 

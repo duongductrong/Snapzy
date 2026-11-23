@@ -26,12 +26,12 @@ struct AutomationExternalSection: View {
       }
 
       if automation.externalInvocation {
-        if automation.startsCapture {
+        if automation.runsWithoutInput {
           copyableRow(L10n.Automations.externalURLLabel, value: AutomationDisplay.runURL(for: automation))
         }
         copyableRow(L10n.Automations.externalCLILabel, value: AutomationDisplay.cliCommand(for: automation))
 
-        if !isURLSchemeEnabled, automation.startsCapture {
+        if !isURLSchemeEnabled, automation.runsWithoutInput {
           HStack(spacing: 6) {
             Label(L10n.Automations.externalURLSchemeOff, systemImage: "exclamationmark.triangle.fill")
               .font(.caption)

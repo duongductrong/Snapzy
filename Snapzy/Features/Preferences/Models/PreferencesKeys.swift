@@ -254,4 +254,8 @@ enum PreferencesKeys {
   static let automations = "automations.items"
   /// Built-in presets were seeded once; deleting them must not re-seed.
   static let automationsSeeded = "automations.seeded"
+  /// JSON `[UUID: {bookmark, path}]` of folders picked for Save to Folder steps.
+  static let automationFolders = "automations.folders"
+  /// Keep the Activity run log (on by default).
+  static let automationsActivityLogEnabled = "automations.activityLogEnabled"
 }

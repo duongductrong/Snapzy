@@ -71,7 +71,7 @@ final class AutomationStore: ObservableObject {
       guard automation.isEnabled, !automation.hasUnsupportedSource else { return false }
       switch slot {
       case .menuBar:
-        guard automation.showsInMenuBar, automation.startsCapture else { return false }
+        guard automation.showsInMenuBar, automation.runsWithoutInput else { return false }
       case .quickAccess:
         guard automation.showsInQuickAccess else { return false }
       case .history:

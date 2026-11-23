@@ -75,7 +75,7 @@ public struct CLIAutomationRunResult: Codable, Sendable, Equatable {
   public let runId: String
   public let automationId: String
   public let state: CLIAutomationRunState
-  /// Files the run produced or worked on (the capture, or the files passed in).
+  /// Files the run delivered: the saved file, else the final (possibly transformed) files.
   public let files: [String]
   /// Uploaded link text (URL or Markdown) when a step produced one.
   public let link: String?
@@ -83,6 +83,8 @@ public struct CLIAutomationRunResult: Codable, Sendable, Equatable {
   public let message: String
   /// A step failed (for example the upload), even if earlier steps succeeded.
   public let isError: Bool
+  /// Text an OCR / Translate step produced. Absent from older Snapzy builds.
+  public let text: String?
 
   public init(
     runId: String,
@@ -91,7 +93,8 @@ public struct CLIAutomationRunResult: Codable, Sendable, Equatable {
     files: [String] = [],
     link: String? = nil,
     message: String = "",
-    isError: Bool = false
+    isError: Bool = false,
+    text: String? = nil
   ) {
     self.runId = runId
     self.automationId = automationId
@@ -100,5 +103,6 @@ public struct CLIAutomationRunResult: Codable, Sendable, Equatable {
     self.link = link
     self.message = message
     self.isError = isError
+    self.text = text
   }
 }

@@ -62,9 +62,6 @@ final class CloudShareService {
   /// Writes `text` as the only pasteboard item and returns the new change count.
   @discardableResult
   func copyToPasteboard(_ text: String) -> Int {
-    let pasteboard = NSPasteboard.general
-    pasteboard.clearContents()
-    pasteboard.setString(text, forType: .string)
-    return pasteboard.changeCount
+    ClipboardHelper.copyText(text)
   }
 }

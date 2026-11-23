@@ -2,12 +2,18 @@
 //  AutomationEditorSheet.swift
 //  Snapzy
 //
-//  Create / edit one automation. Steps are edited as a checklist in a fixed
-//  canonical order; the stored model already supports any order. Also edits
-//  where the automation is listed and whether other apps may run it.
+//  Create / edit one automation. Two panes: the source + step list on the
+//  left, an inspector for the selected row on the right. The chain is
+//  validated live; Save is disabled while a step has nothing to work on.
 //
 
 import SwiftUI
+
+/// What the editor's inspector shows.
+enum AutomationEditorSelection: Hashable {
+  case triggers
+  case step(UUID)
+}
 
 struct AutomationEditorSheet: View {
   let isNew: Bool
@@ -16,8 +22,10 @@ struct AutomationEditorSheet: View {
   let onCancel: () -> Void
 
   @State private var automation: Automation
+  @State private var selection: AutomationEditorSelection? = .triggers
   @State private var shortcutIssue: ShortcutValidationIssue?
-  @AppStorage(PreferencesKeys.urlSchemeEnabled) private var urlSchemeEnabled = true
+  /// The last capture settings, kept while another source is picked so switching back restores them.
+  @State private var lastCaptureSpec: AutomationCaptureSpec?
 
   init(
     automation: Automation,
@@ -26,7 +34,7 @@ struct AutomationEditorSheet: View {
     onSave: @escaping (Automation) -> Void,
     onCancel: @escaping () -> Void
   ) {
-    var editable = automation
+    var editable = automation.migrated()
     // Show presets under their localized name; renaming makes it a custom name.
     editable.name = automation.displayName
     _automation = State(initialValue: editable)
@@ -38,241 +46,189 @@ struct AutomationEditorSheet: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      Text(isNew ? L10n.Automations.editorNewTitle : L10n.Automations.editorEditTitle)
-        .font(.headline)
-        .padding(.top, 16)
-
-      Form {
-        Section {
-          TextField(L10n.Automations.nameLabel, text: $automation.name, prompt: Text(L10n.Automations.defaultName))
-
-          if hasDuplicateName {
-            Label(L10n.Automations.duplicateNameWarning, systemImage: "exclamationmark.triangle.fill")
-              .font(.caption)
-              .foregroundStyle(.orange)
-          }
-
-          Picker(L10n.Automations.sourceLabel, selection: sourceBinding) {
-            ForEach(AutomationCaptureMode.allCases) { mode in
-              Label(mode.displayName, systemImage: mode.symbol).tag(SourceChoice.capture(mode))
-            }
-            Divider()
-            Label(L10n.Automations.sourceInput, systemImage: AutomationDisplay.inputSymbol).tag(SourceChoice.input)
-          }
-
-          if automation.startsCapture {
-            Toggle(isOn: saveBinding) {
-              VStack(alignment: .leading, spacing: 2) {
-                Text(L10n.Automations.saveToFolderLabel)
-                Text(L10n.Automations.saveToFolderDescription)
-                  .font(.caption)
-                  .foregroundStyle(.secondary)
-                  .fixedSize(horizontal: false, vertical: true)
-              }
-            }
-
-            ShortcutRecorderView(
-              label: L10n.Automations.shortcutLabel,
-              shortcut: Binding(get: { automation.hotkey }, set: { _ in }),
-              validationIssue: shortcutIssue,
-              onShortcutChanged: handleShortcutChange
-            )
-          } else {
-            Text(L10n.Automations.sourceInputDescription)
-              .font(.caption)
-              .foregroundStyle(.secondary)
-              .fixedSize(horizontal: false, vertical: true)
-          }
-        }
-
-        Section {
-          ForEach(AutomationStepKind.allCases) { kind in
-            Toggle(isOn: stepBinding(kind)) {
-              Label(kind.displayName, systemImage: kind.symbol)
-            }
-
-            if kind == .uploadAndCopyLink, automation.contains(.uploadAndCopyLink) {
-              Picker(L10n.Automations.linkFormatLabel, selection: linkFormatBinding) {
-                ForEach(AutomationLinkFormat.allCases) { format in
-                  Text(format.displayName).tag(format)
-                }
-              }
-              .pickerStyle(.segmented)
-              .padding(.leading, 24)
-
-              if !isCloudConfigured {
-                Label(L10n.Automations.cloudWarning, systemImage: "exclamationmark.triangle.fill")
-                  .font(.caption)
-                  .foregroundStyle(.orange)
-                  .padding(.leading, 24)
-              }
-            }
-          }
-        } header: {
-          Text(L10n.Automations.stepsLabel)
-        } footer: {
-          Text(L10n.Automations.stepsDescription)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-
-        Section {
-          Toggle(L10n.Automations.showInMenuBar, isOn: $automation.showsInMenuBar)
-            .disabled(!automation.startsCapture)
-          Toggle(L10n.Automations.showInQuickAccess, isOn: $automation.showsInQuickAccess)
-          Toggle(L10n.Automations.showInHistory, isOn: $automation.showsInHistory)
-        } header: {
-          Text(L10n.Automations.showInLabel)
-        } footer: {
-          Text(automation.startsCapture ? L10n.Automations.showInDescription : L10n.Automations.showInInputDescription)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-
-        AutomationExternalSection(automation: $automation, isURLSchemeEnabled: urlSchemeEnabled)
+      header
+      Divider()
+      HStack(spacing: 0) {
+        AutomationStepListView(automation: $automation, selection: $selection, issues: issues)
+          .frame(width: 300)
+        Divider()
+        inspector
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      .formStyle(.grouped)
-
-      HStack {
-        Spacer()
-        Button(L10n.Common.cancel, role: .cancel, action: onCancel)
-          .keyboardShortcut(.cancelAction)
-        Button(L10n.Common.save) {
-          var saved = automation.normalized()
-          // An untouched preset name goes back to its stored form so it keeps following the app language.
-          if let preset = saved.presetID.flatMap(AutomationPreset.init(rawValue:)), saved.name == preset.localizedName {
-            saved.name = preset.storedName
-          }
-          onSave(saved)
-        }
-        .keyboardShortcut(.defaultAction)
-      }
-      .padding(16)
+      Divider()
+      footer
     }
-    .frame(width: 500, height: 680)
+    .frame(minWidth: 780, minHeight: 560)
   }
 
-  // MARK: - Bindings
+  // MARK: - Header
 
-  /// The last capture settings, kept while "Run on a File" is picked so switching back restores them.
-  @State private var lastCaptureSpec: AutomationCaptureSpec?
+  private var header: some View {
+    HStack(spacing: 12) {
+      Image(systemName: automation.symbol ?? automation.sourceSymbol)
+        .font(.system(size: 18, weight: .medium))
+        .foregroundStyle(.secondary)
+        .frame(width: 24)
+      VStack(alignment: .leading, spacing: 4) {
+        TextField(L10n.Automations.nameLabel, text: $automation.name, prompt: Text(L10n.Automations.defaultName))
+          .textFieldStyle(.roundedBorder)
+          .font(.title3)
+        if hasDuplicateName {
+          Label(L10n.Automations.duplicateNameWarning, systemImage: "exclamationmark.triangle.fill")
+            .font(.caption)
+            .foregroundStyle(.orange)
+        }
+      }
+      AutomationSourcePicker(
+        automation: $automation,
+        lastCaptureSpec: $lastCaptureSpec,
+        onSourceChange: { shortcutIssue = nil }
+      )
+      .frame(width: 240)
+    }
+    .padding(16)
+  }
+
+  // MARK: - Inspector
+
+  @ViewBuilder
+  private var inspector: some View {
+    switch selection {
+    case .step(let id)?:
+      if let index = automation.steps.firstIndex(where: { $0.id == id }) {
+        AutomationStepInspector(
+          step: $automation.steps[index],
+          issues: issues.filter { $0.stepID == id },
+          isCloudConfigured: isCloudConfigured
+        )
+        .id(id)
+      } else {
+        placeholder
+      }
+    case .triggers?:
+      AutomationTriggersInspector(automation: $automation, shortcutIssue: $shortcutIssue)
+    case nil:
+      placeholder
+    }
+  }
+
+  private var placeholder: some View {
+    Text(L10n.Automations.inspectorEmpty)
+      .foregroundStyle(.secondary)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+
+  // MARK: - Footer
+
+  private var footer: some View {
+    HStack(spacing: 12) {
+      if let issue = issues.first {
+        Button {
+          selection = .step(issue.stepID)
+        } label: {
+          Label(
+            L10n.Automations.issuesSummary(issues.count, issue.message),
+            systemImage: issue.blocksRun ? "xmark.octagon.fill" : "exclamationmark.triangle.fill"
+          )
+          .foregroundStyle(issue.blocksRun ? .red : .orange)
+          .lineLimit(1)
+        }
+        .buttonStyle(.plain)
+        .font(.caption)
+      }
+      Spacer()
+      Button(L10n.Common.cancel, role: .cancel, action: onCancel)
+        .keyboardShortcut(.cancelAction)
+      Button(L10n.Common.save, action: save)
+        .keyboardShortcut(.defaultAction)
+        .disabled(issues.contains(where: \.blocksRun))
+        .help(issues.contains(where: \.blocksRun) ? L10n.Automations.saveBlockedHelp : "")
+    }
+    .padding(16)
+  }
+
+  // MARK: - Helpers
+
+  private var issues: [AutomationChainIssue] {
+    let presets = Set(AnnotateCanvasPresetStore.shared.loadPresets().map(\.id))
+    return AutomationChainValidator.validate(automation, canvasPresetExists: { presets.contains($0) })
+  }
+
+  private var hasDuplicateName: Bool {
+    !AutomationStore.shared.duplicateNameIDs(for: storedForm(automation)).isEmpty
+  }
+
+  /// An untouched preset name goes back to its stored form so it keeps following the app language.
+  private func storedForm(_ candidate: Automation) -> Automation {
+    var copy = candidate
+    if let preset = copy.presetID.flatMap(AutomationPreset.init(rawValue:)), copy.name == preset.localizedName {
+      copy.name = preset.storedName
+    }
+    return copy
+  }
+
+  private func save() {
+    onSave(storedForm(automation.normalized()))
+  }
+}
+
+/// Source menu: screenshot modes, recordings, clipboard image, or a handed-in file.
+struct AutomationSourcePicker: View {
+  @Binding var automation: Automation
+  @Binding var lastCaptureSpec: AutomationCaptureSpec?
+  let onSourceChange: () -> Void
+
+  private enum Choice: Hashable {
+    case capture(AutomationCaptureMode)
+    case clipboard
+    case input
+  }
+
+  var body: some View {
+    Picker(L10n.Automations.sourceLabel, selection: binding) {
+      Section(L10n.Automations.sourceScreenshotSection) {
+        ForEach(AutomationCaptureMode.screenshotModes) { mode in
+          Label(mode.displayName, systemImage: mode.symbol).tag(Choice.capture(mode))
+        }
+      }
+      Section(L10n.Automations.sourceRecordingSection) {
+        ForEach(AutomationCaptureMode.recordingModes) { mode in
+          Label(mode.displayName, systemImage: mode.symbol).tag(Choice.capture(mode))
+        }
+      }
+      Divider()
+      Label(L10n.Automations.sourceClipboard, systemImage: "list.clipboard").tag(Choice.clipboard)
+      Label(L10n.Automations.sourceInput, systemImage: AutomationDisplay.inputSymbol).tag(Choice.input)
+    }
+  }
 
   private var captureSpec: AutomationCaptureSpec {
     automation.captureSpec ?? lastCaptureSpec ?? AutomationCaptureSpec(mode: .area, saveToExportDirectory: false)
   }
 
-  private enum SourceChoice: Hashable {
-    case capture(AutomationCaptureMode)
-    case input
-  }
-
-  private var sourceBinding: Binding<SourceChoice> {
+  private var binding: Binding<Choice> {
     Binding(
       get: {
-        if automation.source == .input { return .input }
-        return .capture(captureSpec.mode)
+        switch automation.source {
+        case .input: .input
+        case .clipboardImage: .clipboard
+        case .capture, .unsupported: .capture(captureSpec.mode)
+        }
       },
       set: { choice in
+        if let spec = automation.captureSpec { lastCaptureSpec = spec }
         switch choice {
         case .capture(let mode):
           var spec = captureSpec
           spec.mode = mode
           automation.source = .capture(spec)
+        case .clipboard:
+          automation.source = .clipboardImage
         case .input:
-          lastCaptureSpec = automation.captureSpec ?? lastCaptureSpec
-          // Keep the hotkey / menu bar choice out of the saved model: normalization drops them.
           automation.source = .input
-          shortcutIssue = nil
         }
+        onSourceChange()
       }
     )
-  }
-
-  private var hasDuplicateName: Bool {
-    var candidate = automation
-    if let preset = candidate.presetID.flatMap(AutomationPreset.init(rawValue:)), candidate.name == preset.localizedName {
-      candidate.name = preset.storedName
-    }
-    return !AutomationStore.shared.duplicateNameIDs(for: candidate).isEmpty
-  }
-
-  private var saveBinding: Binding<Bool> {
-    Binding(
-      get: { captureSpec.saveToExportDirectory },
-      set: { save in
-        var spec = captureSpec
-        spec.saveToExportDirectory = save
-        automation.source = .capture(spec)
-      }
-    )
-  }
-
-  private func stepBinding(_ kind: AutomationStepKind) -> Binding<Bool> {
-    Binding(
-      get: { automation.contains(kind) },
-      set: { isOn in
-        var steps = automation.steps
-        if isOn {
-          if let index = steps.firstIndex(where: { $0.action?.kind == kind }) {
-            steps[index].isEnabled = true
-          } else {
-            steps.append(AutomationStep(defaultAction(for: kind)))
-          }
-        } else {
-          steps.removeAll { $0.action?.kind == kind }
-        }
-        automation.steps = canonicallyOrdered(steps)
-      }
-    )
-  }
-
-  private var linkFormatBinding: Binding<AutomationLinkFormat> {
-    Binding(
-      get: {
-        for step in automation.steps {
-          if case .uploadAndCopyLink(let format)? = step.action { return format }
-        }
-        return .url
-      },
-      set: { format in
-        guard let index = automation.steps.firstIndex(where: { $0.action?.kind == .uploadAndCopyLink }) else { return }
-        automation.steps[index].content = .action(.uploadAndCopyLink(format))
-      }
-    )
-  }
-
-  private func defaultAction(for kind: AutomationStepKind) -> AutomationStepAction {
-    switch kind {
-    case .copyImage: .copyImage
-    case .uploadAndCopyLink: .uploadAndCopyLink(.url)
-    case .showQuickAccess: .showQuickAccess
-    case .openAnnotate: .openAnnotate
-    case .notify: .notify
-    }
-  }
-
-  /// Supported steps in the checklist's order; steps this build doesn't know stay last.
-  private func canonicallyOrdered(_ steps: [AutomationStep]) -> [AutomationStep] {
-    let order = AutomationStepKind.allCases
-    let supported = steps
-      .filter { $0.action != nil }
-      .sorted { lhs, rhs in
-        (order.firstIndex(of: lhs.action!.kind) ?? 0) < (order.firstIndex(of: rhs.action!.kind) ?? 0)
-      }
-    return supported + steps.filter { $0.action == nil }
-  }
-
-  private func handleShortcutChange(_ config: ShortcutConfig?) -> Bool {
-    switch ShortcutValidationService.shared.validateAutomationShortcut(config, for: automation.id) {
-    case .accept(let issue):
-      shortcutIssue = issue
-      automation.hotkey = config
-      return true
-    case .reject(let issue):
-      shortcutIssue = issue
-      return false
-    }
   }
 }

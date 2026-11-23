@@ -57,6 +57,7 @@ enum CLIAutomationBridge {
     switch source {
     case .capture(let spec): spec.mode.rawValue
     case .input: "input"
+    case .clipboardImage: "clipboard"
     case .unsupported: "unsupported"
     }
   }
@@ -98,10 +99,11 @@ enum CLIAutomationBridge {
         runId: report.runID.uuidString,
         automationId: report.automationID.uuidString,
         state: .finished,
-        files: report.files.map(\.path),
+        files: report.outputFiles.map(\.path),
         link: report.link,
         message: report.message,
-        isError: report.isError
+        isError: report.isError,
+        text: report.text
       )
     case .cancelled:
       return CLIAutomationRunResult(
@@ -156,6 +158,11 @@ enum CLIAutomationBridge {
                       hint: "Grant it in System Settings → Privacy & Security → Screen Recording, then retry")
     case .captureInProgress:
       return CLIError(.busy, "Another capture is in progress", hint: "Retry when it finishes")
+    case .clipboardEmpty:
+      return CLIError(.invalidArguments, "The clipboard holds no image", hint: "Copy an image, then retry")
+    case .invalidChain:
+      return CLIError(.invalidArguments, "Automation \(ref) has a step with nothing to work on",
+                      hint: "Fix the steps marked in Settings → Automations")
     }
   }
 }

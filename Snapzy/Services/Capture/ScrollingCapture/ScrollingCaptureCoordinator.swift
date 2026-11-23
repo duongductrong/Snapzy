@@ -88,6 +88,8 @@ final class ScrollingCaptureCoordinator {
   private var lastLivePreviewPublishedAt: TimeInterval?
   private var lastCommittedObservationAt: TimeInterval?
   private var onSessionEnded: (@MainActor () -> Void)?
+  /// `.automation` when an automation started this session; its run gets the stitched image.
+  private var routing: PostCaptureRouting = .standard
   private var isFinishRequested = false
 
   var isActive: Bool {
@@ -99,6 +101,7 @@ final class ScrollingCaptureCoordinator {
     saveDirectory: URL,
     format: ImageFormat,
     prefetchedContentTask: ShareableContentPrefetchTask?,
+    routing: PostCaptureRouting = .standard,
     onSessionEnded: (@MainActor () -> Void)? = nil
   ) {
     cancel()
@@ -106,6 +109,7 @@ final class ScrollingCaptureCoordinator {
     unalignedFrameDumpCount = 0
 
     self.onSessionEnded = onSessionEnded
+    self.routing = routing
     let model = ScrollingCaptureSessionModel(selectedRect: rect)
     self.sessionModel = model
     self.selectedRect = rect
@@ -228,6 +232,10 @@ final class ScrollingCaptureCoordinator {
     sessionMetrics = ScrollingCaptureSessionMetrics()
     didFlushSessionMetrics = false
     isFinishRequested = false
+
+    // Cancelled before the stitched image was saved (a saved run already took it).
+    AutomationRunner.shared.abandon(routing: routing)
+    routing = .standard
 
     let sessionEndHandler = onSessionEnded
     onSessionEnded = nil
@@ -697,15 +705,19 @@ final class ScrollingCaptureCoordinator {
       sessionModel.previewCaption = L10n.ScrollingCapture.captionSavingStitchedResult
       updatePreviewTruthState()
 
+      let routing = self.routing
       let result = await captureManager.saveProcessedImage(
         latestImage,
         to: saveDirectory,
         format: format,
-        scaleFactor: captureScaleFactor
+        scaleFactor: captureScaleFactor,
+        context: CaptureContext.empty.withRouting(routing)
       )
 
       switch result {
       case .success:
+        // The completion event carries the routing; the run now owns the file.
+        if self.routing == routing { self.routing = .standard }
         flushSessionMetricsIfNeeded(reason: "saved")
         SoundManager.playScreenshotCapture()
         AppToastManager.shared.show(

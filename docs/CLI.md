@@ -186,7 +186,7 @@ Stdout is JSON when it is not a terminal (or with `--json`); a terminal gets one
  "link":"https://share.example.com/a1b2.png","message":"Link copied","runId":"9C1D…","state":"finished"}
 ```
 
-`message` is Snapzy's own summary, in the app's language; branch on `state`, `isError` and the exit code. A terminal gets `Link copied: https://…` (or `Image copied`) and then one file path per line.
+`message` is Snapzy's own summary, in the app's language; branch on `state`, `isError` and the exit code. `files` are the files the run delivered (the saved file after a Save to Folder step, else the final, possibly transformed, files); `text` is present when an OCR / Translate step produced text. A terminal gets `Link copied: https://…` (or `Image copied`), then the text if any, then one file path per line.
 
 Agent example — upload a file it already has and use the link:
 

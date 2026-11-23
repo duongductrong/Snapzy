@@ -22,7 +22,7 @@ final class CLIAutomationBridgeTests: XCTestCase {
       name: name,
       isEnabled: enabled,
       source: source,
-      steps: [AutomationStep(.copyImage), AutomationStep(.notify, isEnabled: false), AutomationStep(.uploadAndCopyLink(.url))],
+      steps: [AutomationStep(.copyImage), AutomationStep(.notify, isEnabled: false), AutomationStep(.upload), AutomationStep(.copyLink(AutomationLinkTemplate()))],
       externalInvocation: external
     )
   }
@@ -44,7 +44,7 @@ final class CLIAutomationBridgeTests: XCTestCase {
         id: first.id.uuidString,
         name: "First",
         source: "area",
-        steps: ["copyImage", "uploadAndCopyLink"],
+        steps: ["copyImage", "upload", "copyLink"],
         enabled: true,
         external: true
       )

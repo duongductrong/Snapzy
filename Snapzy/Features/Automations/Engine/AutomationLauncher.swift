@@ -18,7 +18,7 @@ protocol AutomationCaptureStarting: AnyObject {
   /// for permission as a side effect.
   func automationCaptureBlocker() -> AutomationLaunchRejection?
   /// Starts the capture. The capture must eventually complete or abandon `routing`.
-  func startAutomationCapture(mode: AutomationCaptureMode, routing: PostCaptureRouting)
+  func startAutomationCapture(spec: AutomationCaptureSpec, routing: PostCaptureRouting)
 }
 
 @MainActor
@@ -28,6 +28,9 @@ final class AutomationLauncher {
     runner: .shared,
     isURLSchemeEnabled: {
       UserDefaults.standard.object(forKey: PreferencesKeys.urlSchemeEnabled) as? Bool ?? true
+    },
+    readClipboardImage: {
+      ClipboardHelper.readImageFile(into: TempCaptureManager.shared.tempCaptureDirectory)
     }
   )
 
@@ -37,11 +40,19 @@ final class AutomationLauncher {
   private let store: AutomationStore
   private let runner: AutomationRunner
   private let isURLSchemeEnabled: () -> Bool
+  /// Saves the clipboard image as a new file (clipboard-image source); `nil` when there is none.
+  private let readClipboardImage: () -> URL?
 
-  init(store: AutomationStore, runner: AutomationRunner, isURLSchemeEnabled: @escaping () -> Bool) {
+  init(
+    store: AutomationStore,
+    runner: AutomationRunner,
+    isURLSchemeEnabled: @escaping () -> Bool,
+    readClipboardImage: @escaping () -> URL? = { nil }
+  ) {
     self.store = store
     self.runner = runner
     self.isURLSchemeEnabled = isURLSchemeEnabled
+    self.readClipboardImage = readClipboardImage
   }
 
   /// Runs `ref`. With `input`, the steps run on those files (no capture);
@@ -70,6 +81,17 @@ final class AutomationLauncher {
       return .finished(result.report)
     }
 
+    if automation.source == .clipboardImage {
+      guard let file = readClipboardImage() else {
+        return reject(.clipboardEmpty, invocation: invocation, automationID: automation.id)
+      }
+      let input = AutomationInput(files: [file], isAlreadyInHistory: false)
+      guard let result = await runner.run(automation, input: input, invocation: invocation) else {
+        return .cancelled
+      }
+      return .finished(result.report)
+    }
+
     guard let spec = automation.captureSpec else {
       return reject(.needsFile, invocation: invocation, automationID: automation.id)
     }
@@ -84,7 +106,7 @@ final class AutomationLauncher {
       let routing = runner.begin(automation, invocation: invocation) { outcome in
         continuation.resume(returning: outcome)
       }
-      starter.startAutomationCapture(mode: spec.mode, routing: routing)
+      starter.startAutomationCapture(spec: spec, routing: routing)
     }
   }
 
@@ -98,9 +120,11 @@ final class AutomationLauncher {
     if invocation.isExternal, !automation.externalInvocation { return .externalNotAllowed }
     if invocation == .urlScheme, !isURLSchemeEnabled() { return .urlSchemeDisabled }
     if automation.hasUnsupportedSource { return .unsupportedSource }
+    // Never start a capture (or touch a file) for a chain that cannot run.
+    if !AutomationChainValidator.blockingIssues(automation.migrated()).isEmpty { return .invalidChain }
 
     guard let files = input?.files, !files.isEmpty else {
-      return automation.startsCapture ? nil : .needsFile
+      return automation.runsWithoutInput ? nil : .needsFile
     }
     for file in files {
       guard FileManager.default.fileExists(atPath: file.path) else {

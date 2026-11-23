@@ -27,6 +27,8 @@ final class RecordingCoordinator: ObservableObject {
   private var localEscapeMonitor: Any?
   private var globalEscapeMonitor: Any?
   private var onSessionEnded: (@MainActor () -> Void)?
+  /// `.automation` when an automation started this session; its run gets the file.
+  private var routing: PostCaptureRouting = .standard
 
   // Annotation overlay
   private var annotationToolbarWindow: RecordingAnnotationToolbarWindow?
@@ -192,21 +194,28 @@ final class RecordingCoordinator: ObservableObject {
     for rect: CGRect,
     captureMode: RecordingCaptureMode = .area,
     windowTarget: WindowCaptureTarget? = nil,
+    routing: PostCaptureRouting = .standard,
     onSessionEnded: (@MainActor () -> Void)? = nil
   ) {
     guard !isActive else {
       DiagnosticLogger.shared.log(.debug, .recording, "Recording toolbar request ignored: coordinator active")
+      AutomationRunner.shared.abandon(routing: routing)
       onSessionEnded?()
       return
     }
     isActive = true
     self.onSessionEnded = onSessionEnded
+    self.routing = routing
     presentToolbar(
       for: rect,
       captureMode: captureMode,
       windowTarget: windowTarget,
       configuration: nil
     )
+    // An automation decides whether it receives a video or a GIF.
+    if let spec = AutomationRunner.shared.pendingAutomation(for: routing)?.captureSpec {
+      toolbarWindow?.outputMode = spec.recordingOutput == .gif ? .gif : .video
+    }
   }
 
   private func setupEscapeMonitors() {
@@ -708,7 +717,8 @@ final class RecordingCoordinator: ObservableObject {
         let exclusionConfig = self.recordingCaptureExclusionConfiguration()
 
         let savePlan = try self.tempCaptureManager.makeRecordingSavePlan(
-          exportDirectory: saveDirectory
+          exportDirectory: saveDirectory,
+          saveOverride: AutomationRunner.shared.saveToExportOverride(for: self.routing)
         )
 
         try await recorder.prepareRecording(
@@ -864,7 +874,8 @@ final class RecordingCoordinator: ObservableObject {
         ])
 
         let savePlan = try self.tempCaptureManager.makeRecordingSavePlan(
-          exportDirectory: saveDirectory
+          exportDirectory: saveDirectory,
+          saveOverride: AutomationRunner.shared.saveToExportOverride(for: self.routing)
         )
 
         try await recorder.prepareRecording(
@@ -1009,7 +1020,8 @@ final class RecordingCoordinator: ObservableObject {
         let exclusionConfig = self.recordingCaptureExclusionConfiguration()
 
         let savePlan = try self.tempCaptureManager.makeRecordingSavePlan(
-          exportDirectory: saveDirectory
+          exportDirectory: saveDirectory,
+          saveOverride: AutomationRunner.shared.saveToExportOverride(for: self.routing)
         )
 
         try await recorder.prepareRecording(
@@ -1068,6 +1080,9 @@ final class RecordingCoordinator: ObservableObject {
     recordingGeneration = UUID()
     // Capture output mode before cleanup closes the toolbar
     let outputMode = toolbarWindow?.state.outputMode ?? .video
+    // Taken before cleanup, which abandons a routing still attached to the session.
+    let routing = self.routing
+    self.routing = .standard
 
     if let window = cameraOverlayWindow {
       recorder.updateStudioCameraLayout(window.studioLayout)
@@ -1086,11 +1101,17 @@ final class RecordingCoordinator: ObservableObject {
       // Dismiss recording UI immediately (status bar, area overlay, etc.)
       cleanup()
 
-      if let url {
+      guard let url else {
+        AutomationRunner.shared.abandon(routing: routing)
+        return
+      }
+      do {
         // Play sound
         SoundManager.play("Glass")
 
-        if outputMode == .gif {
+        if case .automation = routing {
+          await completeAutomationRecording(videoURL: url, outputMode: outputMode, routing: routing)
+        } else if outputMode == .gif {
           // GIF mode: add to QuickAccess immediately with processing state
           await handleGIFConversion(videoURL: url)
         } else if RecordingStudioFlattenJob.needsFlatten(RecordingMetadataStore.load(for: url)) {
@@ -1101,6 +1122,34 @@ final class RecordingCoordinator: ObservableObject {
         }
       }
     }
+  }
+
+  /// Automation recordings skip Quick Access and the after-capture actions: the
+  /// automation's steps decide. GIF output and studio flatten still run first.
+  private func completeAutomationRecording(
+    videoURL: URL,
+    outputMode: RecordingOutputMode,
+    routing: PostCaptureRouting
+  ) async {
+    guard case .automation(let runID) = routing else { return }
+    var output = videoURL
+    if outputMode == .gif {
+      do {
+        output = try await GIFConverter.convert(videoURL: videoURL, onProgress: { _ in })
+        SandboxFileAccessManager.shared.withScopedAccess(to: videoURL.deletingLastPathComponent()) {
+          try? FileManager.default.removeItem(at: videoURL)
+          try? RecordingMetadataStore.delete(for: videoURL)
+        }
+      } catch {
+        // Keep the video: the run still gets a file (steps for GIFs skip it).
+        DiagnosticLogger.shared.logError(.recording, error, "Automation GIF conversion failed; delivering video")
+      }
+    } else if RecordingStudioFlattenJob.needsFlatten(RecordingMetadataStore.load(for: videoURL)) {
+      var fps = UserDefaults.standard.integer(forKey: PreferencesKeys.recordingFPS)
+      if fps == 0 { fps = 30 }
+      _ = await RecordingStudioFlattenJob.run(url: videoURL, frameRate: fps) { _ in }
+    }
+    await AutomationRunner.shared.complete(runID: runID, capturedURLs: [output])
   }
 
   /// Studio recording: show the card as processing while the cursor is burned back
@@ -1329,6 +1378,9 @@ final class RecordingCoordinator: ObservableObject {
     selectedRect = nil
     selectedWindowTarget = nil
     isActive = false
+    // Deleted or cancelled before a file was saved.
+    AutomationRunner.shared.abandon(routing: routing)
+    routing = .standard
     let sessionEndHandler = onSessionEnded
     onSessionEnded = nil
     sessionEndHandler?()

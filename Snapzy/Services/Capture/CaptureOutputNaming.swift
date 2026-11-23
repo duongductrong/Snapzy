@@ -154,7 +154,17 @@ enum CaptureOutputNaming {
     context: CaptureContext
   ) -> String {
     var resolved = template
-    let replacements: [String: String] = [
+    for (token, value) in tokenValues(kind: kind, date: date, context: context) {
+      resolved = resolved.replacingOccurrences(of: token, with: value)
+    }
+
+    return resolved
+  }
+
+  /// Every naming token (`{date}`, `{appName}`, …) and its value; shared with
+  /// automation templates so both accept the same tokens.
+  static func tokenValues(kind: CaptureOutputKind, date: Date, context: CaptureContext) -> [String: String] {
+    [
       "{type}": kind.typeTokenValue,
       "{year}": format(date, style: "yyyy"),
       "{yearShort}": format(date, style: "yy"),
@@ -173,13 +183,13 @@ enum CaptureOutputNaming {
       "{timestamp}": String(Int(date.timeIntervalSince1970)),
       "{appName}": context.appName ?? "",
       "{app_name}": context.appName ?? "",
+      "{window.title}": (context.sanitizedWindowTitle ?? "").replacingOccurrences(of: "/", with: "-"),
     ]
+  }
 
-    for (token, value) in replacements {
-      resolved = resolved.replacingOccurrences(of: token, with: value)
-    }
-
-    return resolved
+  /// Base name made safe for the file system (`/` keeps sub-folders); empty when nothing is left.
+  static func sanitizedBaseName(_ value: String) -> String {
+    sanitizeBaseName(value)
   }
 
   private static func sanitizeBaseName(_ value: String) -> String {

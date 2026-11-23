@@ -124,7 +124,8 @@ per-Mac and never exported.
 
 Automations ([AUTOMATIONS.md](AUTOMATIONS.md)) export as one keyed table each,
 `[automations.<uuid>]`, because the parser has no arrays of tables. `order`
-keeps the list order.
+keeps the list order. Steps are keyed sub-tables `[automations.<uuid>.steps.<nn>]`
+in run order.
 
 ```toml
 [automations.8f0c2a6e-5a1d-4b6c-9a3e-2f1b0c9d8e7a]
@@ -134,29 +135,51 @@ preset = "cloud-share"
 enabled = true
 capture = "area"
 save_to_export = false
-steps = ["copy_image", "upload_copy_link:markdown", "notify"]
 shortcut_key = "4"
 shortcut_modifiers = ["control", "shift"]
 menu_bar = false
 quick_access = true
 history = true
 external_invocation = false
+
+[automations.8f0c2a6e-5a1d-4b6c-9a3e-2f1b0c9d8e7a.steps.01]
+kind = "copy_image"
+
+[automations.8f0c2a6e-5a1d-4b6c-9a3e-2f1b0c9d8e7a.steps.02]
+kind = "upload"
+
+[automations.8f0c2a6e-5a1d-4b6c-9a3e-2f1b0c9d8e7a.steps.03]
+kind = "copy_link"
+style = "markdown"   # url | markdown | html | bbcode | custom (+ template = "…")
+
+[automations.8f0c2a6e-5a1d-4b6c-9a3e-2f1b0c9d8e7a.steps.04]
+kind = "notify"
 ```
 
-- `capture`: `area`, `fullscreen`, `active_window`, `application_window`, or
+- `capture`: `area`, `fullscreen`, `active_window`, `application_window`,
+  `scrolling`, `recording_area`, `recording_window` (with
+  `recording_output = "video" | "gif"`), `clipboard` (the clipboard image), or
   `input` (runs on a file handed in by Quick Access, History, CLI or
   Shortcuts; `save_to_export` and shortcuts do not apply and are not exported).
 - `menu_bar`, `quick_access`, `history`: list the automation in the menu bar
-  Automations submenu (capture sources only; ignored for `input`), the Quick
-  Access "Run Automation" menu, and the History "Run Automation" menu. Omitted
-  keys keep the value stored in `data`.
+  Automations submenu (capture and clipboard sources; ignored for `input`), the
+  Quick Access "Run Automation" menu, and the History "Run Automation" menu.
+  Omitted keys keep the value stored in `data`.
 - `external_invocation`: allow the URL scheme, `snapzy automation run` and
   Shortcuts to start it (default `false`). `true` in an imported file is
   honored and logged.
-- `steps`: `copy_image`, `upload_copy_link` (`:url` / `:markdown`),
-  `show_quick_access`, `open_annotate`, `notify`.
-- Each table also has `data` (the full automation JSON) so details the flat
-  keys cannot express survive a round trip; edited flat keys win.
+- Step tables: `kind` plus that kind's keys (snake_case), optional
+  `enabled = false` and `on_failure = "continue"`. The full key list is in
+  [AUTOMATIONS.md § Configuration](AUTOMATIONS.md#configuration-toml). Unknown
+  keys warn. `save_to_folder.folder` is a path (`~` allowed) or `"export"`; the
+  folder bookmark is created on import, and a missing folder is a warning (the
+  step then shows "Needs setup").
+- Files from Snapzy before milestone 3 used `steps = ["copy_image",
+  "upload_copy_link:markdown", …]`; that form is still imported
+  (`upload_copy_link` becomes `upload` + `copy_link`).
+- Each table also has `data` (the full automation JSON) so details the keys
+  cannot express (steps or sources from a newer Snapzy) survive a round trip;
+  edited keys and step tables win.
 - The `[automations]` header is always exported. When the file has it, import
   replaces every automation (an empty section clears them); without it,
   automations are left untouched. Bad entries, unknown

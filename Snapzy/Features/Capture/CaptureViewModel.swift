@@ -2180,18 +2180,20 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     }
   }
 
-  func captureScrolling() {
+  func captureScrolling(routing: PostCaptureRouting = .standard) {
     guard !ScrollingCaptureCoordinator.shared.isActive else {
       AppToastManager.shared.show(
         message: L10n.ScrollingCapture.toastSessionAlreadyActive,
         style: .warning,
         position: .bottomCenter
       )
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
 
     if isAreaSelectionActive {
       DiagnosticLogger.shared.log(.debug, .capture, "captureScrolling blocked: area selection active")
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
 
@@ -2201,6 +2203,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       )
     else {
       lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
     saveDirectory = resolvedSaveDirectory
@@ -2226,6 +2229,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           DiagnosticLogger.shared.log(.warning, .capture, "captureScrolling: self deallocated")
           hiddenWindowSession.restore()
           AreaSelectionController.shared.cancelSelection()
+          AutomationRunner.shared.abandon(routing: routing)
           return
         }
 
@@ -2233,6 +2237,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           guard let self else {
             DiagnosticLogger.shared.log(.warning, .capture, "captureScrolling completion: self deallocated")
             hiddenWindowSession.restore()
+            AutomationRunner.shared.abandon(routing: routing)
             return
           }
 
@@ -2244,12 +2249,14 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             DiagnosticLogger.shared.log(.info, .capture, "Scrolling capture cancelled by user")
             lastCaptureResult = .failure(.cancelled)
             hiddenWindowSession.restore()
+            AutomationRunner.shared.abandon(routing: routing)
             return
           }
 
           let actualSaveDirectory = tempCaptureManager.resolveSaveDirectory(
             for: .screenshot,
-            exportDirectory: resolvedSaveDirectory
+            exportDirectory: resolvedSaveDirectory,
+            saveOverride: AutomationRunner.shared.saveToExportOverride(for: routing)
           )
 
           ScrollingCaptureCoordinator.shared.beginSession(
@@ -2257,6 +2264,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             saveDirectory: actualSaveDirectory,
             format: resolvedFormat,
             prefetchedContentTask: prefetchedContentTask,
+            routing: routing,
             onSessionEnded: {
               hiddenWindowSession.restore()
             }
@@ -2337,18 +2345,26 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     }
   }
 
-  private func startRecordingFlow(initialInteractionMode: AreaSelectionInteractionMode) {
+  private func startRecordingFlow(
+    initialInteractionMode: AreaSelectionInteractionMode,
+    routing: PostCaptureRouting = .standard
+  ) {
     guard hasPermission else {
       requestPermission()
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
 
     // Check if already recording (including a `snapzy record` recording, which has no toolbar)
-    guard !RecordingCoordinator.shared.isActive, !ScreenRecordingManager.shared.isActive else { return }
+    guard !RecordingCoordinator.shared.isActive, !ScreenRecordingManager.shared.isActive else {
+      AutomationRunner.shared.abandon(routing: routing)
+      return
+    }
 
     // Prevent multiple area selections
     guard !isAreaSelectionActive else {
       DiagnosticLogger.shared.log(.debug, .recording, "startRecordingFlow blocked: area selection active")
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
 
@@ -2370,6 +2386,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           DiagnosticLogger.shared.log(.warning, .recording, "startRecordingFlow: self deallocated")
           hiddenWindowSession.restore()
           AreaSelectionController.shared.cancelSelection()
+          AutomationRunner.shared.abandon(routing: routing)
           return
         }
 
@@ -2389,6 +2406,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           Task { @MainActor in
             RecordingCoordinator.shared.showToolbar(
               for: savedRect,
+              routing: routing,
               onSessionEnded: {
                 hiddenWindowSession.restore()
               }
@@ -2411,6 +2429,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           guard let self else {
             DiagnosticLogger.shared.log(.warning, .recording, "startRecordingFlow completion: self deallocated")
             hiddenWindowSession.restore()
+            AutomationRunner.shared.abandon(routing: routing)
             return
           }
 
@@ -2418,6 +2437,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
           guard let selection else {
             hiddenWindowSession.restore()
+            AutomationRunner.shared.abandon(routing: routing)
             return
           }
 
@@ -2426,6 +2446,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             case .rect:
               RecordingCoordinator.shared.showToolbar(
                 for: selection.rect,
+                routing: routing,
                 onSessionEnded: {
                   hiddenWindowSession.restore()
                 }
@@ -2434,6 +2455,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               RecordingCoordinator.shared.showToolbar(
                 for: selection.rect,
                 captureMode: .fullscreen,
+                routing: routing,
                 onSessionEnded: {
                   hiddenWindowSession.restore()
                 }
@@ -2443,6 +2465,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
                 for: selection.rect,
                 captureMode: .application,
                 windowTarget: target,
+                routing: routing,
                 onSessionEnded: {
                   hiddenWindowSession.restore()
                 }
@@ -3252,15 +3275,18 @@ extension ScreenCaptureViewModel: AutomationCaptureStarting {
       requestPermission()
       return .permissionRequired
     }
-    guard !isAreaSelectionActive, !isCapturing else {
+    guard !isAreaSelectionActive, !isCapturing,
+          !RecordingCoordinator.shared.isActive, !ScreenRecordingManager.shared.isActive,
+          !ScrollingCaptureCoordinator.shared.isActive
+    else {
       return .captureInProgress
     }
     return nil
   }
 
   /// The saved file comes back to `AutomationRunner` through `PostCaptureRouting.automation`.
-  func startAutomationCapture(mode: AutomationCaptureMode, routing: PostCaptureRouting) {
-    switch mode {
+  func startAutomationCapture(spec: AutomationCaptureSpec, routing: PostCaptureRouting) {
+    switch spec.mode {
     case .area:
       captureArea(routing: routing)
     case .applicationWindow:
@@ -3269,6 +3295,12 @@ extension ScreenCaptureViewModel: AutomationCaptureStarting {
       captureFullscreen(routing: routing)
     case .activeWindow:
       captureActiveWindow(routing: routing)
+    case .recordingArea:
+      startRecordingFlow(initialInteractionMode: .manualRegion, routing: routing)
+    case .recordingWindow:
+      startRecordingFlow(initialInteractionMode: .applicationWindow, routing: routing)
+    case .scrolling:
+      captureScrolling(routing: routing)
     }
   }
 }

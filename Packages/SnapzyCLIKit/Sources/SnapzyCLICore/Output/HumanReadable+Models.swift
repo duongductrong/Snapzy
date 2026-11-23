@@ -160,6 +160,7 @@ extension CLIAutomationRunResult: HumanReadable {
     guard state == .finished else { return "Cancelled." }
     let summary = message.isEmpty ? (isError ? "Failed" : "Done") : message
     var lines = [link.map { "\(summary): \($0)" } ?? summary]
+    if let text, !text.isEmpty { lines.append(text) }
     lines += files
     return lines.joined(separator: "\n")
   }

@@ -105,8 +105,9 @@ final class TempCaptureManager {
   /// Resolve final and processing directories for recording output.
   /// The final video is moved into `finalDirectory` after the writer completes,
   /// while AVAssetWriter and any transient sidecars stay in `processingDirectory`.
-  func makeRecordingSavePlan(exportDirectory: URL) throws -> RecordingSavePlan {
-    let autoSaveEnabled = preferences.isActionEnabled(.save, for: .recording)
+  /// - Parameter saveOverride: an automation's own Save choice; `nil` uses the preference.
+  func makeRecordingSavePlan(exportDirectory: URL, saveOverride: Bool? = nil) throws -> RecordingSavePlan {
+    let autoSaveEnabled = saveOverride ?? preferences.isActionEnabled(.save, for: .recording)
     let finalDirectory = autoSaveEnabled ? exportDirectory : tempCaptureDirectory
     let processingDirectory = try createRecordingProcessingDirectory()
 

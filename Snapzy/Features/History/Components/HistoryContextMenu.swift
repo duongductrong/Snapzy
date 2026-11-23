@@ -13,7 +13,7 @@ struct HistoryContextMenu: View {
 
   var body: some View {
     Button(L10n.Common.openInFinder) {
-      NSWorkspace.shared.activateFileViewerSelecting([record.fileURL])
+      FileRevealer.reveal([record.fileURL])
     }
 
     Button(L10n.Common.copy) {

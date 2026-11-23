@@ -4,25 +4,37 @@
 //
 //  `[automations.<id>]` tables in config.toml. One keyed table per automation
 //  (the TOML parser has no arrays of tables); `order` keeps the list order.
-//  `capture = "input"` is an automation that runs on a handed-in file
-//  (`save_to_export` and shortcuts don't apply to it).
+//  Steps are keyed sub-tables `[automations.<id>.steps.<nn>]` in run order.
+//  `capture = "input"` runs on a handed-in file, `capture = "clipboard"` on the
+//  clipboard image (`save_to_export` and shortcuts don't apply to input).
 //
 //    [automations.8f0c…]
 //    order = 0
-//    name = "Cloud Share"
-//    preset = "cloud-share"
+//    name = "Docs Shot"
+//    preset = "docs-shot"
 //    enabled = true
-//    capture = "area"
+//    capture = "active_window"
 //    save_to_export = false
-//    steps = ["copy_image", "upload_copy_link:markdown", "notify"]
 //    shortcut_key = "4"
 //    shortcut_modifiers = ["control", "shift"]
 //    menu_bar = false
 //    quick_access = true
 //    history = true
 //    external_invocation = false
-//    data = "{…}"   # full JSON; keeps what the flat keys can't (disabled or
-//                   # newer steps, failure policy). Flat keys win when edited.
+//    data = "{…}"   # full JSON; keeps what the keys can't (newer steps or
+//                   # sources). Keys win when edited.
+//
+//    [automations.8f0c….steps.01]
+//    kind = "resize"
+//    max_dimension = 1600
+//
+//    [automations.8f0c….steps.02]
+//    kind = "save_to_folder"
+//    folder = "~/repo/docs/img"   # or "export"; a bookmark is created on import
+//    name = "{date}-{appName}"
+//
+//  Milestone 1 files used `steps = ["copy_image", "upload_copy_link:markdown"]`;
+//  that form is still read.
 //
 
 import Foundation
@@ -47,6 +59,7 @@ enum SnapzyConfigurationAutomationsCodec {
       switch automation.source {
       case .capture(let spec): captureValue = captureToken(spec.mode)
       case .input: captureValue = inputToken
+      case .clipboardImage: captureValue = clipboardToken
       case .unsupported: continue
       }
       if let presetID = automation.presetID {
@@ -56,8 +69,10 @@ enum SnapzyConfigurationAutomationsCodec {
       writer.value("capture", captureValue)
       if let spec = automation.captureSpec {
         writer.value("save_to_export", spec.saveToExportDirectory)
+        if spec.mode.isRecording {
+          writer.value("recording_output", spec.recordingOutput.rawValue)
+        }
       }
-      writer.stringArray("steps", automation.activeActions.map(stepToken))
       if let hotkey = automation.hotkey {
         writer.value("shortcut_key", SnapzyConfigurationShortcutCodec.exportKey(hotkey))
         writer.stringArray("shortcut_modifiers", SnapzyConfigurationShortcutCodec.exportModifiers(hotkey))
@@ -66,7 +81,17 @@ enum SnapzyConfigurationAutomationsCodec {
       writer.value("quick_access", automation.showsInQuickAccess)
       writer.value("history", automation.showsInHistory)
       writer.value("external_invocation", automation.externalInvocation)
+
+      for (stepIndex, step) in automation.steps.flatMap(\.migrated).enumerated() {
+        writer.section("\(sectionName).\(automation.id.uuidString.lowercased()).steps.\(stepKey(stepIndex))")
+        SnapzyConfigurationAutomationStepCodec.write(step, to: &writer)
+      }
     }
+  }
+
+  /// `01`, `02`, … so keys sort in run order.
+  static func stepKey(_ index: Int) -> String {
+    String(format: "%02d", index + 1)
   }
 
   // MARK: - Import
@@ -78,7 +103,11 @@ enum SnapzyConfigurationAutomationsCodec {
   }
 
   @MainActor
-  static func parse(_ document: SimpleTOMLDocument) -> ParseResult {
+  static func parse(
+    _ document: SimpleTOMLDocument,
+    folderStore: AutomationFolderAccessStore? = nil
+  ) -> ParseResult {
+    let folderStore = folderStore ?? .shared
     guard let section = document.value(at: [sectionName]) else {
       return ParseResult(automations: nil, warnings: [])
     }
@@ -102,31 +131,61 @@ enum SnapzyConfigurationAutomationsCodec {
       let source: AutomationSource
       if fields["capture"]?.stringValue?.lowercased() == inputToken {
         source = .input
+      } else if fields["capture"]?.stringValue?.lowercased() == clipboardToken {
+        source = .clipboardImage
       } else if let captureRaw = fields["capture"]?.stringValue, let mode = captureMode(captureRaw) {
         source = .capture(AutomationCaptureSpec(
           mode: mode,
-          saveToExportDirectory: fields["save_to_export"]?.boolValue ?? base?.captureSpec?.saveToExportDirectory ?? false
+          saveToExportDirectory: fields["save_to_export"]?.boolValue ?? base?.captureSpec?.saveToExportDirectory ?? false,
+          recordingOutput: fields["recording_output"]?.stringValue.flatMap(AutomationRecordingOutput.init(rawValue:))
+            ?? base?.captureSpec?.recordingOutput ?? .video
         ))
       } else if let base, base.hasUnsupportedSource, fields["capture"] == nil {
         source = base.source  // written by a newer Snapzy; keep as is
       } else {
-        warnings.append("\(path).capture must be one of area, fullscreen, active_window, application_window, input; skipped")
+        warnings.append("\(path).capture must be one of \(captureTokens.joined(separator: ", ")); skipped")
         continue
       }
 
-      var tokens: [String] = []
-      for token in fields["steps"]?.stringArrayValue ?? [] {
-        if stepAction(token) != nil {
-          tokens.append(token.lowercased())
-        } else {
-          warnings.append("\(path).steps: unknown step \"\(token)\" ignored")
-        }
-      }
       let steps: [AutomationStep]
-      if let base, fields["steps"] == nil || tokens == base.activeActions.map(stepToken) {
-        steps = base.steps  // unchanged: keep disabled/newer steps and failure policies
+      if case .table(let stepTables)? = fields["steps"] {
+        var parsedSteps: [AutomationStep] = []
+        for stepKey in stepTables.keys.sorted() {
+          guard case .table(let stepFields)? = stepTables[stepKey] else {
+            warnings.append("\(path).steps.\(stepKey) must be a table; skipped")
+            continue
+          }
+          let result = SnapzyConfigurationAutomationStepCodec.parse(
+            stepFields,
+            path: "\(path).steps.\(stepKey)",
+            folderStore: folderStore
+          )
+          warnings.append(contentsOf: result.warnings)
+          guard var step = result.step else { continue }
+          // Keep the stored id when the step at this position is the same kind.
+          let index = parsedSteps.count
+          if let baseSteps = base?.steps, baseSteps.indices.contains(index),
+             baseSteps[index].action?.kind == step.action?.kind
+          {
+            step.id = baseSteps[index].id
+          }
+          parsedSteps.append(step)
+        }
+        steps = parsedSteps
+      } else if let tokenValues = fields["steps"]?.stringArrayValue {
+        var tokens: [String] = []
+        for token in tokenValues {
+          if legacyStepAction(token) != nil {
+            tokens.append(token.lowercased())
+          } else {
+            warnings.append("\(path).steps: unknown step \"\(token)\" ignored")
+          }
+        }
+        steps = tokens.compactMap(legacyStepAction).map { AutomationStep($0) }
+      } else if let base {
+        steps = base.steps  // keep disabled/newer steps and failure policies
       } else {
-        steps = tokens.compactMap(stepAction).map { AutomationStep($0) }
+        steps = []
       }
 
       var automation = base ?? Automation(name: "", source: source, steps: [])
@@ -198,6 +257,12 @@ enum SnapzyConfigurationAutomationsCodec {
 
   /// `capture` value of an automation that runs on a handed-in file.
   static let inputToken = "input"
+  /// `capture` value of an automation that runs on the clipboard image.
+  static let clipboardToken = "clipboard"
+
+  static var captureTokens: [String] {
+    AutomationCaptureMode.allCases.map { captureToken($0) } + [inputToken, clipboardToken]
+  }
 
   static func captureToken(_ mode: AutomationCaptureMode) -> String {
     switch mode {
@@ -205,6 +270,9 @@ enum SnapzyConfigurationAutomationsCodec {
     case .fullscreen: "fullscreen"
     case .activeWindow: "active_window"
     case .applicationWindow: "application_window"
+    case .recordingArea: "recording_area"
+    case .recordingWindow: "recording_window"
+    case .scrolling: "scrolling"
     }
   }
 
@@ -212,18 +280,8 @@ enum SnapzyConfigurationAutomationsCodec {
     AutomationCaptureMode.allCases.first { captureToken($0) == token.lowercased() }
   }
 
-  static func stepToken(_ action: AutomationStepAction) -> String {
-    switch action {
-    case .copyImage: "copy_image"
-    case .uploadAndCopyLink(.url): "upload_copy_link"
-    case .uploadAndCopyLink(.markdown): "upload_copy_link:markdown"
-    case .showQuickAccess: "show_quick_access"
-    case .openAnnotate: "open_annotate"
-    case .notify: "notify"
-    }
-  }
-
-  static func stepAction(_ token: String) -> AutomationStepAction? {
+  /// Milestone 1 `steps = [...]` tokens.
+  static func legacyStepAction(_ token: String) -> AutomationStepAction? {
     switch token.lowercased() {
     case "copy_image": .copyImage
     case "upload_copy_link", "upload_copy_link:url": .uploadAndCopyLink(.url)

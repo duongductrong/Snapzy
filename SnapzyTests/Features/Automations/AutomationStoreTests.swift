@@ -82,7 +82,7 @@ final class AutomationStoreTests: XCTestCase {
     let store = AutomationStore(defaults: defaults)
     let ids = store.automations.map(\.id)
     store.move(fromOffsets: IndexSet(integer: 0), toOffset: 2)
-    XCTAssertEqual(store.automations.map(\.id), [ids[1], ids[0]])
+    XCTAssertEqual(Array(store.automations.map(\.id).prefix(2)), [ids[1], ids[0]])
   }
 
   func testReplaceAllCapsAndMarksSeeded() {

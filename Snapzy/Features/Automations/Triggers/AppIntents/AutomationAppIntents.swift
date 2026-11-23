@@ -142,7 +142,7 @@ enum AutomationIntentSupport {
 
   /// The link when a step produced one, else the first file path.
   nonisolated static func resultValue(for report: AutomationRunReport) -> String {
-    report.link ?? report.files.first?.path ?? ""
+    report.link ?? report.text ?? report.outputFiles.first?.path ?? ""
   }
 
   nonisolated static var cancelledMessage: String {

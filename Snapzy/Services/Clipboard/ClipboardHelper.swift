@@ -27,6 +27,60 @@ private nonisolated let logger = Logger(subsystem: "Snapzy", category: "Clipboar
 /// When `ClipboardImageContentOption` is `.imageOnly`, image copies skip the file URL and
 /// write pixel data only (still one pasteboard item). Media and multi-file copies are unaffected.
 enum ClipboardHelper {
+  // MARK: - Text
+
+  /// The one writer for links and text (Cloud links, translations, automations).
+  /// Returns the pasteboard change count after the write.
+  @discardableResult
+  static func copyText(_ text: String) -> Int {
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString(text, forType: .string)
+    return pasteboard.changeCount
+  }
+
+  // MARK: - Reading
+
+  /// Writes the clipboard's image (pixel data, or an image file reference) as a
+  /// PNG into `directory` and returns it; `nil` when the clipboard holds no image.
+  static func readImageFile(
+    from pasteboard: NSPasteboard = .general,
+    into directory: URL,
+    date: Date = Date()
+  ) -> URL? {
+    let image: NSImage? = {
+      if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
+         let file = urls.first(where: { UTType(filenameExtension: $0.pathExtension)?.conforms(to: .image) == true }),
+         let image = NSImage(contentsOf: file)
+      {
+        return image
+      }
+      return (pasteboard.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage])?.first
+    }()
+    guard let image,
+          let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+    else { return nil }
+
+    let bitmap = NSBitmapImageRep(cgImage: cgImage)
+    guard let data = bitmap.representation(using: .png, properties: [:]) else { return nil }
+    do {
+      try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+      let formatter = DateFormatter()
+      formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+      formatter.locale = Locale(identifier: "en_US_POSIX")
+      let url = CaptureOutputNaming.makeUniqueFileURL(
+        in: directory,
+        baseName: "Snapzy_Clipboard_\(formatter.string(from: date))",
+        fileExtension: "png"
+      )
+      try data.write(to: url, options: .atomic)
+      return url
+    } catch {
+      DiagnosticLogger.shared.logError(.clipboard, error, "Clipboard image write failed")
+      return nil
+    }
+  }
+
   // MARK: - File-based copy
 
   /// Copy one or more file URLs to the clipboard.

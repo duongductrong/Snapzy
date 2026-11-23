@@ -9,10 +9,11 @@
 //  on files a trigger handed in.
 //
 //  Guarantee: a capture is never lost. Files are saved before any step runs,
-//  and a failed upload leaves the image on the clipboard plus a Quick Access
-//  card to retry from.
+//  transforms write into a per-run working directory, and a failed upload
+//  leaves the image on the clipboard plus a Quick Access card to retry from.
 //
 
+import AppKit
 import Foundation
 
 @MainActor
@@ -23,15 +24,18 @@ final class AutomationRunner {
     let state: AutomationRunState
     let message: String
     let isError: Bool
+    let outcome: AutomationRunRecord.Outcome
 
     var report: AutomationRunReport {
       AutomationRunReport(
         runID: state.runID,
         automationID: state.automation.id,
-        files: state.files,
+        files: state.inputFiles,
         link: state.linkText,
         message: message,
-        isError: isError
+        isError: isError,
+        text: state.payload.text,
+        outputFiles: state.payload.savedFile.map { [$0] } ?? state.files
       )
     }
   }
@@ -42,6 +46,9 @@ final class AutomationRunner {
     let automation: Automation
     let invocation: AutomationInvocation
     let startedAt: Date
+    /// `nil` never expires (recordings run until the user stops them).
+    let expiresAt: Date?
+    let appName: String?
     let onFinish: FinishHandler?
   }
 
@@ -50,16 +57,23 @@ final class AutomationRunner {
     case input(AutomationInput)
   }
 
-  /// Area selection can stay open a long time; older registrations are dropped.
-  private static let pendingLifetime: TimeInterval = 30 * 60
+  /// Area selection can stay open a long time; older screenshot registrations are dropped.
+  static let pendingLifetime: TimeInterval = 30 * 60
 
   private let environment: AutomationRunEnvironment
   private var pendingRuns: [UUID: PendingRun] = [:]
+  private var runningTasks: [UUID: Task<StepLoopResult, Never>] = [:]
   private let now: () -> Date
+  private let frontmostAppName: () -> String?
 
-  init(environment: AutomationRunEnvironment, now: @escaping () -> Date = Date.init) {
+  init(
+    environment: AutomationRunEnvironment,
+    now: @escaping () -> Date = Date.init,
+    frontmostAppName: @escaping () -> String? = { NSWorkspace.shared.frontmostApplication?.localizedName }
+  ) {
     self.environment = environment
     self.now = now
+    self.frontmostAppName = frontmostAppName
   }
 
   // MARK: - Capture-sourced runs
@@ -75,17 +89,21 @@ final class AutomationRunner {
   ) -> PostCaptureRouting {
     pruneStaleRuns()
     let runID = UUID()
+    let startedAt = now()
+    let lifetime: TimeInterval? = automation.captureSpec?.mode.isRecording == true ? nil : Self.pendingLifetime
     pendingRuns[runID] = PendingRun(
       automation: automation,
       invocation: invocation,
-      startedAt: now(),
+      startedAt: startedAt,
+      expiresAt: lifetime.map { startedAt.addingTimeInterval($0) },
+      appName: frontmostAppName(),
       onFinish: onFinish
     )
     logStart(automation, runID: runID, invocation: invocation, source: "capture")
-    if onFinish != nil {
+    if onFinish != nil, let lifetime {
       // A waiting caller (CLI, Shortcuts) must not hang if a capture path never reports back.
       Task { [weak self] in
-        try? await Task.sleep(nanoseconds: UInt64(Self.pendingLifetime * 1_000_000_000))
+        try? await Task.sleep(nanoseconds: UInt64(lifetime * 1_000_000_000))
         self?.expire(runID: runID)
       }
     }
@@ -112,6 +130,12 @@ final class AutomationRunner {
     return pendingRuns[runID]?.automation.captureSpec?.saveToExportDirectory
   }
 
+  /// The automation a pending capture belongs to (recording toolbar chip, output mode).
+  func pendingAutomation(for routing: PostCaptureRouting) -> Automation? {
+    guard case .automation(let runID) = routing else { return nil }
+    return pendingRuns[runID]?.automation
+  }
+
   func complete(runID: UUID, capturedURLs: [URL]) async {
     guard let pending = pendingRuns.removeValue(forKey: runID) else {
       // The registration expired. Never drop the capture: route it the standard way.
@@ -124,16 +148,30 @@ final class AutomationRunner {
       await PostCaptureActionHandler.shared.handleScreenshotCaptures(urls: capturedURLs)
       return
     }
-    let result = await execute(pending.automation, files: capturedURLs, source: .capture, runID: runID)
+    let result = await execute(
+      pending.automation,
+      files: capturedURLs,
+      source: .capture,
+      runID: runID,
+      invocation: pending.invocation,
+      appName: pending.appName
+    )
     pending.onFinish?(result.map { .finished($0.report) } ?? .cancelled)
   }
 
+  /// Stops a running run between (or inside) steps. Files are kept; no fallback.
+  func cancel(runID: UUID) {
+    runningTasks[runID]?.cancel()
+  }
+
+  var hasRunningRuns: Bool { !runningTasks.isEmpty }
+
   // MARK: - Execution
 
-  /// Runs the steps on freshly captured screenshots.
+  /// Runs the steps on freshly captured files.
   @discardableResult
   func run(_ automation: Automation, files: [URL], runID: UUID = UUID()) async -> Result? {
-    await execute(automation, files: files, source: .capture, runID: runID)
+    await execute(automation, files: files, source: .capture, runID: runID, invocation: .hotkey, appName: frontmostAppName())
   }
 
   /// Runs the steps on files handed in by a trigger. No capture, no canvas
@@ -146,28 +184,55 @@ final class AutomationRunner {
     runID: UUID = UUID()
   ) async -> Result? {
     logStart(automation, runID: runID, invocation: invocation, source: "input")
-    return await execute(automation, files: input.files, source: .input(input), runID: runID)
+    return await execute(
+      automation,
+      files: input.files,
+      source: .input(input),
+      runID: runID,
+      invocation: invocation,
+      appName: frontmostAppName()
+    )
   }
 
-  private func execute(_ automation: Automation, files: [URL], source: RunSource, runID: UUID) async -> Result? {
+  private func execute(
+    _ snapshot: Automation,
+    files: [URL],
+    source: RunSource,
+    runID: UUID,
+    invocation: AutomationInvocation,
+    appName: String?
+  ) async -> Result? {
+    let automation = snapshot.migrated()
     let existing = files.filter { FileManager.default.fileExists(atPath: $0.path) }
     guard !existing.isEmpty else {
       DiagnosticLogger.shared.log(.error, .action, "Automation run skipped: file missing", context: ["runID": runID.uuidString])
       return nil
     }
 
-    var state = AutomationRunState(runID: runID, automation: automation, files: existing)
-    for file in existing {
-      state.fileKinds[file] = AutomationFileKind.of(file) ?? .image
-    }
+    let startedAt = now()
+    let context = AutomationRunContext(
+      runID: runID,
+      automationID: automation.id,
+      automationName: automation.displayName,
+      invocation: invocation,
+      startedAt: startedAt,
+      appName: appName,
+      windowTitle: nil,
+      workingDirectory: AutomationRunContext.workingDirectory(for: runID)
+    )
+    let inputFiles = existing.map { AutomationFile(url: $0, kind: AutomationFileKind.of($0) ?? .image) }
+    var state = AutomationRunState(runID: runID, automation: automation, files: inputFiles, context: context)
 
     let recordsHistory: Bool
     switch source {
     case .capture:
       recordsHistory = true
-      for file in existing {
-        if let sessionData = environment.prepareScreenshot(file) {
-          state.sessionData[file] = sessionData
+      // An explicit canvas preset step decides instead of the default preset.
+      if !automation.contains(.applyCanvasPreset) {
+        for file in inputFiles where file.kind == .image {
+          if let sessionData = environment.prepareScreenshot(file.url) {
+            state.sessionData[file.url] = sessionData
+          }
         }
       }
     case .input(let input):
@@ -177,55 +242,66 @@ final class AutomationRunner {
       }
     }
 
-    for step in automation.steps where step.isEnabled {
-      guard let action = step.action else {
-        DiagnosticLogger.shared.log(
-          .warning,
-          .action,
-          "Automation step skipped: unsupported kind",
-          context: ["runID": runID.uuidString, "kind": stepKindLabel(step)]
-        )
-        continue
-      }
-
-      let handler = AutomationStepRegistry.handler(for: action.kind)
-      let stepFiles = existing.filter { handler.accepts.contains(state.kind(of: $0)) }
-      guard !stepFiles.isEmpty else {
-        DiagnosticLogger.shared.log(
-          .warning,
-          .action,
-          "Automation step skipped: file kind not accepted",
-          context: ["runID": runID.uuidString, "step": action.kind.rawValue]
-        )
-        continue
-      }
-
-      let startedAt = now()
-      do {
-        try await handler.run(action, files: stepFiles, state: &state, environment: environment)
-        logStep(action, runID: runID, startedAt: startedAt, error: nil)
-      } catch {
-        logStep(action, runID: runID, startedAt: startedAt, error: error)
-        if action.kind == .uploadAndCopyLink {
-          state.uploadFailure = (error as? AutomationStepError) == .cloudNotConfigured
-            ? .notConfigured
-            : .failed(error.localizedDescription)
-          await applyUploadFallback(&state)
-        }
-        if step.onFailure == .stop { break }
-      }
+    environment.runDidUpdate(.started(runID: runID, name: automation.displayName))
+    let initialState = state
+    let task = Task { @MainActor [environment = self.environment, now = self.now] () -> StepLoopResult in
+      await Self.runSteps(of: automation, state: initialState, environment: environment, now: now)
     }
+    runningTasks[runID] = task
+    let finished = await withTaskCancellationHandler {
+      await task.value
+    } onCancel: {
+      task.cancel()
+    }
+    runningTasks.removeValue(forKey: runID)
+    state = finished.state
+    let steps = finished.steps
 
     if recordsHistory {
-      for file in existing {
-        await environment.recordHistory(file, kind: state.kind(of: file))
+      for file in inputFiles {
+        await environment.recordHistory(file.url, kind: file.kind)
       }
     }
-
-    let (message, isError) = outcomeMessage(for: state)
-    if state.wantsNotification || isError {
-      await environment.notify(title: automation.displayName, body: message, isError: isError)
+    // CLI / Shortcuts / URL callers get the output paths back: keep those files.
+    if invocation.isExternal, state.payload.savedFile == nil {
+      state.retain(state.files)
     }
+    cleanUpWorkingDirectory(state)
+
+    let outcome = Self.outcome(steps: steps, cancelled: finished.cancelled)
+    let (message, isError) = outcomeMessage(for: state, steps: steps, cancelled: finished.cancelled)
+    if !finished.cancelled, state.wantsNotification || isError {
+      await environment.notify(
+        title: automation.displayName,
+        body: message,
+        isError: isError,
+        context: AutomationNotificationContext(
+          outcome: isError ? .failed : .succeeded,
+          automationID: automation.id,
+          inputFiles: state.inputFiles,
+          link: state.payload.link,
+          savedFile: state.payload.savedFile
+        )
+      )
+    }
+    environment.runDidUpdate(.finished(runID: runID))
+
+    let durationMs = Int(now().timeIntervalSince(startedAt) * 1000)
+    environment.recordRun(AutomationRunRecord(
+      id: runID,
+      automationID: automation.id,
+      automationName: automation.displayName,
+      invocation: invocation.rawValue,
+      startedAt: startedAt,
+      durationMs: durationMs,
+      outcome: outcome,
+      steps: steps,
+      inputFiles: state.inputFiles.map(\.path),
+      link: state.payload.link?.absoluteString,
+      text: state.payload.text,
+      savedPaths: state.payload.savedFile.map { [$0.path] } ?? [],
+      warnings: state.warnings
+    ))
 
     DiagnosticLogger.shared.log(
       isError ? .warning : .info,
@@ -235,19 +311,107 @@ final class AutomationRunner {
         "automation": automation.id.uuidString,
         "runID": runID.uuidString,
         "files": "\(existing.count)",
+        "outcome": outcome.rawValue,
+        "duration_ms": "\(durationMs)",
         "imageCopied": state.didCopyImage ? "true" : "false",
         "linkCopied": state.didCopyLink ? "true" : "false",
         "uploadFailed": state.uploadFailure == nil ? "false" : "true",
       ]
     )
-    return Result(state: state, message: message, isError: isError)
+    return Result(state: state, message: message, isError: isError, outcome: outcome)
+  }
+
+  private struct StepLoopResult {
+    var state: AutomationRunState
+    var steps: [AutomationRunRecord.StepRecord]
+    var cancelled: Bool
+  }
+
+  /// The step loop. Runs in its own task so `cancel(runID:)` can stop it.
+  private static func runSteps(
+    of automation: Automation,
+    state initial: AutomationRunState,
+    environment: AutomationRunEnvironment,
+    now: () -> Date
+  ) async -> StepLoopResult {
+    var state = initial
+    var records: [AutomationRunRecord.StepRecord] = []
+    var cancelled = false
+    let runID = state.runID
+
+    for step in automation.steps where step.isEnabled {
+      if Task.isCancelled {
+        cancelled = true
+        break
+      }
+      guard let action = step.action else {
+        let kind = stepKindLabel(step)
+        DiagnosticLogger.shared.log(
+          .warning,
+          .action,
+          "Automation step skipped: unsupported kind",
+          context: ["runID": runID.uuidString, "kind": kind]
+        )
+        records.append(.init(kind: kind, durationMs: 0, status: .skipped, error: nil))
+        continue
+      }
+
+      let handler = AutomationStepRegistry.handler(for: action.kind)
+      let accepted = handler.accepts(action)
+      let stepFiles = state.payload.files
+        .filter { accepted.contains(AutomationPayloadKind($0.kind)) }
+        .map(\.url)
+      let hasOtherInput = !accepted.isDisjoint(with: state.payload.kinds.subtracting(AutomationPayloadKind.files))
+      guard !stepFiles.isEmpty || hasOtherInput else {
+        DiagnosticLogger.shared.log(
+          .warning,
+          .action,
+          "Automation step skipped: payload kind not accepted",
+          context: ["runID": runID.uuidString, "step": action.kind.rawValue]
+        )
+        records.append(.init(kind: action.kind.rawValue, durationMs: 0, status: .skipped, error: nil))
+        continue
+      }
+
+      environment.runDidUpdate(.step(runID: runID, title: action.kind.displayName))
+      let startedAt = now()
+      do {
+        try await handler.run(action, files: stepFiles, state: &state, environment: environment)
+        let duration = milliseconds(since: startedAt, now: now)
+        logStep(action, runID: runID, durationMs: duration, error: nil)
+        records.append(.init(kind: action.kind.rawValue, durationMs: duration, status: .succeeded, error: nil))
+      } catch {
+        let duration = milliseconds(since: startedAt, now: now)
+        if error is CancellationError || Task.isCancelled {
+          cancelled = true
+          records.append(.init(kind: action.kind.rawValue, durationMs: duration, status: .skipped, error: nil))
+          break
+        }
+        logStep(action, runID: runID, durationMs: duration, error: error)
+        records.append(.init(
+          kind: action.kind.rawValue,
+          durationMs: duration,
+          status: .failed,
+          error: error.localizedDescription
+        ))
+        if action.kind == .upload || action.kind == .uploadAndCopyLink {
+          state.uploadFailure = (error as? AutomationStepError) == .cloudNotConfigured
+            ? .notConfigured
+            : .failed(error.localizedDescription)
+          await applyUploadFallback(&state, environment: environment)
+        }
+        if step.onFailure == .stop { break }
+      }
+    }
+    return StepLoopResult(state: state, steps: records, cancelled: cancelled)
   }
 
   /// A failed upload must still leave something to paste and a way to retry.
-  private func applyUploadFallback(_ state: inout AutomationRunState) async {
+  private static func applyUploadFallback(_ state: inout AutomationRunState, environment: AutomationRunEnvironment) async {
     if !state.didCopyImage {
       state.ownPasteboardChangeCount = AutomationStepCopy.copy(state.files, state: state, environment: environment)
       state.didCopyImage = true
+      state.retain(state.files)
     }
     if state.quickAccessItemIDs.isEmpty, let file = state.primaryFile,
        let itemID = await environment.showQuickAccess(
@@ -257,10 +421,39 @@ final class AutomationRunner {
        )
     {
       state.quickAccessItemIDs[file] = itemID
+      state.retain([file])
     }
   }
 
-  private func outcomeMessage(for state: AutomationRunState) -> (String, Bool) {
+  /// Deletes working files nothing still shows; the directory goes when empty.
+  private func cleanUpWorkingDirectory(_ state: AutomationRunState) {
+    let directory = state.context.workingDirectory
+    let fileManager = FileManager.default
+    guard let contents = try? fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else { return }
+    let retained = Set(state.retainedFiles.map(\.standardizedFileURL.path))
+    for file in contents where !retained.contains(file.standardizedFileURL.path) {
+      try? fileManager.removeItem(at: file)
+    }
+    if (try? fileManager.contentsOfDirectory(atPath: directory.path))?.isEmpty ?? true {
+      try? fileManager.removeItem(at: directory)
+    }
+  }
+
+  private static func outcome(steps: [AutomationRunRecord.StepRecord], cancelled: Bool) -> AutomationRunRecord.Outcome {
+    if cancelled { return .cancelled }
+    guard let failedIndex = steps.firstIndex(where: { $0.status == .failed }) else { return .succeeded }
+    // A failure followed by steps that still ran is partial; a failure that ended the run is failed.
+    return steps[(failedIndex + 1)...].contains { $0.status == .succeeded } ? .partial : .failed
+  }
+
+  private func outcomeMessage(
+    for state: AutomationRunState,
+    steps: [AutomationRunRecord.StepRecord],
+    cancelled: Bool
+  ) -> (String, Bool) {
+    if cancelled {
+      return (L10n.Automations.resultCancelled, false)
+    }
     switch state.uploadFailure {
     case .notConfigured?:
       return (L10n.Automations.resultCloudNotConfigured, true)
@@ -269,18 +462,31 @@ final class AutomationRunner {
     case nil:
       break
     }
-    if state.linkText != nil {
+    if let failed = steps.first(where: { $0.status == .failed }) {
+      let title = AutomationStepKind(rawValue: failed.kind)?.displayName ?? failed.kind
+      return (L10n.Automations.resultStepFailed(title, failed.error ?? ""), true)
+    }
+    switch state.lastDelivery {
+    case .linkCopied?:
+      return (L10n.Automations.resultLinkCopied, false)
+    case .linkReady?:
       return (state.didCopyLink ? L10n.Automations.resultLinkCopied : L10n.Automations.resultLinkReady, false)
-    }
-    if state.didCopyImage {
+    case .textCopied?:
+      return (L10n.Automations.resultTextCopied, false)
+    case .saved(let url)?:
+      return (L10n.Automations.resultSavedTo(url.lastPathComponent), false)
+    case .imageCopied?:
+      return (L10n.Automations.resultImageCopied, false)
+    case .fileCopied?:
       return (state.isImageOnly ? L10n.Automations.resultImageCopied : L10n.Automations.resultFileCopied, false)
+    case nil:
+      return (L10n.Automations.resultCaptureSaved, false)
     }
-    return (L10n.Automations.resultCaptureSaved, false)
   }
 
   private func pruneStaleRuns() {
-    let cutoff = now().addingTimeInterval(-Self.pendingLifetime)
-    let stale = pendingRuns.filter { $0.value.startedAt < cutoff }
+    let current = now()
+    let stale = pendingRuns.filter { $0.value.expiresAt.map { $0 < current } ?? false }
     for (runID, pending) in stale {
       pendingRuns.removeValue(forKey: runID)
       pending.onFinish?(.cancelled)
@@ -301,13 +507,16 @@ final class AutomationRunner {
     )
   }
 
-  private func stepKindLabel(_ step: AutomationStep) -> String {
+  private static func stepKindLabel(_ step: AutomationStep) -> String {
     if case .unsupported(let raw) = step.content { return raw.kind ?? "unknown" }
     return step.action?.kind.rawValue ?? "unknown"
   }
 
-  private func logStep(_ action: AutomationStepAction, runID: UUID, startedAt: Date, error: Error?) {
-    let durationMs = Int(now().timeIntervalSince(startedAt) * 1000)
+  private static func milliseconds(since start: Date, now: () -> Date) -> Int {
+    max(0, Int(now().timeIntervalSince(start) * 1000))
+  }
+
+  private static func logStep(_ action: AutomationStepAction, runID: UUID, durationMs: Int, error: Error?) {
     var context = [
       "runID": runID.uuidString,
       "step": action.kind.rawValue,

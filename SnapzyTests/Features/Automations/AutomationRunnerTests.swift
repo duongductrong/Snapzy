@@ -29,8 +29,21 @@ final class FakeAutomationEnvironment: AutomationRunEnvironment {
   var history: [URL] = []
   var historyKinds: [AutomationFileKind] = []
   var notifications: [(title: String, body: String, isError: Bool)] = []
+  var notificationContexts: [AutomationNotificationContext?] = []
   /// Simulates the user copying something while an upload runs.
   var copyDuringUpload = false
+  var pinned: [URL] = []
+  var revealed: [[URL]] = []
+  var canvasPresetCalls: [(UUID?, URL)] = []
+  var recognizedText = "Hello world"
+  var translationPrefix = "translated:"
+  var translateShouldFail = false
+  var folders: [AutomationFolderRef: URL] = [:]
+  var optimizePresets: [UUID: QuickAccessOptimizeSettings] = [:]
+  var runUpdates: [AutomationRunUpdate] = []
+  var runRecords: [AutomationRunRecord] = []
+  /// Suspends `upload` until resumed, to test cancellation.
+  var uploadDelayNanoseconds: UInt64 = 0
 
   func prepareScreenshot(_ url: URL) -> AnnotationSessionData? {
     preparedScreenshots.append(url)
@@ -58,6 +71,9 @@ final class FakeAutomationEnvironment: AutomationRunEnvironment {
   var pasteboardChangeCount: Int { changeCount }
 
   func upload(_ url: URL) async throws -> CloudUploadResult {
+    if uploadDelayNanoseconds > 0 {
+      try await Task.sleep(nanoseconds: uploadDelayNanoseconds)
+    }
     if copyDuringUpload { changeCount += 1 }
     if uploadShouldFail { throw UploadFailure() }
     uploaded.append(url)
@@ -87,8 +103,57 @@ final class FakeAutomationEnvironment: AutomationRunEnvironment {
     historyKinds.append(kind)
   }
 
-  func notify(title: String, body: String, isError: Bool) async {
+  func notify(title: String, body: String, isError: Bool, context: AutomationNotificationContext?) async {
     notifications.append((title, body, isError))
+    notificationContexts.append(context)
+  }
+
+  func pin(_ url: URL) async -> Bool {
+    pinned.append(url)
+    return true
+  }
+
+  func reveal(_ urls: [URL]) {
+    revealed.append(urls)
+  }
+
+  /// Copies the source so a "rendered" working file exists.
+  func applyCanvasPreset(_ presetID: UUID?, source: URL, destination: URL) throws -> AnnotationSessionData? {
+    canvasPresetCalls.append((presetID, source))
+    try FileManager.default.copyItem(at: source, to: destination)
+    return nil
+  }
+
+  func optimizeSettings(presetID: UUID) -> QuickAccessOptimizeSettings? {
+    optimizePresets[presetID]
+  }
+
+  func recognizeText(in _: URL, config _: AutomationOCRConfig) async throws -> String {
+    recognizedText
+  }
+
+  func translate(_ text: String, targetLanguage _: String?) async throws -> String {
+    if translateShouldFail { throw AutomationStepError.translationUnavailable("offline") }
+    return translationPrefix + text
+  }
+
+  func convertToGIF(_ url: URL, config _: AutomationGIFConfig) async throws -> URL {
+    let gif = url.deletingPathExtension().appendingPathExtension("gif")
+    try Data("GIF89a".utf8).write(to: gif)
+    return gif
+  }
+
+  func resolveFolder(_ ref: AutomationFolderRef) throws -> URL {
+    guard let url = folders[ref] else { throw AutomationStepError.folderUnavailable }
+    return url
+  }
+
+  func runDidUpdate(_ update: AutomationRunUpdate) {
+    runUpdates.append(update)
+  }
+
+  func recordRun(_ record: AutomationRunRecord) {
+    runRecords.append(record)
   }
 }
 

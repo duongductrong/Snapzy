@@ -18,6 +18,8 @@ enum AutomationInvocation: String, Sendable {
   case quickAccess
   case history
   case appIntent
+  /// "Retry" on a failure notification (internal; re-runs on the run's input files).
+  case retry
 
   var isExternal: Bool {
     self == .urlScheme || self == .cli || self == .appIntent
@@ -83,6 +85,10 @@ enum AutomationLaunchRejection: Error, Equatable, Sendable {
   case fileMissing(String)
   case permissionRequired
   case captureInProgress
+  /// The clipboard holds no image (clipboard-image source).
+  case clipboardEmpty
+  /// A step has nothing to work on (e.g. Translate before OCR).
+  case invalidChain
 
   /// Stable identifier for logs and the CLI.
   var code: String {
@@ -99,6 +105,8 @@ enum AutomationLaunchRejection: Error, Equatable, Sendable {
     case .fileMissing: "file_missing"
     case .permissionRequired: "permission_required"
     case .captureInProgress: "capture_in_progress"
+    case .clipboardEmpty: "clipboard_empty"
+    case .invalidChain: "invalid_chain"
     }
   }
 }
@@ -107,11 +115,36 @@ enum AutomationLaunchRejection: Error, Equatable, Sendable {
 struct AutomationRunReport: Equatable, Sendable {
   let runID: UUID
   let automationID: UUID
+  /// The captured or handed-in files.
   let files: [URL]
   /// The uploaded link text (URL or Markdown), when a step produced one.
   let link: String?
   let message: String
   let isError: Bool
+  /// OCR / translation output, when a step produced text.
+  let text: String?
+  /// What the run delivered: the saved file, else the final (possibly transformed) files.
+  let outputFiles: [URL]
+
+  init(
+    runID: UUID,
+    automationID: UUID,
+    files: [URL],
+    link: String?,
+    message: String,
+    isError: Bool,
+    text: String? = nil,
+    outputFiles: [URL]? = nil
+  ) {
+    self.runID = runID
+    self.automationID = automationID
+    self.files = files
+    self.link = link
+    self.message = message
+    self.isError = isError
+    self.text = text
+    self.outputFiles = outputFiles ?? files
+  }
 }
 
 enum AutomationLaunchOutcome: Equatable, Sendable {
@@ -134,6 +167,6 @@ enum AutomationTriggerSlot: Sendable {
 extension Automation {
   /// True when at least one enabled step can work on a file of `kind`.
   func acceptsFile(of kind: AutomationFileKind) -> Bool {
-    activeActions.contains { AutomationStepRegistry.accepts($0.kind, kind) }
+    activeActions.contains { AutomationStepRegistry.accepts($0, kind) }
   }
 }
