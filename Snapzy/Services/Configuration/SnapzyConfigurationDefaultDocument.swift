@@ -326,7 +326,7 @@ enum SnapzyConfigurationDefaultDocument {
     case .shortcutList: return .defaultShortcutList
     case .ocr: return .defaultOCR
     case .translate: return .defaultTranslate
-    case .smartElement: return nil
+    case .smartElement: return .defaultSmartElement
     case .objectCutout: return .defaultObjectCutout
     case .history: return .defaultHistory
     case .pickColor: return nil
