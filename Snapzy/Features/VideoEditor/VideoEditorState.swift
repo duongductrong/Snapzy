@@ -3438,6 +3438,9 @@ final class VideoEditorState: ObservableObject {
           candidate.startTime < userZoom.endTime && candidate.endTime > userZoom.startTime
         }
       }
+      // Nothing fits in the open gaps: keep the timeline as-is (prior smart zooms included)
+      // so the caller reports "No actions detected" instead of silently dropping zooms.
+      guard !nonOverlappingGenerated.isEmpty else { return existing }
       return (preservedUserZooms + nonOverlappingGenerated).sorted { $0.startTime < $1.startTime }
     }
   }

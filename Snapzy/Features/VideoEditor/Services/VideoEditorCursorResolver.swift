@@ -45,9 +45,14 @@ nonisolated struct VideoEditorCursorResolver: Sendable {
   /// Raw samples, kept so a smoothing change can re-smooth without the recording.
   private let rawSamples: [RecordedMouseSample]
 
+  /// Shape changes shorter than this are treated as capture noise and skipped.
+  static let minimumAppearanceDwell: TimeInterval = 0.1
+
   init(samples rawSamples: [RecordedMouseSample], capture: RecordingCursorCapture, settings: VideoEditorCursorSettings) {
     self.settings = settings
-    self.capture = capture
+    var stabilized = capture
+    stabilized.appearance = Self.stabilizedAppearance(capture.appearance)
+    self.capture = stabilized
     self.rawSamples = rawSamples
     let smoothed = Self.smooth(rawSamples, tau: settings.smoothing * Self.maxSmoothingTau)
     samples = smoothed
@@ -75,6 +80,27 @@ nonisolated struct VideoEditorCursorResolver: Sendable {
     self.rawSamples = rawSamples
     self.samples = samples
     self.activityTimes = activityTimes
+  }
+
+  /// Drops visible cursor-shape changes that last under `minimumAppearanceDwell`, so the
+  /// previous shape carries through. Recordings captured before the content-keyed cursor
+  /// fix flip between a stale and the real shape every poll (~33 ms); real shape changes
+  /// virtually never last that briefly. Hidden periods are always kept.
+  static func stabilizedAppearance(_ appearance: [RecordedCursorChange]) -> [RecordedCursorChange] {
+    guard appearance.count > 1 else { return appearance }
+    var result: [RecordedCursorChange] = []
+    result.reserveCapacity(appearance.count)
+    for index in appearance.indices {
+      let change = appearance[index]
+      let isLast = index == appearance.count - 1
+      let dwell = isLast ? .infinity : appearance[index + 1].time - change.time
+      guard change.isHidden || dwell >= minimumAppearanceDwell || result.isEmpty else { continue }
+      if let last = result.last, last.imageID == change.imageID, last.isHidden == change.isHidden {
+        continue
+      }
+      result.append(change)
+    }
+    return result
   }
 
   /// The same recording with new settings. Activity times never depend on settings, and

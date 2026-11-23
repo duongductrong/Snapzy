@@ -25,7 +25,10 @@ final class RecordingCursorAppearanceTracker {
   private var timer: Timer?
   private var monitors: [Any] = []
   private var imagesByHash: [Int: StoredImage] = [:]
-  private var imageIDByCursor: [ObjectIdentifier: Int] = [:]
+  /// Pixel fingerprint → image ID. Keyed by content, never by `ObjectIdentifier` (see `imageID(for:)`).
+  private var imageIDByFingerprint: [Int: Int] = [:]
+  /// Last polled cursor, retained so the identity fast path can't hit a recycled address.
+  private var lastResolvedCursor: (cursor: NSCursor, id: Int)?
   private var appearance: [RecordedCursorChange] = []
   private var clicks: [RecordedClick] = []
   private var pressedButtons: Set<RecordedClickButton> = []
@@ -77,7 +80,8 @@ final class RecordingCursorAppearanceTracker {
   func reset() {
     teardown()
     imagesByHash.removeAll()
-    imageIDByCursor.removeAll()
+    imageIDByFingerprint.removeAll()
+    lastResolvedCursor = nil
     appearance.removeAll()
     clicks.removeAll()
     pressedButtons.removeAll()
@@ -97,10 +101,21 @@ final class RecordingCursorAppearanceTracker {
     appearance.append(change)
   }
 
+  /// Resolves the captured image ID for `cursor` by its pixels, never by object identity:
+  /// `NSCursor.currentSystem` returns a fresh object on every poll, and a freed cursor's address
+  /// is routinely reused by the next one, so an `ObjectIdentifier` cache maps an I-beam onto a
+  /// stale arrow ID (the cursor then flickers between shapes on playback).
   private func imageID(for cursor: NSCursor) -> Int? {
-    let key = ObjectIdentifier(cursor)
-    if let cached = imageIDByCursor[key] { return cached }
-    guard let encoded = Self.encode(cursor) else { return nil }
+    // Fast path: the very same object as last poll. Held strongly, so its address can't be reused.
+    if let last = lastResolvedCursor, last.cursor === cursor { return last.id }
+    guard let raster = Self.rasterize(cursor) else { return nil }
+
+    let fingerprint = Self.fingerprint(of: raster.cgImage, hotspot: cursor.hotSpot)
+    if let cached = imageIDByFingerprint[fingerprint] {
+      lastResolvedCursor = (cursor, cached)
+      return cached
+    }
+    guard let encoded = Self.encode(cursor, raster: raster) else { return nil }
 
     var hasher = Hasher()
     hasher.combine(encoded.pngData)
@@ -122,20 +137,43 @@ final class RecordingCursorAppearanceTracker {
       )
       imagesByHash[hash] = StoredImage(image: image, pngData: encoded.pngData)
     }
-    imageIDByCursor[key] = id
+    imageIDByFingerprint[fingerprint] = id
+    lastResolvedCursor = (cursor, id)
     return id
   }
 
-  private static func encode(_ cursor: NSCursor) -> (pngData: Data, hotspot: CGPoint, pointSize: CGSize, scale: CGFloat)? {
+  private static func rasterize(_ cursor: NSCursor) -> (cgImage: CGImage, pointSize: CGSize)? {
     let image = cursor.image
     let pointSize = image.size
     guard pointSize.width > 0, pointSize.height > 0 else { return nil }
     // Ask for a 2x rect so Retina representations win when present.
     var rect = CGRect(origin: .zero, size: CGSize(width: pointSize.width * 2, height: pointSize.height * 2))
-    guard let cgImage = image.cgImage(forProposedRect: &rect, context: nil, hints: nil),
-          let png = NSBitmapImageRep(cgImage: cgImage).representation(using: .png, properties: [:])
+    guard let cgImage = image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else { return nil }
+    return (cgImage, pointSize)
+  }
+
+  /// Cheap per-poll identity of a cursor's look: raw pixel bytes + geometry + hotspot.
+  private static func fingerprint(of cgImage: CGImage, hotspot: CGPoint) -> Int {
+    var hasher = Hasher()
+    hasher.combine(cgImage.width)
+    hasher.combine(cgImage.height)
+    hasher.combine(cgImage.bytesPerRow)
+    hasher.combine(cgImage.bitmapInfo.rawValue)
+    if let data = cgImage.dataProvider?.data as Data? {
+      hasher.combine(data)
+    }
+    hasher.combine(hotspot.x)
+    hasher.combine(hotspot.y)
+    return hasher.finalize()
+  }
+
+  private static func encode(
+    _ cursor: NSCursor,
+    raster: (cgImage: CGImage, pointSize: CGSize)
+  ) -> (pngData: Data, hotspot: CGPoint, pointSize: CGSize, scale: CGFloat)? {
+    guard let png = NSBitmapImageRep(cgImage: raster.cgImage).representation(using: .png, properties: [:])
     else { return nil }
-    return (png, cursor.hotSpot, pointSize, CGFloat(cgImage.width) / pointSize.width)
+    return (png, cursor.hotSpot, raster.pointSize, CGFloat(raster.cgImage.width) / raster.pointSize.width)
   }
 
   // MARK: - Clicks

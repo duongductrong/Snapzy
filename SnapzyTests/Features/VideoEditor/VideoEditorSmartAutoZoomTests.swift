@@ -968,6 +968,17 @@ final class VideoEditorSmartAutoZoomTests: XCTestCase {
     XCTAssertFalse(merged.contains { $0.id == overlappingGenerated.id })
     XCTAssertFalse(merged.contains { $0.id == previousSmartZoom.id })
 
+    // 2b. When every generated segment overlaps a user zoom, fill-gaps is a no-op:
+    //     prior smart zooms must not be dropped without a replacement.
+    XCTAssertEqual(
+      VideoEditorState.mergeSmartAutoZoomSegments(
+        existing: existing,
+        generated: [overlappingGenerated],
+        policy: .fillGaps
+      ),
+      existing
+    )
+
     // 3. Explicit replaceAll policy replaces every segment when plan is non-empty.
     let replaced = VideoEditorState.mergeSmartAutoZoomSegments(
       existing: existing,
