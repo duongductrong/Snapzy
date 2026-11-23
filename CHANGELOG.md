@@ -4,6 +4,20 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.10] - 2026-11-23
+
+### Features
+- add Smart Auto-Zoom and physical Metal motion blur to Video Editor (#800) (7f51c2b9)
+- Improved smooth onboarding step transitions (#803) (7c7f41c5)
+
+### Bug Fixes
+- stop cursor shape flicker in Studio recordings and keep smart zooms on fill-gaps no-op (#804) (2f789dfe)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @williamcachamwri
+
 ## [2.3.0-beta.9] - 2026-11-22
 
 ### Features
