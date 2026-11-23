@@ -76,6 +76,19 @@ final class CLIRequestRouterTests: XCTestCase {
     XCTAssertEqual(response.error?.code, .unknownMethod)
   }
 
+  func testAgentRouterNeverServesAutomations() {
+    let methods = CLIServer.makeAgentRouter().registeredMethods
+    XCTAssertFalse(methods.contains(CLIMethod.automationList.rawValue))
+    XCTAssertFalse(methods.contains(CLIMethod.automationRun.rawValue))
+    XCTAssertEqual(methods, Set([CLIMethod.systemStatus, .agentTools, .agentCall].map(\.rawValue)))
+  }
+
+  func testOnlyAutomationRunGetsALongRequestTimeout() {
+    XCTAssertEqual(CLIConnection.requestTimeout(for: CLIMethod.automationRun.rawValue), 15 * 60)
+    XCTAssertNil(CLIConnection.requestTimeout(for: CLIMethod.captureArea.rawValue))
+    XCTAssertNil(CLIConnection.requestTimeout(for: CLIMethod.automationList.rawValue))
+  }
+
   func testServerRegistersEveryMethodButHello() {
     XCTAssertEqual(
       CLIServer.makeRouter().registeredMethods,

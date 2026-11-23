@@ -174,25 +174,38 @@ private struct AutomationRow: View {
 
   var body: some View {
     HStack(alignment: .top, spacing: 8) {
-      Image(systemName: automation.symbol ?? automation.captureSpec?.mode.symbol ?? "bolt.fill")
+      Image(systemName: automation.symbol ?? rowSymbol)
         .font(.system(size: 14, weight: .medium))
         .foregroundStyle(.secondary)
         .frame(width: 20, height: 22)
 
       VStack(alignment: .leading, spacing: 3) {
-        ShortcutRecorderView(
-          label: automation.displayName,
-          shortcut: Binding(get: { automation.hotkey }, set: { _ in }),
-          isEnabled: Binding(get: { automation.isEnabled }, set: onToggle),
-          validationIssue: validationIssue,
-          onShortcutChanged: onShortcutChanged
-        )
-        .disabled(automation.hasUnsupportedSource)
+        if automation.source == .input {
+          Toggle(isOn: Binding(get: { automation.isEnabled }, set: onToggle)) {
+            Text(automation.displayName)
+          }
+        } else {
+          ShortcutRecorderView(
+            label: automation.displayName,
+            shortcut: Binding(get: { automation.hotkey }, set: { _ in }),
+            isEnabled: Binding(get: { automation.isEnabled }, set: onToggle),
+            validationIssue: validationIssue,
+            onShortcutChanged: onShortcutChanged
+          )
+          .disabled(automation.hasUnsupportedSource)
+        }
 
-        Text(automation.summary)
-          .font(.caption)
-          .foregroundStyle(.secondary)
-          .lineLimit(2)
+        HStack(spacing: 4) {
+          if automation.externalInvocation {
+            Image(systemName: "link")
+              .help(L10n.Automations.externalBadge)
+              .accessibilityLabel(L10n.Automations.externalBadge)
+          }
+          Text(automation.summary)
+            .lineLimit(2)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
 
         if automation.hasUnsupportedSource {
           warning(L10n.Automations.unsupported)
@@ -228,6 +241,14 @@ private struct AutomationRow: View {
     .onTapGesture(count: 2) {
       guard !automation.hasUnsupportedSource else { return }
       onEdit()
+    }
+  }
+
+  private var rowSymbol: String {
+    switch automation.source {
+    case .capture(let spec): spec.mode.symbol
+    case .input: AutomationDisplay.inputSymbol
+    case .unsupported: "bolt.fill"
     }
   }
 

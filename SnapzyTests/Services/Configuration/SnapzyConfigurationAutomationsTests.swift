@@ -126,4 +126,42 @@ final class SnapzyConfigurationAutomationsTests: XCTestCase {
     let result = SnapzyConfigurationAutomationsCodec.parse(try SimpleTOMLParser.parse(writer.output))
     XCTAssertEqual(result.automations?.count, 0)
   }
+
+  // MARK: - Milestone 2
+
+  func testInputSourceAndListFlagsRoundTrip() throws {
+    var automation = Automation(name: "On file", source: .input, steps: [AutomationStep(.copyImage)])
+    automation.showsInHistory = true
+    automation.externalInvocation = true
+
+    var writer = SimpleTOMLWriter()
+    SnapzyConfigurationAutomationsCodec.write([automation], to: &writer)
+    XCTAssertTrue(writer.output.contains("capture = \"input\""))
+    XCTAssertFalse(writer.output.contains("save_to_export"))
+    let result = SnapzyConfigurationAutomationsCodec.parse(try SimpleTOMLParser.parse(writer.output))
+
+    XCTAssertTrue(result.warnings.isEmpty, "\(result.warnings)")
+    let imported = try XCTUnwrap(result.automations?.first)
+    XCTAssertEqual(imported.source, .input)
+    XCTAssertTrue(imported.showsInHistory)
+    XCTAssertFalse(imported.showsInQuickAccess)
+    XCTAssertTrue(imported.externalInvocation)
+  }
+
+  func testFlatListKeysWinOverData() throws {
+    let automation = AutomationPreset.quickCopy.makeAutomation()
+    var writer = SimpleTOMLWriter()
+    SnapzyConfigurationAutomationsCodec.write([automation], to: &writer)
+    let edited = writer.output
+      .replacingOccurrences(of: "menu_bar = false", with: "menu_bar = true")
+      .replacingOccurrences(of: "history = true", with: "history = false")
+
+    let imported = try XCTUnwrap(
+      SnapzyConfigurationAutomationsCodec.parse(try SimpleTOMLParser.parse(edited)).automations?.first
+    )
+
+    XCTAssertTrue(imported.showsInMenuBar)
+    XCTAssertFalse(imported.showsInHistory)
+    XCTAssertTrue(imported.showsInQuickAccess, "Absent edits keep the stored value")
+  }
 }

@@ -41,6 +41,14 @@ Keyboard: hovering a card arms its action shortcuts (⌘C copy, ⌘S save/open, 
 
 Customization: `QuickAccessActionConfigurationStore` — context-menu order (`quickAccess.actions.order.v1`), enabled set (`...enabled.v1`), slot assignments (`...slots.v1`). Settings → Quick Access preview card supports drag-to-slot + swipe zones + reset. Note: commit `dd4ccd5` removed only the after-capture auto-upload preference option; the manual `uploadToCloud` card action stays, additionally gated by `isEnabled(.uploadToCloud)`.
 
+## Run Automation
+
+Context menu → **Run Automation** submenu (placed after Upload, or before the destructive group when Upload is not in the menu). Lists automations from `AutomationStore.automations(for: .quickAccess, fileKind:)`: enabled, "Show in Quick Access" on, and at least one enabled step accepts the card's file kind (image / video / GIF). Hidden when empty.
+
+- Runs `AutomationTriggerActions.runFromQuickAccess` → `AutomationLauncher.launch(invocation: .quickAccess, input:)` with the card's file, `isAlreadyInHistory: true` and `sourceQuickAccessItemID` = this card. The automation's capture source is skipped.
+- The card is reused: an upload sets this card's cloud link; no second card, no new History row, no default canvas preset. The card's countdown is paused while the run is in flight.
+- Rejections show a warning toast. Details: [AUTOMATIONS.md](AUTOMATIONS.md).
+
 ## Gestures
 
 `QuickAccessDraggableView`:
@@ -121,5 +129,6 @@ Settings → Quick Access: position (left/right), overlay size, sound effects, o
 - [ANNOTATE.md](ANNOTATE.md) — edit action, sidecars, drag-to-app
 - [VIDEO_EDITOR.md](VIDEO_EDITOR.md) — video/GIF editor entry
 - [HISTORY.md](HISTORY.md) — restore-to-Quick-Access flow
+- [AUTOMATIONS.md](AUTOMATIONS.md) — Run Automation on a card
 - [CLOUD.md](CLOUD.md) — manual upload gating
 - [PREFERENCES.md](PREFERENCES.md) — settings keys

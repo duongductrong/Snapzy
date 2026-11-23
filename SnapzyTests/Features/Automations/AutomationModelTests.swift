@@ -116,11 +116,11 @@ final class AutomationModelTests: XCTestCase {
 
     automation.hotkey = ShortcutConfig(keyCode: 1, modifiers: UInt32(cmdKey))
     automation.hotkey = ShortcutConfig(keyCode: 2, modifiers: UInt32(cmdKey))
-    XCTAssertEqual(automation.triggers.count, 1)
+    XCTAssertEqual(automation.triggers.filter { if case .hotkey = $0 { true } else { false } }.count, 1)
     XCTAssertEqual(automation.hotkey?.keyCode, 2)
 
     automation.hotkey = nil
-    XCTAssertTrue(automation.triggers.isEmpty)
+    XCTAssertEqual(automation.triggers, [.quickAccessAction, .historyAction], "Other triggers are kept")
   }
 
   func testPresetDisplayNameFollowsLanguageUntilRenamed() {
@@ -139,5 +139,66 @@ final class AutomationModelTests: XCTestCase {
       XCTAssertEqual(automation.captureSpec?.mode, .area)
       XCTAssertEqual(automation.activeActions.first, .copyImage)
     }
+  }
+
+  // MARK: - Milestone 2
+
+  func testInputSourceAndListTriggersRoundTrip() throws {
+    var automation = Automation(name: "On file", source: .input, steps: [AutomationStep(.copyImage)])
+    automation.showsInQuickAccess = true
+    automation.showsInHistory = true
+
+    let decoded = try roundTrip(automation)
+
+    XCTAssertEqual(decoded, automation)
+    XCTAssertEqual(decoded.source, .input)
+    XCTAssertFalse(decoded.hasUnsupportedSource)
+    XCTAssertFalse(decoded.startsCapture)
+    XCTAssertTrue(decoded.showsInQuickAccess)
+    XCTAssertTrue(decoded.showsInHistory)
+    XCTAssertFalse(decoded.showsInMenuBar)
+  }
+
+  func testNormalizedDropsHotkeyAndMenuBarForInputSource() {
+    var automation = Automation(name: "On file", source: .input, steps: [AutomationStep(.copyImage)])
+    automation.hotkey = ShortcutConfig(keyCode: 1, modifiers: UInt32(cmdKey))
+    automation.showsInMenuBar = true
+    automation.showsInHistory = true
+    automation.triggers.append(.historyAction)
+
+    let normalized = automation.normalized()
+
+    XCTAssertNil(normalized.hotkey)
+    XCTAssertFalse(normalized.showsInMenuBar)
+    XCTAssertEqual(normalized.triggers, [.historyAction], "Duplicate list triggers collapse")
+  }
+
+  func testNewPresetsAreOfferedOnQuickAccessAndHistory() {
+    for preset in AutomationPreset.allCases {
+      let automation = preset.makeAutomation()
+      XCTAssertTrue(automation.showsInQuickAccess)
+      XCTAssertTrue(automation.showsInHistory)
+      XCTAssertFalse(automation.showsInMenuBar)
+      XCTAssertFalse(automation.externalInvocation, "Other apps stay opt-in")
+    }
+  }
+
+  func testFileKindsAndStepAcceptance() {
+    XCTAssertEqual(AutomationFileKind.of(URL(fileURLWithPath: "/a/b.PNG")), .image)
+    XCTAssertEqual(AutomationFileKind.of(URL(fileURLWithPath: "/a/b.gif")), .gif)
+    XCTAssertEqual(AutomationFileKind.of(URL(fileURLWithPath: "/a/b.mov")), .video)
+    XCTAssertEqual(AutomationFileKind.of(URL(fileURLWithPath: "/a/b.mp4")), .video)
+    XCTAssertNil(AutomationFileKind.of(URL(fileURLWithPath: "/a/b.txt")))
+
+    let annotateOnly = Automation(name: "A", source: .input, steps: [AutomationStep(.openAnnotate)])
+    XCTAssertTrue(annotateOnly.acceptsFile(of: .image))
+    XCTAssertFalse(annotateOnly.acceptsFile(of: .video))
+    XCTAssertFalse(annotateOnly.acceptsFile(of: .gif))
+  }
+
+  func testAutomationRefParsesUUIDOrName() {
+    let id = UUID()
+    XCTAssertEqual(AutomationRef(" \(id.uuidString) "), .id(id))
+    XCTAssertEqual(AutomationRef("  Cloud Share "), .name("Cloud Share"))
   }
 }

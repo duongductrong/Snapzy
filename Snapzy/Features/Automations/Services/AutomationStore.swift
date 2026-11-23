@@ -35,6 +35,59 @@ final class AutomationStore: ObservableObject {
     automations.first { $0.id == id }
   }
 
+  /// Finds an automation by id, or by name (trimmed, case-insensitive, matching
+  /// the stored or the displayed name). Several matches → `.ambiguousName`.
+  func resolve(_ ref: AutomationRef) -> Result<Automation, AutomationLaunchRejection> {
+    switch ref {
+    case .id(let id):
+      return automation(id: id).map { .success($0) } ?? .failure(.notFound)
+    case .name(let raw):
+      let wanted = Self.nameKey(raw)
+      guard !wanted.isEmpty else { return .failure(.notFound) }
+      let matches = automations.filter {
+        Self.nameKey($0.name) == wanted || Self.nameKey($0.displayName) == wanted
+      }
+      switch matches.count {
+      case 0: return .failure(.notFound)
+      case 1: return .success(matches[0])
+      default: return .failure(.ambiguousName(matches.map(\.id)))
+      }
+    }
+  }
+
+  /// Ids of other automations that share `automation`'s name (shown as a warning in the editor).
+  func duplicateNameIDs(for automation: Automation) -> [UUID] {
+    let key = Self.nameKey(automation.displayName)
+    guard !key.isEmpty else { return [] }
+    return automations
+      .filter { $0.id != automation.id && Self.nameKey($0.displayName) == key }
+      .map(\.id)
+  }
+
+  /// Enabled automations offered by `slot`. With `fileKind`, only those that
+  /// have at least one enabled step accepting that kind of file.
+  func automations(for slot: AutomationTriggerSlot, fileKind: AutomationFileKind? = nil) -> [Automation] {
+    automations.filter { automation in
+      guard automation.isEnabled, !automation.hasUnsupportedSource else { return false }
+      switch slot {
+      case .menuBar:
+        guard automation.showsInMenuBar, automation.startsCapture else { return false }
+      case .quickAccess:
+        guard automation.showsInQuickAccess else { return false }
+      case .history:
+        guard automation.showsInHistory else { return false }
+      case .external:
+        guard automation.externalInvocation else { return false }
+      }
+      guard let fileKind else { return true }
+      return automation.acceptsFile(of: fileKind)
+    }
+  }
+
+  private static func nameKey(_ name: String) -> String {
+    name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+  }
+
   var canAdd: Bool {
     automations.count < Self.maxAutomations
   }

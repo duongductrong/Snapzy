@@ -45,6 +45,8 @@ enum AutomationPreset: String, CaseIterable {
     return Automation(
       name: storedName,
       symbol: symbol,
+      // Offered on Quick Access cards and History items; existing users keep their own setup.
+      triggers: [.quickAccessAction, .historyAction],
       source: .capture(AutomationCaptureSpec(mode: .area, saveToExportDirectory: false)),
       steps: steps,
       presetID: rawValue

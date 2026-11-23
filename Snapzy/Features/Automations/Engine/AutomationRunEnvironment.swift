@@ -15,6 +15,8 @@ protocol AutomationRunEnvironment: AnyObject {
   func prepareScreenshot(_ url: URL) -> AnnotationSessionData?
   /// Copies image(s) and returns the pasteboard change count after the write.
   func copyImages(_ urls: [URL]) -> Int
+  /// Copies one video / GIF as a file reference; returns the change count after the write.
+  func copyMedia(_ url: URL) -> Int
   /// Writes plain text and returns the pasteboard change count after the write.
   func copyText(_ text: String) -> Int
   var pasteboardChangeCount: Int { get }
@@ -23,11 +25,11 @@ protocol AutomationRunEnvironment: AnyObject {
   func upload(_ url: URL) async throws -> CloudUploadResult
 
   /// Adds a Quick Access card and returns its item id.
-  func showQuickAccess(_ url: URL, sessionData: AnnotationSessionData?) async -> UUID?
+  func showQuickAccess(_ url: URL, kind: AutomationFileKind, sessionData: AnnotationSessionData?) async -> UUID?
   func setCloudLink(quickAccessItemID: UUID, result: CloudUploadResult)
   func openAnnotate(_ url: URL, quickAccessItemID: UUID?, sessionData: AnnotationSessionData?)
 
-  func recordHistory(_ url: URL) async
+  func recordHistory(_ url: URL, kind: AutomationFileKind) async
   func notify(title: String, body: String, isError: Bool) async
 }
 
@@ -47,6 +49,11 @@ final class LiveAutomationRunEnvironment: AutomationRunEnvironment {
     return NSPasteboard.general.changeCount
   }
 
+  func copyMedia(_ url: URL) -> Int {
+    ClipboardHelper.copyMediaFile(from: url)
+    return NSPasteboard.general.changeCount
+  }
+
   func copyText(_ text: String) -> Int {
     CloudShareService.shared.copyToPasteboard(text)
   }
@@ -63,7 +70,10 @@ final class LiveAutomationRunEnvironment: AutomationRunEnvironment {
     try await CloudShareService.shared.upload(fileURL: url)
   }
 
-  func showQuickAccess(_ url: URL, sessionData: AnnotationSessionData?) async -> UUID? {
+  func showQuickAccess(_ url: URL, kind: AutomationFileKind, sessionData: AnnotationSessionData?) async -> UUID? {
+    guard kind == .image else {
+      return await QuickAccessManager.shared.addVideo(url: url)?.id
+    }
     guard let item = await QuickAccessManager.shared.addScreenshot(url: url) else { return nil }
     if let sessionData {
       AnnotateManager.shared.saveSessionData(sessionData, for: item.id)
@@ -85,8 +95,15 @@ final class LiveAutomationRunEnvironment: AutomationRunEnvironment {
     }
   }
 
-  func recordHistory(_ url: URL) async {
-    await PostCaptureActionHandler.shared.addScreenshotToHistory(url: url)
+  func recordHistory(_ url: URL, kind: AutomationFileKind) async {
+    // A file handed in from the CLI or Shortcuts may already have an entry.
+    guard !CaptureHistoryStore.shared.hasRecord(forFilePath: url.path) else { return }
+    switch kind {
+    case .image:
+      await PostCaptureActionHandler.shared.addScreenshotToHistory(url: url)
+    case .video, .gif:
+      await PostCaptureActionHandler.shared.addVideoToHistory(url: url)
+    }
   }
 
   func notify(title: String, body: String, isError: Bool) async {

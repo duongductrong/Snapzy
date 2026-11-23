@@ -19,6 +19,8 @@
 //  | record.area      | RecordAreaParams    | CLIRecordingInfo  |
 //  | record.stop      | RecordStopParams    | CLIRecordingResult |
 //  | record.status    | CLIEmpty            | CLIRecordingStatus |
+//  | automation.list  | CLIEmpty            | CLIAutomationList |
+//  | automation.run   | CLIAutomationRunParams | CLIAutomationRunResult |
 //  | agent.tools      | AgentToolsParams    | AgentToolList     |
 //  | agent.call       | AgentCallParams     | AgentCallResult   |
 //
@@ -40,6 +42,10 @@ public enum CLIMethod: String, Codable, Sendable, CaseIterable {
   case recordArea = "record.area"
   case recordStop = "record.stop"
   case recordStatus = "record.status"
+  /// Protocol 1.1. An app on 1.0 answers `unknownMethod`.
+  case automationList = "automation.list"
+  /// Waits for the run to finish, including an interactive area selection.
+  case automationRun = "automation.run"
   /// Annotate AI tools for `snapzy mcp`; authorized by a session token (CLIAgentModels).
   case agentTools = "agent.tools"
   case agentCall = "agent.call"

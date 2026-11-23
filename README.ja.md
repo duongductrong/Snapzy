@@ -152,6 +152,8 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 
 **設定 → オートメーション** で、ひとつのショートカットにキャプチャの流れ全体を割り当てられます。内蔵：**クイックコピー**（範囲を選択し、画像をクリップボードへ。Quick Access カードなし）と **クラウド共有**（範囲を選択してアップロードし、公開リンクをクリップボードへ）。キャプチャモードとステップ（画像をコピー、アップロードしてリンクをコピー〔URL または Markdown〕、Quick Access を表示、Annotate で開く、通知）を組み合わせて自分で作ることもできます。アップロードに失敗しても画像はコピーされ、再試行用の Quick Access カードが残ります。
 
+オートメーションは、メニューバー、Quick Access カードや履歴の項目、`snapzy://automation/run`、コマンドライン、Apple ショートカットからも実行でき、既存のファイルに対して動かすこともできます。先にそのオートメーションで **URL スキーム、コマンドライン、ショートカットを許可** をオンにしてください。例：`snapzy automation run "Cloud Share"`。
+
 <a id="quick-access-card-actions"></a>
 
 ## クイックアクセスカードの操作

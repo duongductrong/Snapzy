@@ -143,6 +143,8 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 
 Run a whole capture flow from one shortcut in **Settings → Automations**. Built in: **Quick Copy** (select an area, image on the clipboard, no Quick Access card) and **Cloud Share** (select an area, upload, public link on the clipboard). Build your own from a capture mode and steps: copy image, upload and copy link (URL or Markdown), show Quick Access, open in Annotate, notification. If an upload fails, the image is still copied and a Quick Access card stays to retry.
 
+Automations can also start from the menu bar, a Quick Access card or History item, `snapzy://automation/run`, the command line and Apple Shortcuts, and can run on an existing file. Turn on **Allow URL scheme, command line and Shortcuts** for an automation first, then for example `snapzy automation run "Cloud Share"`.
+
 ## Quick Access card actions
 
 Hover a Quick Access card, then press the key. Active only while the pointer is over a card.

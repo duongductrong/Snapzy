@@ -370,7 +370,7 @@ final class TempCaptureManager {
 
   // MARK: - Private
 
-  private static func tempCaptureRootDirectory() -> URL {
+  nonisolated static func tempCaptureRootDirectory() -> URL {
     guard let appSupport = FileManager.default.urls(
       for: .applicationSupportDirectory, in: .userDomainMask
     ).first else {

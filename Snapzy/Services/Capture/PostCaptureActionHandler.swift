@@ -207,7 +207,7 @@ final class PostCaptureActionHandler {
   }
 
   /// Add a video or GIF to capture history
-  private func addVideoToHistory(url: URL) async {
+  func addVideoToHistory(url: URL) async {
     guard FileManager.default.fileExists(atPath: url.path) else {
       DiagnosticLogger.shared.log(
         .warning,

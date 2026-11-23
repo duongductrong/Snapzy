@@ -45,6 +45,13 @@ flowchart TD
 - Sidecar package format and signature validation: see [ANNOTATE.md](ANNOTATE.md#session-sidecars).
 - Restored saves follow the same Quick Access session behavior as fresh captures; already-saved files expose Open in the save/open slot.
 
+## Run Automation
+
+`HistoryContextMenu` (shared by the grid, carousel and floating views) adds a **Run Automation** submenu after the cloud upload item. Lists `AutomationStore.automations(for: .history, fileKind:)`: enabled, "Show in History" on, with at least one enabled step accepting the record's kind (`captureType` → image / video / GIF). Hidden when empty; items are disabled when the file no longer exists.
+
+- Runs `AutomationTriggerActions.runFromHistory` → `AutomationLauncher.launch(invocation: .history, input:)` with the record's file and `isAlreadyInHistory: true`: no new History row, no canvas preset, the original file is not modified.
+- Rejections show a warning toast. Details: [AUTOMATIONS.md](AUTOMATIONS.md).
+
 ## Storage
 
 - Database: GRDB SQLite at `~/Library/Application Support/Snapzy/snapzy.db` via `DatabaseManager` (`Services/Cloud/`). Migrations: `v1_createCloudUploadRecords`, `v2_createCaptureHistoryRecords`. Launch repair/reset recovery archives db files to `DatabaseRecovery-<timestamp>/`.
@@ -77,6 +84,7 @@ Unused (kept in tree): `HistoryMainView` (except `HistoryBackdropView`, still us
 ## Related docs
 
 - [QUICK_ACCESS.md](QUICK_ACCESS.md) — restore target and card lifecycle
+- [AUTOMATIONS.md](AUTOMATIONS.md) — Run Automation on a record
 - [ANNOTATE.md](ANNOTATE.md) — editable session restore, sidecar format
 - [VIDEO_EDITOR.md](VIDEO_EDITOR.md) — video/GIF restore target
 - [POST_CAPTURE.md](POST_CAPTURE.md) — where history records are created

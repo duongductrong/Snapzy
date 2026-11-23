@@ -9,6 +9,7 @@
 import Darwin
 import Foundation
 @testable import SnapzyCLIClient
+@testable import SnapzyCLICore
 @testable import SnapzyCLIProtocol
 import XCTest
 
@@ -156,6 +157,71 @@ final class CLIClientSocketTests: XCTestCase {
       as: CLICaptureResult.self
     )) { error in
       XCTAssertEqual(error as? CLIError, CLIError(.notAuthorized, "Terminal is not allowed"))
+    }
+  }
+
+  // MARK: - automation.* against an older Snapzy
+
+  func testAutomation_oldProtocolAsksForUpdateWithoutCalling() throws {
+    let server = try FakeSnapzyServer { header, _ in
+      if header.method == "hello" {
+        return FakeSnapzyServer.hello(id: header.id, protocolVersion: ProtocolVersion(major: 1, minor: 0))
+      }
+      XCTFail("automation request sent to a 1.0 app")
+      return nil
+    }
+    let client = try CLIClient(connection: SocketConnection.connect(path: server.path), cliVersion: "test",
+                               requestTimeout: 2)
+    defer { client.close() }
+
+    XCTAssertThrowsError(try AutomationCommand.call(
+      client, .automationList, params: CLIEmpty(), as: CLIAutomationList.self, timeout: 2
+    )) { error in
+      XCTAssertEqual((error as? CLIError)?.code, .unknownMethod)
+      XCTAssertEqual((error as? CLIError)?.message, "Update Snapzy to use automations")
+      XCTAssertEqual(CLIErrorCode.unknownMethod.exitCode, 5)
+    }
+  }
+
+  func testAutomation_unknownMethodAnswerAsksForUpdate() throws {
+    let server = try FakeSnapzyServer { header, _ in
+      header.method == "hello"
+        ? FakeSnapzyServer.hello(id: header.id)
+        : FakeSnapzyServer.encode(CLIResponseEnvelope<CLIEmpty>(
+          id: header.id,
+          error: CLIError(.unknownMethod, "Snapzy does not support automation.run")
+        ))
+    }
+    let client = try CLIClient(connection: SocketConnection.connect(path: server.path), cliVersion: "test",
+                               requestTimeout: 2)
+    defer { client.close() }
+
+    XCTAssertThrowsError(try AutomationCommand.call(
+      client, .automationRun, params: CLIAutomationRunParams(ref: "x"), as: CLIAutomationRunResult.self, timeout: 2
+    )) { error in
+      XCTAssertEqual((error as? CLIError)?.message, "Update Snapzy to use automations")
+    }
+  }
+
+  func testAutomation_runPassesParamsAndOtherErrorsThrough() throws {
+    let server = try FakeSnapzyServer { header, payload in
+      if header.method == "hello" { return FakeSnapzyServer.hello(id: header.id) }
+      let request = try? CLIJSON.makeDecoder().decode(CLIRequestEnvelope<CLIAutomationRunParams>.self, from: payload)
+      XCTAssertEqual(request?.params, CLIAutomationRunParams(ref: "Cloud Share", files: ["/tmp/a.png"]))
+      return FakeSnapzyServer.encode(CLIResponseEnvelope<CLIEmpty>(
+        id: header.id,
+        error: CLIError(.notAuthorized, "Cloud Share cannot be run from the command line")
+      ))
+    }
+    let client = try CLIClient(connection: SocketConnection.connect(path: server.path), cliVersion: "test",
+                               requestTimeout: 2)
+    defer { client.close() }
+
+    XCTAssertThrowsError(try AutomationCommand.call(
+      client, .automationRun, params: CLIAutomationRunParams(ref: "Cloud Share", files: ["/tmp/a.png"]),
+      as: CLIAutomationRunResult.self, timeout: 2
+    )) { error in
+      XCTAssertEqual((error as? CLIError)?.code, .notAuthorized)
     }
   }
 

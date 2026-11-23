@@ -43,7 +43,7 @@ flowchart TD
 
 ## AppCoordinator duties
 
-`Snapzy/App/AppCoordinator.swift` — `applicationDidFinishLaunching()` performs, in order:
+`Snapzy/App/AppCoordinator.swift` — `init(environment:)` wires `AutomationLauncher.shared.captureStarter = environment.screenCaptureViewModel` (the capture seam every automation trigger launches through). `applicationDidFinishLaunching()` performs, in order:
 
 1. `AppIdentityManager.shared.refresh()`.
 2. `CrashSentinel.shared.checkAndReset()` → `didCrash` flag.
@@ -67,7 +67,7 @@ flowchart TD
 6. TOML configuration: `SnapzyConfigurationAutoImporter.applyIfNeededOnLaunch()` → `SnapzyConfigurationSyncCoordinator.start()`; when the auto-import did not apply, `scheduleSync(reason: .appLaunch)`.
 7. Schedulers: `LogCleanupScheduler`, `RecordingMetadataCleanupScheduler`, `CaptureHistoryRetentionService` — all `.start()`.
 8. `AppStatusBarController.shared.setup(viewModel:updater:didCrash:)` — `didCrash` prompt only when crash detected **and** `DiagnosticLogger.isEnabled`; also pre-allocates the area-selection window pool via `AreaSelectionController.shared.prepareWindowPool()` (targets <150 ms activation).
-9. `CLIServer.shared.startIfEnabled()` — starts the `snapzy` CLI socket when `cliEnabled` is on and keeps following that key via KVO (see [CLI.md](CLI.md)); also sweeps expired headless captures.
+9. `CLIServer.shared.startIfEnabled()` — starts the `snapzy` CLI socket when `cliEnabled` is on and keeps following that key via KVO (see [CLI.md](CLI.md)); also sweeps expired headless captures. Right after, a Combine subscription on `AutomationStore.$automations` (debounced 1 s) calls `AutomationIntentSupport.refreshAppShortcuts()` so Shortcuts/Spotlight parameter phrases follow automation names and the external flag.
 10. After 0.3 s: `presentStartupExperience(...)` (see Onboarding).
 11. `.showOnboarding` notification observer → `SplashWindowController.shared.show(forceOnboarding: true)` ("Restart Onboarding" path).
 
@@ -104,6 +104,7 @@ State machine (`SplashScreen`): `splash` → `language` → `sponsor` (only when
   - When recording/paused: **Stop Recording (mm:ss)** and **Pause/Resume Recording**, then separator.
   - Captures: Capture Area, Capture Area & Annotate, Application Capture (overlay shortcut), Capture Fullscreen, Capture Active Window, Scrolling Capture (disabled while a session is active), Capture Text (OCR), Capture Smart Element, Object Cutout (macOS 14+ only).
   - Recording: Record Screen, Application Recording (both disabled while recorder active).
+  - Automations (capture group): submenu of automations with "Show in menu bar", hidden when none; entries run `AutomationLauncher.launch(invocation: .menuBar)`; ends with Manage Automations… ([AUTOMATIONS.md](AUTOMATIONS.md)).
   - Tools: Open Annotate, Edit Video, Cloud Uploads (enabled only when `CloudManager.shared.isConfigured`), History, Keyboard Shortcuts.
   - Conditional: **Grant Permission** (when screen permission missing), **What's New** (pending `FeatureIntroManager` campaign).
   - Check for Updates, Preferences `⌘,`, Quit `⌘Q`.
@@ -163,7 +164,7 @@ Security-scoped bookmarks persisted in UserDefaults: `exportLocation.bookmark` (
 
 ## Deep link dispatch
 
-AppleEvent `kAEGetURL` → `AppDelegate.handleGetURLEvent` → queued until coordinator ready → `AppCoordinator.handleDeepLink` → `SnapzyDeepLinkHandler.handle(url)`. Gated by `urlSchemeEnabled` (default `true`); unknown routes are logged and ignored. Full route table: [SHORTCUTS.md](SHORTCUTS.md#url-scheme-automation).
+AppleEvent `kAEGetURL` → `AppDelegate.handleGetURLEvent` → queued until coordinator ready → `AppCoordinator.handleDeepLink` → `SnapzyDeepLinkHandler.handle(url)`. Gated by `urlSchemeEnabled` (default `true`); unknown routes are logged and ignored. Full route table: [SHORTCUTS.md](SHORTCUTS.md#url-scheme-automation). `snapzy://automation/run` additionally needs the automation's external switch ([AUTOMATIONS.md](AUTOMATIONS.md#external-gate)).
 
 Deep links are fire-and-forget and mostly interactive. Agents and scripts that need a file path, JSON, and exit codes use the `snapzy` command line tool instead ([CLI.md](CLI.md)).
 

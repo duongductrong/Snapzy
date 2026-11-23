@@ -170,6 +170,26 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
     }
   }
 
+  func testAutomationRunRoutesParseReference() throws {
+    let id = UUID()
+    let cases: [(String, SnapzyDeepLinkAction)] = [
+      ("snapzy://automation/run?id=\(id.uuidString)", .runAutomation(.id(id))),
+      ("snapzy://automations/run?id=\(id.uuidString.lowercased())", .runAutomation(.id(id))),
+      ("snapzy://workflow/run?name=Cloud%20Share", .runAutomation(.name("Cloud Share"))),
+      ("snapzy://automation/run?id=\(id.uuidString)&name=Other", .runAutomation(.id(id))),
+      ("snapzy://automation/run?name=Quick%20Copy&file=/etc/hosts", .runAutomation(.name("Quick Copy"))),
+      ("snapzy://automations", .openSettings(.automations)),
+    ]
+    for (urlString, expected) in cases {
+      let url = try XCTUnwrap(URL(string: urlString))
+      XCTAssertEqual(SnapzyDeepLinkAction(url: url), expected, urlString)
+    }
+
+    let withFile = try XCTUnwrap(URL(string: "snapzy://automation/run?name=Quick&file=/etc/hosts"))
+    XCTAssertTrue(SnapzyDeepLinkAction.hasFileParameter(withFile), "file= is detected so it can be logged and ignored")
+    XCTAssertNil(SnapzyDeepLinkAction(url: try XCTUnwrap(URL(string: "snapzy://automation/run"))), "A reference is required")
+  }
+
   func testUnsupportedRoutesReturnNil() throws {
     let urls = [
       "https://capture/area",

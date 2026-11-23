@@ -694,41 +694,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     AutomationRunner.shared.saveToExportOverride(for: routing)
   }
 
-  /// Starts the capture an automation's source asks for; the saved file comes
-  /// back to `AutomationRunner` through `PostCaptureRouting.automation`.
+  /// Hotkey trigger. Rejections stay silent (logged by the launcher) so a
+  /// shortcut pressed mid-capture never shows a toast.
   func runAutomation(id: UUID) {
-    guard let automation = AutomationStore.shared.automation(id: id) else {
-      DiagnosticLogger.shared.log(.warning, .action, "Automation trigger ignored: not found", context: ["id": id.uuidString])
-      return
-    }
-    guard automation.isEnabled, let spec = automation.captureSpec else {
-      DiagnosticLogger.shared.log(
-        .info,
-        .action,
-        "Automation trigger ignored: disabled or unsupported source",
-        context: ["id": id.uuidString]
-      )
-      return
-    }
-    guard hasPermission else {
-      requestPermission()
-      return
-    }
-    guard !isAreaSelectionActive, !isCapturing else {
-      DiagnosticLogger.shared.log(.debug, .action, "Automation trigger ignored: capture in progress")
-      return
-    }
-
-    let routing = AutomationRunner.shared.begin(automation)
-    switch spec.mode {
-    case .area:
-      captureArea(routing: routing)
-    case .applicationWindow:
-      captureApplication(routing: routing)
-    case .fullscreen:
-      captureFullscreen(routing: routing)
-    case .activeWindow:
-      captureActiveWindow(routing: routing)
+    Task {
+      _ = await AutomationLauncher.shared.launch(.id(id), invocation: .hotkey)
     }
   }
 
@@ -3271,5 +3241,34 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       style: .error,
       position: .bottomCenter
     )
+  }
+}
+
+// MARK: - Automation capture seam
+
+extension ScreenCaptureViewModel: AutomationCaptureStarting {
+  func automationCaptureBlocker() -> AutomationLaunchRejection? {
+    guard hasPermission else {
+      requestPermission()
+      return .permissionRequired
+    }
+    guard !isAreaSelectionActive, !isCapturing else {
+      return .captureInProgress
+    }
+    return nil
+  }
+
+  /// The saved file comes back to `AutomationRunner` through `PostCaptureRouting.automation`.
+  func startAutomationCapture(mode: AutomationCaptureMode, routing: PostCaptureRouting) {
+    switch mode {
+    case .area:
+      captureArea(routing: routing)
+    case .applicationWindow:
+      captureApplication(routing: routing)
+    case .fullscreen:
+      captureFullscreen(routing: routing)
+    case .activeWindow:
+      captureActiveWindow(routing: routing)
+    }
   }
 }

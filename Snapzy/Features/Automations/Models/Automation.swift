@@ -30,6 +30,9 @@ struct AutomationCaptureSpec: Codable, Equatable, Sendable {
 
 enum AutomationSource: Equatable {
   case capture(AutomationCaptureSpec)
+  /// Runs only on files handed in by the trigger (Quick Access, History, CLI,
+  /// Shortcuts). Never starts a capture, so it has no hotkey or menu bar item.
+  case input
   case unsupported(AutomationJSONValue)
 }
 
@@ -41,11 +44,14 @@ extension AutomationSource: Codable {
   init(from decoder: Decoder) throws {
     let raw = try AutomationJSONValue(from: decoder)
     let container = try decoder.container(keyedBy: CodingKeys.self)
-    if (try? container.decode(String.self, forKey: .kind)) == "capture",
+    let kind = try? container.decode(String.self, forKey: .kind)
+    if kind == "capture",
        let mode = try? container.decode(AutomationCaptureMode.self, forKey: .mode)
     {
       let save = (try? container.decode(Bool.self, forKey: .saveToExportDirectory)) ?? false
       self = .capture(AutomationCaptureSpec(mode: mode, saveToExportDirectory: save))
+    } else if kind == "input" {
+      self = .input
     } else {
       self = .unsupported(raw)
     }
@@ -58,6 +64,9 @@ extension AutomationSource: Codable {
       try container.encode("capture", forKey: .kind)
       try container.encode(spec.mode, forKey: .mode)
       try container.encode(spec.saveToExportDirectory, forKey: .saveToExportDirectory)
+    case .input:
+      var container = encoder.container(keyedBy: CodingKeys.self)
+      try container.encode("input", forKey: .kind)
     case .unsupported(let raw):
       try raw.encode(to: encoder)
     }
@@ -68,7 +77,29 @@ extension AutomationSource: Codable {
 
 enum AutomationTrigger: Equatable {
   case hotkey(ShortcutConfig)
+  /// Listed in the menu bar "Automations" submenu.
+  case menuBar
+  /// Listed in a Quick Access card's "Run Automation" menu.
+  case quickAccessAction
+  /// Listed in a History item's "Run Automation" menu.
+  case historyAction
   case unsupported(AutomationJSONValue)
+
+  /// Stored kinds without a payload, keyed by their JSON `kind`.
+  fileprivate static let simpleKinds: [String: AutomationTrigger] = [
+    "menuBar": .menuBar,
+    "quickAccessAction": .quickAccessAction,
+    "historyAction": .historyAction,
+  ]
+
+  fileprivate var simpleKind: String? {
+    switch self {
+    case .menuBar: "menuBar"
+    case .quickAccessAction: "quickAccessAction"
+    case .historyAction: "historyAction"
+    case .hotkey, .unsupported: nil
+    }
+  }
 }
 
 extension AutomationTrigger: Codable {
@@ -79,10 +110,13 @@ extension AutomationTrigger: Codable {
   init(from decoder: Decoder) throws {
     let raw = try AutomationJSONValue(from: decoder)
     let container = try decoder.container(keyedBy: CodingKeys.self)
-    if (try? container.decode(String.self, forKey: .kind)) == "hotkey",
+    let kind = try? container.decode(String.self, forKey: .kind)
+    if kind == "hotkey",
        let shortcut = try? container.decode(ShortcutConfig.self, forKey: .shortcut)
     {
       self = .hotkey(shortcut)
+    } else if let kind, let simple = Self.simpleKinds[kind] {
+      self = simple
     } else {
       self = .unsupported(raw)
     }
@@ -94,6 +128,9 @@ extension AutomationTrigger: Codable {
       var container = encoder.container(keyedBy: CodingKeys.self)
       try container.encode("hotkey", forKey: .kind)
       try container.encode(shortcut, forKey: .shortcut)
+    case .menuBar, .quickAccessAction, .historyAction:
+      var container = encoder.container(keyedBy: CodingKeys.self)
+      try container.encode(simpleKind, forKey: .kind)
     case .unsupported(let raw):
       try raw.encode(to: encoder)
     }
@@ -281,6 +318,31 @@ struct Automation: Identifiable, Equatable {
     }
   }
 
+  var showsInMenuBar: Bool {
+    get { triggers.contains(.menuBar) }
+    set { setTrigger(.menuBar, on: newValue) }
+  }
+
+  var showsInQuickAccess: Bool {
+    get { triggers.contains(.quickAccessAction) }
+    set { setTrigger(.quickAccessAction, on: newValue) }
+  }
+
+  var showsInHistory: Bool {
+    get { triggers.contains(.historyAction) }
+    set { setTrigger(.historyAction, on: newValue) }
+  }
+
+  private mutating func setTrigger(_ trigger: AutomationTrigger, on: Bool) {
+    triggers.removeAll { $0 == trigger }
+    if on { triggers.append(trigger) }
+  }
+
+  /// True when the source starts a capture (so a hotkey or menu item can run it alone).
+  var startsCapture: Bool {
+    captureSpec != nil
+  }
+
   var captureSpec: AutomationCaptureSpec? {
     guard case .capture(let spec) = source else { return nil }
     return spec
@@ -297,7 +359,8 @@ struct Automation: Identifiable, Equatable {
 
   /// True when this build cannot run the source (it was written by a newer Snapzy).
   var hasUnsupportedSource: Bool {
-    captureSpec == nil
+    if case .unsupported = source { return true }
+    return false
   }
 
   /// Sanitized copy: trimmed name, one step per kind, Copy Image always before
@@ -329,10 +392,22 @@ struct Automation: Identifiable, Equatable {
     }
 
     var keptHotkey = false
+    var seenSimple = Set<String>()
+    let isInput = source == .input
     copy.triggers = triggers.filter { trigger in
-      guard case .hotkey = trigger else { return true }
-      defer { keptHotkey = true }
-      return !keptHotkey
+      switch trigger {
+      case .hotkey:
+        // An input automation has no file to run on when started from a shortcut.
+        guard !isInput else { return false }
+        defer { keptHotkey = true }
+        return !keptHotkey
+      case .menuBar where isInput:
+        return false
+      case .menuBar, .quickAccessAction, .historyAction:
+        return seenSimple.insert(trigger.simpleKind ?? "").inserted
+      case .unsupported:
+        return true
+      }
     }
     return copy
   }

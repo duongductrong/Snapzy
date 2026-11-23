@@ -207,11 +207,19 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 | `snapzy://tools/measure` | Measure Screen / Screen Ruler (aliases `tools/ruler`, `measure`, `ruler`, `screen-ruler`, `measure-screen`) |
 | `snapzy://show/shortcuts` | Toggle shortcut cheat sheet |
 | `snapzy://settings` / `snapzy://settings?tab=<tab>` | Open Settings, optionally to a tab |
+| `snapzy://automation/run?id=<uuid>` or `?name=<name>` | Run an automation (aliases `automations/run`, `workflow/run`); see below |
+| `snapzy://automations` | Open Settings → Automations (aliases `automation`, `workflows`) |
 
 - `open/combine` query params: repeat `?file=` with absolute paths; ≥2 valid files → combines directly, otherwise opens the combine picker (`CombineImagesCoordinator.presentPicker()`). Example:
 
   ```sh
   open 'snapzy://open/combine?file=/tmp/first.png&file=/tmp/second.png'
+  ```
+
+- `automation/run` ([AUTOMATIONS.md](AUTOMATIONS.md)): `id` (UUID) wins over `name` (trimmed, case-insensitive; names are not unique, so use `id` when several share one). A non-UUID `id` is treated as a name. Runs through `AutomationLauncher` with `invocation: .urlScheme`, so it needs **both** the global URL scheme toggle **and** the automation's "Allow URL scheme, command line and Shortcuts" switch (Settings → Automations → editor → Run from Other Apps; default off). The automation's own source runs (usually an interactive capture); an input-source automation is rejected (`needs_file`). `file=` is ignored (logged as a warning): a link must not be able to upload a local file. Rejections (not found, ambiguous name, not allowed, disabled, busy, missing permission) show a warning toast and never reveal other automations' names. Example:
+
+  ```sh
+  open 'snapzy://automation/run?name=Cloud%20Share'
   ```
 
 - Settings tabs: `general`, `capture`, `annotate`, `ai` (`ask`), `quick-access`, `history`, `shortcuts`, `permissions`, `command-line` (`cli`), `cloud`, `advanced`, `about`. Also accepted as path form (`snapzy://settings/capture`).
@@ -226,3 +234,4 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 - [ANNOTATE.md](ANNOTATE.md) — editor tools and actions
 - [VIDEO_EDITOR.md](VIDEO_EDITOR.md) — video editor keys
 - [CONFIGURATION.md](CONFIGURATION.md) — TOML control of shortcut prefs
+- [AUTOMATIONS.md](AUTOMATIONS.md) — automation triggers, external gate, rejection reasons

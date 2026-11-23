@@ -133,3 +133,34 @@ extension CLIRecordingResult: HumanReadable {
     return "\(file.path)  \(file.width)x\(file.height)  \(RecordingDuration.text(file.durationSeconds))  \(size)"
   }
 }
+
+extension CLIAutomationList: HumanReadable {
+  /// `3F2A…  Cloud Share  area → copyImage, uploadAndCopyLink`, flagged when it cannot run.
+  public var humanDescription: String {
+    guard !automations.isEmpty else { return "No automations." }
+    return automations.map { automation in
+      var line = "\(automation.id)  \(automation.name)  \(automation.source)"
+      if !automation.steps.isEmpty {
+        line += " → \(automation.steps.joined(separator: ", "))"
+      }
+      if !automation.enabled {
+        line += "  disabled"
+      }
+      if !automation.external {
+        line += "  not allowed from the command line"
+      }
+      return line
+    }.joined(separator: "\n")
+  }
+}
+
+extension CLIAutomationRunResult: HumanReadable {
+  /// `Link copied: https://…` (or Snapzy's summary), then one file path per line.
+  public var humanDescription: String {
+    guard state == .finished else { return "Cancelled." }
+    let summary = message.isEmpty ? (isError ? "Failed" : "Done") : message
+    var lines = [link.map { "\(summary): \($0)" } ?? summary]
+    lines += files
+    return lines.joined(separator: "\n")
+  }
+}

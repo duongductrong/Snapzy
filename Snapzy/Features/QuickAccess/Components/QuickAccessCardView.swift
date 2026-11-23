@@ -740,9 +740,42 @@ struct QuickAccessCardView: View {
           action: { performAction(action) }
         )
       )
+
+      if action == .uploadToCloud, let automationsEntry = runAutomationContextMenuEntry {
+        entries.append(automationsEntry)
+      }
+    }
+
+    if !contextActions.contains(.uploadToCloud), let automationsEntry = runAutomationContextMenuEntry {
+      let destructiveIndex = entries.firstIndex { if case .separator = $0 { return true } else { return false } }
+      entries.insert(automationsEntry, at: destructiveIndex ?? entries.endIndex)
     }
 
     return entries
+  }
+
+  /// "Run Automation" submenu: automations marked for Quick Access whose steps
+  /// accept this file. They run on the card's file and reuse this card.
+  private var runAutomationContextMenuEntry: QuickAccessContextMenuEntry? {
+    guard let fileKind = AutomationFileKind.of(item.url) else { return nil }
+    let automations = AutomationStore.shared.automations(for: .quickAccess, fileKind: fileKind)
+    guard !automations.isEmpty else { return nil }
+    let item = item
+    return .submenu(
+      title: L10n.Automations.runAutomationMenu,
+      systemImage: "bolt",
+      isEnabled: true,
+      makeEntries: {
+        automations.map { automation in
+          .action(
+            title: automation.displayName,
+            systemImage: automation.symbol ?? "bolt",
+            isEnabled: true,
+            action: { AutomationTriggerActions.runFromQuickAccess(automation.id, item: item) }
+          )
+        }
+      }
+    )
   }
 
   /// Optimize as a submenu so the levels stay reachable from the context menu even

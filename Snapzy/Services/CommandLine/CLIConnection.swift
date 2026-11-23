@@ -15,6 +15,15 @@ final nonisolated class CLIConnection: @unchecked Sendable {
   static let handshakeTimeout: TimeInterval = 5
   static let idleTimeout: TimeInterval = 60
   static let writeTimeout: TimeInterval = 5
+  /// `automation.run` waits for the user's area selection and then an upload.
+  static let automationRunTimeout: TimeInterval = 15 * 60
+
+  /// Longest one request may run before the connection is closed (which cancels it).
+  /// `nil`: no server-side limit while the request runs; the CLI's `--timeout` bounds it.
+  /// The idle timeout applies only between requests.
+  static func requestTimeout(for method: String) -> TimeInterval? {
+    method == CLIMethod.automationRun.rawValue ? automationRunTimeout : nil
+  }
 
   let id = UUID()
 
@@ -173,6 +182,10 @@ final nonisolated class CLIConnection: @unchecked Sendable {
 
     isProcessing = true
     timeoutTimer?.cancel()
+    timeoutTimer = nil
+    if let limit = Self.requestTimeout(for: header.method) {
+      scheduleTimeout(limit, reason: "request \(header.method)")
+    }
     let router = router
     let authorizer = authorizer
     let context = CLIRequestContext(

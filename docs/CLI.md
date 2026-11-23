@@ -1,6 +1,6 @@
 # snapzy Command Line Tool
 
-`snapzy` lets AI agents, scripts, and terminals capture or record a display, a window, or an area through Snapzy — no overlay, no clicks — and get back a file path, JSON metadata, and an exit code. It ships inside the app at `Snapzy.app/Contents/Helpers/snapzy`.
+`snapzy` lets AI agents, scripts, and terminals capture or record a display, a window, or an area through Snapzy — no overlay, no clicks — and get back a file path, JSON metadata, and an exit code. It can also run the user's [automations](#automations) (capture → copy / upload → link) and wait for the result. It ships inside the app at `Snapzy.app/Contents/Helpers/snapzy`.
 
 Current as of HEAD (`v2.3.0-beta.10`, build 243, macOS 13.0+ deployment target).
 
@@ -18,6 +18,7 @@ flowchart LR
     E --> R["HeadlessRecordingService"]
     R --> S["ScreenRecordingManager"]
     S --> H
+    E --> AU["AutomationLauncher (automation.run)"]
     B -->|"moves file to --output"| I["caller's path"]
 ```
 
@@ -65,6 +66,8 @@ Sparkle replaces the whole bundle at the same path, so the helper updates with t
 | `snapzy record area --rect x,y,w,h` | Records a rectangle; one spanning displays records the part on the display it overlaps most |
 | `snapzy record stop [--id ID] [-o PATH] [--force]` | Stops the `snapzy` recording (or collects one stopped from the menu bar) and prints its file |
 | `snapzy record status` | The `snapzy` recording in progress, if any. Never starts or stops anything |
+| `snapzy automation list` | Every automation with its id, source, enabled steps and whether the command line may run it; runnable ones first — see [Automations](#automations) |
+| `snapzy automation run ID\|NAME [--file PATH]…` | Runs an automation like its shortcut would and waits for the result (link, files). With `--file` the capture is skipped and the steps run on those files |
 | `snapzy measure image PATH (--at x,y \| --box x,y,w,h)…` | Measures an image file **in the CLI process**: no app, no approval, no Screen Recording permission |
 | `snapzy measure screen [--display main\|ID] (--at … \| --box …)…` | Captures one display, then measures it locally |
 | `snapzy measure window --id ID \| --app NAME … \| --active (--at … \| --box …)…` | Captures one window without its shadow, then measures it |
@@ -100,8 +103,9 @@ App matching (`--app`): exact bundle ID, else exact name, else name prefix — c
 | `--mic` | record | Record the default microphone. Snapzy must already have Microphone access (it never prompts); otherwise `permissionDenied` |
 | `--duration S` | record | Stop after S seconds |
 | `--detach` | record | Return once recording starts (prints the recording); stop it later with `snapzy record stop` |
+| `--file PATH` | automation run | Repeatable. An image, GIF or video to run the steps on instead of capturing. Resolved to an absolute path and checked to exist **before** contacting Snapzy (missing → `targetNotFound`, directory → `invalidArguments`). Never modified |
 | `--json` | all | JSON even on a terminal (pretty-printed there) |
-| `--timeout S` | all | Per-request timeout, default 30 |
+| `--timeout S` | all | Per-request timeout, default 30 (`automation run`: 300, since an area selection waits for the user) |
 | `--launch-timeout S` | all | Wait for Snapzy to start, default 15 |
 | `--no-launch` | all | Fail instead of starting Snapzy |
 
@@ -155,6 +159,51 @@ Stdout is JSON when it is not a terminal (or with `--json`); a terminal gets one
 
 `--detach` and `snapzy record status` print the recording instead: `{"recording":{"displayID":1,"elapsedSeconds":4,"format":"mov","id":"snapzy-cli-…","output":{"force":false,"path":"/Users/me/demo.mov"},"rect":{…},"state":"recording"},"interactiveRecordingActive":false}` (status; `recording` is absent when none runs). `rect` is the recorded region in global top-left points, clamped to the recorded display; window recordings add `window` and `matchedCandidates`.
 
+### Automations
+
+`snapzy automation run` goes through the same `AutomationLauncher` as the automation's shortcut, the menu bar, the URL scheme and Shortcuts, so the steps behave identically (clipboard, upload, Quick Access, notification, History). Unlike other commands this is **not** headless: an `area` automation shows the selection overlay and the command waits until the user finishes or cancels.
+
+- **Gate.** Only automations with **Allow URL scheme, command line and Shortcuts** on (Settings → Automations, `external_invocation` in `config.toml`) can run; others give `notAuthorized` (7) with that hint. The calling app still needs [approval](#approval); the prompt names `automation run`. With command line access off, `automation.*` is not served even while `snapzy mcp` holds the socket in agent-only mode.
+- **Reference.** A UUID from `automation list`, or the name — trimmed, case-insensitive, matching the stored or the shown (localized preset) name. Several matches → `invalidArguments` listing the ids.
+- **Files.** With `--file` the capture source is skipped; each enabled step that accepts the file kind (image, GIF, video) runs, others are skipped. No canvas preset is applied, the file gets a History row like a capture, and the original is never modified. An `input` automation (source "files only") needs `--file`.
+- **Result.** Exit 0 when the steps ran, 1 when one failed (`isError`, e.g. the upload failed but the image was still copied), 6 when the capture was cancelled or saved nothing (`state: "cancelled"`; `runId` is empty).
+- **Older Snapzy.** An app speaking protocol 1.0 (or answering `unknownMethod`) → exit 5, `Update Snapzy to use automations`.
+- **Timeouts.** The CLI waits `--timeout` (default 300 s). Snapzy closes an `automation.run` request after 15 minutes regardless.
+
+`snapzy automation list --json`:
+
+```json
+{"automations":[{"enabled":true,"external":true,"id":"3F2A…","name":"Cloud Share","source":"area",
+ "steps":["copyImage","uploadAndCopyLink"]}]}
+```
+
+`source` is `area`, `fullscreen`, `activeWindow`, `applicationWindow`, `input` (files only), or `unsupported` (made by a newer Snapzy). A terminal gets `3F2A…  Cloud Share  area → copyImage, uploadAndCopyLink`, flagged `disabled` / `not allowed from the command line`.
+
+`snapzy automation run "Cloud Share" --json` (after the user selects an area):
+
+```json
+{"automationId":"3F2A…","files":["/Users/me/Desktop/Snapzy 2026-11-23 at 10.15.00.png"],"isError":false,
+ "link":"https://share.example.com/a1b2.png","message":"Link copied","runId":"9C1D…","state":"finished"}
+```
+
+`message` is Snapzy's own summary, in the app's language; branch on `state`, `isError` and the exit code. A terminal gets `Link copied: https://…` (or `Image copied`) and then one file path per line.
+
+Agent example — upload a file it already has and use the link:
+
+```bash
+link=$(snapzy automation run "Cloud Share" --file ./build/screenshot.png --json | jq -r .link)
+```
+
+| Rejection | Code (exit) |
+| --- | --- |
+| no such automation; `--file` missing at run time | `targetNotFound` (4) |
+| ambiguous name; `input` automation without `--file`; unsupported file; no enabled step accepts the file kind | `invalidArguments` (2) |
+| automation turned off | `disabled` (5) |
+| another capture in progress | `busy` (5) |
+| made by a newer Snapzy | `versionMismatch` (5) |
+| Screen Recording missing | `permissionDenied` (3) |
+| external invocation off for this automation | `notAuthorized` (7) |
+
 ### Coordinates
 
 All frames and `--rect` use **global points with the origin at the top-left of the main display** (CoreGraphics/Accessibility convention). Displays left of or above the main one have negative x/y; `--rect -1440,0,800,600` works without `=`. A frame from `list windows` can be passed straight to `capture area`.
@@ -166,12 +215,13 @@ All frames and `--rect` use **global points with the origin at the top-left of t
 | Exit | Error codes | Meaning |
 | --- | --- | --- |
 | 0 | — | Success |
-| 1 | `internal` | Unexpected failure (also unknown codes from a newer Snapzy) |
+| 1 | `internal` | Unexpected failure (also unknown codes from a newer Snapzy); `automation run` whose step failed (`isError`) |
 | 2 | `invalidArguments` | Bad flags, partly off-screen area, existing `--output`, a recording `--output` that is not `.mov`/`.mp4`, a measure point outside the image, a file that is not an image |
 | 3 | `permissionDenied`, `onboardingIncomplete` | Screen Recording (or Microphone, for `--mic`) missing or not active yet; setup unfinished |
-| 4 | `targetNotFound` | No such display/window/app, area off screen, no file at the `measure image` path, or no `snapzy` recording to stop |
-| 5 | `appUnavailable`, `launchTimeout`, `disabled`, `busy`, `versionMismatch`, `unknownMethod` | Snapzy not reachable, command line access off, another capture or recording running, screen locked, version skew |
-| 7 | `notAuthorized` | This app was denied, not approved in time, or could not be identified |
+| 4 | `targetNotFound` | No such display/window/app, area off screen, no file at the `measure image` or `--file` path, no `snapzy` recording to stop, or no such automation |
+| 5 | `appUnavailable`, `launchTimeout`, `disabled`, `busy`, `versionMismatch`, `unknownMethod` | Snapzy not reachable, command line access off, another capture or recording running, screen locked, version skew, automation turned off, Snapzy too old for `automation` |
+| 6 | — | `automation run`: the capture was cancelled (`state: "cancelled"`) |
+| 7 | `notAuthorized` | This app was denied, not approved in time, or could not be identified; or the automation does not allow the command line |
 
 ## Approval
 
@@ -211,7 +261,7 @@ Debug (`com.trongduong.snapzy.debug`) and release builds use separate sockets. T
 
 ## Wire protocol
 
-`SnapzyCLIProtocol` (Foundation-only, linked by the app): 4-byte big-endian length + one UTF-8 JSON document, max 1 MiB. The first request must be `hello` with `protocolVersion` (`"1.0"`); a different major version gets `versionMismatch`. Requests are `{id, method, params}`, responses `{id, result}` or `{id, error}`; errors to unreadable requests use `id: 0`. Methods: `hello`, `system.status`, `list.displays|windows|apps`, `capture.screen|window|area`, `record.screen|window|area|stop|status`, `agent.tools|call` (token-bound, for `snapzy mcp`). One request at a time per connection; 5 s handshake and 60 s idle timeouts; over 8 connections the server answers `busy` instead of refusing.
+`SnapzyCLIProtocol` (Foundation-only, linked by the app): 4-byte big-endian length + one UTF-8 JSON document, max 1 MiB. The first request must be `hello` with `protocolVersion` (`"1.1"`; 1.1 added `automation.*`); a different major version gets `versionMismatch`, and an older minor answers new methods with `unknownMethod`. Requests are `{id, method, params}`, responses `{id, result}` or `{id, error}`; errors to unreadable requests use `id: 0`. Methods: `hello`, `system.status`, `list.displays|windows|apps`, `capture.screen|window|area`, `record.screen|window|area|stop|status`, `automation.list|run`, `agent.tools|call` (token-bound, for `snapzy mcp`). One request at a time per connection; 5 s handshake and 60 s idle timeouts (idle = between requests; a running request has no server limit except `automation.run`, closed after 15 min); over 8 connections the server answers `busy` instead of refusing.
 
 ## Source map
 
@@ -219,7 +269,7 @@ Debug (`com.trongduong.snapzy.debug`) and release builds use separate sockets. T
 | --- | --- |
 | `Packages/SnapzyCLIKit/` | `SnapzyCLIProtocol` (wire), `SnapzyCLIClient` (socket, app locator/launcher), `SnapzyCLICore` (commands, output; `Commands/Measure/`, `Measure/`, `Commands/Record/`), `SnapzyMeasureCore` (pixel edge engine shared with the app), `snapzy-dev` (dev executable) |
 | `SnapzyCLI/main.swift` | Xcode Command Line Tool target `SnapzyCLI` (product `snapzy`, module `SnapzyCLIMain`), embedded by the app's "Embed Command Line Tool" phase |
-| `Snapzy/Services/CommandLine/` | `CLIServer`, `CLISocketListener`, `CLIConnection`, `CLIRequestRouter`, authorization, identity, installer, activity indicator, handlers |
+| `Snapzy/Services/CommandLine/` | `CLIServer`, `CLISocketListener`, `CLIConnection`, `CLIRequestRouter`, authorization, identity, installer, activity indicator, handlers (`CLIAutomationHandlers` → `AutomationLauncher`) |
 | `Snapzy/Services/Capture/HeadlessCapture/` | `HeadlessCaptureService`, `HeadlessRecordingService`, `CaptureTargetResolver`, staging, post-processor, `AppNameMatcher` |
 | `Snapzy/Features/CommandLine/` | Approval prompt |
 | `Snapzy/Features/Preferences/Components/PreferencesCommandLineSection.swift` | Settings section |

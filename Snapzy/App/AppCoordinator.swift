@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 import Foundation
 import SnapzyCLIProtocol
 
@@ -13,9 +14,11 @@ import SnapzyCLIProtocol
 final class AppCoordinator {
   private let environment: AppEnvironment
   private var observers: [NSObjectProtocol] = []
+  private var automationShortcutsSubscription: AnyCancellable?
 
   init(environment: AppEnvironment) {
     self.environment = environment
+    AutomationLauncher.shared.captureStarter = environment.screenCaptureViewModel
   }
 
   func applicationDidFinishLaunching() {
@@ -89,6 +92,12 @@ final class AppCoordinator {
     )
 
     CLIServer.shared.startIfEnabled()
+    // Shortcuts / Spotlight list automations by name; refresh when they change.
+    automationShortcutsSubscription = AutomationStore.shared.$automations
+      .map { automations in automations.map { [$0.id.uuidString, $0.displayName, "\($0.externalInvocation)", "\($0.isEnabled)"] } }
+      .removeDuplicates()
+      .debounce(for: .seconds(1), scheduler: RunLoop.main)
+      .sink { _ in AutomationIntentSupport.refreshAppShortcuts() }
 
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
       DiagnosticLogger.shared.log(.debug, .ui, "Splash presentation scheduled")

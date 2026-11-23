@@ -33,6 +33,26 @@ struct HistoryContextMenu: View {
       .disabled(manager.cloudUploadState(for: record) != nil)
     }
 
+    let automations = AutomationStore.shared.automations(
+      for: .history,
+      fileKind: AutomationTriggerActions.fileKind(of: record)
+    )
+    if !automations.isEmpty {
+      let fileExists = FileManager.default.fileExists(atPath: record.fileURL.path)
+      Menu {
+        ForEach(automations) { automation in
+          Button {
+            AutomationTriggerActions.runFromHistory(automation.id, record: record)
+          } label: {
+            Label(automation.displayName, systemImage: automation.symbol ?? "bolt")
+          }
+          .disabled(!fileExists)
+        }
+      } label: {
+        Label(L10n.Automations.runAutomationMenu, systemImage: "bolt")
+      }
+    }
+
     Divider()
 
     Button(L10n.Common.delete) {

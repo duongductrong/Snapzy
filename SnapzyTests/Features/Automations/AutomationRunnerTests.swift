@@ -10,13 +10,15 @@ import XCTest
 @testable import Snapzy
 
 @MainActor
-private final class FakeAutomationEnvironment: AutomationRunEnvironment {
+final class FakeAutomationEnvironment: AutomationRunEnvironment {
   struct UploadFailure: LocalizedError {
     var errorDescription: String? { "offline" }
   }
 
   var changeCount = 0
   var copiedImages: [[URL]] = []
+  var copiedMedia: [URL] = []
+  var preparedScreenshots: [URL] = []
   var copiedTexts: [String] = []
   var isCloudConfigured = true
   var uploadShouldFail = false
@@ -25,11 +27,21 @@ private final class FakeAutomationEnvironment: AutomationRunEnvironment {
   var cloudLinks: [UUID: URL] = [:]
   var annotated: [(URL, UUID?)] = []
   var history: [URL] = []
+  var historyKinds: [AutomationFileKind] = []
   var notifications: [(title: String, body: String, isError: Bool)] = []
   /// Simulates the user copying something while an upload runs.
   var copyDuringUpload = false
 
-  func prepareScreenshot(_: URL) -> AnnotationSessionData? { nil }
+  func prepareScreenshot(_ url: URL) -> AnnotationSessionData? {
+    preparedScreenshots.append(url)
+    return nil
+  }
+
+  func copyMedia(_ url: URL) -> Int {
+    copiedMedia.append(url)
+    changeCount += 1
+    return changeCount
+  }
 
   func copyImages(_ urls: [URL]) -> Int {
     copiedImages.append(urls)
@@ -57,7 +69,7 @@ private final class FakeAutomationEnvironment: AutomationRunEnvironment {
     )
   }
 
-  func showQuickAccess(_ url: URL, sessionData _: AnnotationSessionData?) async -> UUID? {
+  func showQuickAccess(_ url: URL, kind _: AutomationFileKind, sessionData _: AnnotationSessionData?) async -> UUID? {
     quickAccessShown.append(url)
     return UUID()
   }
@@ -70,8 +82,9 @@ private final class FakeAutomationEnvironment: AutomationRunEnvironment {
     annotated.append((url, quickAccessItemID))
   }
 
-  func recordHistory(_ url: URL) async {
+  func recordHistory(_ url: URL, kind: AutomationFileKind) async {
     history.append(url)
+    historyKinds.append(kind)
   }
 
   func notify(title: String, body: String, isError: Bool) async {
@@ -220,6 +233,98 @@ final class AutomationRunnerTests: XCTestCase {
 
     XCTAssertEqual(environment.copiedImages, [[capture]])
     XCTAssertNil(runner.saveToExportOverride(for: routing), "A run is consumed once")
+  }
+
+  // MARK: - Milestone 2: input runs and awaitable capture runs
+
+  func testInputRunSkipsCanvasPresetAndHistoryWhenAlreadyRecorded() async throws {
+    let input = AutomationInput(files: [capture], isAlreadyInHistory: true)
+
+    let result = try await XCTUnwrapAsync(
+      await runner.run(AutomationPreset.quickCopy.makeAutomation(), input: input, invocation: .history)
+    )
+
+    XCTAssertTrue(environment.preparedScreenshots.isEmpty, "Input files are never re-processed")
+    XCTAssertTrue(environment.history.isEmpty)
+    XCTAssertEqual(environment.copiedImages, [[capture]])
+    XCTAssertEqual(result.report.files, [capture])
+  }
+
+  func testInputRunRecordsHistoryByKindWhenNew() async throws {
+    let video = directory.appendingPathComponent("clip.mov")
+    try Data([0]).write(to: video)
+
+    _ = await runner.run(
+      automation([.copyImage, .openAnnotate]),
+      input: AutomationInput(files: [video], isAlreadyInHistory: false),
+      invocation: .cli
+    )
+
+    XCTAssertEqual(environment.copiedMedia, [video], "A video is copied as a file")
+    XCTAssertTrue(environment.copiedImages.isEmpty)
+    XCTAssertTrue(environment.annotated.isEmpty, "Annotate does not accept videos")
+    XCTAssertEqual(environment.historyKinds, [.video])
+  }
+
+  func testQuickAccessInputReusesSourceCard() async throws {
+    let cardID = UUID()
+    let input = AutomationInput(files: [capture], isAlreadyInHistory: true, sourceQuickAccessItemID: cardID)
+
+    let result = try await XCTUnwrapAsync(
+      await runner.run(automation([.uploadAndCopyLink(.url), .showQuickAccess]), input: input, invocation: .quickAccess)
+    )
+
+    XCTAssertTrue(environment.quickAccessShown.isEmpty, "No second card for the same file")
+    XCTAssertEqual(environment.cloudLinks[cardID]?.lastPathComponent, "Snapzy_shot.png")
+    XCTAssertEqual(result.report.link, "https://cdn.example.com/Snapzy_shot.png")
+  }
+
+  func testAbandonReportsCancelled() {
+    var outcomes: [AutomationLaunchOutcome] = []
+    let routing = runner.begin(AutomationPreset.quickCopy.makeAutomation(), invocation: .cli) { outcomes.append($0) }
+
+    runner.abandon(routing: routing)
+    runner.abandon(routing: routing)
+
+    XCTAssertEqual(outcomes, [.cancelled], "onFinish fires exactly once")
+  }
+
+  func testCompleteReportsFinishedRun() async {
+    var outcomes: [AutomationLaunchOutcome] = []
+    let automation = AutomationPreset.quickCopy.makeAutomation()
+    let routing = runner.begin(automation, invocation: .urlScheme) { outcomes.append($0) }
+    guard case .automation(let runID) = routing else { return XCTFail("Expected automation routing") }
+
+    await runner.complete(runID: runID, capturedURLs: [capture])
+
+    guard case .finished(let report)? = outcomes.first else { return XCTFail("Expected a finished outcome") }
+    XCTAssertEqual(outcomes.count, 1)
+    XCTAssertEqual(report.runID, runID)
+    XCTAssertEqual(report.automationID, automation.id)
+    XCTAssertEqual(report.message, L10n.Automations.resultImageCopied)
+    XCTAssertEqual(environment.preparedScreenshots, [capture], "Captures still get the canvas preset")
+  }
+
+  func testStaleRegistrationsReportCancelledWhenPruned() {
+    var clock = Date()
+    runner = AutomationRunner(environment: environment, now: { clock })
+    var outcomes: [AutomationLaunchOutcome] = []
+    _ = runner.begin(AutomationPreset.quickCopy.makeAutomation()) { outcomes.append($0) }
+
+    clock = clock.addingTimeInterval(31 * 60)
+    _ = runner.begin(AutomationPreset.quickCopy.makeAutomation())
+
+    XCTAssertEqual(outcomes, [.cancelled])
+  }
+
+  func testMarkdownLinkForVideoIsAPlainLink() {
+    let text = CloudShareService.linkText(
+      for: URL(string: "https://cdn.example.com/clip.mov")!,
+      fileURL: URL(fileURLWithPath: "/tmp/clip.mov"),
+      format: .markdown,
+      isImage: false
+    )
+    XCTAssertEqual(text, "[clip](https://cdn.example.com/clip.mov)")
   }
 
   func testMarkdownLinkEscapesBracketsAndWrapsSpaces() {

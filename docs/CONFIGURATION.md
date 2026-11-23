@@ -137,10 +137,22 @@ save_to_export = false
 steps = ["copy_image", "upload_copy_link:markdown", "notify"]
 shortcut_key = "4"
 shortcut_modifiers = ["control", "shift"]
+menu_bar = false
+quick_access = true
+history = true
 external_invocation = false
 ```
 
-- `capture`: `area`, `fullscreen`, `active_window`, `application_window`.
+- `capture`: `area`, `fullscreen`, `active_window`, `application_window`, or
+  `input` (runs on a file handed in by Quick Access, History, CLI or
+  Shortcuts; `save_to_export` and shortcuts do not apply and are not exported).
+- `menu_bar`, `quick_access`, `history`: list the automation in the menu bar
+  Automations submenu (capture sources only; ignored for `input`), the Quick
+  Access "Run Automation" menu, and the History "Run Automation" menu. Omitted
+  keys keep the value stored in `data`.
+- `external_invocation`: allow the URL scheme, `snapzy automation run` and
+  Shortcuts to start it (default `false`). `true` in an imported file is
+  honored and logged.
 - `steps`: `copy_image`, `upload_copy_link` (`:url` / `:markdown`),
   `show_quick_access`, `open_annotate`, `notify`.
 - Each table also has `data` (the full automation JSON) so details the flat

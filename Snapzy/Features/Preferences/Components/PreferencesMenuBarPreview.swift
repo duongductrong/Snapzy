@@ -298,7 +298,7 @@ struct MenuBarSettingsPreview: View {
     case .cloudUploads: return .cloudUploads
     case .openHistory: return .history
     case .shortcutList: return .shortcutList
-    case .captureApplication, .recordApplication, .combineImages, .checkForUpdates:
+    case .captureApplication, .recordApplication, .combineImages, .checkForUpdates, .automations:
       return nil
     }
   }

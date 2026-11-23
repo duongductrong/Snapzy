@@ -534,9 +534,9 @@ final class AppStatusBarController: ObservableObject {
     // Customizable groups (Capture → Recording → Tools): user-ordered, hidden
     // items filtered out, separators only between non-empty groups.
     for group in MenuBarItemGroup.allCases {
-      let groupItems = menuBarCustomizationStore.orderedVisibleItems(for: group).map {
-        makeMenuItem(for: $0, viewModel: viewModel, shortcutManager: shortcutManager)
-      }
+      let groupItems = menuBarCustomizationStore.orderedVisibleItems(for: group)
+        .filter { $0 != .automations || !AutomationStore.shared.automations(for: .menuBar).isEmpty }
+        .map { makeMenuItem(for: $0, viewModel: viewModel, shortcutManager: shortcutManager) }
       guard !groupItems.isEmpty else { continue }
       groupItems.forEach { menu?.addItem($0) }
       menu?.addItem(NSMenuItem.separator())
@@ -914,7 +914,62 @@ final class AppStatusBarController: ObservableObject {
       item.image = MenuBarItemImage.symbol("arrow.triangle.2.circlepath")
       item.isEnabled = true
       return item
+
+    case .automations:
+      return makeAutomationsMenuItem(viewModel: viewModel)
     }
+  }
+
+  /// "Automations" submenu: automations marked for the menu bar, then "Manage Automations…".
+  private func makeAutomationsMenuItem(viewModel: ScreenCaptureViewModel) -> NSMenuItem {
+    let item = NSMenuItem(title: L10n.Automations.menuTitle, action: nil, keyEquivalent: "")
+    item.image = MenuBarItemImage.symbol("bolt")
+    item.isEnabled = true
+
+    let submenu = NSMenu()
+    submenu.autoenablesItems = false
+    for automation in AutomationStore.shared.automations(for: .menuBar) {
+      let entry = NSMenuItem(
+        title: automation.displayName,
+        action: #selector(runAutomationMenuAction(_:)),
+        keyEquivalent: ""
+      )
+      if let hotkey = automation.hotkey, let keyEquivalent = hotkey.menuKeyEquivalent {
+        entry.keyEquivalent = keyEquivalent
+        entry.keyEquivalentModifierMask = hotkey.menuModifierFlags
+      }
+      entry.representedObject = automation.id
+      entry.target = self
+      entry.image = MenuBarItemImage.symbol(automation.symbol ?? automation.captureSpec?.mode.symbol ?? "bolt")
+      entry.isEnabled = viewModel.hasPermission
+      submenu.addItem(entry)
+    }
+    submenu.addItem(NSMenuItem.separator())
+    let manage = NSMenuItem(
+      title: L10n.Automations.manageAutomations,
+      action: #selector(openAutomationsSettingsAction),
+      keyEquivalent: ""
+    )
+    manage.target = self
+    manage.image = MenuBarItemImage.symbol("gearshape")
+    manage.isEnabled = true
+    submenu.addItem(manage)
+    item.submenu = submenu
+    return item
+  }
+
+  @objc private func runAutomationMenuAction(_ sender: NSMenuItem) {
+    guard let id = sender.representedObject as? UUID else { return }
+    // Start after menu tracking ends so the capture overlay doesn't fight the menu.
+    DispatchQueue.main.async {
+      Task { @MainActor in
+        _ = await AutomationLauncher.shared.launch(.id(id), invocation: .menuBar)
+      }
+    }
+  }
+
+  @objc private func openAutomationsSettingsAction() {
+    openPreferencesWindow(tab: .automations)
   }
 
   // MARK: - Menu Actions

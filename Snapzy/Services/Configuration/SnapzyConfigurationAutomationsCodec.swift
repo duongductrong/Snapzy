@@ -4,6 +4,8 @@
 //
 //  `[automations.<id>]` tables in config.toml. One keyed table per automation
 //  (the TOML parser has no arrays of tables); `order` keeps the list order.
+//  `capture = "input"` is an automation that runs on a handed-in file
+//  (`save_to_export` and shortcuts don't apply to it).
 //
 //    [automations.8f0c…]
 //    order = 0
@@ -15,6 +17,10 @@
 //    steps = ["copy_image", "upload_copy_link:markdown", "notify"]
 //    shortcut_key = "4"
 //    shortcut_modifiers = ["control", "shift"]
+//    menu_bar = false
+//    quick_access = true
+//    history = true
+//    external_invocation = false
 //    data = "{…}"   # full JSON; keeps what the flat keys can't (disabled or
 //                   # newer steps, failure policy). Flat keys win when edited.
 //
@@ -37,18 +43,28 @@ enum SnapzyConfigurationAutomationsCodec {
       if let data = try? JSONEncoder().encode(automation), let json = String(data: data, encoding: .utf8) {
         writer.value("data", json)
       }
-      guard let spec = automation.captureSpec else { continue }
+      let captureValue: String
+      switch automation.source {
+      case .capture(let spec): captureValue = captureToken(spec.mode)
+      case .input: captureValue = inputToken
+      case .unsupported: continue
+      }
       if let presetID = automation.presetID {
         writer.value("preset", presetID)
       }
       writer.value("enabled", automation.isEnabled)
-      writer.value("capture", captureToken(spec.mode))
-      writer.value("save_to_export", spec.saveToExportDirectory)
+      writer.value("capture", captureValue)
+      if let spec = automation.captureSpec {
+        writer.value("save_to_export", spec.saveToExportDirectory)
+      }
       writer.stringArray("steps", automation.activeActions.map(stepToken))
       if let hotkey = automation.hotkey {
         writer.value("shortcut_key", SnapzyConfigurationShortcutCodec.exportKey(hotkey))
         writer.stringArray("shortcut_modifiers", SnapzyConfigurationShortcutCodec.exportModifiers(hotkey))
       }
+      writer.value("menu_bar", automation.showsInMenuBar)
+      writer.value("quick_access", automation.showsInQuickAccess)
+      writer.value("history", automation.showsInHistory)
       writer.value("external_invocation", automation.externalInvocation)
     }
   }
@@ -84,7 +100,9 @@ enum SnapzyConfigurationAutomationsCodec {
       let id = UUID(uuidString: key) ?? base?.id ?? UUID()
 
       let source: AutomationSource
-      if let captureRaw = fields["capture"]?.stringValue, let mode = captureMode(captureRaw) {
+      if fields["capture"]?.stringValue?.lowercased() == inputToken {
+        source = .input
+      } else if let captureRaw = fields["capture"]?.stringValue, let mode = captureMode(captureRaw) {
         source = .capture(AutomationCaptureSpec(
           mode: mode,
           saveToExportDirectory: fields["save_to_export"]?.boolValue ?? base?.captureSpec?.saveToExportDirectory ?? false
@@ -92,7 +110,7 @@ enum SnapzyConfigurationAutomationsCodec {
       } else if let base, base.hasUnsupportedSource, fields["capture"] == nil {
         source = base.source  // written by a newer Snapzy; keep as is
       } else {
-        warnings.append("\(path).capture must be one of area, fullscreen, active_window, application_window; skipped")
+        warnings.append("\(path).capture must be one of area, fullscreen, active_window, application_window, input; skipped")
         continue
       }
 
@@ -118,6 +136,24 @@ enum SnapzyConfigurationAutomationsCodec {
       automation.source = source
       automation.steps = steps
       automation.externalInvocation = fields["external_invocation"]?.boolValue ?? base?.externalInvocation ?? false
+      if fields["external_invocation"]?.boolValue == true {
+        // The user's own dotfile may opt in; logged so an unexpected opt-in is traceable.
+        DiagnosticLogger.shared.log(
+          .info,
+          .action,
+          "Automation imported with external invocation allowed",
+          context: ["automation": id.uuidString]
+        )
+      }
+      if let menuBar = fields["menu_bar"]?.boolValue {
+        automation.showsInMenuBar = menuBar
+      }
+      if let quickAccess = fields["quick_access"]?.boolValue {
+        automation.showsInQuickAccess = quickAccess
+      }
+      if let history = fields["history"]?.boolValue {
+        automation.showsInHistory = history
+      }
       automation.presetID = fields["preset"]?.stringValue.flatMap { AutomationPreset(rawValue: $0)?.rawValue }
         ?? (fields["preset"] == nil ? base?.presetID : nil)
       if automation.symbol == nil {
@@ -159,6 +195,9 @@ enum SnapzyConfigurationAutomationsCodec {
   }
 
   // MARK: - Tokens
+
+  /// `capture` value of an automation that runs on a handed-in file.
+  static let inputToken = "input"
 
   static func captureToken(_ mode: AutomationCaptureMode) -> String {
     switch mode {

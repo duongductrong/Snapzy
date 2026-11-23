@@ -9,7 +9,11 @@
 import Foundation
 
 public struct ProtocolVersion: Codable, Sendable, Hashable, Comparable, CustomStringConvertible {
-  public static let current = ProtocolVersion(major: 1, minor: 0)
+  /// 1.1 added `automation.list` and `automation.run`.
+  public static let current = ProtocolVersion(major: 1, minor: 1)
+
+  /// First version that serves `automation.*`.
+  public static let automations = ProtocolVersion(major: 1, minor: 1)
 
   public let major: Int
   public let minor: Int

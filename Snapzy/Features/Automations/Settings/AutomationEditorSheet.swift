@@ -2,8 +2,9 @@
 //  AutomationEditorSheet.swift
 //  Snapzy
 //
-//  Create / edit one automation. Milestone 1 edits steps as a checklist in a
-//  fixed canonical order; the stored model already supports any order.
+//  Create / edit one automation. Steps are edited as a checklist in a fixed
+//  canonical order; the stored model already supports any order. Also edits
+//  where the automation is listed and whether other apps may run it.
 //
 
 import SwiftUI
@@ -16,6 +17,7 @@ struct AutomationEditorSheet: View {
 
   @State private var automation: Automation
   @State private var shortcutIssue: ShortcutValidationIssue?
+  @AppStorage(PreferencesKeys.urlSchemeEnabled) private var urlSchemeEnabled = true
 
   init(
     automation: Automation,
@@ -44,28 +46,43 @@ struct AutomationEditorSheet: View {
         Section {
           TextField(L10n.Automations.nameLabel, text: $automation.name, prompt: Text(L10n.Automations.defaultName))
 
-          Picker(L10n.Automations.captureLabel, selection: modeBinding) {
+          if hasDuplicateName {
+            Label(L10n.Automations.duplicateNameWarning, systemImage: "exclamationmark.triangle.fill")
+              .font(.caption)
+              .foregroundStyle(.orange)
+          }
+
+          Picker(L10n.Automations.sourceLabel, selection: sourceBinding) {
             ForEach(AutomationCaptureMode.allCases) { mode in
-              Label(mode.displayName, systemImage: mode.symbol).tag(mode)
+              Label(mode.displayName, systemImage: mode.symbol).tag(SourceChoice.capture(mode))
             }
+            Divider()
+            Label(L10n.Automations.sourceInput, systemImage: AutomationDisplay.inputSymbol).tag(SourceChoice.input)
           }
 
-          Toggle(isOn: saveBinding) {
-            VStack(alignment: .leading, spacing: 2) {
-              Text(L10n.Automations.saveToFolderLabel)
-              Text(L10n.Automations.saveToFolderDescription)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+          if automation.startsCapture {
+            Toggle(isOn: saveBinding) {
+              VStack(alignment: .leading, spacing: 2) {
+                Text(L10n.Automations.saveToFolderLabel)
+                Text(L10n.Automations.saveToFolderDescription)
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+                  .fixedSize(horizontal: false, vertical: true)
+              }
             }
-          }
 
-          ShortcutRecorderView(
-            label: L10n.Automations.shortcutLabel,
-            shortcut: Binding(get: { automation.hotkey }, set: { _ in }),
-            validationIssue: shortcutIssue,
-            onShortcutChanged: handleShortcutChange
-          )
+            ShortcutRecorderView(
+              label: L10n.Automations.shortcutLabel,
+              shortcut: Binding(get: { automation.hotkey }, set: { _ in }),
+              validationIssue: shortcutIssue,
+              onShortcutChanged: handleShortcutChange
+            )
+          } else {
+            Text(L10n.Automations.sourceInputDescription)
+              .font(.caption)
+              .foregroundStyle(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
         }
 
         Section {
@@ -99,6 +116,22 @@ struct AutomationEditorSheet: View {
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }
+
+        Section {
+          Toggle(L10n.Automations.showInMenuBar, isOn: $automation.showsInMenuBar)
+            .disabled(!automation.startsCapture)
+          Toggle(L10n.Automations.showInQuickAccess, isOn: $automation.showsInQuickAccess)
+          Toggle(L10n.Automations.showInHistory, isOn: $automation.showsInHistory)
+        } header: {
+          Text(L10n.Automations.showInLabel)
+        } footer: {
+          Text(automation.startsCapture ? L10n.Automations.showInDescription : L10n.Automations.showInInputDescription)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+
+        AutomationExternalSection(automation: $automation, isURLSchemeEnabled: urlSchemeEnabled)
       }
       .formStyle(.grouped)
 
@@ -118,24 +151,51 @@ struct AutomationEditorSheet: View {
       }
       .padding(16)
     }
-    .frame(width: 480, height: 600)
+    .frame(width: 500, height: 680)
   }
 
   // MARK: - Bindings
 
+  /// The last capture settings, kept while "Run on a File" is picked so switching back restores them.
+  @State private var lastCaptureSpec: AutomationCaptureSpec?
+
   private var captureSpec: AutomationCaptureSpec {
-    automation.captureSpec ?? AutomationCaptureSpec(mode: .area, saveToExportDirectory: false)
+    automation.captureSpec ?? lastCaptureSpec ?? AutomationCaptureSpec(mode: .area, saveToExportDirectory: false)
   }
 
-  private var modeBinding: Binding<AutomationCaptureMode> {
+  private enum SourceChoice: Hashable {
+    case capture(AutomationCaptureMode)
+    case input
+  }
+
+  private var sourceBinding: Binding<SourceChoice> {
     Binding(
-      get: { captureSpec.mode },
-      set: { mode in
-        var spec = captureSpec
-        spec.mode = mode
-        automation.source = .capture(spec)
+      get: {
+        if automation.source == .input { return .input }
+        return .capture(captureSpec.mode)
+      },
+      set: { choice in
+        switch choice {
+        case .capture(let mode):
+          var spec = captureSpec
+          spec.mode = mode
+          automation.source = .capture(spec)
+        case .input:
+          lastCaptureSpec = automation.captureSpec ?? lastCaptureSpec
+          // Keep the hotkey / menu bar choice out of the saved model: normalization drops them.
+          automation.source = .input
+          shortcutIssue = nil
+        }
       }
     )
+  }
+
+  private var hasDuplicateName: Bool {
+    var candidate = automation
+    if let preset = candidate.presetID.flatMap(AutomationPreset.init(rawValue:)), candidate.name == preset.localizedName {
+      candidate.name = preset.storedName
+    }
+    return !AutomationStore.shared.duplicateNameIDs(for: candidate).isEmpty
   }
 
   private var saveBinding: Binding<Bool> {

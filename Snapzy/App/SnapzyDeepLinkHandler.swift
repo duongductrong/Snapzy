@@ -106,6 +106,21 @@ struct SnapzyDeepLinkHandler {
       ShortcutOverlayManager.shared.toggle()
     case .openSettings(let tab):
       AppStatusBarController.shared.openPreferencesWindow(tab: tab)
+    case .runAutomation(let ref):
+      runAutomation(ref, url: url)
+    }
+  }
+
+  /// Runs only automations that allow other apps. Files are never taken from a
+  /// URL: any page could otherwise upload a local file.
+  private func runAutomation(_ ref: AutomationRef, url: URL) {
+    if SnapzyDeepLinkAction.hasFileParameter(url) {
+      DiagnosticLogger.shared.log(.warning, .action, "Automation deeplink file parameter ignored")
+    }
+    Task { @MainActor in
+      let outcome = await AutomationLauncher.shared.launch(ref, invocation: .urlScheme)
+      guard case .rejected(let rejection) = outcome else { return }
+      AppToastManager.shared.show(message: rejection.localizedMessage, style: .warning)
     }
   }
 }
@@ -135,6 +150,8 @@ enum SnapzyDeepLinkAction: Equatable {
   case measureScreen
   case showShortcuts
   case openSettings(PreferencesTab?)
+  case runAutomation(AutomationRef)
+
   init?(url: URL) {
     guard url.scheme?.lowercased() == "snapzy" else { return nil }
 
@@ -193,6 +210,11 @@ enum SnapzyDeepLinkAction: Equatable {
       self = .measureScreen
     case "show/shortcuts", "shortcuts", "keyboard-shortcuts", "show-shortcuts":
       self = .showShortcuts
+    case "automation/run", "automations/run", "workflow/run":
+      guard let ref = Self.automationRef(from: components) else { return nil }
+      self = .runAutomation(ref)
+    case "automations", "automation", "workflows":
+      self = .openSettings(.automations)
     case "settings", "preferences":
       self = .openSettings(Self.preferencesTab(from: components, pathParts: pathParts))
     case let value where value.hasPrefix("settings/"):
@@ -230,7 +252,29 @@ enum SnapzyDeepLinkAction: Equatable {
     case .measureScreen: return "measureScreen"
     case .showShortcuts: return "showShortcuts"
     case .openSettings(let tab): return "openSettings(\(String(describing: tab)))"
+    case .runAutomation: return "runAutomation"
     }
+  }
+
+  /// `?id=<uuid>` wins over `?name=<name>`.
+  private static func automationRef(from components: URLComponents?) -> AutomationRef? {
+    let items = components?.queryItems ?? []
+    func value(_ name: String) -> String? {
+      let raw = items.first(where: { $0.name.lowercased() == name })?
+        .value?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+      return raw?.isEmpty == false ? raw : nil
+    }
+    if let id = value("id") {
+      return UUID(uuidString: id).map(AutomationRef.id) ?? .name(id)
+    }
+    return value("name").map(AutomationRef.name)
+  }
+
+  static func hasFileParameter(_ url: URL) -> Bool {
+    URLComponents(url: url, resolvingAgainstBaseURL: false)?
+      .queryItems?
+      .contains { $0.name.lowercased() == "file" } ?? false
   }
 
   /// `snapzy://capture/delayed?mode=fullscreen` captures the whole display.

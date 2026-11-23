@@ -41,7 +41,8 @@ final class CloudShareService {
   nonisolated static func linkText(
     for publicURL: URL,
     fileURL: URL,
-    format: AutomationLinkFormat
+    format: AutomationLinkFormat,
+    isImage: Bool = true
   ) -> String {
     let link = publicURL.absoluteString
     switch format {
@@ -53,7 +54,8 @@ final class CloudShareService {
         .replacingOccurrences(of: "]", with: "\\]")
       let needsAngleBrackets = link.contains(" ") || link.contains("(") || link.contains(")")
       let target = needsAngleBrackets ? "<\(link)>" : link
-      return "![\(alt)](\(target))"
+      // Videos are not inline images in Markdown; link them instead.
+      return isImage ? "![\(alt)](\(target))" : "[\(alt)](\(target))"
     }
   }
 
