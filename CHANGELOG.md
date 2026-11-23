@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.11] - 2026-11-23
+
+### Features
+- Added snapzy record command for CLI screen recording (#806) (9031878a)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.3.0-beta.10] - 2026-11-23
 
 ### Features
