@@ -3031,7 +3031,9 @@ private struct InlineAreaLineStylePicker: View {
   }
 }
 
-private struct InlineAreaSliderControl: View {
+struct InlineAreaSliderControl: View {
+  static let valueReadoutMinWidth: CGFloat = 44
+
   let title: String
   let icon: String
   @Binding var value: CGFloat
@@ -3060,7 +3062,7 @@ private struct InlineAreaSliderControl: View {
           .foregroundColor(InlineAreaChrome.secondaryText)
           .lineLimit(1)
           .monospacedDigit()
-          .frame(width: 34, alignment: .trailing)
+          .frame(minWidth: Self.valueReadoutMinWidth, alignment: .trailing)
       }
     }
   }
