@@ -64,7 +64,7 @@ enum AutomationPreset: String, CaseIterable {
       source = .capture(AutomationCaptureSpec(mode: .area, saveToExportDirectory: false))
       steps = [
         AutomationStep(.copyImage),
-        AutomationStep(.upload),
+        AutomationStep(.upload(AutomationUploadConfig())),
         AutomationStep(.copyLink(AutomationLinkTemplate(style: .url))),
         AutomationStep(.notify),
       ]
@@ -83,7 +83,7 @@ enum AutomationPreset: String, CaseIterable {
     case .gifShare:
       source = .capture(AutomationCaptureSpec(mode: .recordingArea, saveToExportDirectory: false, recordingOutput: .gif))
       steps = [
-        AutomationStep(.upload),
+        AutomationStep(.upload(AutomationUploadConfig())),
         AutomationStep(.copyLink(AutomationLinkTemplate(style: .url))),
         AutomationStep(.notify),
       ]

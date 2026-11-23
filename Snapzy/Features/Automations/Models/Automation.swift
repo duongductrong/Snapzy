@@ -225,13 +225,19 @@ enum AutomationStepAction: Equatable {
   case translate(AutomationTranslateConfig)
   case convertToGIF(AutomationGIFConfig)
   // Deliver
-  case upload
+  case upload(AutomationUploadConfig)
   case copyLink(AutomationLinkTemplate)
   case copyText(AutomationTextTemplate)
   case copyFile
   case saveToFolder(AutomationSaveToFolderConfig)
   case reveal
   case pin
+  // Integrations (milestone 4)
+  case webhook(AutomationWebhookConfig)
+  case runScript(AutomationRunScriptConfig)
+  case runShortcut(AutomationRunShortcutConfig)
+  case shareSheet(AutomationShareSheetConfig)
+  case openInApp(AutomationOpenInAppConfig)
 
   var kind: AutomationStepKind {
     switch self {
@@ -254,6 +260,11 @@ enum AutomationStepAction: Equatable {
     case .saveToFolder: .saveToFolder
     case .reveal: .reveal
     case .pin: .pin
+    case .webhook: .webhook
+    case .runScript: .runScript
+    case .runShortcut: .runShortcut
+    case .shareSheet: .shareSheet
+    case .openInApp: .openInApp
     }
   }
 }
@@ -278,6 +289,11 @@ enum AutomationStepKind: String, Codable, CaseIterable, Identifiable, Sendable {
   case saveToFolder
   case reveal
   case pin
+  case webhook
+  case runScript
+  case runShortcut
+  case shareSheet
+  case openInApp
 
   var id: String { rawValue }
 
@@ -299,13 +315,18 @@ enum AutomationStepKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case .ocr: .ocr(AutomationOCRConfig())
     case .translate: .translate(AutomationTranslateConfig())
     case .convertToGIF: .convertToGIF(AutomationGIFConfig())
-    case .upload: .upload
+    case .upload: .upload(AutomationUploadConfig())
     case .copyLink: .copyLink(AutomationLinkTemplate())
     case .copyText: .copyText(AutomationTextTemplate())
     case .copyFile: .copyFile
     case .saveToFolder: .saveToFolder(AutomationSaveToFolderConfig())
     case .reveal: .reveal
     case .pin: .pin
+    case .webhook: .webhook(AutomationWebhookConfig())
+    case .runScript: .runScript(AutomationRunScriptConfig())
+    case .runShortcut: .runShortcut(AutomationRunShortcutConfig())
+    case .shareSheet: .shareSheet(AutomationShareSheetConfig())
+    case .openInApp: .openInApp(AutomationOpenInAppConfig())
     }
   }
 }
@@ -348,7 +369,7 @@ struct AutomationStep: Identifiable, Equatable {
   var migrated: [AutomationStep] {
     guard case .uploadAndCopyLink(let format)? = action else { return [self] }
     var upload = self
-    upload.content = .action(.upload)
+    upload.content = .action(.upload(AutomationUploadConfig()))
     var copy = self
     copy.id = Self.derivedID(from: id)
     copy.content = .action(.copyLink(AutomationLinkTemplate(format)))
@@ -400,13 +421,18 @@ extension AutomationStep: Codable {
     case .ocr: .ocr(config(AutomationOCRConfig()))
     case .translate: .translate(config(AutomationTranslateConfig()))
     case .convertToGIF: .convertToGIF(config(AutomationGIFConfig()))
-    case .upload: .upload
+    case .upload: .upload(config(AutomationUploadConfig()))
     case .copyLink: .copyLink(config(AutomationLinkTemplate()))
     case .copyText: .copyText(config(AutomationTextTemplate()))
     case .copyFile: .copyFile
     case .saveToFolder: .saveToFolder(config(AutomationSaveToFolderConfig()))
     case .reveal: .reveal
     case .pin: .pin
+    case .webhook: .webhook(config(AutomationWebhookConfig()))
+    case .runScript: .runScript(config(AutomationRunScriptConfig()))
+    case .runShortcut: .runShortcut(config(AutomationRunShortcutConfig()))
+    case .shareSheet: .shareSheet(config(AutomationShareSheetConfig()))
+    case .openInApp: .openInApp(config(AutomationOpenInAppConfig()))
     }
     content = .action(action)
   }
@@ -432,8 +458,14 @@ extension AutomationStep: Codable {
     case .copyLink(let config): try container.encode(config, forKey: .config)
     case .copyText(let config): try container.encode(config, forKey: .config)
     case .saveToFolder(let config): try container.encode(config, forKey: .config)
+    case .upload(let config): try container.encode(config, forKey: .config)
+    case .webhook(let config): try container.encode(config, forKey: .config)
+    case .runScript(let config): try container.encode(config, forKey: .config)
+    case .runShortcut(let config): try container.encode(config, forKey: .config)
+    case .shareSheet(let config): try container.encode(config, forKey: .config)
+    case .openInApp(let config): try container.encode(config, forKey: .config)
     case .copyImage, .showQuickAccess, .openAnnotate, .notify, .stripMetadata,
-         .upload, .copyFile, .reveal, .pin:
+         .copyFile, .reveal, .pin:
       break
     }
     try container.encode(isEnabled, forKey: .isEnabled)
@@ -461,6 +493,12 @@ struct Automation: Identifiable, Equatable {
   /// Built-in preset this automation was seeded from, if any.
   var presetID: String?
   var schemaVersion: Int
+  /// Imported (config file / recipe) with network or script steps the user has
+  /// not looked at yet. Refused at launch until saved from the editor.
+  var needsReview: Bool
+  /// Second opt-in: the URL scheme and Shortcuts may run this automation even
+  /// though it contains script / Shortcut steps. Never imported.
+  var allowExternalCode: Bool
 
   init(
     id: UUID = UUID(),
@@ -472,7 +510,9 @@ struct Automation: Identifiable, Equatable {
     steps: [AutomationStep],
     externalInvocation: Bool = false,
     presetID: String? = nil,
-    schemaVersion: Int = Automation.currentSchemaVersion
+    schemaVersion: Int = Automation.currentSchemaVersion,
+    needsReview: Bool = false,
+    allowExternalCode: Bool = false
   ) {
     self.id = id
     self.name = name
@@ -484,6 +524,8 @@ struct Automation: Identifiable, Equatable {
     self.externalInvocation = externalInvocation
     self.presetID = presetID
     self.schemaVersion = schemaVersion
+    self.needsReview = needsReview
+    self.allowExternalCode = allowExternalCode
   }
 
   /// The keyboard shortcut trigger, if any. Setting `nil` removes it.
@@ -580,6 +622,9 @@ struct Automation: Identifiable, Equatable {
       copy.steps.insert(AutomationStep(.copyImage), at: 0)
     }
 
+    // The second opt-in only means something while the first is on.
+    if !copy.externalInvocation { copy.allowExternalCode = false }
+
     var keptHotkey = false
     var seenSimple = Set<String>()
     let needsInput = !copy.runsWithoutInput && !copy.hasUnsupportedSource
@@ -613,6 +658,7 @@ struct Automation: Identifiable, Equatable {
 extension Automation: Codable {
   private enum CodingKeys: String, CodingKey {
     case id, name, symbol, isEnabled, triggers, source, steps, externalInvocation, presetID, schemaVersion
+    case needsReview, allowExternalCode
   }
 
   init(from decoder: Decoder) throws {
@@ -627,6 +673,8 @@ extension Automation: Codable {
     externalInvocation = (try? container.decode(Bool.self, forKey: .externalInvocation)) ?? false
     presetID = try? container.decodeIfPresent(String.self, forKey: .presetID)
     schemaVersion = (try? container.decode(Int.self, forKey: .schemaVersion)) ?? 1
+    needsReview = (try? container.decode(Bool.self, forKey: .needsReview)) ?? false
+    allowExternalCode = (try? container.decode(Bool.self, forKey: .allowExternalCode)) ?? false
     // Older data is migrated in memory; it is written back in the current schema.
     if schemaVersion < Self.currentSchemaVersion || steps.contains(where: { $0.action?.kind == .uploadAndCopyLink }) {
       self = migrated()
@@ -645,5 +693,7 @@ extension Automation: Codable {
     try container.encode(externalInvocation, forKey: .externalInvocation)
     try container.encodeIfPresent(presetID, forKey: .presetID)
     try container.encode(max(schemaVersion, Self.currentSchemaVersion), forKey: .schemaVersion)
+    if needsReview { try container.encode(true, forKey: .needsReview) }
+    if allowExternalCode { try container.encode(true, forKey: .allowExternalCode) }
   }
 }

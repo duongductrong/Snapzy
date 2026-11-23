@@ -67,6 +67,7 @@ nonisolated enum L10n {
     ("cloud-settings.", "Cloud"),
     ("cloud-transfer.", "Cloud"),
     ("cloud-usage.", "Cloud"),
+    ("cloud.custom-uploader.", "Cloud"),
     ("shortcut-overlay.", "Shortcuts"),
     ("shortcut-recorder.", "Shortcuts"),
     ("shortcut-validation.", "Shortcuts"),
@@ -5418,6 +5419,11 @@ nonisolated enum L10n {
       "cloud-provider.imgbb",
       defaultValue: "imgbb",
       comment: "Cloud provider display name for the imgbb image host"
+    )
+    static let customHTTP = string(
+      "cloud-provider.custom-http",
+      defaultValue: "Custom Uploader",
+      comment: "Cloud provider display name for a user-defined HTTP uploader (ShareX-style)"
     )
   }
 

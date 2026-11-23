@@ -18,16 +18,20 @@ struct UploadStepHandler: AutomationStepHandler {
   var trust: AutomationTrustTier { .network }
 
   func run(
-    _: AutomationStepAction,
+    _ action: AutomationStepAction,
     files: [URL],
     state: inout AutomationRunState,
     environment: AutomationRunEnvironment
   ) async throws {
-    guard environment.isCloudConfigured else { throw AutomationStepError.cloudNotConfigured }
+    let destination: AutomationUploadDestination
+    if case .upload(let config) = action { destination = config.destination } else { destination = .default }
+    guard environment.isUploadConfigured(destination) else {
+      throw destination == .default ? AutomationStepError.cloudNotConfigured : AutomationStepError.uploaderMissing
+    }
     // Multi-display captures upload the first display only; one link per run.
     guard let file = files.first else { throw AutomationStepError.noFile }
 
-    let result = try await environment.upload(file)
+    let result = try await environment.upload(file, destination: destination)
     try Task.checkCancellation()
     state.uploadResult = result
     state.payload.link = result.publicURL

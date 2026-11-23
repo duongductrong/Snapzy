@@ -41,6 +41,7 @@
         "cloud-settings.",
         "cloud-transfer.",
         "cloud-usage.",
+        "cloud.custom-uploader.",
         "preferences-cloud-history."
       ]
     },

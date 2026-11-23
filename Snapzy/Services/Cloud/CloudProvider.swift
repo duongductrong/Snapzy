@@ -15,6 +15,7 @@ nonisolated enum CloudProviderType: String, Codable, CaseIterable {
   case cloudflareR2 = "cloudflare_r2"
   case googleDrive = "google_drive"
   case imgbb = "imgbb"
+  case customHTTP = "custom_http"
 
   var displayName: String {
     switch self {
@@ -22,15 +23,31 @@ nonisolated enum CloudProviderType: String, Codable, CaseIterable {
     case .cloudflareR2: return L10n.CloudProvider.cloudflareR2
     case .googleDrive: return L10n.CloudProvider.googleDrive
     case .imgbb: return L10n.CloudProvider.imgbb
+    case .customHTTP: return L10n.CloudProvider.customHTTP
     }
   }
 
   /// Providers that can't write bucket lifecycle rules, list usage, or name objects.
-  /// imgbb sets expiration per upload instead; Google Drive has none at all.
+  /// imgbb sets expiration per upload instead; Google Drive and custom uploaders have none at all.
   var usesObjectStorage: Bool {
     switch self {
     case .awsS3, .cloudflareR2: return true
-    case .googleDrive, .imgbb: return false
+    case .googleDrive, .imgbb, .customHTTP: return false
+    }
+  }
+
+  /// False for providers that store nothing in the Keychain (custom uploaders keep their
+  /// definitions in UserDefaults and their secrets in the automation secret store).
+  var usesCloudCredentials: Bool {
+    self != .customHTTP
+  }
+
+  /// False for hosts with no delete API. Deleting their history row opens the delete page
+  /// returned at upload (if any) instead, and replaced uploads are left online.
+  var supportsRemoteDelete: Bool {
+    switch self {
+    case .awsS3, .cloudflareR2, .googleDrive: return true
+    case .imgbb, .customHTTP: return false
     }
   }
 }

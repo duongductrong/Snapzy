@@ -248,6 +248,10 @@ enum PreferencesKeys {
   nonisolated static let cloudUploadsFloatingPosition = "cloud.uploads.floatingPosition"
   nonisolated static let cloudShareLinkStyle = "cloud.shareLinkStyle"
   static let cloudGoogleFolderId = "cloud.google.folderId"
+  /// JSON array of `CustomUploader` definitions (no secret values, only `{secret:NAME}` references).
+  nonisolated static let cloudCustomUploaders = "cloud.customUploaders"
+  /// UUID of the custom uploader used when the Cloud provider is `custom_http`.
+  nonisolated static let cloudCustomUploaderID = "cloud.customUploaderID"
 
   // Automations
   /// JSON `[Automation]`.
@@ -258,4 +262,9 @@ enum PreferencesKeys {
   static let automationFolders = "automations.folders"
   /// Keep the Activity run log (on by default).
   static let automationsActivityLogEnabled = "automations.activityLogEnabled"
+  /// Allow shell script and Apple Shortcut steps to run (off by default). Never
+  /// imported from a configuration file.
+  static let automationsAllowCodeSteps = "automations.allowCodeSteps"
+  /// Name → Keychain account index for automation secrets (values live in the Keychain).
+  static let automationSecrets = "automations.secrets"
 }

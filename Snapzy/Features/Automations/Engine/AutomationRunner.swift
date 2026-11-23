@@ -300,7 +300,7 @@ final class AutomationRunner {
       link: state.payload.link?.absoluteString,
       text: state.payload.text,
       savedPaths: state.payload.savedFile.map { [$0.path] } ?? [],
-      warnings: state.warnings
+      warnings: state.warnings.map { AutomationSecretStore.mask($0, values: state.secretValues) }
     ))
 
     DiagnosticLogger.shared.log(
@@ -387,17 +387,19 @@ final class AutomationRunner {
           records.append(.init(kind: action.kind.rawValue, durationMs: duration, status: .skipped, error: nil))
           break
         }
-        logStep(action, runID: runID, durationMs: duration, error: error)
+        // Secrets a step resolved never reach the log, the run record or a notification.
+        let message = AutomationSecretStore.mask(error.localizedDescription, values: state.secretValues)
+        logStep(action, runID: runID, durationMs: duration, error: message)
         records.append(.init(
           kind: action.kind.rawValue,
           durationMs: duration,
           status: .failed,
-          error: error.localizedDescription
+          error: message
         ))
         if action.kind == .upload || action.kind == .uploadAndCopyLink {
           state.uploadFailure = (error as? AutomationStepError) == .cloudNotConfigured
             ? .notConfigured
-            : .failed(error.localizedDescription)
+            : .failed(message)
           await applyUploadFallback(&state, environment: environment)
         }
         if step.onFailure == .stop { break }
@@ -516,14 +518,14 @@ final class AutomationRunner {
     max(0, Int(now().timeIntervalSince(start) * 1000))
   }
 
-  private static func logStep(_ action: AutomationStepAction, runID: UUID, durationMs: Int, error: Error?) {
+  private static func logStep(_ action: AutomationStepAction, runID: UUID, durationMs: Int, error: String?) {
     var context = [
       "runID": runID.uuidString,
       "step": action.kind.rawValue,
       "duration_ms": "\(durationMs)",
     ]
     if let error {
-      context["error"] = error.localizedDescription
+      context["error"] = error
       DiagnosticLogger.shared.log(.warning, .action, "Automation step failed", context: context)
     } else {
       DiagnosticLogger.shared.log(.debug, .action, "Automation step finished", context: context)

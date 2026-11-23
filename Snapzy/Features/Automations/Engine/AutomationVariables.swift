@@ -98,6 +98,48 @@ struct AutomationVariables: Equatable {
     return output
   }
 
+  /// `render`, plus `{secret:NAME}` resolved through `resolveSecret` in the
+  /// same pass, so a payload value that happens to contain `{secret:…}` (OCR
+  /// text, a file name) is inserted literally and never resolved. Only for
+  /// fields that allow secrets (webhook URL / headers / body, uploader headers).
+  /// Returns the text and the secret values used (for masking).
+  func renderAllowingSecrets(
+    _ template: String,
+    escape: AutomationEscape = .none,
+    secretEscape: AutomationEscape? = nil,
+    resolveSecret: (String) -> String?
+  ) throws -> (text: String, secrets: [String]) {
+    var output = ""
+    var secrets: [String] = []
+    var index = template.startIndex
+    while index < template.endIndex {
+      guard template[index] == "{",
+            let close = template[index...].firstIndex(of: "}")
+      else {
+        output.append(template[index])
+        index = template.index(after: index)
+        continue
+      }
+      let token = String(template[index...close])
+      if token.hasPrefix(Self.secretPrefix) {
+        let name = String(token.dropFirst(Self.secretPrefix.count).dropLast())
+        guard let value = resolveSecret(name) else { throw AutomationStepError.secretMissing(name) }
+        secrets.append(value)
+        output += Self.escaped(value, mode: secretEscape ?? escape)
+        index = template.index(after: close)
+      } else if let value = values[token] {
+        output += Self.escaped(value, mode: escape)
+        index = template.index(after: close)
+      } else {
+        output.append(template[index])
+        index = template.index(after: index)
+      }
+    }
+    return (output, secrets)
+  }
+
+  static let secretPrefix = "{secret:"
+
   static func escaped(_ value: String, mode: AutomationEscape) -> String {
     switch mode {
     case .none:

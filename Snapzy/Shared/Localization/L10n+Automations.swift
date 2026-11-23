@@ -1185,5 +1185,590 @@ extension L10n {
       defaultValue: "Cancelled",
       comment: "Run outcome"
     )
+    static let groupIntegrations = string(
+      "automations.group.integrations",
+      defaultValue: "Integrations",
+      comment: "Step picker group: webhook, script, Shortcut, share, open in app"
+    )
+    static let stepWebhook = string(
+      "automations.step.webhook",
+      defaultValue: "Send Webhook",
+      comment: "Step: send an HTTP request"
+    )
+    static let stepRunScript = string(
+      "automations.step.run-script",
+      defaultValue: "Run Shell Script",
+      comment: "Step: run a shell script"
+    )
+    static let stepRunShortcut = string(
+      "automations.step.run-shortcut",
+      defaultValue: "Run Shortcut",
+      comment: "Step: run an Apple Shortcut"
+    )
+    static let stepShareSheet = string(
+      "automations.step.share-sheet",
+      defaultValue: "Share",
+      comment: "Step: open the share sheet / AirDrop"
+    )
+    static let stepOpenInApp = string(
+      "automations.step.open-in-app",
+      defaultValue: "Open in App",
+      comment: "Step: open the file in another app"
+    )
+    static let describeWebhook = string(
+      "automations.describe.webhook",
+      defaultValue: "Sends an HTTP request, for example the link to a Slack or Discord channel.",
+      comment: "Inspector description of the webhook step"
+    )
+    static let describeRunScript = string(
+      "automations.describe.run-script",
+      defaultValue: "Runs a shell script with the file and values as environment variables.",
+      comment: "Inspector description of the script step"
+    )
+    static let describeRunShortcut = string(
+      "automations.describe.run-shortcut",
+      defaultValue: "Runs a shortcut from the Shortcuts app with the file, link or text.",
+      comment: "Inspector description of the Shortcut step"
+    )
+    static let describeShareSheet = string(
+      "automations.describe.share-sheet",
+      defaultValue: "Opens the share menu or AirDrop with the file (or the link).",
+      comment: "Inspector description of the share step"
+    )
+    static let describeOpenInApp = string(
+      "automations.describe.open-in-app",
+      defaultValue: "Opens the file in the app you choose.",
+      comment: "Inspector description of the open in app step"
+    )
+    static let errorUploaderMissing = string(
+      "automations.error.uploader-missing",
+      defaultValue: "The custom uploader no longer exists.",
+      comment: "Run error: upload step points at a deleted custom uploader"
+    )
+    static let errorCodeStepsDisabled = string(
+      "automations.error.code-steps-disabled",
+      defaultValue: "Script and Shortcut steps are turned off.",
+      comment: "Run error"
+    )
+    static let errorInvalidWebhookURL = string(
+      "automations.error.invalid-webhook-url",
+      defaultValue: "The webhook URL must start with https://.",
+      comment: "Run error"
+    )
+    static func errorHTTPStatus(_ status: Int) -> String {
+      format(
+        "automations.error.http-status",
+        defaultValue: "The server answered HTTP %lld",
+        comment: "Run error; %lld is the HTTP status code",
+        status
+      )
+    }
+    static func errorTimedOut(_ seconds: Int) -> String {
+      format(
+        "automations.error.timed-out",
+        defaultValue: "Timed out after %lld s.",
+        comment: "Run error; %lld is seconds",
+        seconds
+      )
+    }
+    static func errorExitStatus(_ status: Int) -> String {
+      format(
+        "automations.error.exit-status",
+        defaultValue: "Exited with status %lld",
+        comment: "Run error; %lld is the process exit status",
+        status
+      )
+    }
+    static func errorShortcutNotFound(_ name: String) -> String {
+      format(
+        "automations.error.shortcut-not-found",
+        defaultValue: "Couldn’t find the shortcut “%@”.",
+        comment: "Run error; %@ is the shortcut name",
+        name
+      )
+    }
+    static let errorShareUnavailable = string(
+      "automations.error.share-unavailable",
+      defaultValue: "This sharing service isn’t available for this item.",
+      comment: "Run error"
+    )
+    static let errorShareBusy = string(
+      "automations.error.share-busy",
+      defaultValue: "Another share menu is already open.",
+      comment: "Run error"
+    )
+    static func errorAppNotFound(_ name: String) -> String {
+      format(
+        "automations.error.app-not-found",
+        defaultValue: "Couldn’t find the app “%@”.",
+        comment: "Run error; %@ is the app name",
+        name
+      )
+    }
+    static let errorOutputFileInvalid = string(
+      "automations.error.output-file-invalid",
+      defaultValue: "The step didn’t produce a usable file.",
+      comment: "Run error: script/Shortcut output file missing"
+    )
+    static let errorScriptEmpty = string(
+      "automations.error.script-empty",
+      defaultValue: "The script is empty.",
+      comment: "Run error"
+    )
+    static func errorWebhookNoLink(_ path: String) -> String {
+      format(
+        "automations.error.webhook-no-link",
+        defaultValue: "The response has no link at “%@”.",
+        comment: "Run error; %@ is a JSON path",
+        path
+      )
+    }
+    static let issueUploader = string(
+      "automations.issue.uploader",
+      defaultValue: "Choose a custom uploader",
+      comment: "Step needs setup"
+    )
+    static let issueWebhookURL = string(
+      "automations.issue.webhook-url",
+      defaultValue: "Enter an https:// URL",
+      comment: "Step needs setup"
+    )
+    static let issueScript = string(
+      "automations.issue.script",
+      defaultValue: "Write a script",
+      comment: "Step needs setup"
+    )
+    static let issueShortcut = string(
+      "automations.issue.shortcut",
+      defaultValue: "Choose a shortcut",
+      comment: "Step needs setup"
+    )
+    static let issueApp = string(
+      "automations.issue.app",
+      defaultValue: "Choose an app",
+      comment: "Step needs setup"
+    )
+    static func issueSecret(_ name: String) -> String {
+      format(
+        "automations.issue.secret",
+        defaultValue: "Add the secret “%@”",
+        comment: "Step needs setup; %@ is a secret name",
+        name
+      )
+    }
+    static let rejectionNeedsReview = string(
+      "automations.rejection.needs-review",
+      defaultValue: "This automation was imported with network or script steps. Open it and save it to allow it to run.",
+      comment: "Launch refused"
+    )
+    static let rejectionCodeStepsDisabled = string(
+      "automations.rejection.code-steps-disabled",
+      defaultValue: "This automation runs a script or Shortcut, and those steps are turned off in Settings → Automations.",
+      comment: "Launch refused"
+    )
+    static let rejectionExternalCode = string(
+      "automations.rejection.external-code",
+      defaultValue: "This automation runs a script and can’t be started from another app.",
+      comment: "Launch refused (URL scheme / Shortcuts)"
+    )
+    static let secretErrorInvalidName = string(
+      "automations.secret.error.invalid-name",
+      defaultValue: "Use letters, digits, “_”, “-” or “.” (up to 64 characters).",
+      comment: "Secret name validation"
+    )
+    static let secretErrorDuplicate = string(
+      "automations.secret.error.duplicate",
+      defaultValue: "A secret with this name already exists.",
+      comment: "Secret name validation"
+    )
+    static let secretErrorEmptyValue = string(
+      "automations.secret.error.empty-value",
+      defaultValue: "Enter a value.",
+      comment: "Secret value validation"
+    )
+    static func secretErrorLimit(_ limit: Int) -> String {
+      format(
+        "automations.secret.error.limit",
+        defaultValue: "You can store up to %lld secrets.",
+        comment: "Secret limit; %lld is the limit",
+        limit
+      )
+    }
+    static func secretErrorNotFound(_ name: String) -> String {
+      format(
+        "automations.secret.error.not-found",
+        defaultValue: "There is no secret named “%@”.",
+        comment: "Run/validation error; %@ is a secret name",
+        name
+      )
+    }
+    static let shareServicePicker = string(
+      "automations.share-service.picker",
+      defaultValue: "Share Menu",
+      comment: "Share step service: system share picker"
+    )
+    static let shareServiceMessages = string(
+      "automations.share-service.messages",
+      defaultValue: "Messages",
+      comment: "Share step service (the Messages app)"
+    )
+    static let shareServiceMail = string(
+      "automations.share-service.mail",
+      defaultValue: "Mail",
+      comment: "Share step service (the Mail app)"
+    )
+    static let timeoutLabel = string(
+      "automations.inspector.timeout",
+      defaultValue: "Timeout",
+      comment: "Inspector: request / process timeout"
+    )
+    static func secondsValue(_ seconds: Int) -> String {
+      format(
+        "automations.inspector.seconds",
+        defaultValue: "%lld s",
+        comment: "Duration in seconds; %lld is the number",
+        seconds
+      )
+    }
+    static let outputLabel = string(
+      "automations.inspector.output",
+      defaultValue: "Output",
+      comment: "Inspector: what a script/Shortcut output becomes"
+    )
+    static let outputIgnore = string(
+      "automations.inspector.output.ignore",
+      defaultValue: "Ignore",
+      comment: "Output option"
+    )
+    static let outputText = string(
+      "automations.inspector.output.text",
+      defaultValue: "Text → {text}",
+      comment: "Output option; {text} is a token, keep it"
+    )
+    static let outputLink = string(
+      "automations.inspector.output.link",
+      defaultValue: "Link → {link} (first line)",
+      comment: "Output option; {link} is a token, keep it"
+    )
+    static let outputFileFromScript = string(
+      "automations.inspector.output.file-path",
+      defaultValue: "File (path on the last line)",
+      comment: "Script output option"
+    )
+    static let outputFile = string(
+      "automations.inspector.output.file",
+      defaultValue: "File",
+      comment: "Shortcut output / input option"
+    )
+    static let codeStepsOffBanner = string(
+      "automations.inspector.code-off",
+      defaultValue: "Script and Shortcut steps are off. This step won’t run until you allow them.",
+      comment: "Inspector banner for script/Shortcut steps"
+    )
+    static let allowInSettings = string(
+      "automations.inspector.allow-in-settings",
+      defaultValue: "Allow…",
+      comment: "Button opening the setting that allows script steps"
+    )
+    static let insertSecret = string(
+      "automations.inspector.insert-secret",
+      defaultValue: "Insert Secret",
+      comment: "Menu that inserts {secret:NAME}"
+    )
+    static let manageSecrets = string(
+      "automations.inspector.manage-secrets",
+      defaultValue: "Manage Secrets…",
+      comment: "Menu item opening the secrets list"
+    )
+    static let uploadDestinationLabel = string(
+      "automations.inspector.upload.destination",
+      defaultValue: "Upload To",
+      comment: "Upload step destination picker"
+    )
+    static let uploadDestinationDefault = string(
+      "automations.inspector.upload.default",
+      defaultValue: "Cloud (from Settings)",
+      comment: "Upload destination: the provider set in Settings → Cloud"
+    )
+    static let manageUploaders = string(
+      "automations.inspector.upload.manage",
+      defaultValue: "Manage Uploaders…",
+      comment: "Button opening Settings → Cloud"
+    )
+    static let webhookPresetLabel = string(
+      "automations.inspector.webhook.preset",
+      defaultValue: "Template",
+      comment: "Webhook body template picker"
+    )
+    static let webhookPresetSlack = string(
+      "automations.inspector.webhook.preset.slack",
+      defaultValue: "Slack Incoming Webhook",
+      comment: "Webhook template"
+    )
+    static let webhookPresetDiscord = string(
+      "automations.inspector.webhook.preset.discord",
+      defaultValue: "Discord Webhook",
+      comment: "Webhook template"
+    )
+    static let webhookPresetGeneric = string(
+      "automations.inspector.webhook.preset.generic",
+      defaultValue: "Generic JSON",
+      comment: "Webhook template"
+    )
+    static let methodLabel = string(
+      "automations.inspector.webhook.method",
+      defaultValue: "Method",
+      comment: "HTTP method picker"
+    )
+    static let urlLabel = string(
+      "automations.inspector.webhook.url",
+      defaultValue: "URL",
+      comment: "Webhook URL field"
+    )
+    static let headersLabel = string(
+      "automations.inspector.webhook.headers",
+      defaultValue: "Headers",
+      comment: "HTTP headers list"
+    )
+    static let addHeader = string(
+      "automations.inspector.webhook.add-header",
+      defaultValue: "Add Header",
+      comment: "Button"
+    )
+    static let fieldsLabel = string(
+      "automations.inspector.webhook.fields",
+      defaultValue: "Fields",
+      comment: "Form fields list"
+    )
+    static let addField = string(
+      "automations.inspector.webhook.add-field",
+      defaultValue: "Add Field",
+      comment: "Button"
+    )
+    static let keyPlaceholder = string(
+      "automations.inspector.webhook.key",
+      defaultValue: "Name",
+      comment: "Placeholder for a header / field name"
+    )
+    static let valuePlaceholder = string(
+      "automations.inspector.webhook.value",
+      defaultValue: "Value",
+      comment: "Placeholder for a header / field value"
+    )
+    static let removeRow = string(
+      "automations.inspector.webhook.remove",
+      defaultValue: "Remove",
+      comment: "Accessibility label of the remove-row button"
+    )
+    static let bodyLabel = string(
+      "automations.inspector.webhook.body",
+      defaultValue: "Body",
+      comment: "HTTP body kind picker"
+    )
+    static let bodyNone = string(
+      "automations.inspector.webhook.body.none",
+      defaultValue: "None",
+      comment: "Body kind"
+    )
+    static let bodyJSON = string(
+      "automations.inspector.webhook.body.json",
+      defaultValue: "JSON",
+      comment: "Body kind"
+    )
+    static let bodyForm = string(
+      "automations.inspector.webhook.body.form",
+      defaultValue: "Form",
+      comment: "Body kind (URL-encoded form)"
+    )
+    static let bodyMultipart = string(
+      "automations.inspector.webhook.body.multipart",
+      defaultValue: "Form with File",
+      comment: "Body kind (multipart with the file)"
+    )
+    static let fileFieldLabel = string(
+      "automations.inspector.webhook.file-field",
+      defaultValue: "File Field",
+      comment: "Name of the multipart file field"
+    )
+    static let jsonInvalid = string(
+      "automations.inspector.webhook.json-invalid",
+      defaultValue: "Not valid JSON with sample values.",
+      comment: "Validation hint under the JSON template"
+    )
+    static let responseToText = string(
+      "automations.inspector.webhook.response-text",
+      defaultValue: "Use the response as {text}",
+      comment: "Toggle; {text} is a token, keep it"
+    )
+    static let responseLinkPath = string(
+      "automations.inspector.webhook.response-link",
+      defaultValue: "Link from Response",
+      comment: "JSON path field read into {link}"
+    )
+    static let webhookFooter = string(
+      "automations.inspector.webhook.footer",
+      defaultValue: "Values are JSON-escaped in a JSON body. Put tokens in a secret and write {secret:NAME} so they stay out of your config file.",
+      comment: "Webhook inspector footer; {secret:NAME} is syntax, keep it"
+    )
+    static let scriptLabel = string(
+      "automations.inspector.script",
+      defaultValue: "Script",
+      comment: "Script editor label"
+    )
+    static let shellLabel = string(
+      "automations.inspector.script.shell",
+      defaultValue: "Shell",
+      comment: "Shell picker"
+    )
+    static let loginShell = string(
+      "automations.inspector.script.login-shell",
+      defaultValue: "Use login shell (PATH from your profile)",
+      comment: "Toggle"
+    )
+    static let scriptVariablesHelp = string(
+      "automations.inspector.script.variables",
+      defaultValue: "Values reach the script only as environment variables — $SNAPZY_FILE, $SNAPZY_FILES (one per line), $SNAPZY_LINK, $SNAPZY_TEXT, $SNAPZY_AUTOMATION, $SNAPZY_RUN_ID, $SNAPZY_WORK_DIR — and the files as $1, $2… They are never inserted into the script text.",
+      comment: "Script inspector footer; variable names are code, keep them"
+    )
+    static let shortcutNone = string(
+      "automations.inspector.shortcut.none",
+      defaultValue: "Choose…",
+      comment: "Shortcut picker placeholder"
+    )
+    static let refreshShortcuts = string(
+      "automations.inspector.shortcut.refresh",
+      defaultValue: "Refresh List",
+      comment: "Button reloading the Shortcuts list"
+    )
+    static let openInShortcuts = string(
+      "automations.inspector.shortcut.open",
+      defaultValue: "Open in Shortcuts",
+      comment: "Button"
+    )
+    static let inputLabel = string(
+      "automations.inspector.shortcut.input",
+      defaultValue: "Input",
+      comment: "What the shortcut receives"
+    )
+    static let inputText = string(
+      "automations.inspector.shortcut.input.text",
+      defaultValue: "Text",
+      comment: "Shortcut input option"
+    )
+    static let inputLink = string(
+      "automations.inspector.shortcut.input.link",
+      defaultValue: "Link",
+      comment: "Shortcut input option"
+    )
+    static let inputNone = string(
+      "automations.inspector.shortcut.input.none",
+      defaultValue: "Nothing",
+      comment: "Shortcut input option"
+    )
+    static let shortcutFooter = string(
+      "automations.inspector.shortcut.footer",
+      defaultValue: "The first run may ask you to allow the shortcut to use the file.",
+      comment: "Shortcut inspector footer"
+    )
+    static let serviceLabel = string(
+      "automations.inspector.share.service",
+      defaultValue: "Service",
+      comment: "Share step service picker"
+    )
+    static let appLabel = string(
+      "automations.inspector.app",
+      defaultValue: "App",
+      comment: "Open in app: app label"
+    )
+    static let chooseApp = string(
+      "automations.inspector.app.choose",
+      defaultValue: "Choose…",
+      comment: "Button opening an app chooser"
+    )
+    static let externalCodeToggle = string(
+      "automations.external.code-toggle",
+      defaultValue: "Let other apps run its script steps",
+      comment: "Second opt-in toggle in Run from other apps"
+    )
+    static let externalCodeDescription = string(
+      "automations.external.code-description",
+      defaultValue: "A snapzy:// link or a shortcut could then run this script. Turn on only if you trust everything that can open links on this Mac.",
+      comment: "Warning under the second opt-in"
+    )
+    static let reviewBadge = string(
+      "automations.review.badge",
+      defaultValue: "Imported — review before it can run",
+      comment: "Row status for imported automations with network/script steps"
+    )
+    static let reviewButton = string(
+      "automations.review.button",
+      defaultValue: "Review",
+      comment: "Button opening the editor for review"
+    )
+    static let reviewBanner = string(
+      "automations.review.banner",
+      defaultValue: "Imported with network or script steps. Check what each step sends or runs, then save to allow this automation.",
+      comment: "Editor banner for an automation that needs review"
+    )
+    static let advancedHeader = string(
+      "automations.advanced.header",
+      defaultValue: "Advanced",
+      comment: "Settings → Automations section"
+    )
+    static let allowCodeStepsToggle = string(
+      "automations.advanced.allow-code",
+      defaultValue: "Allow script & Shortcut steps",
+      comment: "Toggle"
+    )
+    static let allowCodeStepsDescription = string(
+      "automations.advanced.allow-code-description",
+      defaultValue: "Scripts and shortcuts can do anything your user account can. Only run automations you wrote or trust. Never turned on by an imported config file.",
+      comment: "Warning under the toggle"
+    )
+    static let secretsHeader = string(
+      "automations.secrets.header",
+      defaultValue: "Secrets",
+      comment: "Secrets list title"
+    )
+    static let secretsDescription = string(
+      "automations.secrets.description",
+      defaultValue: "Tokens for webhooks and custom uploaders, kept in your Keychain. Write {secret:NAME} to use one; values are never exported or logged.",
+      comment: "Secrets section description; {secret:NAME} is syntax"
+    )
+    static let secretsEmpty = string(
+      "automations.secrets.empty",
+      defaultValue: "No secrets yet.",
+      comment: "Secrets list placeholder"
+    )
+    static let addSecret = string(
+      "automations.secrets.add",
+      defaultValue: "Add Secret…",
+      comment: "Button"
+    )
+    static let replaceSecretValue = string(
+      "automations.secrets.replace",
+      defaultValue: "Replace Value…",
+      comment: "Button"
+    )
+    static let secretNameLabel = string(
+      "automations.secrets.name",
+      defaultValue: "Name",
+      comment: "Secret sheet field"
+    )
+    static let secretValueLabel = string(
+      "automations.secrets.value",
+      defaultValue: "Value",
+      comment: "Secret sheet field"
+    )
+    static let copySecretReference = string(
+      "automations.secrets.copy-reference",
+      defaultValue: "Copy {secret:…}",
+      comment: "Button copying the reference token"
+    )
+    static let shortcutPickerLabel = string(
+      "automations.inspector.shortcut-picker",
+      defaultValue: "Shortcut",
+      comment: "Shortcut picker label"
+    )
   }
 }

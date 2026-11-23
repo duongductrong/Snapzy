@@ -31,7 +31,8 @@ final class AutomationLauncher {
     },
     readClipboardImage: {
       ClipboardHelper.readImageFile(into: TempCaptureManager.shared.tempCaptureDirectory)
-    }
+    },
+    allowsCodeSteps: { AutomationTrust.allowsCodeSteps() }
   )
 
   /// Set once at launch to the app's capture view model.
@@ -42,17 +43,21 @@ final class AutomationLauncher {
   private let isURLSchemeEnabled: () -> Bool
   /// Saves the clipboard image as a new file (clipboard-image source); `nil` when there is none.
   private let readClipboardImage: () -> URL?
+  /// Settings → Automations → Advanced → "Allow script & Shortcut steps".
+  private let allowsCodeSteps: () -> Bool
 
   init(
     store: AutomationStore,
     runner: AutomationRunner,
     isURLSchemeEnabled: @escaping () -> Bool,
-    readClipboardImage: @escaping () -> URL? = { nil }
+    readClipboardImage: @escaping () -> URL? = { nil },
+    allowsCodeSteps: @escaping () -> Bool = { false }
   ) {
     self.store = store
     self.runner = runner
     self.isURLSchemeEnabled = isURLSchemeEnabled
     self.readClipboardImage = readClipboardImage
+    self.allowsCodeSteps = allowsCodeSteps
   }
 
   /// Runs `ref`. With `input`, the steps run on those files (no capture);
@@ -117,8 +122,18 @@ final class AutomationLauncher {
     input: AutomationInput?
   ) -> AutomationLaunchRejection? {
     guard automation.isEnabled else { return .disabled }
+    // Imported with network / script steps nobody looked at yet.
+    if automation.needsReview { return .needsReview }
     if invocation.isExternal, !automation.externalInvocation { return .externalNotAllowed }
     if invocation == .urlScheme, !isURLSchemeEnabled() { return .urlSchemeDisabled }
+    if automation.containsCodeSteps {
+      guard allowsCodeSteps() else { return .codeStepsDisabled }
+      // A link or a shortcut must not run a script without the second opt-in
+      // (the CLI is already approved per calling app).
+      if invocation == .urlScheme || invocation == .appIntent, !automation.allowExternalCode {
+        return .externalCodeNotAllowed
+      }
+    }
     if automation.hasUnsupportedSource { return .unsupportedSource }
     // Never start a capture (or touch a file) for a chain that cannot run.
     if !AutomationChainValidator.blockingIssues(automation.migrated()).isEmpty { return .invalidChain }

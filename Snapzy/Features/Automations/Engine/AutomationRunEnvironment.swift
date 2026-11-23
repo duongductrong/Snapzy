@@ -65,6 +65,21 @@ protocol AutomationRunEnvironment: AnyObject {
   /// The folder's URL, or `AutomationStepError.folderUnavailable`.
   func resolveFolder(_ ref: AutomationFolderRef) throws -> URL
 
+  // Integrations (milestone 4). Defaults in `AutomationIntegrationEnvironment.swift`.
+  func isUploadConfigured(_ destination: AutomationUploadDestination) -> Bool
+  func upload(_ url: URL, destination: AutomationUploadDestination) async throws -> CloudUploadResult
+  /// Value of a named secret (Keychain), `nil` when there is none.
+  func secretValue(named name: String) -> String?
+  /// Settings → Automations → Advanced → "Allow script & Shortcut steps".
+  var allowsCodeSteps: Bool { get }
+  /// Sends an HTTP request; `bodyFile` streams the body from disk.
+  func send(_ request: URLRequest, bodyFile: URL?) async throws -> (Data, HTTPURLResponse)
+  func runProcess(_ request: ProcessRequest) async throws -> ProcessOutcome
+  /// Shares `items` (file URLs, a link URL or text) and returns once the user
+  /// picked a service and it finished, or dismissed the picker.
+  func share(_ items: [Any], service: AutomationShareService) async throws
+  func open(_ items: [URL], appBundleID: String, appName: String) async throws
+
   func recordHistory(_ url: URL, kind: AutomationFileKind) async
   func notify(title: String, body: String, isError: Bool, context: AutomationNotificationContext?) async
   func runDidUpdate(_ update: AutomationRunUpdate)

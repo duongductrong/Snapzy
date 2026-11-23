@@ -44,6 +44,17 @@ final class FakeAutomationEnvironment: AutomationRunEnvironment {
   var runRecords: [AutomationRunRecord] = []
   /// Suspends `upload` until resumed, to test cancellation.
   var uploadDelayNanoseconds: UInt64 = 0
+  // Milestone 4 integrations
+  var secrets: [String: String] = [:]
+  var codeStepsAllowed = false
+  var sentRequests: [URLRequest] = []
+  var sendStatus = 200
+  var sendBody = Data()
+  var processRequests: [ProcessRequest] = []
+  var processOutcome = ProcessOutcome(status: 0, stdout: Data(), stderr: Data(), timedOut: false, truncated: false)
+  var shared: [([Any], AutomationShareService)] = []
+  var opened: [([URL], String)] = []
+  var customUploaders: Set<UUID> = []
 
   func prepareScreenshot(_ url: URL) -> AnnotationSessionData? {
     preparedScreenshots.append(url)
@@ -83,6 +94,40 @@ final class FakeAutomationEnvironment: AutomationRunEnvironment {
       fileSize: 10,
       uploadedAt: Date()
     )
+  }
+
+  func secretValue(named name: String) -> String? { secrets[name] }
+
+  var allowsCodeSteps: Bool { codeStepsAllowed }
+
+  func isUploadConfigured(_ destination: AutomationUploadDestination) -> Bool {
+    switch destination {
+    case .default: isCloudConfigured
+    case .customUploader(let id): customUploaders.contains(id)
+    }
+  }
+
+  func upload(_ url: URL, destination _: AutomationUploadDestination) async throws -> CloudUploadResult {
+    try await upload(url)
+  }
+
+  func send(_ request: URLRequest, bodyFile _: URL?) async throws -> (Data, HTTPURLResponse) {
+    sentRequests.append(request)
+    let response = HTTPURLResponse(url: request.url!, statusCode: sendStatus, httpVersion: nil, headerFields: nil)!
+    return (sendBody, response)
+  }
+
+  func runProcess(_ request: ProcessRequest) async throws -> ProcessOutcome {
+    processRequests.append(request)
+    return processOutcome
+  }
+
+  func share(_ items: [Any], service: AutomationShareService) async throws {
+    shared.append((items, service))
+  }
+
+  func open(_ items: [URL], appBundleID: String, appName _: String) async throws {
+    opened.append((items, appBundleID))
   }
 
   func showQuickAccess(_ url: URL, kind _: AutomationFileKind, sessionData _: AnnotationSessionData?) async -> UUID? {

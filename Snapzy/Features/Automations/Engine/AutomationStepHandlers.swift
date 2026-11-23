@@ -48,6 +48,8 @@ struct AutomationRunState {
   var retainedFiles: Set<URL> = []
   /// Non-fatal notes for the run log (e.g. "WebP unavailable, wrote PNG").
   var warnings: [String] = []
+  /// Secret values a step resolved; masked out of errors and the run log.
+  var secretValues: Set<String> = []
 
   init(
     runID: UUID,
@@ -128,6 +130,18 @@ enum AutomationStepError: LocalizedError, Equatable {
   case folderUnavailable
   case translationUnavailable(String)
   case failed(String)
+  // Milestone 4
+  case uploaderMissing
+  case codeStepsDisabled
+  case secretMissing(String)
+  case invalidURL
+  case httpStatus(Int, String)
+  case timedOut(Int)
+  case processFailed(Int32, String)
+  case shortcutNotFound(String)
+  case shareServiceUnavailable
+  case appNotFound(String)
+  case outputFileInvalid
 
   var errorDescription: String? {
     switch self {
@@ -141,15 +155,21 @@ enum AutomationStepError: LocalizedError, Equatable {
     case .folderUnavailable: L10n.Automations.errorFolderUnavailable
     case .translationUnavailable(let reason): reason
     case .failed(let reason): reason
+    case .uploaderMissing: L10n.Automations.errorUploaderMissing
+    case .codeStepsDisabled: L10n.Automations.errorCodeStepsDisabled
+    case .secretMissing(let name): L10n.Automations.secretErrorNotFound(name)
+    case .invalidURL: L10n.Automations.errorInvalidWebhookURL
+    case .httpStatus(let status, let body):
+      body.isEmpty ? L10n.Automations.errorHTTPStatus(status) : "\(L10n.Automations.errorHTTPStatus(status)): \(body)"
+    case .timedOut(let seconds): L10n.Automations.errorTimedOut(seconds)
+    case .processFailed(let status, let stderr):
+      stderr.isEmpty ? L10n.Automations.errorExitStatus(Int(status)) : "\(L10n.Automations.errorExitStatus(Int(status))): \(stderr)"
+    case .shortcutNotFound(let name): L10n.Automations.errorShortcutNotFound(name)
+    case .shareServiceUnavailable: L10n.Automations.errorShareUnavailable
+    case .appNotFound(let name): L10n.Automations.errorAppNotFound(name)
+    case .outputFileInvalid: L10n.Automations.errorOutputFileInvalid
     }
   }
-}
-
-/// Where a step may reach. Enforced from milestone 4 (network / code steps).
-enum AutomationTrustTier: String, Sendable {
-  case local
-  case network
-  case code
 }
 
 @MainActor
@@ -198,6 +218,11 @@ enum AutomationStepRegistry {
     case .saveToFolder: SaveToFolderStepHandler()
     case .reveal: RevealStepHandler()
     case .pin: PinStepHandler()
+    case .webhook: WebhookStepHandler()
+    case .runScript: RunScriptStepHandler()
+    case .runShortcut: RunShortcutStepHandler()
+    case .shareSheet: ShareSheetStepHandler()
+    case .openInApp: OpenInAppStepHandler()
     }
   }
 
@@ -319,7 +344,7 @@ struct LegacyUploadAndCopyLinkStepHandler: AutomationStepHandler {
     environment: AutomationRunEnvironment
   ) async throws {
     guard case .uploadAndCopyLink(let format) = action else { return }
-    try await UploadStepHandler().run(.upload, files: files, state: &state, environment: environment)
+    try await UploadStepHandler().run(.upload(AutomationUploadConfig()), files: files, state: &state, environment: environment)
     try await CopyLinkStepHandler().run(
       .copyLink(AutomationLinkTemplate(format)),
       files: files,

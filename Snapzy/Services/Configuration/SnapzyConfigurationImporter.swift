@@ -587,6 +587,14 @@ enum SnapzyConfigurationImporter {
     collectEnumString(&reader, "cloud", "uploads_window_position", allowed: CloudUploadFloatingPosition.allCases.map(\.rawValue), mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.cloudUploadsFloatingPosition)
     }
+    // Only which custom uploader is active; definitions are never imported.
+    collectString(&reader, "cloud", "custom_uploader", mutations: &mutations) { raw in
+      guard let id = UUID(uuidString: raw) else {
+        if raw.isEmpty { defaults.removeObject(forKey: PreferencesKeys.cloudCustomUploaderID) }
+        return
+      }
+      defaults.set(id.uuidString, forKey: PreferencesKeys.cloudCustomUploaderID)
+    }
   }
 
   private static func collectAnnotate(

@@ -105,8 +105,11 @@ enum SnapzyConfigurationAutomationsCodec {
   @MainActor
   static func parse(
     _ document: SimpleTOMLDocument,
-    folderStore: AutomationFolderAccessStore? = nil
+    folderStore: AutomationFolderAccessStore? = nil,
+    storedAutomation: ((UUID) -> Automation?)? = nil
   ) -> ParseResult {
+    // The review baseline is what this Mac already has, never the file's own `data`.
+    let storedAutomation = storedAutomation ?? { AutomationStore.shared.automation(id: $0) }
     let folderStore = folderStore ?? .shared
     guard let section = document.value(at: [sectionName]) else {
       return ParseResult(automations: nil, warnings: [])
@@ -231,7 +234,14 @@ enum SnapzyConfigurationAutomationsCodec {
         }
       }
 
-      parsed.append((fields["order"]?.intValue ?? Int.max, automation.normalized()))
+      // Network / script steps the file added or changed wait for a review in the
+      // editor before they can run; the second external opt-in is never imported.
+      let stored = storedAutomation(id)
+      let reviewed = automation.normalized().flaggedForReview(comparedTo: stored)
+      if reviewed.needsReview, !(stored?.needsReview ?? false) {
+        warnings.append("\(path): has webhook, upload or script steps; open it in Settings → Automations and save to allow it")
+      }
+      parsed.append((fields["order"]?.intValue ?? Int.max, reviewed))
     }
 
     var automations = parsed.sorted { $0.order < $1.order }.map(\.automation)

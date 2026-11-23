@@ -10,6 +10,12 @@ import Foundation
 enum AutomationDisplay {
   static let inputSymbol = "doc.badge.gearshape"
 
+  /// A template with its query string hidden (webhook URLs often carry tokens).
+  static func maskedTemplate(_ template: String) -> String {
+    guard let query = template.firstIndex(of: "?") else { return template }
+    return String(template[..<query]) + "?…"
+  }
+
   /// `snapzy://automation/run?id=<uuid>` for the "Run from other apps" section.
   static func runURL(for automation: Automation) -> String {
     "snapzy://automation/run?id=\(automation.id.uuidString)"
@@ -64,6 +70,7 @@ extension AutomationRecordingOutput {
 enum AutomationStepGroup: CaseIterable, Identifiable {
   case transform
   case deliver
+  case integrations
   case control
 
   var id: Self { self }
@@ -72,6 +79,7 @@ enum AutomationStepGroup: CaseIterable, Identifiable {
     switch self {
     case .transform: L10n.Automations.groupTransform
     case .deliver: L10n.Automations.groupDeliver
+    case .integrations: L10n.Automations.groupIntegrations
     case .control: L10n.Automations.groupControl
     }
   }
@@ -80,6 +88,7 @@ enum AutomationStepGroup: CaseIterable, Identifiable {
     switch self {
     case .transform: [.applyCanvasPreset, .resize, .convert, .stripMetadata, .ocr, .translate, .convertToGIF]
     case .deliver: [.copyImage, .upload, .copyLink, .copyText, .saveToFolder, .reveal, .pin, .showQuickAccess, .openAnnotate]
+    case .integrations: [.webhook, .shareSheet, .openInApp, .runShortcut, .runScript]
     case .control: [.notify]
     }
   }
@@ -106,6 +115,11 @@ extension AutomationStepKind {
     case .saveToFolder: L10n.Automations.stepSaveToFolder
     case .reveal: L10n.Automations.stepReveal
     case .pin: L10n.Automations.stepPin
+    case .webhook: L10n.Automations.stepWebhook
+    case .runScript: L10n.Automations.stepRunScript
+    case .runShortcut: L10n.Automations.stepRunShortcut
+    case .shareSheet: L10n.Automations.stepShareSheet
+    case .openInApp: L10n.Automations.stepOpenInApp
     }
   }
 
@@ -129,6 +143,11 @@ extension AutomationStepKind {
     case .saveToFolder: "folder"
     case .reveal: "magnifyingglass"
     case .pin: "pin"
+    case .webhook: "paperplane"
+    case .runScript: "terminal"
+    case .runShortcut: "square.2.layers.3d"
+    case .shareSheet: "square.and.arrow.up"
+    case .openInApp: "arrow.up.forward.app"
     }
   }
 }
@@ -168,8 +187,24 @@ extension AutomationStepAction {
       return (path as NSString).abbreviatingWithTildeInPath
     case .uploadAndCopyLink(let format):
       return format.displayName
+    case .upload(let config):
+      switch config.destination {
+      case .default: return ""
+      case .customUploader(let id):
+        return CustomUploaderStore.shared.uploader(id: id)?.name ?? L10n.Automations.issueUploader
+      }
+    case .webhook(let config):
+      return config.url.isEmpty ? L10n.Automations.issueWebhookURL : AutomationDisplay.maskedTemplate(config.url)
+    case .runScript(let config):
+      return config.script.split(whereSeparator: \.isNewline).first.map(String.init) ?? L10n.Automations.issueScript
+    case .runShortcut(let config):
+      return config.trimmedName.isEmpty ? L10n.Automations.issueShortcut : config.trimmedName
+    case .shareSheet(let config):
+      return config.service.displayName
+    case .openInApp(let config):
+      return config.appName.isEmpty ? (config.trimmedBundleID.isEmpty ? L10n.Automations.issueApp : config.trimmedBundleID) : config.appName
     case .copyImage, .showQuickAccess, .openAnnotate, .notify, .stripMetadata,
-         .upload, .copyFile, .reveal, .pin:
+         .copyFile, .reveal, .pin:
       return ""
     }
   }
@@ -217,6 +252,12 @@ extension AutomationChainIssue {
     case .missingConfig(.folder): return L10n.Automations.issueFolder
     case .missingConfig(.template): return L10n.Automations.issueTemplate
     case .missingConfig(.canvasPreset): return L10n.Automations.issueCanvasPreset
+    case .missingConfig(.uploader): return L10n.Automations.issueUploader
+    case .missingConfig(.webhookURL): return L10n.Automations.issueWebhookURL
+    case .missingConfig(.script): return L10n.Automations.issueScript
+    case .missingConfig(.shortcut): return L10n.Automations.issueShortcut
+    case .missingConfig(.app): return L10n.Automations.issueApp
+    case .missingConfig(.secret(let name)): return L10n.Automations.issueSecret(name)
     }
   }
 }
@@ -235,8 +276,15 @@ extension Automation {
     return "\(mode) · \(stepsText)"
   }
 
+  /// Uploads through the provider configured in Settings → Cloud.
   var needsCloud: Bool {
-    contains(.upload) || contains(.uploadAndCopyLink)
+    activeActions.contains { action in
+      switch action {
+      case .upload(let config): config.destination == .default
+      case .uploadAndCopyLink: true
+      default: false
+      }
+    }
   }
 
   /// A step still needs a setting (e.g. a folder) before the automation can run.
@@ -274,6 +322,21 @@ extension AutomationLaunchRejection {
     case .captureInProgress: L10n.Automations.rejectionCaptureInProgress
     case .clipboardEmpty: L10n.Automations.rejectionClipboardEmpty
     case .invalidChain: L10n.Automations.rejectionInvalidChain
+    case .needsReview: L10n.Automations.rejectionNeedsReview
+    case .codeStepsDisabled: L10n.Automations.rejectionCodeStepsDisabled
+    case .externalCodeNotAllowed: L10n.Automations.rejectionExternalCode
+    }
+  }
+}
+
+extension AutomationShareService {
+  var displayName: String {
+    switch self {
+    case .picker: L10n.Automations.shareServicePicker
+    case .airDrop: "AirDrop"
+    case .messages: L10n.Automations.shareServiceMessages
+    case .mail: L10n.Automations.shareServiceMail
+    case .named(let name): name
     }
   }
 }

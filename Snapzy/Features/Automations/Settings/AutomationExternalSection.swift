@@ -31,6 +31,19 @@ struct AutomationExternalSection: View {
         }
         copyableRow(L10n.Automations.externalCLILabel, value: AutomationDisplay.cliCommand(for: automation))
 
+        // Second opt-in: a link or a shortcut must not run a script unless asked for.
+        if automation.containsCodeSteps {
+          Toggle(isOn: $automation.allowExternalCode) {
+            VStack(alignment: .leading, spacing: 2) {
+              Text(L10n.Automations.externalCodeToggle)
+              Text(L10n.Automations.externalCodeDescription)
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+          }
+        }
+
         if !isURLSchemeEnabled, automation.runsWithoutInput {
           HStack(spacing: 6) {
             Label(L10n.Automations.externalURLSchemeOff, systemImage: "exclamationmark.triangle.fill")

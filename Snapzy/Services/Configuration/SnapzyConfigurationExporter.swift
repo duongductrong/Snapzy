@@ -212,6 +212,9 @@ enum SnapzyConfigurationExporter {
 
     if providerRaw == CloudProviderType.googleDrive.rawValue {
       writer.value("folder_name", defaults.string(forKey: PreferencesKeys.cloudBucket) ?? "Snapzy")
+    } else if providerRaw == CloudProviderType.customHTTP.rawValue {
+      // The uploader definitions stay on this Mac (Settings → Cloud); only the choice syncs.
+      writer.value("custom_uploader", defaults.string(forKey: PreferencesKeys.cloudCustomUploaderID) ?? "")
     } else if providerRaw == CloudProviderType.imgbb.rawValue {
       // The imgbb API key stays in the Keychain; only the expiration is portable.
       writer.value("expire_time", defaults.string(forKey: PreferencesKeys.cloudExpireTime) ?? CloudExpireTime.day7.rawValue)

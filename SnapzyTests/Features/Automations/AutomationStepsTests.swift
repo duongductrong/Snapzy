@@ -148,13 +148,13 @@ final class AutomationStepsTests: XCTestCase {
       (.bbcode, "[img]https://cdn.example.com/Snapzy_shot.png[/img]"),
     ] {
       environment.copiedTexts = []
-      _ = await runner.run(automation([.upload, .copyLink(AutomationLinkTemplate(style: style))]), files: [capture])
+      _ = await runner.run(automation([.upload(AutomationUploadConfig()), .copyLink(AutomationLinkTemplate(style: style))]), files: [capture])
       XCTAssertEqual(environment.copiedTexts, [expected])
     }
 
     environment.copiedTexts = []
     _ = await runner.run(
-      automation([.upload, .copyLink(AutomationLinkTemplate(style: .custom, custom: "<{link}> by {automation}"))]),
+      automation([.upload(AutomationUploadConfig()), .copyLink(AutomationLinkTemplate(style: .custom, custom: "<{link}> by {automation}"))]),
       files: [capture]
     )
     XCTAssertEqual(environment.copiedTexts, ["<https://cdn.example.com/Snapzy_shot.png> by Test"])
@@ -281,7 +281,7 @@ final class AutomationStepsTests: XCTestCase {
     let runID = UUID()
 
     async let pending = runner.run(
-      automation([.upload, .copyLink(AutomationLinkTemplate()), .notify]),
+      automation([.upload(AutomationUploadConfig()), .copyLink(AutomationLinkTemplate()), .notify]),
       input: AutomationInput(files: [capture], isAlreadyInHistory: true),
       invocation: .cli,
       runID: runID

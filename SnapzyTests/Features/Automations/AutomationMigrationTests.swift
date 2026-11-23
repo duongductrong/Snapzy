@@ -37,7 +37,7 @@ final class AutomationMigrationTests: XCTestCase {
     XCTAssertEqual(automation.schemaVersion, 2)
     XCTAssertEqual(automation.steps.map(\.action), [
       .copyImage,
-      .upload,
+      .upload(AutomationUploadConfig()),
       .copyLink(AutomationLinkTemplate(style: .markdown)),
       .notify,
     ])
@@ -76,7 +76,7 @@ final class AutomationMigrationTests: XCTestCase {
       .ocr(AutomationOCRConfig(languageIdentifier: "vi", includeQR: true)),
       .translate(AutomationTranslateConfig(targetLanguage: "ja")),
       .convertToGIF(AutomationGIFConfig(fps: 24, maxWidth: 640)),
-      .upload,
+      .upload(AutomationUploadConfig()),
       .copyLink(AutomationLinkTemplate(style: .custom, custom: "<{link}>")),
       .copyText(AutomationTextTemplate(template: "> {text}")),
       .copyFile,

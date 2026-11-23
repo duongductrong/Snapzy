@@ -50,6 +50,10 @@ struct AutomationEditorSheet: View {
     VStack(spacing: 0) {
       header
       Divider()
+      if automation.needsReview {
+        reviewBanner
+        Divider()
+      }
       HStack(spacing: 0) {
         AutomationStepListView(automation: $automation, selection: $selection, issues: issues)
           .frame(width: 300)
@@ -114,6 +118,18 @@ struct AutomationEditorSheet: View {
   }
 
   private static let headerControlHeight: CGFloat = 30
+
+  /// Imported with network / script steps: saving is the review.
+  private var reviewBanner: some View {
+    Label(L10n.Automations.reviewBanner, systemImage: "checkmark.shield")
+      .font(.callout)
+      .foregroundStyle(.orange)
+      .fixedSize(horizontal: false, vertical: true)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 8)
+      .background(Color.orange.opacity(0.08))
+  }
 
   // MARK: - Inspector
 
@@ -195,7 +211,10 @@ struct AutomationEditorSheet: View {
   }
 
   private func save() {
-    onSave(storedForm(automation.normalized()))
+    var saved = storedForm(automation.normalized())
+    // Saving from the editor is the review an imported automation waits for.
+    saved.needsReview = false
+    onSave(saved)
   }
 }
 

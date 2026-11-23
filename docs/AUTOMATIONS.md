@@ -131,6 +131,9 @@ Input runs differ from capture runs: no `prepareScreenshot`, so no default Annot
 | `capture_in_progress` | A selection, capture, recording or scrolling session is active (also when no capture starter is wired) |
 | `clipboard_empty` | Clipboard source, but the clipboard holds no image |
 | `invalid_chain` | A step has nothing to work on (validator `.needs`); checked before any capture starts |
+| `needs_review` | Imported (config file / recipe) with webhook, custom-uploader or script / Shortcut steps nobody reviewed yet; saving it from the editor clears it. Checked right after `disabled` |
+| `code_steps_disabled` | Contains a script or Shortcut step while Settings → Automations → Advanced → "Allow script & Shortcut steps" is off |
+| `external_code_not_allowed` | URL scheme or Shortcuts caller, automation has script / Shortcut steps, and its second opt-in ("Let other apps run its script steps") is off. The CLI is allowed (already approved per calling app) |
 
 `.cancelled` (not a rejection): capture cancelled or saved no file; the CLI returns state `cancelled`.
 
@@ -155,7 +158,7 @@ Capture runs still bake the default Annotate canvas preset into fresh screenshot
 | `ocr(language?, includeQR)` | image → +text | `OCRService` (+ `QRCodeService` / `OCRQRPayloadComposer`); empty → "No text found" |
 | `translate(target?)` | text → text | `TranslationEngineResolver`: Apple → `HeadlessTranslationHost` (macOS 15+, offscreen non-activating panel hosting `.translationTask`, 30 s timeout, torn down after 60 s idle); endpoint → `RemoteTranslationProvider`; unavailable → error. Target `nil` = Snip to Translate target |
 | `convertToGIF(fps, maxWidth)` | video → gif | `GIFConverter` on an APFS clone inside the working directory (never writes next to the recording) |
-| `upload` | file → +link | `CloudShareService.upload` (first file); sets the Quick Access card's cloud link; failure → [fallback](#failures-fallback-cancel) |
+| `upload(destination)` | file → +link | `default`: `CloudShareService.upload` (first file); `customUploader(id)`: that Settings → Cloud custom uploader (`CustomUploaderEngine`), whatever the main Cloud provider is. Sets the Quick Access card's cloud link; failure → [fallback](#failures-fallback-cancel) |
 | `copyLink(style)` | link | `url`, `markdown` (`CloudShareService.linkText`: escaping, `[name](url)` for video), `html`, `bbcode`, `custom` template |
 | `copyText(template)` | text, or anything when the template has no `{text}` | Renders the template (default `{text}`) |
 | `copyImage` / `copyFile` | files | `ClipboardHelper.copyImage` (image-only setting respected); one video/GIF → file reference; several → file URLs |
@@ -165,6 +168,11 @@ Capture runs still bake the default Annotate canvas preset into fresh screenshot
 | `showQuickAccess` | files | `addScreenshot` (+ session data) or `addVideo`; shows the current (possibly transformed) file |
 | `openAnnotate` | image | Through its Quick Access item when present |
 | `notify` | any | One notification at the end with the outcome |
+| `webhook(method, url, headers, body, timeout, responseToText, responseLink)` | any (multipart: file) → +text / +link | HTTP request through `environment.send`. URL must be `https://` (or `http://localhost` / `127.0.0.1` / `[::1]`), checked after rendering. Body: `none`, `json` (template rendered with JSON escaping), `form`, `multipart` (fields + the file as `file_field`, streamed from a temp file). URL, headers, JSON and field values allow `{secret:NAME}`. Non-2xx → failure with status + first 200 chars (secrets masked). Optional response → `{text}` (64 KB) and JSON path (`data.url`, `files[0].link`) → `{link}`. Presets: Slack, Discord, generic JSON |
+| `runScript(script, shell, loginShell, timeout, output)` | any → +text / +link / file | `/bin/zsh -f` (or `bash --noprofile --norc`, `sh`; `-l` with login shell) `-c <script> snapzy <file paths…>` via `ProcessRunner` (posix_spawn, own process group, minimal environment, 1 MB output cap, SIGTERM→SIGKILL on timeout / cancel). Values only as environment variables: `SNAPZY_FILE`, `SNAPZY_FILES` (newline-separated), `SNAPZY_LINK`, `SNAPZY_TEXT`, `SNAPZY_AUTOMATION`, `SNAPZY_RUN_ID`, `SNAPZY_WORK_DIR`, `SNAPZY_SAVED_FILE`; never interpolated into the script. cwd = run working directory. Non-zero exit → failure with the stderr tail (512 chars). Output: ignore, text, link (first line, http(s)), file (last line: existing file in the working dir or home) |
+| `runShortcut(name, input, output, timeout)` | file / text / link → +text / file | `/usr/bin/shortcuts run <name> [--input-path …] [--output-path …]` (no Apple Events entitlement). Text / link input is written to a temp file. Not found → "Couldn't find the shortcut". The first run of a shortcut may ask for Shortcuts privacy consent (covered by the timeout). The inspector lists `shortcuts list` (cached 60 s) |
+| `shareSheet(service)` | any | `picker` (`NSSharingServicePicker` anchored to a 1×1 non-activating panel at the mouse), `airdrop`, `messages`, `mail`, or any `NSSharingService.Name` raw value. Files first, else the link, else the text. Waits until the user picks / dismisses (dismissing is not a failure). Unavailable service → failure |
+| `openInApp(appBundleID, appName)` | files / link | `NSWorkspace.open(_:withApplicationAt:configuration:)`; missing app → failure with its name. The opened file is kept after the run |
 
 `uploadAndCopyLink` remains decodable (legacy) and runs as `upload` + `copyLink` if built in code.
 
@@ -182,7 +190,7 @@ Capture runs still bake the default Annotate canvas preset into fresh screenshot
 
 ### Chain validation
 
-`AutomationChainValidator.validate` walks enabled steps starting from the source's kinds (screenshot / scrolling / clipboard → image; recording → video or gif; input → any file kind): a step whose `accepts` has nothing available → `.needs(kinds)` (blocks Save and launch: `invalid_chain`); missing settings → `.missingConfig(folder | template | canvasPreset)` ("Needs setup"; runs fail at that step). Example: `translate → …` without `ocr` is rejected; `ocr → translate → copyText` is valid.
+`AutomationChainValidator.validate` walks enabled steps starting from the source's kinds (screenshot / scrolling / clipboard → image; recording → video or gif; input → any file kind): a step whose `accepts` has nothing available → `.needs(kinds)` (blocks Save and launch: `invalid_chain`); missing settings → `.missingConfig(folder | template | canvasPreset | uploader | webhookURL | script | shortcut | app | secret(name))` ("Needs setup"; runs fail at that step). Example: `translate → …` without `ocr` is rejected; `ocr → translate → copyText` is valid.
 
 ### Failures, fallback, cancel
 
@@ -191,6 +199,21 @@ Capture runs still bake the default Annotate canvas preset into fresh screenshot
 - **Pasteboard guard**: links and text are written only when the pasteboard change count still equals the run's own last write. `ClipboardHelper.copyText` is the one text writer for automations, Cloud Share and Snip to Translate.
 - **Outcome message** follows what was delivered last (link copied / link ready / text copied / saved `name` / image or file copied); a failed step → "<step> failed: <reason>".
 - **Cancel**: `AutomationRunner.cancel(runID:)` cancels the step task; handlers check cancellation after slow work. A cancelled run keeps its files, applies no fallback, posts no notification, and logs `cancelled`. The run HUD (`AutomationRunHUDController`, bottom-center non-activating panel) appears after 1.5 s with the automation, current step and a Cancel button (no global Esc: a global key monitor would need Input Monitoring).
+
+## Trust, secrets and review (milestone 4)
+
+Least privilege for steps that reach outside Snapzy (`Engine/AutomationTrust.swift`):
+
+| Tier | Steps | Allowed when |
+| --- | --- | --- |
+| `local` | everything else, share sheet, open in app | Always |
+| `network` | `upload`, `webhook`, `translate` | The destination is configured (Cloud, custom uploader, webhook URL) |
+| `code` | `runScript`, `runShortcut` | Settings → Automations → Advanced → **Allow script & Shortcut steps** (`automations.allowCodeSteps`, off). Never set by an imported file |
+
+- Each handler declares `trust`; `Automation.maxTrust` is the highest among enabled steps. The launcher refuses `code_steps_disabled`; the runner checks again (`environment.allowsCodeSteps`) so a direct run cannot bypass it.
+- **External + code**: URL scheme and Shortcuts runs of an automation with code steps also need `Automation.allowExternalCode` (toggle under Run from Other Apps, shown only with code steps). It is cleared when `externalInvocation` is off and never imported. The CLI does not need it.
+- **Secrets** (`Services/AutomationSecretStore.swift`): name → Keychain item (service `com.trongduong.snapzy.automations`, account = a UUID); UserDefaults `automations.secrets` holds only names and accounts. Templates reference them as `{secret:NAME}`; `AutomationVariables.renderAllowingSecrets` resolves them in the same pass as payload tokens, so a payload value containing `{secret:…}` (OCR text, a file name) stays literal. Allowed in webhook URL / headers / body and custom uploader templates only; never in pasteboard text. Resolved values go into `AutomationRunState.secretValues` and are masked (`••••`) in step errors, the run log, warnings, notifications and diagnostics. A missing secret is a "Needs setup" issue and fails the step. Settings → Automations → **Secrets**: add, replace value (write-only), copy `{secret:NAME}`, delete. Custom uploaders resolve secrets through the same store (`CustomUploaderSecrets.provider`, set at launch).
+- **Review flag**: `Automation.needsReview`. An import (TOML; recipes later) flags an automation whose review-relevant part — webhook, custom-uploader and code steps with their settings, plus `externalInvocation` — differs from the automation **already stored on this Mac** with the same id (or there is none). The file's own `data` JSON is never the baseline. Flagged automations are refused (`needs_review`), show "Imported — review before it can run" with a Review button, and the editor shows a banner; saving from the editor clears the flag. Re-importing what this Mac exported does not flag.
 
 ## Activity log and notification actions
 
@@ -222,11 +245,11 @@ Capture runs still bake the default Annotate canvas preset into fresh screenshot
 | Area | Contents |
 | --- | --- |
 | Header | Name (duplicate-name warning), **Source** menu (Screenshot: area, fullscreen, active window, window, scrolling; Recording: area, window; Clipboard Image; Run on a File) |
-| Left: `AutomationStepListView` | "Source & Triggers" row, then the steps (icon, title, one-line config summary, issue badge, enable switch). Drag or ⌘↑ / ⌘↓ to reorder, ⌫ / "−" to delete, context menu duplicate. "+" menu grouped Transform / Deliver / Control |
-| Right: inspector | Source & Triggers (`AutomationTriggersInspector`): recording output (video / GIF), save-to-export, shortcut, Show In toggles, **Run from Other Apps** (`AutomationExternalSection`). Step (`AutomationStepInspector`): description, issues, per-kind settings (`StepInspectors/*`: canvas preset, resize, convert / Optimize preset, OCR QR, translate target, GIF fps / width, link style + custom template, text template, folder picker + name template + conflict + preview), "If this step fails: Stop / Continue". Template fields have a token help popover and a live preview |
+| Left: `AutomationStepListView` | "Source & Triggers" row, then the steps (icon, title, one-line config summary, issue badge, enable switch). Drag or ⌘↑ / ⌘↓ to reorder, ⌫ / "−" to delete, context menu duplicate. "+" menu grouped Transform / Deliver / Integrations / Control |
+| Right: inspector | Source & Triggers (`AutomationTriggersInspector`): recording output (video / GIF), save-to-export, shortcut, Show In toggles, **Run from Other Apps** (`AutomationExternalSection`). Step (`AutomationStepInspector`): description, issues, per-kind settings (`StepInspectors/*`: canvas preset, resize, convert / Optimize preset, OCR QR, translate target, GIF fps / width, link style + custom template, text template, folder picker + name template + conflict + preview; `AutomationIntegrationInspectors`: upload destination, webhook preset / method / URL / headers / body / response, script editor + shell + output + env-var cheat sheet, Shortcut picker + Open in Shortcuts, share service, app chooser; "Insert Secret" key menus; a lock banner on script / Shortcut steps while code steps are off), "If this step fails: Stop / Continue". Template fields have a token help popover and a live preview |
 | Footer | First validation issue (click selects the step); **Save is disabled while any `.needs` issue exists** |
 
-List rows show a "Needs setup" badge with a Set Up… button when a step misses a setting (e.g. Docs Shot without a folder).
+List rows show a "Needs setup" badge with a Set Up… button when a step misses a setting (e.g. Docs Shot without a folder), or "Imported — review before it can run" with Review. Below the list: **Advanced** ("Allow script & Shortcut steps") and **Secrets** (`AutomationAdvancedSection.swift`).
 
 ## Configuration (TOML)
 
@@ -277,7 +300,36 @@ template = "![{file.basename}]({saved.relativeURL})"
 on_failure = "continue"     # optional; enabled = false to keep a step off
 ```
 
-Step kinds: `copy_image`, `copy_file`, `show_quick_access`, `open_annotate`, `notify`, `apply_canvas_preset`, `resize`, `convert`, `strip_metadata`, `ocr` (`language`, `include_qr`), `translate` (`target`), `convert_to_gif` (`fps`, `max_width`), `upload`, `copy_link` (`style` url | markdown | html | bbcode | custom, `template`), `copy_text` (`template`), `save_to_folder`, `reveal`, `pin`. Unknown keys warn. A step kind this build doesn't know is written as `kind` + `json` and survives a round trip.
+Step kinds: `copy_image`, `copy_file`, `show_quick_access`, `open_annotate`, `notify`, `apply_canvas_preset`, `resize`, `convert`, `strip_metadata`, `ocr` (`language`, `include_qr`), `translate` (`target`), `convert_to_gif` (`fps`, `max_width`), `upload` (`destination` = custom uploader UUID, omitted for the Cloud default), `copy_link` (`style` url | markdown | html | bbcode | custom, `template`), `copy_text` (`template`), `save_to_folder`, `reveal`, `pin`, `webhook`, `run_script`, `run_shortcut`, `share_sheet` (`service` picker | airdrop | messages | mail | a sharing service name), `open_in_app` (`app` bundle id, `app_name`). Unknown keys warn.
+
+```toml
+[automations.8f0c2a6e-….steps.03]
+kind = "webhook"
+method = "POST"                         # GET | POST | PUT | PATCH | DELETE
+url = "{secret:SLACK_WEBHOOK}"          # https:// (or http://localhost); secrets allowed
+headers = ["Authorization: Bearer {secret:API_TOKEN}"]
+body = "json"                           # none | json | form | multipart
+template = "{\"text\": \"{link}\"}"       # json body; form / multipart use fields = ["name=value"], file_field
+timeout = 30
+# response_to_text = true
+# response_link = "data.url"
+
+[automations.8f0c2a6e-….steps.04]
+kind = "run_script"
+script = "pngquant --force --output \"$SNAPZY_FILE\" \"$SNAPZY_FILE\""   # newlines as \n
+shell = "zsh"                           # zsh | bash | sh
+login_shell = true
+timeout = 30
+output = "ignore"                       # ignore | text | link | file
+
+[automations.8f0c2a6e-….steps.05]
+kind = "run_shortcut"
+shortcut = "Post to Notion"
+input = "file"                          # file | text | link | none
+output = "text"                         # ignore | text | file
+```
+
+Secret values are never written (only `{secret:NAME}`). `allow_code_steps` is not a config key; importing never turns script steps on. Imported webhook / custom-uploader / script / Shortcut steps that differ from this Mac's copy are flagged for review (see [Trust, secrets and review](#trust-secrets-and-review-milestone-4)). A step kind this build doesn't know is written as `kind` + `json` and survives a round trip.
 
 - **Import precedence**: step sub-tables win; else the M1 form `steps = ["copy_image", "upload_copy_link:markdown", …]` (migrated); else `data`. Step ids are kept when the step at the same position has the same kind.
 - **Folders** are device-local bookmarks (`AutomationFolderAccessStore`, UserDefaults `automations.folders`). Export writes the path (`~` abbreviated); import registers a bookmark when the folder exists, otherwise warns ("choose it again") and the step shows "Needs setup".
@@ -323,6 +375,15 @@ The store also keeps stored entries it cannot decode and writes them back, so on
 | `Snapzy/Features/Automations/Steps/AutomationTextSteps.swift` | OCR, translate, live recognizer / translator |
 | `Snapzy/Features/Automations/Services/AutomationFolderAccessStore.swift` | Folder bookmarks for Save to Folder |
 | `Snapzy/Features/Automations/Services/HeadlessTranslationHost.swift` | Apple Translation without a visible window |
+| `Snapzy/Features/Automations/Engine/AutomationTrust.swift` | Trust tiers, code-step switch, review rule |
+| `Snapzy/Features/Automations/Engine/AutomationIntegrationEnvironment.swift` | Upload destinations, HTTP, processes, share sheet presenter, open in app (live + defaults) |
+| `Snapzy/Features/Automations/Models/AutomationIntegrationConfigs.swift` | Upload / webhook / script / Shortcut / share / open-in-app configs |
+| `Snapzy/Features/Automations/Steps/AutomationIntegrationSteps.swift` | Webhook, script, Shortcut, share, open-in-app handlers; JSON path; multipart body; Shortcuts catalog |
+| `Snapzy/Features/Automations/Services/AutomationSecretStore.swift` | Keychain-backed `{secret:NAME}` store and masking |
+| `Snapzy/Services/Security/KeychainPasswordStore.swift` | Generic-password Keychain wrapper |
+| `Snapzy/Services/Process/ProcessRunner.swift` | posix_spawn runner: process group, timeout, output cap |
+| `Snapzy/Features/Automations/Settings/AutomationAdvancedSection.swift` | Advanced switch and Secrets list |
+| `Snapzy/Features/Automations/Settings/StepInspectors/AutomationIntegrationInspectors.swift` | Inspectors for the integration steps |
 | `Snapzy/Features/Automations/Settings/AutomationStepListView.swift`, `AutomationStepInspector.swift`, `AutomationTriggersInspector.swift`, `StepInspectors/*` | Two-pane editor |
 | `Snapzy/Features/Automations/Settings/AutomationActivitySection.swift` | Activity page |
 | `Snapzy/Services/Configuration/SnapzyConfigurationAutomationStepCodec.swift` | TOML step sub-tables |
@@ -355,6 +416,7 @@ The store also keeps stored entries it cannot decode and writes them back, so on
 | Schema 2 migration, config round trips, new sources | `SnapzyTests/Features/Automations/AutomationMigrationTests.swift` |
 | M3 steps through the runner (working files, OCR / translate, templates, save to folder, cancel, run record) | `SnapzyTests/Features/Automations/AutomationStepsTests.swift` |
 | Validator, variables, image transforms on real files, folder store, run log, notification routing | `SnapzyTests/Features/Automations/AutomationEngineV2Tests.swift` |
+| M4: trust tiers at launch, external code opt-in, review flag (incl. forged `data`), secrets render / mask / store, webhook / script / Shortcut / share / open steps, real-shell no-interpolation, process timeout, TOML round trip of integration steps | `SnapzyTests/Features/Automations/AutomationIntegrationTests.swift` |
 
 ## Related docs
 

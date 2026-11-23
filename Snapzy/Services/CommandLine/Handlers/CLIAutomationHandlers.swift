@@ -163,6 +163,15 @@ enum CLIAutomationBridge {
     case .invalidChain:
       return CLIError(.invalidArguments, "Automation \(ref) has a step with nothing to work on",
                       hint: "Fix the steps marked in Settings → Automations")
+    case .needsReview:
+      return CLIError(.disabled, "Automation \(ref) was imported with network or script steps and needs a review",
+                      hint: "Open it in Settings → Automations, check the steps and save")
+    case .codeStepsDisabled:
+      return CLIError(.disabled, "Automation \(ref) runs a script or Shortcut, and script steps are turned off",
+                      hint: "Allow them in Settings → Automations → Advanced")
+    case .externalCodeNotAllowed:
+      return CLIError(.notAuthorized, "Automation \(ref) runs a script and cannot be started from outside Snapzy",
+                      hint: "Allow other apps to run its script steps in the automation's editor")
     }
   }
 }

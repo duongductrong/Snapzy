@@ -49,7 +49,7 @@ final class AutomationEngineV2Tests: XCTestCase {
     let gifRecording = AutomationSource.capture(AutomationCaptureSpec(mode: .recordingArea, saveToExportDirectory: false, recordingOutput: .gif))
     let videoRecording = AutomationSource.capture(AutomationCaptureSpec(mode: .recordingArea, saveToExportDirectory: false))
 
-    XCTAssertTrue(AutomationChainValidator.validate(automation([.upload, .copyLink(AutomationLinkTemplate())], source: gifRecording)).isEmpty)
+    XCTAssertTrue(AutomationChainValidator.validate(automation([.upload(AutomationUploadConfig()), .copyLink(AutomationLinkTemplate())], source: gifRecording)).isEmpty)
     XCTAssertEqual(
       AutomationChainValidator.validate(automation([.copyLink(AutomationLinkTemplate())])).first?.reason,
       .needs([.link]),
@@ -60,7 +60,7 @@ final class AutomationEngineV2Tests: XCTestCase {
       .needs([.image])
     )
     XCTAssertTrue(
-      AutomationChainValidator.validate(automation([.convertToGIF(AutomationGIFConfig()), .upload], source: videoRecording)).isEmpty
+      AutomationChainValidator.validate(automation([.convertToGIF(AutomationGIFConfig()), .upload(AutomationUploadConfig())], source: videoRecording)).isEmpty
     )
     XCTAssertEqual(
       AutomationChainValidator.validate(automation([.convertToGIF(AutomationGIFConfig()), .convertToGIF(AutomationGIFConfig())], source: videoRecording))

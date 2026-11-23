@@ -35,7 +35,7 @@ final class SnapzyConfigurationAutomationsTests: XCTestCase {
     XCTAssertEqual(imported[0].presetID, AutomationPreset.cloudShare.rawValue)
     XCTAssertEqual(
       imported[0].activeActions,
-      [.copyImage, .upload, .copyLink(AutomationLinkTemplate(style: .markdown)), .notify]
+      [.copyImage, .upload(AutomationUploadConfig()), .copyLink(AutomationLinkTemplate(style: .markdown)), .notify]
     )
     XCTAssertEqual(imported[0].steps.map(\.id), cloud.steps.map(\.id), "Step ids survive the round trip")
     XCTAssertEqual(imported[1].name, "Window \"docs\"")
@@ -132,7 +132,7 @@ final class SnapzyConfigurationAutomationsTests: XCTestCase {
 
     XCTAssertEqual(
       imported.first?.activeActions,
-      [.copyImage, .upload, .copyLink(AutomationLinkTemplate(style: .markdown)), .notify]
+      [.copyImage, .upload(AutomationUploadConfig()), .copyLink(AutomationLinkTemplate(style: .markdown)), .notify]
     )
   }
 
@@ -200,7 +200,7 @@ final class SnapzyConfigurationAutomationsTests: XCTestCase {
       source: .capture(AutomationCaptureSpec(mode: .recordingWindow, saveToExportDirectory: false, recordingOutput: .gif)),
       steps: [
         AutomationStep(.convertToGIF(AutomationGIFConfig(fps: 24, maxWidth: 640)), onFailure: .continue),
-        AutomationStep(.upload),
+        AutomationStep(.upload(AutomationUploadConfig())),
         AutomationStep(.copyLink(AutomationLinkTemplate(style: .custom, custom: "<{link}>"))),
         AutomationStep(.ocr(AutomationOCRConfig(languageIdentifier: "vi", includeQR: true)), isEnabled: false),
         AutomationStep(.translate(AutomationTranslateConfig(targetLanguage: "ja"))),
@@ -223,7 +223,7 @@ final class SnapzyConfigurationAutomationsTests: XCTestCase {
     )
     automation.steps.append(AutomationStep(.notify))
     var future = AutomationStep(.notify)
-    future.content = .unsupported(.object(["kind": .string("webhook"), "url": .string("https://example.com")]))
+    future.content = .unsupported(.object(["kind": .string("teleport"), "url": .string("https://example.com")]))
     automation.steps.append(future)
 
     var writer = SimpleTOMLWriter()

@@ -38,6 +38,11 @@ enum SnapzyConfigurationAutomationStepCodec {
     case .saveToFolder: "save_to_folder"
     case .reveal: "reveal"
     case .pin: "pin"
+    case .webhook: "webhook"
+    case .runScript: "run_script"
+    case .runShortcut: "run_shortcut"
+    case .shareSheet: "share_sheet"
+    case .openInApp: "open_in_app"
     }
   }
 
@@ -59,6 +64,12 @@ enum SnapzyConfigurationAutomationStepCodec {
     case .copyText: ["template"]
     case .saveToFolder: ["folder", "name", "conflict"]
     case .uploadAndCopyLink: ["format"]
+    case .upload: ["destination"]
+    case .webhook: ["method", "url", "headers", "body", "template", "fields", "file_field", "timeout", "response_to_text", "response_link"]
+    case .runScript: ["script", "shell", "login_shell", "timeout", "output"]
+    case .runShortcut: ["shortcut", "input", "output", "timeout"]
+    case .shareSheet: ["service"]
+    case .openInApp: ["app", "app_name"]
     default: []
     }
   }
@@ -118,8 +129,46 @@ enum SnapzyConfigurationAutomationStepCodec {
       writer.value("conflict", config.conflict.rawValue)
     case .uploadAndCopyLink(let format):
       writer.value("format", format.rawValue)
+    case .upload(let config):
+      if case .customUploader(let id) = config.destination {
+        writer.value("destination", id.uuidString.lowercased())
+      }
+    case .webhook(let config):
+      // Secret values never reach the file: fields hold `{secret:NAME}` references only.
+      writer.value("method", config.method.rawValue)
+      writer.value("url", config.url)
+      if !config.headers.isEmpty {
+        writer.stringArray("headers", config.headers.map { "\($0.name): \($0.value)" })
+      }
+      writer.value("body", config.bodyKind.rawValue)
+      switch config.bodyKind {
+      case .json: writer.value("template", config.jsonTemplate)
+      case .form, .multipart:
+        writer.stringArray("fields", config.fields.map { "\($0.name)=\($0.value)" })
+        if config.bodyKind == .multipart { writer.value("file_field", config.fileField) }
+      case .none: break
+      }
+      writer.value("timeout", Int(config.clampedTimeout))
+      if config.responseToText { writer.value("response_to_text", true) }
+      if let path = config.trimmedResponseLinkPath { writer.value("response_link", path) }
+    case .runScript(let config):
+      writer.value("script", config.script)
+      writer.value("shell", config.shell.rawValue)
+      if config.useLoginShell { writer.value("login_shell", true) }
+      writer.value("timeout", Int(config.clampedTimeout))
+      writer.value("output", config.output.rawValue)
+    case .runShortcut(let config):
+      writer.value("shortcut", config.name)
+      writer.value("input", config.input.rawValue)
+      writer.value("output", config.output.rawValue)
+      writer.value("timeout", Int(config.clampedTimeout))
+    case .shareSheet(let config):
+      writer.value("service", config.service.token)
+    case .openInApp(let config):
+      writer.value("app", config.appBundleID)
+      if !config.appName.isEmpty { writer.value("app_name", config.appName) }
     case .copyImage, .showQuickAccess, .openAnnotate, .notify, .stripMetadata,
-         .upload, .copyFile, .reveal, .pin:
+         .copyFile, .reveal, .pin:
       break
     }
   }
@@ -223,7 +272,61 @@ enum SnapzyConfigurationAutomationStepCodec {
     case .openAnnotate: action = .openAnnotate
     case .notify: action = .notify
     case .stripMetadata: action = .stripMetadata
-    case .upload: action = .upload
+    case .upload:
+      var config = AutomationUploadConfig()
+      if let raw = string("destination"), raw != AutomationUploadDestination.defaultToken {
+        if let id = UUID(uuidString: raw) {
+          config.destination = .customUploader(id)
+        } else {
+          warnings.append("\(path).destination must be \"default\" or a custom uploader id; using default")
+        }
+      }
+      action = .upload(config)
+    case .webhook:
+      var config = AutomationWebhookConfig()
+      if let raw = string("method") {
+        if let method = AutomationHTTPMethod(rawValue: raw.uppercased()) {
+          config.method = method
+        } else {
+          warnings.append("\(path).method \"\(raw)\" is unknown; using POST")
+        }
+      }
+      config.url = string("url") ?? ""
+      config.headers = pairs(fields["headers"], separator: ":", path: "\(path).headers", warnings: &warnings)
+      if let raw = string("body") {
+        if let body = AutomationWebhookBodyKind(rawValue: raw.lowercased()) {
+          config.bodyKind = body
+        } else {
+          warnings.append("\(path).body must be none, json, form or multipart; using json")
+        }
+      }
+      config.jsonTemplate = string("template") ?? config.jsonTemplate
+      config.fields = pairs(fields["fields"], separator: "=", path: "\(path).fields", warnings: &warnings)
+      config.fileField = string("file_field") ?? config.fileField
+      config.timeout = fields["timeout"]?.doubleValue ?? config.timeout
+      config.responseToText = bool("response_to_text") ?? false
+      config.responseLinkPath = string("response_link")
+      if !config.url.isEmpty, !AutomationWebhookPolicy.isAcceptableTemplate(config.url) {
+        warnings.append("\(path).url must start with https:// (or http://localhost)")
+      }
+      action = .webhook(config)
+    case .runScript:
+      var config = AutomationRunScriptConfig(script: string("script") ?? "")
+      config.shell = string("shell").flatMap { AutomationScriptShell(rawValue: $0.lowercased()) } ?? .zsh
+      config.useLoginShell = bool("login_shell") ?? false
+      config.timeout = fields["timeout"]?.doubleValue ?? config.timeout
+      config.output = string("output").flatMap { AutomationScriptOutput(rawValue: $0.lowercased()) } ?? .ignore
+      action = .runScript(config)
+    case .runShortcut:
+      var config = AutomationRunShortcutConfig(name: string("shortcut") ?? "")
+      config.input = string("input").flatMap { AutomationShortcutInput(rawValue: $0.lowercased()) } ?? .file
+      config.output = string("output").flatMap { AutomationShortcutOutput(rawValue: $0.lowercased()) } ?? .ignore
+      config.timeout = fields["timeout"]?.doubleValue ?? config.timeout
+      action = .runShortcut(config)
+    case .shareSheet:
+      action = .shareSheet(AutomationShareSheetConfig(service: AutomationShareService(token: string("service") ?? "picker")))
+    case .openInApp:
+      action = .openInApp(AutomationOpenInAppConfig(appBundleID: string("app") ?? "", appName: string("app_name") ?? ""))
     case .copyFile: action = .copyFile
     case .reveal: action = .reveal
     case .pin: action = .pin
@@ -239,5 +342,29 @@ enum SnapzyConfigurationAutomationStepCodec {
     }
     let step = AutomationStep(action, isEnabled: bool("enabled") ?? true, onFailure: onFailure)
     return ParseResult(step: step, warnings: warnings)
+  }
+
+  /// `["Name: value", …]` (headers) or `["name=value", …]` (form fields).
+  private static func pairs(
+    _ value: SimpleTOMLValue?,
+    separator: Character,
+    path: String,
+    warnings: inout [String]
+  ) -> [AutomationKeyValue] {
+    guard let value else { return [] }
+    guard let items = value.stringArrayValue else {
+      warnings.append("\(path) must be an array of strings; ignored")
+      return []
+    }
+    return items.compactMap { text in
+      guard let index = text.firstIndex(of: separator) else {
+        warnings.append("\(path): entries look like \"name\(separator)value\"; one was ignored")
+        return nil
+      }
+      let name = text[..<index].trimmingCharacters(in: .whitespaces)
+      let rest = text[text.index(after: index)...]
+      let value = separator == ":" ? rest.trimmingCharacters(in: .whitespaces) : String(rest)
+      return AutomationKeyValue(name: name, value: value)
+    }
   }
 }

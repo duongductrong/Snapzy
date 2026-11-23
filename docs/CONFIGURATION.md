@@ -53,7 +53,7 @@ The TOML file covers portable app preferences:
 - Recording settings: format, quality, FPS, audio, microphone device id, cursor, click highlights, keystroke overlay, live annotation shortcuts, video editor zoom transition duration.
 - Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, pinned image zoom mode (`pin_zoom_mode`: `fixedViewport` by default or `windowFollowsImage`), swipe left/right actions, hide card when window open, animation style, open in Finder after saving (`[quick_access] open_in_finder_after_save`, default `true`), action order, enabled actions, card slots, hover-activated card action shortcuts.
 - History: retention, maximum count, floating panel layout and filter.
-- Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, share link style (`[cloud] share_link_style`: `"descriptive"` or `"short"`, default `"descriptive"`, S3 and R2 only), and upload window position.
+- Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, share link style (`[cloud] share_link_style`: `"descriptive"` or `"short"`, default `"descriptive"`, S3 and R2 only), upload window position, and with `provider = "custom_http"` the active custom uploader (`[cloud] custom_uploader = "<uuid>"`). Custom uploader definitions are not in the file: they stay in Settings → Cloud on each Mac (a synced file cannot point uploads at a new server).
 - Annotate preferences.
 - Global, overlay, Annotate tool, Annotate action, and Video Editor action shortcuts.
 
@@ -174,6 +174,16 @@ kind = "notify"
   keys warn. `save_to_folder.folder` is a path (`~` allowed) or `"export"`; the
   folder bookmark is created on import, and a missing folder is a warning (the
   step then shows "Needs setup").
+- Integration steps (`webhook`, `run_script`, `run_shortcut`, `share_sheet`,
+  `open_in_app`, `upload.destination`) are listed in
+  [AUTOMATIONS.md § Configuration](AUTOMATIONS.md#configuration-toml). Secret
+  values are never exported, only `{secret:NAME}` references. An imported
+  automation whose webhook, custom-uploader, script or Shortcut steps differ
+  from the one already on this Mac is marked "needs review" and won't run until
+  it is opened and saved in Settings → Automations. Script and Shortcut steps
+  stay off until "Allow script & Shortcut steps" is turned on in Settings; no
+  file key can turn it on, and the per-automation "let other apps run its
+  script steps" opt-in is never imported.
 - Files from Snapzy before milestone 3 used `steps = ["copy_image",
   "upload_copy_link:markdown", …]`; that form is still imported
   (`upload_copy_link` becomes `upload` + `copy_link`).

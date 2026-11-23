@@ -38,7 +38,7 @@ struct AutomationStepInspector: View {
             .font(.caption)
             .foregroundStyle(issue.blocksRun ? .red : .orange)
         }
-        if step.action?.kind == .upload, !isCloudConfigured {
+        if case .upload(let config)? = step.action, config.destination == .default, !isCloudConfigured {
           Label(L10n.Automations.cloudWarning, systemImage: "exclamationmark.triangle.fill")
             .font(.caption)
             .foregroundStyle(.orange)
@@ -81,6 +81,18 @@ struct AutomationStepInspector: View {
       TextTemplateInspector(template: binding(template, AutomationStepAction.copyText))
     case .saveToFolder(let config)?:
       SaveToFolderInspector(config: binding(config, AutomationStepAction.saveToFolder))
+    case .upload(let config)?:
+      UploadDestinationInspector(config: binding(config, AutomationStepAction.upload))
+    case .webhook(let config)?:
+      WebhookInspector(config: binding(config, AutomationStepAction.webhook))
+    case .runScript(let config)?:
+      RunScriptInspector(config: binding(config, AutomationStepAction.runScript))
+    case .runShortcut(let config)?:
+      RunShortcutInspector(config: binding(config, AutomationStepAction.runShortcut))
+    case .shareSheet(let config)?:
+      ShareSheetInspector(config: binding(config, AutomationStepAction.shareSheet))
+    case .openInApp(let config)?:
+      OpenInAppInspector(config: binding(config, AutomationStepAction.openInApp))
     default:
       EmptyView()
     }
@@ -113,6 +125,11 @@ extension AutomationStepKind {
     case .reveal: L10n.Automations.describeReveal
     case .pin: L10n.Automations.describePin
     case .notify: L10n.Automations.describeNotify
+    case .webhook: L10n.Automations.describeWebhook
+    case .runScript: L10n.Automations.describeRunScript
+    case .runShortcut: L10n.Automations.describeRunShortcut
+    case .shareSheet: L10n.Automations.describeShareSheet
+    case .openInApp: L10n.Automations.describeOpenInApp
     case .copyImage, .copyFile: L10n.Automations.describeCopyImage
     case .showQuickAccess, .openAnnotate, .uploadAndCopyLink: nil
     }

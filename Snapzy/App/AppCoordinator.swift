@@ -19,6 +19,8 @@ final class AppCoordinator {
   init(environment: AppEnvironment) {
     self.environment = environment
     AutomationLauncher.shared.captureStarter = environment.screenCaptureViewModel
+    // Custom uploaders resolve `{secret:NAME}` from the automation secret store.
+    CustomUploaderSecrets.provider = AutomationSecretStore.shared
     AutomationNotificationRouter.install()
   }
 

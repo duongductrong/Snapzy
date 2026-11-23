@@ -35,7 +35,7 @@ final class AutomationModelTests: XCTestCase {
       "source": {"kind": "capture", "mode": "area", "saveToExportDirectory": true},
       "steps": [
         {"id": "11111111-1111-1111-1111-111111111111", "kind": "copyImage", "isEnabled": true, "onFailure": "stop"},
-        {"id": "22222222-2222-2222-2222-222222222222", "kind": "webhook", "url": "https://example.com/hook", "isEnabled": true}
+        {"id": "22222222-2222-2222-2222-222222222222", "kind": "teleport", "url": "https://example.com/hook", "isEnabled": true}
       ],
       "externalInvocation": false,
       "schemaVersion": 2
@@ -48,7 +48,7 @@ final class AutomationModelTests: XCTestCase {
     guard case .unsupported(let raw) = automation.steps[1].content else {
       return XCTFail("Unknown step kind must be kept as unsupported")
     }
-    XCTAssertEqual(raw.kind, "webhook")
+    XCTAssertEqual(raw.kind, "teleport")
     XCTAssertEqual(automation.hotkey, ShortcutConfig(keyCode: 21, modifiers: 4608))
     XCTAssertEqual(automation.triggers.count, 2)
 
@@ -80,7 +80,7 @@ final class AutomationModelTests: XCTestCase {
 
     XCTAssertEqual(
       automation.activeActions,
-      [.upload, .copyLink(AutomationLinkTemplate(style: .url)), .notify, .copyImage, .notify]
+      [.upload(AutomationUploadConfig()), .copyLink(AutomationLinkTemplate(style: .url)), .notify, .copyImage, .notify]
     )
     XCTAssertEqual(automation.schemaVersion, Automation.currentSchemaVersion)
     XCTAssertEqual(automation.name, L10n.Automations.defaultName)

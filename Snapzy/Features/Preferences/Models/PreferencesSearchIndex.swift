@@ -598,7 +598,7 @@ extension PreferencesSearchEntry {
     let uploadsWindow = L10n.CloudSettings.uploadsWindowSection
     return [
       .init(.cloud, section: provider, title: L10n.CloudSettings.provider,
-            keywords: ["s3", "r2", "google drive", "aws", "imgbb"]),
+            keywords: ["s3", "r2", "google drive", "aws", "imgbb", "custom uploader", "sharex", "sxcu"]),
       .init(.cloud, section: provider, title: L10n.CloudSettings.edit,
             keywords: ["cloud settings", "credentials"], anchored: false),
       .init(.cloud, section: provider, title: L10n.CloudSettings.reset,

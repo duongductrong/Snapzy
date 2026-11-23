@@ -47,6 +47,8 @@ struct AutomationsSettingsView: View {
         AutomationActivitySection()
       } else {
         automationsSection
+        AutomationAdvancedSection()
+        AutomationSecretsSection()
       }
     }
     .formStyle(.grouped)
@@ -272,6 +274,8 @@ private struct AutomationRow: View {
   private var statusLine: some View {
     if automation.hasUnsupportedSource {
       warning(L10n.Automations.unsupported)
+    } else if automation.needsReview {
+      warningWithAction(L10n.Automations.reviewBadge, action: L10n.Automations.reviewButton, perform: onEdit)
     } else if automation.needsSetup {
       warningWithAction(L10n.Automations.needsSetupBadge, action: L10n.Automations.setUpButton, perform: onEdit)
     } else if automation.needsCloud && !isCloudConfigured {

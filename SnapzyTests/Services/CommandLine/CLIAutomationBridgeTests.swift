@@ -22,7 +22,7 @@ final class CLIAutomationBridgeTests: XCTestCase {
       name: name,
       isEnabled: enabled,
       source: source,
-      steps: [AutomationStep(.copyImage), AutomationStep(.notify, isEnabled: false), AutomationStep(.upload), AutomationStep(.copyLink(AutomationLinkTemplate()))],
+      steps: [AutomationStep(.copyImage), AutomationStep(.notify, isEnabled: false), AutomationStep(.upload(AutomationUploadConfig())), AutomationStep(.copyLink(AutomationLinkTemplate()))],
       externalInvocation: external
     )
   }

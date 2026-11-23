@@ -255,7 +255,7 @@ final class AutomationLauncherTests: XCTestCase {
   func testRecordingSourceStartsRecordingCapture() async {
     let automation = add(
       source: .capture(AutomationCaptureSpec(mode: .recordingArea, saveToExportDirectory: false, recordingOutput: .gif)),
-      steps: [.upload, .copyLink(AutomationLinkTemplate())]
+      steps: [.upload(AutomationUploadConfig()), .copyLink(AutomationLinkTemplate())]
     )
     starter.onStart = { [runner] routing in runner!.abandon(routing: routing) }
 

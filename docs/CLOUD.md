@@ -1,6 +1,6 @@
 # Cloud Uploads
 
-Bring-your-own-storage cloud uploads for captures: AWS S3, Cloudflare R2, Google Drive, and the imgbb image host. No Snapzy servers, no telemetry — files go straight from the Mac to the user's bucket, drive, or imgbb account.
+Bring-your-own-storage cloud uploads for captures: AWS S3, Cloudflare R2, Google Drive, the imgbb image host, and user-defined HTTP uploaders (ShareX `.sxcu` compatible). No Snapzy servers, no telemetry — files go straight from the Mac to the user's bucket, drive, imgbb account, or server.
 
 Verified against `Snapzy/Services/Cloud/`, `Snapzy/Features/Preferences/Components/PreferencesCloud*.swift`, and upload call sites at HEAD (`v2.3.0-beta.10`).
 
@@ -27,6 +27,7 @@ flowchart LR
     P --> R2["R2CloudProvider"]
     P --> GD["GoogleDriveCloudProvider"]
     P --> IB["ImgbbCloudProvider"]
+    P --> CU["CustomHTTPCloudProvider<br/>(CustomUploaderEngine)"]
     S3 --> SIG["AWSV4Signer (SigV4)"]
     S3 --> MP["S3MultipartUploader<br/>>50 MB, 10 MB parts"]
     R2 --> S3
@@ -52,7 +53,7 @@ flowchart LR
 
 `PreferencesCloudSettingsView.swift` (+ import/export sheets):
 
-- Provider picker (AWS S3 / Cloudflare R2 / Google Drive / imgbb).
+- Provider picker (AWS S3 / Cloudflare R2 / Google Drive / imgbb / Custom Uploader).
 - S3/R2: access key + secret key, bucket, region (S3) or endpoint (R2), optional custom domain.
 - Google Drive: client ID + secret + OAuth authorize, folder name.
 - imgbb: API key (secure field, "Get an API key" link to `api.imgbb.com`) and expiration. The form and the configured summary both show a warning that imgbb links are public, plus a note that deleting opens imgbb's delete page and that imgbb takes images up to 32 MB, not videos.
@@ -79,12 +80,28 @@ flowchart LR
 - `CloudUploadRecord` fields: `id` (UUID), `fileName`, `publicURL`, `key`, `fileSize`, `uploadedAt`, `providerType`, `expireTime`, `contentType?`, `deleteURL?` (imgbb delete page; migration `v3_addCloudUploadDeleteURL`).
 - Derived: `isExpired` (local check from `expireTime.seconds`), `isImageType`, `thumbnailURL`.
 
+## Custom uploader
+
+ShareX-style uploader to any HTTP endpoint (issue #600). Code in `Snapzy/Services/Cloud/CustomUploader/`, UI in `Snapzy/Features/Preferences/Components/CustomUploader/`.
+
+- **Storage**: `CustomUploaderStore.shared` keeps up to 20 definitions as JSON in UserDefaults `cloud.customUploaders`. Definitions never hold secret values, only `{secret:NAME}` references. Provider `custom_http` (`CloudProviderType.customHTTP`) uses the uploader in `cloud.customUploaderID`. Automations reference uploaders by id too, independent of the Cloud provider.
+- **Fields**: name; method `POST`/`PUT`/`PATCH`; request URL; headers; query parameters; body (multipart form data with a file field and extra fields, binary = the raw file, or URL-encoded form fields without the file); response extractors for URL (required), thumbnail, deletion URL and error message; timeout (default 60 s).
+- **Request templates**: `{filename}` / `{file.name}` and `{secret:NAME}`. Values spliced into the URL are percent-encoded, except a URL that is a single token (e.g. `{secret:WEBHOOK_URL}`). The request URL must be http/https.
+- **Response extractors**: whole response, JSON path subset (`data.url`, `$.data.url`, `[0].url`, `files[0].url`, `data["odd key"]`), regex (first capture group, else whole match; `pattern|group` picks a group), or a template mixing text with `{json:path}`, `{regex:pattern|group}`, `{response}`, `{responseurl}`, `{header:name}`, `{filename}`. The extracted URL must be absolute http/https (`file:`, `javascript:`, `data:` and relative values are rejected); a bad optional link (thumbnail/deletion) is dropped.
+- **Upload**: `CustomUploaderEngine` resolves templates, streams the multipart body from a temp file (1 MB chunks, so videos never sit in memory), sends one URLSession upload task, and maps non-2xx to `CloudError.uploadFailed` with the ErrorMessage extractor's text (else the first 200 characters of the body). The history key is the public URL; `deleteURL` holds the extracted deletion link. There is no delete API, lifecycle rule or expiration: deleting a history row opens the deletion link (if any), and replaced uploads stay online (`CloudProviderType.supportsRemoteDelete == false`, same path as imgbb). Usage stats, share link style and the protection password are hidden for this provider, and `.snapzycloud` export refuses it (`CustomUploaderError.transferUnsupported`).
+- **Secrets**: `{secret:NAME}` is looked up through `CustomUploaderSecrets.provider` (the Keychain-backed automation secret store installed at launch). A missing secret fails the upload with `CustomUploaderError.unresolvedSecret` before any request, so the literal token is never sent. Secret and header values are never logged.
+- **`.sxcu` import** (`CustomUploaderSXCUImporter`): maps `RequestMethod` (or legacy `RequestType`), `RequestURL`, `Parameters`, `Headers`, `Body` (`MultipartFormData`, `Binary`, `FormURLEncoded`), `FileFormName`, `Arguments`, `URL`, `ThumbnailURL`, `DeletionURL`, `ErrorMessage`, keeping header/parameter order. Legacy `$json:path$`, `$response$`, `$filename$` and `$regex:i,g$` (with `RegexList`) become `{…}` syntax.
+- **Unsupported ShareX syntax** is imported but reported as warnings in the review sheet: `GET`/`DELETE` methods (POST is used), `JSON`/`XML` bodies and `Data` (multipart is used), `Body: None`/`FormURLEncoded` (fields only, no file), `ResponseType` other than `Text`, and tokens such as `{input}`, `{random:…}`, `{select:…}`, `{prompt:…}`, `{base64:…}`, `{outputurl}`, `{xml:…}` (they fail at upload time).
+- **Credential candidates**: header, query and form-field names containing `authorization`, `key`, `token`, `secret`, `password` or `auth` are offered **Store as Secret**, which writes the value through `CustomUploaderSecrets.provider?.storeSecret` and replaces it with `{secret:NAME}` (suggested name like `ZIPLINE_AUTHORIZATION`). The option is hidden when no secret store is installed.
+- **Settings UI**: with Custom Uploader selected, Settings → Cloud lists uploaders with an active-uploader picker and New / Edit / Duplicate / Delete / Import .sxcu… Saving marks Cloud configured through `CloudManager.saveCustomUploaderConfiguration(uploaderID:)` (no Keychain writes). The editor's **Test** button uploads a generated 1×1 PNG with the unsaved settings via `CustomUploaderEngine.send` and shows the HTTP status, the first 2 KB of the response, and the extracted URL or the error.
+
 ## Security boundaries
 
 - Secrets never leave the Keychain except via explicit, passphrase-encrypted `.snapzycloud` export.
 - TOML config export excludes secrets — see [CONFIGURATION.md](CONFIGURATION.md).
 - Public URLs are bearer links (custom domain / presigned-style path); deletion requires the stored credentials.
 - imgbb links are public image URLs on imgbb's servers. Settings says so before the key is saved. The imgbb delete page link is stored only in the local history database.
+- Custom uploaders send captures to whatever server the user configures. Credentials belong in `{secret:NAME}` references; links from responses are accepted only as http/https.
 
 ## Related docs
 

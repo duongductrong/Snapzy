@@ -89,6 +89,12 @@ enum AutomationLaunchRejection: Error, Equatable, Sendable {
   case clipboardEmpty
   /// A step has nothing to work on (e.g. Translate before OCR).
   case invalidChain
+  /// Imported with network / script steps; open it in the editor and save to allow it.
+  case needsReview
+  /// Script / Shortcut steps are off (Settings → Automations → Advanced).
+  case codeStepsDisabled
+  /// URL scheme / Shortcuts may not run script steps without the second opt-in.
+  case externalCodeNotAllowed
 
   /// Stable identifier for logs and the CLI.
   var code: String {
@@ -107,6 +113,9 @@ enum AutomationLaunchRejection: Error, Equatable, Sendable {
     case .captureInProgress: "capture_in_progress"
     case .clipboardEmpty: "clipboard_empty"
     case .invalidChain: "invalid_chain"
+    case .needsReview: "needs_review"
+    case .codeStepsDisabled: "code_steps_disabled"
+    case .externalCodeNotAllowed: "external_code_not_allowed"
     }
   }
 }
