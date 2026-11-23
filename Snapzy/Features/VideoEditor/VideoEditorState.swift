@@ -253,6 +253,13 @@ enum EditorAction: Equatable {
   case addZoom(segment: ZoomSegment)
   case removeZoom(segment: ZoomSegment)
   case updateZoom(old: ZoomSegment, new: ZoomSegment)
+  case replaceZooms(
+    old: [ZoomSegment],
+    new: [ZoomSegment],
+    oldMotionBlur: VideoEditorMotionBlurSettings? = nil,
+    newMotionBlur: VideoEditorMotionBlurSettings? = nil
+  )
+  case updateMotionBlur(old: VideoEditorMotionBlurSettings, new: VideoEditorMotionBlurSettings)
   case addSpeed(segment: SpeedSegment)
   case removeSpeed(segment: SpeedSegment)
   case updateSpeed(old: SpeedSegment, new: SpeedSegment)
@@ -341,12 +348,14 @@ final class VideoEditorState: ObservableObject {
     let zoomLevel: CGFloat
     let followSpeed: Double
     let focusMargin: CGFloat
+    let smartKeyframes: [AutoFocusCameraSample]?
 
     init(segment: ZoomSegment) {
       zoomType = segment.zoomType
       zoomLevel = segment.zoomLevel
       followSpeed = segment.followSpeed
       focusMargin = segment.focusMargin
+      smartKeyframes = segment.smartKeyframes
     }
   }
 
@@ -717,6 +726,22 @@ final class VideoEditorState: ObservableObject {
   /// Studio cursor layer settings (only meaningful when `hasEditableCursor`).
   @Published private(set) var cursorSettings = VideoEditorCursorSettings.default
   private(set) var initialCursorSettings = VideoEditorCursorSettings.default
+  /// Camera + cursor motion blur settings (opt-in inside the video editor preview/export).
+  @Published private(set) var motionBlurSettings = VideoEditorMotionBlurSettings.disabled
+  private(set) var initialMotionBlurSettings = VideoEditorMotionBlurSettings.disabled
+  /// Smart Auto-Zoom generation style, confirmation state, notice & in-flight task.
+  @Published var smartAutoZoomStyle: SmartAutoZoomStyle = .balanced
+  @Published private(set) var isGeneratingSmartAutoZoom: Bool = false
+  @Published var showSmartAutoZoomConfirmation: Bool = false
+  @Published private(set) var smartAutoZoomNotice: String?
+  private(set) var pendingSmartAutoZoomStyle: SmartAutoZoomStyle?
+  private var smartAutoZoomTask: Task<Void, Never>?
+  private var smartAutoZoomNoticeTask: Task<Void, Never>?
+
+  /// True when the timeline contains any user-authored zoom (manual or regular auto zoom).
+  var hasUserZoomSegments: Bool {
+    zoomSegments.contains { !$0.isSmartAutoZoom }
+  }
   /// Captured cursor images, loaded once per metadata.
   private(set) var cursorSprites = VideoEditorCursorSpriteStore.empty
   /// Resolver for the current metadata + settings; `nil` without an editable cursor.
@@ -1084,6 +1109,8 @@ final class VideoEditorState: ObservableObject {
     speedPreviewBuildTask?.cancel()
     autoFocusBuildTask?.cancel()
     mappedAutoFocusBuildTask?.cancel()
+    smartAutoZoomTask?.cancel()
+    smartAutoZoomNoticeTask?.cancel()
     estimateTask?.cancel()
     sourceSizeTask?.cancel()
     previewRateController?.invalidate()
@@ -1147,7 +1174,8 @@ final class VideoEditorState: ObservableObject {
       audioTrackRoles = Self.audioTrackRoles(for: audioTracks, metadata: recordingMetadata)
       if !restoreSessionIfNeeded(primaryDuration: CMTimeGetSeconds(loadedDuration)) {
         // Seed the sequence with one clip spanning the whole recording.
-        let seed = TimelineClip(source: .primary, sourceDuration: CMTimeGetSeconds(loadedDuration))
+        let primaryDuration = CMTimeGetSeconds(loadedDuration)
+        let seed = TimelineClip(source: .primary, sourceDuration: primaryDuration)
         clips = [seed]
         initialClips = clips
         selectedClipId = seed.id
@@ -2032,6 +2060,7 @@ final class VideoEditorState: ObservableObject {
     initialBackgroundAlignment = backgroundAlignment
     initialBackgroundAspectRatio = backgroundAspectRatio
     initialExportSettings = exportSettings
+    initialMotionBlurSettings = motionBlurSettings
     initialCaptions = captions
     clearUndoHistory()
   }
@@ -2124,6 +2153,25 @@ final class VideoEditorState: ObservableObject {
         zoomSegments[index] = old
       }
       return .updateZoom(old: new, new: old)
+
+    case .replaceZooms(let old, let new, let oldMotionBlur, let newMotionBlur):
+      zoomSegments = old
+      if let selectedZoomId, !old.contains(where: { $0.id == selectedZoomId }) {
+        self.selectedZoomId = old.first?.id
+      }
+      if let oldMotionBlur {
+        motionBlurSettings = oldMotionBlur
+      }
+      return .replaceZooms(
+        old: new,
+        new: old,
+        oldMotionBlur: newMotionBlur,
+        newMotionBlur: oldMotionBlur
+      )
+
+    case .updateMotionBlur(let old, let new):
+      applyMotionBlurSettings(old)
+      return .updateMotionBlur(old: new, new: old)
 
     case .addSpeed(let segment):
       speedSegments.removeAll { $0.id == segment.id }
@@ -2466,12 +2514,26 @@ final class VideoEditorState: ObservableObject {
     guard let index = zoomSegments.firstIndex(where: { $0.id == id }) else { return }
 
     var segment = zoomSegments[index]
+    let oldStartTime = segment.startTime
+    let oldDuration = segment.duration
     if startTime != nil || duration != nil,
        let resolved = resolvedZoomSegment(
-        id: id, startTime: startTime ?? segment.startTime,
-        duration: duration ?? segment.duration
+         id: id, startTime: startTime ?? segment.startTime,
+         duration: duration ?? segment.duration
        ) {
-      segment.startTime = resolved.startTime
+      let newStartTime = resolved.startTime
+      let newDuration = duration != nil ? resolved.duration : segment.duration
+      if let keyframes = segment.smartKeyframes,
+         !keyframes.isEmpty,
+         abs(newStartTime - oldStartTime) > 0.0001 || abs(newDuration - oldDuration) > 0.0001 {
+        segment.smartKeyframes = Self.remapSmartKeyframes(
+          keyframes,
+          fromOldRange: oldStartTime ... (oldStartTime + oldDuration),
+          toNewRange: newStartTime ... (newStartTime + newDuration),
+          placements: placements
+        )
+      }
+      segment.startTime = newStartTime
       if duration != nil { segment.duration = resolved.duration }
     }
     if let zoomLevel {
@@ -2488,9 +2550,11 @@ final class VideoEditorState: ObservableObject {
     }
     if let followSpeed {
       segment.followSpeed = AutoFocusSettings.clampFollowSpeed(followSpeed)
+      segment.smartKeyframes = nil
     }
     if let focusMargin {
       segment.focusMargin = AutoFocusSettings.clampFocusMargin(focusMargin)
+      segment.smartKeyframes = nil
     }
     if let isEnabled {
       segment.isEnabled = isEnabled
@@ -2523,6 +2587,37 @@ final class VideoEditorState: ObservableObject {
       segments: zoomSegments,
       autoFocusPaths: mappedAutoFocusPaths,
       transitionDuration: effectiveDuration
+    )
+  }
+
+  /// Full-resolution physical shutter-angle motion blur plan for Retina Metal live preview.
+  func previewShutterPlan(at time: TimeInterval) -> VideoEditorMotionBlurEngine.ShutterPlan {
+    let sourceSize = naturalSize.width > 1 && naturalSize.height > 1
+      ? naturalSize
+      : CGSize(width: 1920, height: 1080)
+    return VideoEditorMotionBlurEngine.shutterPlan(
+      at: time,
+      frameDuration: 1.0 / 30.0,
+      frameSize: sourceSize,
+      segments: zoomSegments,
+      autoFocusPaths: mappedAutoFocusPaths,
+      transitionDuration: ZoomCalculator.clampTransitionDuration(zoomTransitionDuration),
+      settings: motionBlurSettings
+    )
+  }
+
+  /// Analytical, zero-flicker directional + radial motion blur parameters for diagnostics.
+  func previewMotionBlurParams(
+    at time: TimeInterval,
+    viewSize: CGSize
+  ) -> VideoEditorMotionBlurEngine.PreviewFilterParams {
+    VideoEditorMotionBlurEngine.previewFilterParams(
+      at: time,
+      viewSize: viewSize,
+      segments: zoomSegments,
+      autoFocusPaths: mappedAutoFocusPaths,
+      transitionDuration: ZoomCalculator.clampTransitionDuration(zoomTransitionDuration),
+      settings: motionBlurSettings
     )
   }
 
@@ -3141,6 +3236,398 @@ final class VideoEditorState: ObservableObject {
     if let captions = sessionData.captions, !isGIF {
       self.captions = captions
     }
+    if let motionBlur = sessionData.motionBlurSettings {
+      motionBlurSettings = motionBlur
+      initialMotionBlurSettings = motionBlur
+    }
+  }
+
+  // MARK: - Motion Blur & Smart Auto-Zoom
+
+  func setMotionBlurSettings(_ settings: VideoEditorMotionBlurSettings, recordUndo: Bool = true) {
+    let old = motionBlurSettings
+    guard settings != old else { return }
+    applyMotionBlurSettings(settings)
+    if recordUndo { recordAction(.updateMotionBlur(old: old, new: settings)) }
+  }
+
+  func commitMotionBlurSettings(from old: VideoEditorMotionBlurSettings) {
+    guard old != motionBlurSettings else { return }
+    recordAction(.updateMotionBlur(old: old, new: motionBlurSettings))
+  }
+
+  private func applyMotionBlurSettings(_ settings: VideoEditorMotionBlurSettings) {
+    motionBlurSettings = settings
+    updateHasUnsavedChanges()
+  }
+
+  /// How Smart Auto-Zoom results are combined with existing timeline zoom segments.
+  enum SmartAutoZoomMergePolicy: Equatable, Sendable {
+    /// Keep all manual and regular auto zooms, replace only prior Smart Auto-Zooms,
+    /// and drop generated segments that overlap kept user zooms.
+    case fillGaps
+    /// Replace every existing zoom segment when the generated plan is non-empty.
+    case replaceAll
+  }
+
+  /// Shifts or linearly rescales source-time `smartKeyframes` when a Smart Auto-Zoom segment
+  /// is dragged or resized on the structural timeline, preventing the camera from clamping to
+  /// stale keyframe bounds. Returns `nil` (falling back to cursor-follow) if the new position
+  /// does not land on a primary recording clip.
+  static func remapSmartKeyframes(
+    _ keyframes: [AutoFocusCameraSample],
+    fromOldRange oldRange: ClosedRange<TimeInterval>,
+    toNewRange newRange: ClosedRange<TimeInterval>,
+    placements: [TimelineSequence.Placement]
+  ) -> [AutoFocusCameraSample]? {
+    guard !keyframes.isEmpty else { return nil }
+
+    func primarySourceTime(at sequenceTime: TimeInterval) -> TimeInterval? {
+      if let exact = placements.first(where: {
+        $0.clip.isPrimary && sequenceTime >= $0.start && sequenceTime <= $0.end
+      }) {
+        return exact.sourceTime(at: sequenceTime)
+      }
+      return nil
+    }
+
+    guard let oldSourceStart = primarySourceTime(at: oldRange.lowerBound),
+          let newSourceStart = primarySourceTime(at: newRange.lowerBound)
+    else {
+      return nil
+    }
+
+    let oldDuration = oldRange.upperBound - oldRange.lowerBound
+    let newDuration = newRange.upperBound - newRange.lowerBound
+
+    if abs(newDuration - oldDuration) < 0.001 {
+      let sourceDelta = newSourceStart - oldSourceStart
+      return keyframes.map { sample in
+        AutoFocusCameraSample(
+          time: max(0, sample.time + sourceDelta),
+          center: sample.center,
+          zoomMultiplier: sample.zoomMultiplier
+        )
+      }
+    }
+
+    guard let oldSourceEnd = primarySourceTime(at: oldRange.upperBound),
+          let newSourceEnd = primarySourceTime(at: newRange.upperBound)
+    else {
+      return nil
+    }
+    let oldSourceSpan = oldSourceEnd - oldSourceStart
+    let newSourceSpan = newSourceEnd - newSourceStart
+    guard oldSourceSpan > 0.001, newSourceSpan > 0.001 else { return nil }
+
+    return keyframes.map { sample in
+      let u = (sample.time - oldSourceStart) / oldSourceSpan
+      let remappedTime = max(0, newSourceStart + u * newSourceSpan)
+      return AutoFocusCameraSample(
+        time: remappedTime,
+        center: sample.center,
+        zoomMultiplier: sample.zoomMultiplier
+      )
+    }
+  }
+
+  /// Filters recording metadata so clicks inside trimmed-out or deleted primary clip ranges
+  /// never trigger phantom Smart Auto-Zooms.
+  static func activeTimelineMetadata(
+    from metadata: RecordingMetadata,
+    placements: [TimelineSequence.Placement]
+  ) -> RecordingMetadata {
+    let activeRanges = placements
+      .filter { $0.clip.isPrimary && $0.clip.sourceEnd > $0.clip.sourceStart }
+      .map { $0.clip.sourceStart ... $0.clip.sourceEnd }
+    guard !activeRanges.isEmpty, var capture = metadata.cursorCapture else {
+      return metadata
+    }
+    capture.clicks = capture.clicks.filter { click in
+      activeRanges.contains { $0.contains(click.time) }
+    }
+    var filtered = metadata
+    filtered.cursorCapture = capture
+    return filtered
+  }
+
+  /// Projects source-time Smart Auto-Zoom segments onto the current primary clip placements.
+  /// Consecutive primary clips (such as a clip split with `S` or trimmed at a cut) coalesce into
+  /// a single continuous `ZoomSegment` so the camera never double-zooms across a split seam, while
+  /// segments spanning across an inserted external clip split cleanly around it.
+  static func mapSmartSegments(
+    _ sourceSegments: [ZoomSegment],
+    onto placements: [TimelineSequence.Placement],
+    timelineDuration: TimeInterval
+  ) -> [ZoomSegment] {
+    guard timelineDuration > 0 else { return [] }
+    let primaryPlacements = placements.filter { $0.clip.isPrimary }
+    guard !primaryPlacements.isEmpty else { return [] }
+
+    var mappedSegments: [ZoomSegment] = []
+    for segment in sourceSegments {
+      let overlapping = primaryPlacements.filter {
+        segment.startTime < $0.clip.sourceEnd && segment.endTime > $0.clip.sourceStart
+      }
+      guard !overlapping.isEmpty else { continue }
+
+      // Group overlapping primary placements into contiguous primary runs (no inserted
+      // non-primary `.file` clip in between and no large > 2.5s deleted source jump).
+      var runs: [[TimelineSequence.Placement]] = []
+      for placement in overlapping {
+        if var currentRun = runs.last,
+           let previous = currentRun.last,
+           placement.index == previous.index + 1,
+           abs(placement.clip.sourceStart - previous.clip.sourceEnd) <= 2.5 {
+          currentRun.append(placement)
+          runs[runs.count - 1] = currentRun
+        } else {
+          runs.append([placement])
+        }
+      }
+
+      for run in runs {
+        guard let firstPlacement = run.first, let lastPlacement = run.last else { continue }
+        let clippedStart = max(segment.startTime, firstPlacement.clip.sourceStart)
+        let clippedEnd = min(segment.endTime, lastPlacement.clip.sourceEnd)
+        guard clippedEnd > clippedStart else { continue }
+
+        let mappedStart = firstPlacement.sequenceTime(atSource: clippedStart)
+        let mappedEnd = lastPlacement.sequenceTime(atSource: clippedEnd)
+        let mappedDuration = mappedEnd - mappedStart
+        guard mappedDuration >= ZoomSegment.minDuration else { continue }
+
+        let clippedKeyframes = segment.smartKeyframes.map {
+          clipSmartKeyframes($0, to: clippedStart ... clippedEnd)
+        }
+        let mapped = ZoomSegment(
+          id: UUID(),
+          startTime: mappedStart,
+          duration: mappedDuration,
+          zoomLevel: segment.zoomLevel,
+          zoomCenter: segment.zoomCenter,
+          zoomType: segment.zoomType,
+          followSpeed: segment.followSpeed,
+          focusMargin: segment.focusMargin,
+          isEnabled: segment.isEnabled,
+          smartKeyframes: clippedKeyframes
+        )
+        mappedSegments.append(mapped.clamped(to: timelineDuration))
+      }
+    }
+
+    return mappedSegments.sorted { $0.startTime < $1.startTime }
+  }
+
+  /// Merges generated Smart Auto-Zoom segments with existing timeline zooms according to `policy`.
+  /// An empty generated plan is always a no-op so existing user zooms are never wiped.
+  static func mergeSmartAutoZoomSegments(
+    existing: [ZoomSegment],
+    generated: [ZoomSegment],
+    policy: SmartAutoZoomMergePolicy
+  ) -> [ZoomSegment] {
+    guard !generated.isEmpty else { return existing }
+
+    switch policy {
+    case .replaceAll:
+      return generated.sorted { $0.startTime < $1.startTime }
+    case .fillGaps:
+      let preservedUserZooms = existing.filter { !$0.isSmartAutoZoom }
+      let nonOverlappingGenerated = generated.filter { candidate in
+        !preservedUserZooms.contains { userZoom in
+          candidate.startTime < userZoom.endTime && candidate.endTime > userZoom.startTime
+        }
+      }
+      return (preservedUserZooms + nonOverlappingGenerated).sorted { $0.startTime < $1.startTime }
+    }
+  }
+
+  private static func clipSmartKeyframes(
+    _ keyframes: [AutoFocusCameraSample],
+    to sourceRange: ClosedRange<TimeInterval>
+  ) -> [AutoFocusCameraSample] {
+    let sorted = keyframes.sorted { $0.time < $1.time }
+    guard !sorted.isEmpty else { return [] }
+    guard let first = sorted.first, let last = sorted.last else { return [] }
+    if first.time >= sourceRange.lowerBound && last.time <= sourceRange.upperBound {
+      return sorted
+    }
+
+    func interpolatedSample(at time: TimeInterval) -> AutoFocusCameraSample {
+      if time <= first.time {
+        return AutoFocusCameraSample(time: time, center: first.center, zoomMultiplier: first.zoomMultiplier)
+      }
+      if time >= last.time {
+        return AutoFocusCameraSample(time: time, center: last.center, zoomMultiplier: last.zoomMultiplier)
+      }
+      var low = 0
+      var high = sorted.count - 1
+      while low + 1 < high {
+        let mid = (low + high) / 2
+        if sorted[mid].time <= time { low = mid } else { high = mid }
+      }
+      let a = sorted[low]
+      let b = sorted[high]
+      let span = max(b.time - a.time, 0.0001)
+      let t = CGFloat(min(max((time - a.time) / span, 0), 1))
+      return AutoFocusCameraSample(
+        time: time,
+        center: CGPoint(
+          x: a.center.x + (b.center.x - a.center.x) * t,
+          y: a.center.y + (b.center.y - a.center.y) * t
+        ),
+        zoomMultiplier: a.zoomMultiplier + (b.zoomMultiplier - a.zoomMultiplier) * t
+      )
+    }
+
+    var clipped: [AutoFocusCameraSample] = [interpolatedSample(at: sourceRange.lowerBound)]
+    for sample in sorted where sample.time > sourceRange.lowerBound + 0.0005 && sample.time < sourceRange.upperBound - 0.0005 {
+      clipped.append(sample)
+    }
+    clipped.append(interpolatedSample(at: sourceRange.upperBound))
+    return clipped
+  }
+
+  /// Entry point for UI actions (sidebar button and timeline context menu).
+  /// Prompts for confirmation when user-authored zooms already exist; otherwise runs directly.
+  func requestSmartAutoZoom(style: SmartAutoZoomStyle? = nil) {
+    guard !isGIF, !isPerformanceWorkClosed, recordingMetadata != nil else { return }
+    let chosenStyle = style ?? smartAutoZoomStyle
+    smartAutoZoomStyle = chosenStyle
+    smartAutoZoomNotice = nil
+
+    if hasUserZoomSegments {
+      pendingSmartAutoZoomStyle = chosenStyle
+      showSmartAutoZoomConfirmation = true
+    } else {
+      generateSmartAutoZoom(style: chosenStyle, policy: .fillGaps)
+    }
+  }
+
+  /// Confirms a pending Smart Auto-Zoom prompt with the user's chosen merge policy.
+  func confirmSmartAutoZoom(policy: SmartAutoZoomMergePolicy) {
+    let style = pendingSmartAutoZoomStyle ?? smartAutoZoomStyle
+    pendingSmartAutoZoomStyle = nil
+    showSmartAutoZoomConfirmation = false
+    generateSmartAutoZoom(style: style, policy: policy)
+  }
+
+  /// Cancels a pending Smart Auto-Zoom confirmation prompt.
+  func cancelSmartAutoZoomConfirmation() {
+    pendingSmartAutoZoomStyle = nil
+    showSmartAutoZoomConfirmation = false
+  }
+
+  /// Generates intelligent action- and outcome-aware Smart Auto-Zoom segments from
+  /// recorded cursor/click telemetry and lightweight video-frame outcome analysis.
+  func generateSmartAutoZoom(
+    style: SmartAutoZoomStyle? = nil,
+    policy: SmartAutoZoomMergePolicy = .fillGaps
+  ) {
+    guard !isGIF, !isPerformanceWorkClosed, let metadata = recordingMetadata else { return }
+    let chosenStyle = style ?? smartAutoZoomStyle
+    smartAutoZoomStyle = chosenStyle
+    smartAutoZoomTask?.cancel()
+    smartAutoZoomNoticeTask?.cancel()
+    smartAutoZoomNotice = nil
+    isGeneratingSmartAutoZoom = true
+
+    let primaryAsset = asset
+    let transition = zoomTransitionDuration
+    let startingLayoutRevision = timelineLayoutRevision
+    let activeMetadata = Self.activeTimelineMetadata(from: metadata, placements: placements)
+
+    smartAutoZoomTask = Task { [weak self] in
+      let analysisTask = Task.detached(priority: .userInitiated) {
+        await VideoEditorSmartAutoZoomEngine.generatePlan(
+          from: activeMetadata,
+          asset: primaryAsset,
+          style: chosenStyle,
+          transitionDuration: transition
+        )
+      }
+      let plan = await withTaskCancellationHandler {
+        await analysisTask.value
+      } onCancel: {
+        analysisTask.cancel()
+      }
+
+      guard !Task.isCancelled, let self, !self.isPerformanceWorkClosed else { return }
+      self.isGeneratingSmartAutoZoom = false
+
+      // Always map against the LIVE timeline placements at apply time (never a stale snapshot
+      // captured before async analysis), splitting cleanly across any primary clip cuts.
+      let livePlacements = self.placements
+      let liveDuration = CMTimeGetSeconds(self.timelineDuration)
+      let layoutChangedDuringAnalysis = self.timelineLayoutRevision != startingLayoutRevision
+
+      let mappedSegments = Self.mapSmartSegments(
+        plan.segments,
+        onto: livePlacements,
+        timelineDuration: liveDuration
+      )
+
+      // Empty plan must never wipe existing zooms.
+      guard !mappedSegments.isEmpty else {
+        self.presentSmartAutoZoomNotice(L10n.VideoEditor.smartAutoZoomNoActionsDetected)
+        DiagnosticLogger.shared.log(.info, .editor, "Smart Auto-Zoom found no actions", context: [
+          "style": chosenStyle.rawValue,
+          "layoutChangedDuringAnalysis": "\(layoutChangedDuringAnalysis)",
+        ])
+        return
+      }
+
+      let oldZooms = self.zoomSegments
+      let mergedZooms = Self.mergeSmartAutoZoomSegments(
+        existing: oldZooms,
+        generated: mappedSegments,
+        policy: policy
+      )
+      guard mergedZooms != oldZooms else {
+        self.presentSmartAutoZoomNotice(L10n.VideoEditor.smartAutoZoomNoActionsDetected)
+        return
+      }
+
+      self.zoomSegments = mergedZooms
+      let newlyAddedSmart = mergedZooms.first { $0.isSmartAutoZoom }
+      self.selectedZoomId = newlyAddedSmart?.id ?? mergedZooms.first?.id
+      let autoEnabledBlur = oldZooms.isEmpty
+        && !mergedZooms.isEmpty
+        && !self.motionBlurSettings.isEnabled
+        && self.motionBlurSettings == self.initialMotionBlurSettings
+      let previousBlur: VideoEditorMotionBlurSettings? = autoEnabledBlur ? self.motionBlurSettings : nil
+      let updatedBlur: VideoEditorMotionBlurSettings? = autoEnabledBlur ? .default : nil
+      if let updatedBlur {
+        self.motionBlurSettings = updatedBlur
+      }
+      self.recordAction(
+        .replaceZooms(
+          old: oldZooms,
+          new: mergedZooms,
+          oldMotionBlur: previousBlur,
+          newMotionBlur: updatedBlur
+        )
+      )
+
+      DiagnosticLogger.shared.log(.info, .editor, "Smart Auto-Zoom generated", context: [
+        "style": chosenStyle.rawValue,
+        "policy": policy == .fillGaps ? "fillGaps" : "replaceAll",
+        "layoutChangedDuringAnalysis": "\(layoutChangedDuringAnalysis)",
+        "actions": "\(plan.actionCount)",
+        "visualOutcomes": "\(plan.analyzedVisualOutcomes)",
+        "segments": "\(mergedZooms.count)",
+      ])
+    }
+  }
+
+  private func presentSmartAutoZoomNotice(_ message: String) {
+    smartAutoZoomNoticeTask?.cancel()
+    smartAutoZoomNotice = message
+    smartAutoZoomNoticeTask = Task { [weak self] in
+      try? await Task.sleep(nanoseconds: 4_000_000_000)
+      guard !Task.isCancelled, let self, self.smartAutoZoomNotice == message else { return }
+      self.smartAutoZoomNotice = nil
+    }
   }
 
   private func reloadCameraLayer() {
@@ -3487,7 +3974,7 @@ final class VideoEditorState: ObservableObject {
       return ZoomCalculator.defaultTransitionDuration
     }
 
-    return ZoomCalculator.clampTransitionDuration(stored)
+    return ZoomCalculator.migrateLegacyTransitionDuration(stored)
   }
 
   private func setupEndObserver() {
@@ -3606,6 +4093,7 @@ final class VideoEditorState: ObservableObject {
       || exportSettings != initialExportSettings
       || cursorSettings != initialCursorSettings
       || cameraSettings != initialCameraSettings
+      || motionBlurSettings != initialMotionBlurSettings
       || clips != initialClips
       || segments != initialZoomSegments
       || speedSegments != initialSpeedSegments
@@ -3782,6 +4270,8 @@ final class VideoEditorState: ObservableObject {
     speedTrackDragDidChange = false
     autoFocusBuildTask?.cancel()
     mappedAutoFocusBuildTask?.cancel()
+    smartAutoZoomTask?.cancel()
+    smartAutoZoomNoticeTask?.cancel()
     autoFocusRequestRevision &+= 1
     estimateTask?.cancel()
     sourceSizeTask?.cancel()

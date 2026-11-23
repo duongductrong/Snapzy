@@ -67,6 +67,7 @@ nonisolated struct VideoEditorCursorLayer: VideoEditorStudioLayer, @unchecked Se
   let captureSize: CGSize
   let sprites: [Int: VideoEditorCursorSprite]
   let arrow: VideoEditorCursorSprite?
+  var motionBlur: VideoEditorMotionBlurSettings = .disabled
 
   var space: VideoEditorStudioLayerSpace { .source }
   var isActive: Bool {
@@ -100,21 +101,55 @@ nonisolated struct VideoEditorCursorLayer: VideoEditorStudioLayer, @unchecked Se
     let scale = resolver.settings.scale * pixelsPerPoint
     let width = sprite.pointSize.width * scale
     let height = sprite.pointSize.height * scale
-    // Core Image is bottom-left; positions and hotspot are top-left.
-    let pointX = extent.minX + frame.position.x * extent.width
-    let pointY = extent.minY + (1 - frame.position.y) * extent.height
-    var drawn = sprite.image
+    let baseSprite = sprite.image
       .transformed(by: CGAffineTransform(translationX: -sprite.image.extent.minX, y: -sprite.image.extent.minY))
       .transformed(by: CGAffineTransform(scaleX: width / sprite.image.extent.width, y: height / sprite.image.extent.height))
-      .transformed(by: CGAffineTransform(
+
+    func positionedSprite(at normalizedPos: CGPoint, alpha: CGFloat) -> CIImage {
+      // Core Image is bottom-left; positions and hotspot are top-left.
+      let pointX = extent.minX + normalizedPos.x * extent.width
+      let pointY = extent.minY + (1 - normalizedPos.y) * extent.height
+      var placed = baseSprite.transformed(by: CGAffineTransform(
         translationX: pointX - sprite.hotspot.x * scale,
         y: pointY + sprite.hotspot.y * scale - height
       ))
-    if frame.opacity < 1 {
-      drawn = drawn.applyingFilter("CIColorMatrix", parameters: [
-        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: frame.opacity),
-      ])
+      if alpha < 0.999 {
+        placed = placed.applyingFilter("CIColorMatrix", parameters: [
+          "inputRVector": CIVector(x: alpha, y: 0, z: 0, w: 0),
+          "inputGVector": CIVector(x: 0, y: alpha, z: 0, w: 0),
+          "inputBVector": CIVector(x: 0, y: 0, z: alpha, w: 0),
+          "inputAVector": CIVector(x: 0, y: 0, z: 0, w: alpha),
+        ])
+      }
+      return placed
     }
+
+    // True temporal sub-frame cursor shutter accumulation along the real curved trajectory.
+    let shutterTaps = VideoEditorMotionBlurEngine.cursorShutterTaps(
+      at: sourceTime,
+      frameDuration: context.frameDuration,
+      frameSize: extent.size,
+      resolver: resolver,
+      settings: motionBlur
+    )
+    if shutterTaps.count >= 2 {
+      var accum: CIImage?
+      for tap in shutterTaps {
+        let weighted = positionedSprite(at: tap.position, alpha: tap.weight * frame.opacity)
+        if let existing = accum {
+          accum = weighted.applyingFilter("CIAdditionCompositing", parameters: [
+            kCIInputBackgroundImageKey: existing,
+          ])
+        } else {
+          accum = weighted
+        }
+      }
+      if let blurredCursor = accum {
+        return blurredCursor.composited(over: result)
+      }
+    }
+
+    let drawn = positionedSprite(at: frame.position, alpha: frame.opacity)
     return drawn.composited(over: result)
   }
 

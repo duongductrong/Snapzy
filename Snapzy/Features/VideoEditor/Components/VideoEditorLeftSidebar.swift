@@ -50,6 +50,15 @@ struct ZoomSettingsContent: View {
   @State private var localFollowSpeed: Double = AutoFocusSettings.defaultFollowSpeed
   @State private var localFocusMargin: CGFloat = AutoFocusSettings.defaultFocusMargin
   @State private var localTransitionDuration: TimeInterval = ZoomCalculator.defaultTransitionDuration
+  @State private var motionBlurDragStart: VideoEditorMotionBlurSettings?
+
+  @Namespace private var smartStyleNamespace
+  @Namespace private var zoomModeNamespace
+  @State private var hoveredSmartStyle: SmartAutoZoomStyle?
+  @State private var hoveredMode: ZoomType?
+  @State private var isHoveringSmartAction = false
+  @State private var isHoveringEnableAction = false
+  @State private var isHoveringDeleteAction = false
 
   private struct LocalStateSnapshot: Equatable {
     let id: UUID
@@ -84,30 +93,20 @@ struct ZoomSettingsContent: View {
 
   var body: some View {
     ScrollView(.vertical, showsIndicators: true) {
-      VStack(alignment: .leading, spacing: 16) {
+      VStack(alignment: .leading, spacing: 10) {
+        if state.hasMouseTrackingData {
+          smartAutoZoomSection
+        }
+
+        motionBlurSection
+
         if let segment = selectedSegment {
-          modeSection(for: segment)
-
-          Divider()
-
-          zoomLevelSection
-          transitionSmoothnessSection
-
-          if segment.isAutoMode {
-            followSpeedSection
-            focusMarginSection
-          } else {
-            centerPickerSection
-          }
-
-          Divider()
-
-          actionsSection
+          selectedSegmentCard(for: segment)
         } else {
           emptyState
         }
 
-        Spacer(minLength: 20)
+        Spacer(minLength: 16)
       }
       .padding(12)
     }
@@ -125,24 +124,360 @@ struct ZoomSettingsContent: View {
     .accessibilityIdentifier("video-editor.zoom-settings")
   }
 
-  private func modeSection(for segment: ZoomSegment) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HStack {
-        Label(L10n.VideoEditor.zoomItem, systemImage: "plus.magnifyingglass")
-          .font(.system(size: 12, weight: .semibold))
+  // MARK: - Inspector Surface & Rail Primitives
+
+  private func inspectorCard(@ViewBuilder content: () -> some View) -> some View {
+    VStack(alignment: .leading, spacing: 10) {
+      content()
+    }
+    .padding(11)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      Radius.rect(Radius.card)
+        .fill(Color.primary.opacity(0.035))
+        .overlay(
+          Radius.rect(Radius.card)
+            .strokeBorder(Color.primary.opacity(0.075), lineWidth: 0.5)
+        )
+    )
+  }
+
+  private var railBackground: some View {
+    Radius.controlRect(forHeight: 26)
+      .fill(Color.primary.opacity(0.05))
+      .overlay(
+        Radius.controlRect(forHeight: 26)
+          .strokeBorder(Color.primary.opacity(0.075), lineWidth: 0.5)
+      )
+  }
+
+  private var activeThumbShape: some View {
+    Radius.controlRect(forHeight: 22)
+      .fill(Color.primary.opacity(0.11))
+      .overlay(
+        Radius.controlRect(forHeight: 22)
+          .strokeBorder(Color.primary.opacity(0.13), lineWidth: 0.5)
+      )
+  }
+
+  // MARK: - Smart Auto-Zoom Section
+
+  private var smartAutoZoomSection: some View {
+    let hasZooms = !state.zoomSegments.isEmpty
+
+    return inspectorCard {
+      HStack(alignment: .firstTextBaseline, spacing: 6) {
+        Text(L10n.VideoEditor.smartAutoZoomTitle)
+          .font(Typography.sectionHeader)
+          .foregroundColor(SidebarColors.labelPrimary)
 
         Spacer()
 
-        Text(segment.isAutoMode ? L10n.VideoEditor.followMouse : L10n.VideoEditor.manual)
-          .font(.system(size: 9, weight: .semibold))
-          .padding(.horizontal, 6)
-          .padding(.vertical, 3)
-          .background(Capsule().fill((segment.isAutoMode ? Color.green : ZoomColors.primary).opacity(0.18)))
-          .foregroundColor(segment.isAutoMode ? .green : ZoomColors.primary)
+        if hasZooms {
+          Text("\(state.zoomSegments.count)")
+            .font(.system(size: 10, weight: .medium))
+            .monospacedDigit()
+            .foregroundColor(SidebarColors.labelSecondary)
+            .contentTransition(.numericText())
+        }
       }
 
-      HStack(spacing: 8) {
-        modeButton(
+      HStack(spacing: 2) {
+        ForEach(SmartAutoZoomStyle.allCases, id: \.self) { style in
+          smartStyleOption(style)
+        }
+      }
+      .padding(2)
+      .background(railBackground)
+
+      Button {
+        state.requestSmartAutoZoom(style: state.smartAutoZoomStyle)
+      } label: {
+        HStack(spacing: 6) {
+          if state.isGeneratingSmartAutoZoom {
+            ProgressView()
+              .controlSize(.small)
+              .scaleEffect(0.7)
+          } else {
+            Image(systemName: hasZooms ? "arrow.clockwise" : "viewfinder")
+              .font(.system(size: 10.5, weight: .semibold))
+          }
+
+          Text(
+            state.isGeneratingSmartAutoZoom
+              ? L10n.VideoEditor.smartAutoZoomAnalyzing
+              : (hasZooms
+                ? L10n.VideoEditor.smartAutoZoomRegenerate
+                : L10n.VideoEditor.smartAutoZoomGenerate)
+          )
+          .font(.system(size: 11, weight: .semibold))
+          .lineLimit(1)
+        }
+        .foregroundColor(hasZooms ? SidebarColors.labelPrimary : LiquidGlassTokens.inkOnAccent)
+        .frame(maxWidth: .infinity)
+        .frame(height: 27)
+        .background {
+          if hasZooms {
+            Radius.controlRect(forHeight: 27)
+              .fill(Color.primary.opacity(isHoveringSmartAction ? 0.105 : 0.06))
+              .overlay(
+                Radius.controlRect(forHeight: 27)
+                  .strokeBorder(Color.primary.opacity(0.09), lineWidth: 0.5)
+              )
+          } else {
+            Radius.controlRect(forHeight: 27)
+              .fill(Color.accentColor.opacity(isHoveringSmartAction ? 0.90 : 1.0))
+          }
+        }
+        .animation(.easeOut(duration: 0.12), value: isHoveringSmartAction)
+        .contentShape(Radius.controlRect(forHeight: 27))
+      }
+      .buttonStyle(.plain)
+      .onHover { isHoveringSmartAction = $0 }
+      .disabled(state.isGeneratingSmartAutoZoom)
+      .opacity(state.isGeneratingSmartAutoZoom ? 0.72 : 1.0)
+      .accessibilityIdentifier("video-editor.smart-auto-zoom")
+
+      if let notice = state.smartAutoZoomNotice {
+        Text(notice)
+          .font(.system(size: 10, weight: .medium))
+          .foregroundColor(SidebarColors.labelSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+          .transition(.opacity)
+      }
+
+      Text(L10n.VideoEditor.smartAutoZoomDescription)
+        .font(.system(size: 10))
+        .foregroundColor(SidebarColors.labelTertiary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private func smartStyleOption(_ style: SmartAutoZoomStyle) -> some View {
+    let isSelected = state.smartAutoZoomStyle == style
+    let isHovered = hoveredSmartStyle == style
+    let title: String = switch style {
+    case .subtle: L10n.VideoEditor.smartAutoZoomSubtle
+    case .balanced: L10n.VideoEditor.smartAutoZoomBalanced
+    case .dynamic: L10n.VideoEditor.smartAutoZoomDynamic
+    }
+
+    return Button {
+      withAnimation(LiquidGlassTokens.settleSpring) {
+        state.smartAutoZoomStyle = style
+      }
+    } label: {
+      Text(title)
+        .font(.system(size: 10.5, weight: isSelected ? .semibold : .medium))
+        .foregroundColor(isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
+        .lineLimit(1)
+        .frame(maxWidth: .infinity)
+        .frame(height: 22)
+        .background {
+          if isSelected {
+            activeThumbShape
+              .matchedGeometryEffect(id: "smartStyleThumb", in: smartStyleNamespace)
+          } else if isHovered {
+            Radius.controlRect(forHeight: 22)
+              .fill(Color.primary.opacity(0.05))
+          }
+        }
+        .animation(.easeOut(duration: 0.10), value: isHovered)
+        .contentShape(Radius.controlRect(forHeight: 22))
+    }
+    .buttonStyle(.plain)
+    .onHover { hovering in
+      hoveredSmartStyle = hovering ? style : (hoveredSmartStyle == style ? nil : hoveredSmartStyle)
+    }
+  }
+
+  // MARK: - Motion Blur Section
+
+  private var motionBlurSection: some View {
+    inspectorCard {
+      HStack(alignment: .center, spacing: 8) {
+        Text(L10n.VideoEditor.motionBlurTitle)
+          .font(Typography.sectionHeader)
+          .foregroundColor(SidebarColors.labelPrimary)
+
+        Spacer()
+
+        Toggle(
+          "",
+          isOn: Binding(
+            get: { state.motionBlurSettings.isEnabled },
+            set: { newValue in
+              withAnimation(LiquidGlassTokens.settleSpring) {
+                var updated = state.motionBlurSettings
+                updated.isEnabled = newValue
+                if newValue, updated.shutterStrength <= 0.01 {
+                  updated.shutterStrength = VideoEditorMotionBlurSettings.defaultShutterStrength
+                }
+                state.setMotionBlurSettings(updated)
+              }
+            }
+          )
+        )
+        .labelsHidden()
+        .toggleStyle(.switch)
+        .controlSize(.small)
+        .accessibilityIdentifier("video-editor.motion-blur-toggle")
+      }
+
+      if state.motionBlurSettings.isEnabled {
+        VStack(alignment: .leading, spacing: 8) {
+          VStack(alignment: .leading, spacing: 4) {
+            HStack {
+              Text(L10n.VideoEditor.motionBlurStrength)
+                .font(Typography.labelMedium)
+                .foregroundColor(SidebarColors.labelSecondary)
+
+              Spacer()
+
+              Text(state.motionBlurSettings.strengthDisplayValue)
+                .font(.system(size: 11, weight: .semibold))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+            }
+
+            Slider(
+              value: Binding(
+                get: { state.motionBlurSettings.shutterStrength },
+                set: { newValue in
+                  // Capture the pre-edit value before mutating so direct track clicks
+                  // (which can invoke `set` before `onEditingChanged(true)`) still commit
+                  // a single undo step on release.
+                  if motionBlurDragStart == nil {
+                    motionBlurDragStart = state.motionBlurSettings
+                  }
+                  var updated = state.motionBlurSettings
+                  updated.shutterStrength = VideoEditorMotionBlurSettings.clampStrength(newValue)
+                  state.setMotionBlurSettings(updated, recordUndo: false)
+                }
+              ),
+              in: VideoEditorMotionBlurSettings.strengthRange
+            ) { editing in
+              if editing {
+                if motionBlurDragStart == nil {
+                  motionBlurDragStart = state.motionBlurSettings
+                }
+              } else if let start = motionBlurDragStart {
+                motionBlurDragStart = nil
+                state.commitMotionBlurSettings(from: start)
+              }
+            }
+            .controlSize(.small)
+            .accessibilityIdentifier("video-editor.motion-blur-strength")
+          }
+
+          if state.hasEditableCursor {
+            HStack {
+              Text(L10n.VideoEditor.motionBlurCursor)
+                .font(Typography.labelMedium)
+                .foregroundColor(SidebarColors.labelSecondary)
+
+              Spacer()
+
+              Toggle(
+                "",
+                isOn: Binding(
+                  get: { state.motionBlurSettings.cursorBlurEnabled },
+                  set: { newValue in
+                    var updated = state.motionBlurSettings
+                    updated.cursorBlurEnabled = newValue
+                    state.setMotionBlurSettings(updated)
+                  }
+                )
+              )
+              .labelsHidden()
+              .toggleStyle(.switch)
+              .controlSize(.small)
+            }
+          }
+        }
+        .transition(.opacity.combined(with: .move(edge: .top)))
+      }
+
+      Text(L10n.VideoEditor.motionBlurDescription)
+        .font(.system(size: 10))
+        .foregroundColor(SidebarColors.labelTertiary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  // MARK: - Selected Zoom Segment Card
+
+  private func selectedSegmentCard(for segment: ZoomSegment) -> some View {
+    inspectorCard {
+      modeSection(for: segment)
+
+      Divider()
+        .opacity(0.6)
+
+      zoomLevelSection
+
+      transitionSmoothnessSection
+
+      if segment.isAutoMode {
+        followSpeedSection
+        focusMarginSection
+      } else {
+        centerPickerSection
+      }
+    }
+  }
+
+  private func modeSection(for segment: ZoomSegment) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 6) {
+        Text(L10n.VideoEditor.zoomItem)
+          .font(Typography.sectionHeader)
+          .foregroundColor(SidebarColors.labelPrimary)
+
+        Spacer()
+
+        Button {
+          if let id = state.selectedZoomId {
+            state.toggleZoomEnabled(id: id)
+          }
+        } label: {
+          Image(systemName: segment.isEnabled ? "eye" : "eye.slash")
+            .font(.system(size: 10.5, weight: .medium))
+            .foregroundColor(segment.isEnabled ? SidebarColors.labelSecondary : SidebarColors.labelTertiary)
+            .frame(width: 22, height: 22)
+            .background(
+              Radius.controlRect(forHeight: 22)
+                .fill(isHoveringEnableAction ? SidebarColors.itemHover : .clear)
+            )
+            .animation(.easeOut(duration: 0.10), value: isHoveringEnableAction)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHoveringEnableAction = $0 }
+        .help(segment.isEnabled ? L10n.VideoEditor.disableZoom : L10n.VideoEditor.enableZoom)
+
+        Button(role: .destructive) {
+          if let id = state.selectedZoomId {
+            state.removeZoom(id: id)
+          }
+        } label: {
+          Image(systemName: "trash")
+            .font(.system(size: 10.5, weight: .medium))
+            .foregroundColor(isHoveringDeleteAction ? .red : SidebarColors.labelSecondary)
+            .frame(width: 22, height: 22)
+            .background(
+              Radius.controlRect(forHeight: 22)
+                .fill(isHoveringDeleteAction ? Color.red.opacity(0.12) : .clear)
+            )
+            .animation(.easeOut(duration: 0.10), value: isHoveringDeleteAction)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHoveringDeleteAction = $0 }
+        .help(L10n.VideoEditor.deleteZoom)
+      }
+
+      HStack(spacing: 2) {
+        modeOption(
+          type: .manual,
           title: L10n.VideoEditor.manual,
           icon: "hand.tap",
           isSelected: !segment.isAutoMode,
@@ -151,21 +486,24 @@ struct ZoomSettingsContent: View {
           applyZoomMode(.manual)
         }
 
-        modeButton(
+        modeOption(
+          type: .auto,
           title: L10n.VideoEditor.auto,
-          icon: "camera.metering.center.weighted",
+          icon: "scope",
           isSelected: segment.isAutoMode,
           isDisabled: !canSwitchSelectedSegmentToAuto
         ) {
           applyZoomMode(.auto)
         }
       }
+      .padding(2)
+      .background(railBackground)
 
       if segment.isAutoMode {
         if state.hasMouseTrackingData {
           Text(L10n.VideoEditor.followMouseActiveDescription)
             .font(.system(size: 10))
-            .foregroundColor(.secondary.opacity(0.8))
+            .foregroundColor(SidebarColors.labelTertiary)
             .fixedSize(horizontal: false, vertical: true)
         } else {
           availabilityWarning
@@ -173,7 +511,7 @@ struct ZoomSettingsContent: View {
       } else if state.hasMouseTrackingData {
         Text(L10n.VideoEditor.manualModeDescription)
           .font(.system(size: 10))
-          .foregroundColor(.secondary.opacity(0.8))
+          .foregroundColor(SidebarColors.labelTertiary)
           .fixedSize(horizontal: false, vertical: true)
       } else {
         availabilityWarning
@@ -181,73 +519,91 @@ struct ZoomSettingsContent: View {
     }
   }
 
-  private func modeButton(
+  private func modeOption(
+    type: ZoomType,
     title: String,
     icon: String,
     isSelected: Bool,
     isDisabled: Bool,
     action: @escaping () -> Void
   ) -> some View {
-    Button(action: action) {
-      HStack(spacing: 6) {
+    let isHovered = hoveredMode == type && !isDisabled
+
+    return Button {
+      withAnimation(LiquidGlassTokens.settleSpring) {
+        action()
+      }
+    } label: {
+      HStack(spacing: 5) {
         Image(systemName: icon)
-          .font(.system(size: 10, weight: .semibold))
+          .font(.system(size: 10, weight: .medium))
 
         Text(title)
-          .font(.system(size: 11, weight: .medium))
+          .font(.system(size: 10.5, weight: isSelected ? .semibold : .medium))
+          .lineLimit(1)
       }
+      .foregroundColor(
+        isDisabled
+          ? SidebarColors.labelTertiary
+          : (isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
+      )
       .frame(maxWidth: .infinity)
-      .padding(.vertical, 7)
-      .background(
-        isSelected
-          ? ZoomColors.primary.opacity(0.22)
-          : Color.white.opacity(0.08)
-      )
-      .foregroundColor(isDisabled ? .secondary : .primary)
-      .clipShape(Capsule(style: .continuous))
-      .overlay(
-        Capsule(style: .continuous)
-          .strokeBorder(isSelected ? ZoomColors.primary.opacity(0.45) : Color.clear, lineWidth: 1)
-      )
+      .frame(height: 22)
+      .background {
+        if isSelected {
+          activeThumbShape
+            .matchedGeometryEffect(id: "zoomModeThumb", in: zoomModeNamespace)
+        } else if isHovered {
+          Radius.controlRect(forHeight: 22)
+            .fill(Color.primary.opacity(0.05))
+        }
+      }
+      .animation(.easeOut(duration: 0.10), value: isHovered)
+      .contentShape(Radius.controlRect(forHeight: 22))
     }
     .buttonStyle(.plain)
+    .onHover { hovering in
+      hoveredMode = hovering ? type : (hoveredMode == type ? nil : hoveredMode)
+    }
     .disabled(isDisabled)
     .opacity(isDisabled ? 0.45 : 1.0)
   }
 
   private var availabilityWarning: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: 4) {
       Label(L10n.VideoEditor.mouseTrackingDataUnavailable, systemImage: "cursorarrow.slash")
-        .font(.system(size: 11, weight: .medium))
-        .foregroundColor(.secondary)
+        .font(.system(size: 10.5, weight: .medium))
+        .foregroundColor(SidebarColors.labelSecondary)
 
       Text(L10n.VideoEditor.followMouseOnlyWorksWithSnapzy)
         .font(.system(size: 10))
-        .foregroundColor(.secondary.opacity(0.8))
+        .foregroundColor(SidebarColors.labelTertiary)
         .fixedSize(horizontal: false, vertical: true)
     }
-    .padding(10)
+    .padding(8)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Radius.rect(Radius.card).fill(Color.white.opacity(0.06)))
+    .background(Radius.rect(Radius.tile).fill(Color.primary.opacity(0.04)))
   }
 
   private var emptyState: some View {
-    VStack(spacing: 12) {
-      Image(systemName: "plus.magnifyingglass")
-        .font(.system(size: 32))
-        .foregroundColor(.secondary.opacity(0.5))
+    inspectorCard {
+      VStack(spacing: 6) {
+        Image(systemName: "plus.magnifyingglass")
+          .font(.system(size: 18, weight: .regular))
+          .foregroundColor(SidebarColors.labelTertiary)
 
-      Text(L10n.VideoEditor.noZoomSelected)
-        .font(.system(size: 13, weight: .medium))
-        .foregroundColor(.secondary)
+        Text(L10n.VideoEditor.noZoomSelected)
+          .font(.system(size: 11.5, weight: .medium))
+          .foregroundColor(SidebarColors.labelSecondary)
 
-      Text(L10n.VideoEditor.pressZToAddZoom)
-        .font(.system(size: 11))
-        .foregroundColor(.secondary.opacity(0.7))
-        .multilineTextAlignment(.center)
+        Text(L10n.VideoEditor.pressZToAddZoom)
+          .font(.system(size: 10))
+          .foregroundColor(SidebarColors.labelTertiary)
+          .multilineTextAlignment(.center)
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 14)
     }
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, 40)
   }
 
   private var zoomLevelSection: some View {
@@ -287,26 +643,43 @@ struct ZoomSettingsContent: View {
           .foregroundColor(.secondary)
       }
 
-      HStack(spacing: 4) {
+      HStack(spacing: 2) {
         ForEach([1.5, 2.0, 2.5, 3.0], id: \.self) { level in
+          let isSelected = abs(localZoomLevel - level) < 0.05
           Button {
             localZoomLevel = level
             applyZoomLevel()
           } label: {
-            Text("\(String(format: "%.1f", level))x")
-              .font(.system(size: 9, weight: .medium))
-              .padding(.horizontal, 6)
-              .padding(.vertical, 3)
-              .background(
-                abs(localZoomLevel - level) < 0.05
-                  ? ZoomColors.primary.opacity(0.3)
-                  : Color.white.opacity(0.1)
-              )
-              .clipShape(Radius.controlRect(forHeight: 17))
+            Text("\(String(format: "%.1f", level))×")
+              .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
+              .monospacedDigit()
+              .foregroundColor(isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
+              .frame(maxWidth: .infinity)
+              .frame(height: 20)
+              .background {
+                if isSelected {
+                  Radius.controlRect(forHeight: 20)
+                    .fill(Color.primary.opacity(0.11))
+                    .overlay(
+                      Radius.controlRect(forHeight: 20)
+                        .strokeBorder(Color.primary.opacity(0.13), lineWidth: 0.5)
+                    )
+                }
+              }
+              .contentShape(Radius.controlRect(forHeight: 20))
           }
           .buttonStyle(.plain)
         }
       }
+      .padding(2)
+      .background(
+        Radius.controlRect(forHeight: 24)
+          .fill(Color.primary.opacity(0.05))
+          .overlay(
+            Radius.controlRect(forHeight: 24)
+              .strokeBorder(Color.primary.opacity(0.075), lineWidth: 0.5)
+          )
+      )
     }
   }
 
@@ -390,26 +763,42 @@ struct ZoomSettingsContent: View {
           .foregroundColor(.secondary)
       }
 
-      HStack(spacing: 4) {
+      HStack(spacing: 2) {
         ForEach(transitionPresets, id: \.title) { preset in
+          let isSelected = abs(localTransitionDuration - preset.value) < 0.02
           Button {
             localTransitionDuration = preset.value
             applyTransitionDuration()
           } label: {
             Text(preset.title)
-              .font(.system(size: 9, weight: .medium))
-              .padding(.horizontal, 6)
-              .padding(.vertical, 3)
-              .background(
-                abs(localTransitionDuration - preset.value) < 0.02
-                  ? ZoomColors.primary.opacity(0.3)
-                  : Color.white.opacity(0.1)
-              )
-              .clipShape(Radius.controlRect(forHeight: 17))
+              .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
+              .foregroundColor(isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
+              .frame(maxWidth: .infinity)
+              .frame(height: 20)
+              .background {
+                if isSelected {
+                  Radius.controlRect(forHeight: 20)
+                    .fill(Color.primary.opacity(0.11))
+                    .overlay(
+                      Radius.controlRect(forHeight: 20)
+                        .strokeBorder(Color.primary.opacity(0.13), lineWidth: 0.5)
+                    )
+                }
+              }
+              .contentShape(Radius.controlRect(forHeight: 20))
           }
           .buttonStyle(.plain)
         }
       }
+      .padding(2)
+      .background(
+        Radius.controlRect(forHeight: 24)
+          .fill(Color.primary.opacity(0.05))
+          .overlay(
+            Radius.controlRect(forHeight: 24)
+              .strokeBorder(Color.primary.opacity(0.075), lineWidth: 0.5)
+          )
+      )
 
       Text(L10n.VideoEditor.transitionAppliesDescription)
         .font(.system(size: 10))
@@ -462,72 +851,44 @@ struct ZoomSettingsContent: View {
         center: $localCenter,
         previewImage: previewImage,
         onEditingChanged: { editing in
-          if editing { beginContinuousEdit() } else { endContinuousEdit() }
+          if editing {
+            beginContinuousEdit()
+          } else {
+            endContinuousEdit()
+          }
         },
         onCenterChanged: applyCenter
       )
 
-      HStack(spacing: 4) {
+      HStack(spacing: 2) {
         ForEach(centerPresets, id: \.name) { preset in
+          let isSelected = isNearPreset(localCenter, preset.point)
           Button {
             localCenter = preset.point
             applyCenter(preset.point)
           } label: {
             Image(systemName: preset.icon)
-              .font(.system(size: 10))
-              .frame(width: 24, height: 24)
-              .background(
-                isNearPreset(localCenter, preset.point)
-                  ? ZoomColors.primary.opacity(0.3)
-                  : Color.white.opacity(0.1)
-              )
-              .clipShape(Radius.controlRect(forHeight: 24))
+              .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
+              .foregroundColor(isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
+              .frame(maxWidth: .infinity)
+              .frame(height: 22)
+              .background {
+                if isSelected {
+                  activeThumbShape
+                }
+              }
+              .contentShape(Radius.controlRect(forHeight: 22))
           }
           .buttonStyle(.plain)
           .help(preset.name)
         }
       }
+      .padding(2)
+      .background(railBackground)
 
       Text(L10n.VideoEditor.manualCameraControlOnlyInManualMode)
         .font(.system(size: 10))
-        .foregroundColor(.secondary.opacity(0.8))
-    }
-  }
-
-  private var actionsSection: some View {
-    HStack(spacing: 8) {
-      Button {
-        if let id = state.selectedZoomId {
-          state.toggleZoomEnabled(id: id)
-        }
-      } label: {
-        HStack(spacing: 4) {
-          Image(systemName: selectedSegment?.isEnabled == true ? "eye" : "eye.slash")
-          Text(selectedSegment?.isEnabled == true ? L10n.Common.enabled : L10n.Common.disabled)
-        }
-        .font(.system(size: 10))
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.white.opacity(0.1))
-        .clipShape(Radius.controlRect(forHeight: 20))
-      }
-      .buttonStyle(.plain)
-
-      Spacer()
-
-      Button(role: .destructive) {
-        if let id = state.selectedZoomId {
-          state.removeZoom(id: id)
-        }
-      } label: {
-        Image(systemName: "trash")
-          .font(.system(size: 10))
-          .foregroundColor(.red)
-          .padding(6)
-          .background(Color.red.opacity(0.1))
-          .clipShape(Radius.controlRect(forHeight: 24))
-      }
-      .buttonStyle(.plain)
+        .foregroundColor(SidebarColors.labelTertiary)
     }
   }
 

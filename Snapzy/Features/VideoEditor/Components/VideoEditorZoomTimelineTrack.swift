@@ -13,10 +13,11 @@ struct ZoomTimelineTrack: View, Equatable {
   static func == (lhs: Self, rhs: Self) -> Bool {
     lhs.state === rhs.state && lhs.timelineWidth == rhs.timelineWidth && lhs.visibleRange == rhs.visibleRange
   }
+
   let state: VideoEditorState
   @StateObject private var observation: VideoEditorTimelineObservation
   let timelineWidth: CGFloat
-  var visibleRange: ClosedRange<CGFloat>? = nil
+  var visibleRange: ClosedRange<CGFloat>?
 
   init(state: VideoEditorState, timelineWidth: CGFloat, visibleRange: ClosedRange<CGFloat>? = nil) {
     self.state = state
@@ -208,7 +209,9 @@ struct ZoomTimelineTrack: View, Equatable {
       }
     }
     .onChange(of: observation.revision) { _ in
-      if isHovering { updateHover(at: hoverLocation) }
+      if isHovering {
+        updateHover(at: hoverLocation)
+      }
     }
     .contextMenu {
       trackContextMenu
@@ -227,10 +230,14 @@ struct ZoomTimelineTrack: View, Equatable {
       let edge: SegmentEdge? = location.x <= layout.visualStartX + handleWidth ? .start
         : (location.x >= layout.visualEndX - handleWidth ? .end : nil)
       let hover = HoverState(segmentId: segment.id, edge: edge)
-      if hover != resolvedHover { resolvedHover = hover }
+      if hover != resolvedHover {
+        resolvedHover = hover
+      }
       setCursor(edge != nil ? .resizeLeftRight : .pointingHand)
     } else {
-      if resolvedHover != .none { resolvedHover = .none }
+      if resolvedHover != .none {
+        resolvedHover = .none
+      }
       setCursor(.crosshair)
     }
   }
@@ -247,7 +254,7 @@ struct ZoomTimelineTrack: View, Equatable {
 
   private func clearCursor() {
     guard activeCursor != nil else { return }
-    self.activeCursor = nil
+    activeCursor = nil
     NSCursor.arrow.set()
   }
 
@@ -338,7 +345,8 @@ struct ZoomTimelineTrack: View, Equatable {
       preview.duration = max(ZoomSegment.minDuration, anchorTimeline - dragInitialStartTime)
     }
 
-    return state.resolvedZoomSegment(id: segment.id, startTime: preview.startTime, duration: preview.duration) ?? segment
+    return state
+      .resolvedZoomSegment(id: segment.id, startTime: preview.startTime, duration: preview.duration) ?? segment
   }
 
   private func commitDragPreviewIfNeeded(_ segment: ZoomSegment, force: Bool = false) {
@@ -365,7 +373,9 @@ struct ZoomTimelineTrack: View, Equatable {
     dragSegmentId = nil
     dragPreviewSegment = nil
     lastDragModelUpdateTime = 0
-    if isHovering { updateHover(at: hoverLocation) }
+    if isHovering {
+      updateHover(at: hoverLocation)
+    }
   }
 
   // MARK: - Tap Handling
@@ -402,6 +412,15 @@ struct ZoomTimelineTrack: View, Equatable {
         isHovering ? L10n.VideoEditor.addZoomHere : L10n.VideoEditor.addZoomAtPlayhead,
         systemImage: "plus.magnifyingglass"
       )
+    }
+
+    if state.hasMouseTrackingData {
+      Button {
+        state.requestSmartAutoZoom(style: state.smartAutoZoomStyle)
+      } label: {
+        Label(L10n.VideoEditor.smartAutoZoomGenerate, systemImage: "viewfinder")
+      }
+      .disabled(state.isGeneratingSmartAutoZoom)
     }
 
     if state.selectedZoomId != nil {
@@ -485,7 +504,9 @@ struct ZoomTimelineTrack: View, Equatable {
   private var visibleSegments: [ZoomSegment] {
     state.zoomSegments.filter { segment in
       guard let span = displaySpan(for: segment) else { return false }
-      if segment.id == dragSegmentId || segment.id == state.selectedZoomId { return true }
+      if segment.id == dragSegmentId || segment.id == state.selectedZoomId {
+        return true
+      }
       guard let visibleRange else { return true }
       let layout = paddedLayout(for: span)
       return layout.visualEndX >= visibleRange.lowerBound && layout.visualStartX <= visibleRange.upperBound
@@ -501,8 +522,12 @@ struct ZoomTimelineTrack: View, Equatable {
     func preferred(_ candidate: (segment: ZoomSegment, layout: SegmentLayout),
                    over winner: (segment: ZoomSegment, layout: SegmentLayout)?) -> Bool {
       guard let winner else { return true }
-      if winner.segment.id == state.selectedZoomId { return false }
-      if candidate.segment.id == state.selectedZoomId { return true }
+      if winner.segment.id == state.selectedZoomId {
+        return false
+      }
+      if candidate.segment.id == state.selectedZoomId {
+        return true
+      }
       // Iteration follows authored order; equal distance replaces with later index.
       return abs(candidate.layout.centerX - x) <= abs(winner.layout.centerX - x)
     }
@@ -512,17 +537,20 @@ struct ZoomTimelineTrack: View, Equatable {
       let endX = (span.upperBound / videoDuration) * timelineWidth
       if endX - startX > 0.01, x >= startX, x <= endX {
         let candidate = (segment, SegmentLayout(visualStartX: startX, visualEndX: endX, visualWidth: endX - startX))
-        if preferred(candidate, over: trueWinner) { trueWinner = candidate }
+        if preferred(candidate, over: trueWinner) {
+          trueWinner = candidate
+        }
       }
       let layout = paddedLayout(for: span)
       if x >= layout.visualStartX, x <= layout.visualEndX {
         let candidate = (segment, layout)
-        if preferred(candidate, over: paddedWinner) { paddedWinner = candidate }
+        if preferred(candidate, over: paddedWinner) {
+          paddedWinner = candidate
+        }
       }
     }
     return trueWinner ?? paddedWinner
   }
-
 }
 
 // MARK: - Zoom Block Visual (No Gestures)
@@ -583,41 +611,45 @@ private struct ZoomBlockVisual: View, Equatable {
   }
 
   private var stateBorderColor: Color {
-    if isSelected { return .white }
-    if isEdgeHovered { return Color.white.opacity(0.55) }
+    if isSelected {
+      return .white
+    }
+    if isEdgeHovered {
+      return Color.white.opacity(0.55)
+    }
     return .clear
   }
 
   @ViewBuilder
   private var blockContent: some View {
     if blockWidth >= compactContentThreshold {
-      HStack(spacing: 3) {
-        Image(systemName: "plus.magnifyingglass")
-          .font(.system(size: 10, weight: .semibold))
+      HStack(spacing: 4) {
+        Image(systemName: segment.isAutoMode ? "scope" : "plus.magnifyingglass")
+          .font(.system(size: 9.5, weight: .semibold))
+          .opacity(0.92)
 
         Text(segment.formattedZoomLevel)
           .font(.system(size: 10, weight: .semibold))
+          .monospacedDigit()
           .lineLimit(1)
           .minimumScaleFactor(0.75)
 
-        Spacer(minLength: 0)
-
         if blockWidth >= extendedContentThreshold {
           Text(segment.zoomType.displayName)
-            .font(.system(size: 8, weight: .medium))
+            .font(.system(size: 9, weight: .medium))
+            .opacity(0.76)
             .lineLimit(1)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Color.white.opacity(0.22)))
         }
+
+        Spacer(minLength: 0)
       }
       .padding(.horizontal, handleWidth + 4)
       .foregroundColor(.white)
     } else {
       HStack {
         Spacer(minLength: 0)
-        Image(systemName: "plus.magnifyingglass")
-          .font(.system(size: 10, weight: .semibold))
+        Image(systemName: segment.isAutoMode ? "scope" : "plus.magnifyingglass")
+          .font(.system(size: 9.5, weight: .semibold))
           .foregroundColor(.white)
         Spacer(minLength: 0)
       }
@@ -634,9 +666,15 @@ private struct ZoomBlockVisual: View, Equatable {
   }
 
   private var gripOpacity: Double {
-    if isEdgeHovered { return 0.85 }
-    if isSelected { return 0.8 }
-    if isHovered { return 0.55 }
+    if isEdgeHovered {
+      return 0.85
+    }
+    if isSelected {
+      return 0.8
+    }
+    if isHovered {
+      return 0.55
+    }
     return 0.38
   }
 

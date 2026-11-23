@@ -58,21 +58,17 @@ struct ZoomSettingsPopover: View {
   // MARK: - Sections
 
   private var header: some View {
-    HStack {
-      Image(systemName: "plus.magnifyingglass")
-        .foregroundColor(ZoomColors.primary)
-
+    HStack(spacing: 6) {
       Text(L10n.VideoEditor.zoomSettings)
-        .font(.system(size: 12, weight: .semibold))
+        .font(Typography.sectionHeader)
+        .foregroundColor(SidebarColors.labelPrimary)
 
       Spacer()
 
       if let segment = selectedSegment {
         Text(segment.zoomType.displayName)
-          .font(.system(size: 9, weight: .medium))
-          .padding(.horizontal, 6)
-          .padding(.vertical, 2)
-          .background(Capsule().fill(ZoomColors.primary.opacity(0.2)))
+          .font(.system(size: 10, weight: .medium))
+          .foregroundColor(SidebarColors.labelSecondary)
       }
     }
   }
@@ -115,26 +111,43 @@ struct ZoomSettingsPopover: View {
       }
 
       // Quick presets
-      HStack(spacing: 4) {
+      HStack(spacing: 2) {
         ForEach([1.5, 2.0, 2.5, 3.0], id: \.self) { level in
+          let isSelected = abs(localZoomLevel - level) < 0.05
           Button {
             localZoomLevel = level
             applyZoomLevel()
           } label: {
-            Text("\(String(format: "%.1f", level))x")
-              .font(.system(size: 9, weight: .medium))
-              .padding(.horizontal, 6)
-              .padding(.vertical, 3)
-              .background(
-                localZoomLevel == level
-                  ? ZoomColors.primary.opacity(0.3)
-                  : Color.white.opacity(0.1)
-              )
-              .clipShape(Radius.controlRect(forHeight: 17))
+            Text("\(String(format: "%.1f", level))×")
+              .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
+              .monospacedDigit()
+              .foregroundColor(isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
+              .frame(maxWidth: .infinity)
+              .frame(height: 20)
+              .background {
+                if isSelected {
+                  Radius.controlRect(forHeight: 20)
+                    .fill(Color.primary.opacity(0.11))
+                    .overlay(
+                      Radius.controlRect(forHeight: 20)
+                        .strokeBorder(Color.primary.opacity(0.13), lineWidth: 0.5)
+                    )
+                }
+              }
+              .contentShape(Radius.controlRect(forHeight: 20))
           }
           .buttonStyle(.plain)
         }
       }
+      .padding(2)
+      .background(
+        Radius.controlRect(forHeight: 24)
+          .fill(Color.primary.opacity(0.05))
+          .overlay(
+            Radius.controlRect(forHeight: 24)
+              .strokeBorder(Color.primary.opacity(0.075), lineWidth: 0.5)
+          )
+      )
     }
   }
 
@@ -148,32 +161,53 @@ struct ZoomSettingsPopover: View {
         center: $localCenter,
         previewImage: previewImage,
         onEditingChanged: { editing in
-          if editing { beginContinuousEdit() } else { endContinuousEdit() }
+          if editing {
+            beginContinuousEdit()
+          } else {
+            endContinuousEdit()
+          }
         },
         onCenterChanged: applyCenter
       )
 
       // Quick position presets
-      HStack(spacing: 4) {
+      HStack(spacing: 2) {
         ForEach(centerPresets, id: \.name) { preset in
+          let isSelected = isNearPreset(localCenter, preset.point)
           Button {
             localCenter = preset.point
             applyCenter(preset.point)
           } label: {
             Image(systemName: preset.icon)
-              .font(.system(size: 10))
-              .frame(width: 24, height: 24)
-              .background(
-                isNearPreset(localCenter, preset.point)
-                  ? ZoomColors.primary.opacity(0.3)
-                  : Color.white.opacity(0.1)
-              )
-              .clipShape(Radius.controlRect(forHeight: 24))
+              .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
+              .foregroundColor(isSelected ? SidebarColors.labelPrimary : SidebarColors.labelSecondary)
+              .frame(maxWidth: .infinity)
+              .frame(height: 22)
+              .background {
+                if isSelected {
+                  Radius.controlRect(forHeight: 22)
+                    .fill(Color.primary.opacity(0.11))
+                    .overlay(
+                      Radius.controlRect(forHeight: 22)
+                        .strokeBorder(Color.primary.opacity(0.13), lineWidth: 0.5)
+                    )
+                }
+              }
+              .contentShape(Radius.controlRect(forHeight: 22))
           }
           .buttonStyle(.plain)
           .help(preset.name)
         }
       }
+      .padding(2)
+      .background(
+        Radius.controlRect(forHeight: 26)
+          .fill(Color.primary.opacity(0.05))
+          .overlay(
+            Radius.controlRect(forHeight: 26)
+              .strokeBorder(Color.primary.opacity(0.075), lineWidth: 0.5)
+          )
+      )
     }
   }
 

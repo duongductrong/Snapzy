@@ -22,6 +22,10 @@ nonisolated enum VideoEditorAutoFocusEngine {
   ) -> [AutoFocusCameraSample] {
     guard segment.isAutoMode else { return [] }
 
+    if let smartKeyframes = segment.smartKeyframes, !smartKeyframes.isEmpty {
+      return buildSmartSplinePath(from: smartKeyframes, zoomLevel: segment.zoomLevel)
+    }
+
     let settings = segment.autoFocusSettings
     let samples = canonicalSamples(from: metadata)
     guard samples.count >= 2 else { return [] }
@@ -179,17 +183,31 @@ nonisolated enum VideoEditorAutoFocusEngine {
       transitionDuration: transitionDuration
     )
 
-    guard interpolated.level > 1.0 else {
+    guard interpolated.progress > 0.0001 else {
       return .identity
     }
 
-    let targetCenter = path.isEmpty ? segment.zoomCenter : center(at: time, in: path)
-    let blendedCenter = ZoomCalculator.interpolateCenter(
-      from: ZoomCalculator.neutralCenter,
-      to: targetCenter,
+    let resolvedSample: (center: CGPoint, zoomMultiplier: CGFloat) = path.isEmpty
+      ? (segment.zoomCenter, 1.0)
+      : sampleState(at: time, in: path)
+
+    let targetZoom = (1.0 + (segment.zoomLevel - 1.0) * resolvedSample.zoomMultiplier)
+      .clamped(to: AutoFocusSettings.zoomRange)
+    let effectiveZoom = ZoomCalculator.opticalZoomLevel(
+      target: targetZoom,
       progress: interpolated.progress
     )
-    return VideoEditorCameraState(zoomLevel: interpolated.level, center: blendedCenter)
+
+    guard effectiveZoom > 1.0 else {
+      return .identity
+    }
+
+    let blendedCenter = ZoomCalculator.interpolateCenter(
+      from: ZoomCalculator.neutralCenter,
+      to: resolvedSample.center,
+      progress: interpolated.progress
+    )
+    return VideoEditorCameraState(zoomLevel: effectiveZoom, center: blendedCenter)
   }
 
   static func resolvedCameraState(
@@ -235,24 +253,25 @@ nonisolated enum VideoEditorAutoFocusEngine {
   ) -> [AutoFocusCameraSample] {
     guard !path.isEmpty, trimEnd > trimStart else { return [] }
 
-    let startCenter = center(at: trimStart, in: path)
-    let endCenter = center(at: trimEnd, in: path)
+    let startSample = sampleState(at: trimStart, in: path)
+    let endSample = sampleState(at: trimEnd, in: path)
 
     var trimmed = path
       .filter { $0.time > trimStart && $0.time < trimEnd }
       .map { sample in
         AutoFocusCameraSample(
           time: sample.time - trimStart,
-          center: sample.center
+          center: sample.center,
+          zoomMultiplier: sample.zoomMultiplier
         )
       }
 
     trimmed.insert(
-      AutoFocusCameraSample(time: 0, center: startCenter),
+      AutoFocusCameraSample(time: 0, center: startSample.center, zoomMultiplier: startSample.zoomMultiplier),
       at: 0
     )
     trimmed.append(
-      AutoFocusCameraSample(time: trimEnd - trimStart, center: endCenter)
+      AutoFocusCameraSample(time: trimEnd - trimStart, center: endSample.center, zoomMultiplier: endSample.zoomMultiplier)
     )
 
     return deduplicated(trimmed)
@@ -266,7 +285,11 @@ nonisolated enum VideoEditorAutoFocusEngine {
   ) -> [AutoFocusCameraSample] {
     guard !path.isEmpty else { return [] }
     let scaled = path.map { sample in
-      AutoFocusCameraSample(time: map.toOutput(sample.time), center: sample.center)
+      AutoFocusCameraSample(
+        time: map.toOutput(sample.time),
+        center: sample.center,
+        zoomMultiplier: sample.zoomMultiplier
+      )
     }
     return deduplicated(scaled)
   }
@@ -287,10 +310,12 @@ nonisolated enum VideoEditorAutoFocusEngine {
       if placement.clip.isPrimary {
         let sourceStart = placement.clip.sourceStart
         let sourceEnd = placement.clip.sourceEnd
+        let startState = sampleState(at: sourceStart, in: path)
         adjusted.append(
           AutoFocusCameraSample(
             time: placement.activeStart,
-            center: center(at: sourceStart, in: path)
+            center: startState.center,
+            zoomMultiplier: startState.zoomMultiplier
           )
         )
 
@@ -298,20 +323,25 @@ nonisolated enum VideoEditorAutoFocusEngine {
           guard sample.time > sourceStart, sample.time < sourceEnd else { return nil }
           return AutoFocusCameraSample(
             time: placement.sequenceTime(atSource: sample.time),
-            center: sample.center
+            center: sample.center,
+            zoomMultiplier: sample.zoomMultiplier
           )
         })
 
+        let endState = sampleState(at: sourceEnd, in: path)
         adjusted.append(
           AutoFocusCameraSample(
             time: placement.activeEnd,
-            center: center(at: sourceEnd, in: path)
+            center: endState.center,
+            zoomMultiplier: endState.zoomMultiplier
           )
         )
       } else {
-        let holdCenter = adjusted.last?.center ?? center(at: 0, in: path)
-        adjusted.append(AutoFocusCameraSample(time: placement.start, center: holdCenter))
-        adjusted.append(AutoFocusCameraSample(time: placement.end, center: holdCenter))
+        let fallback = sampleState(at: 0, in: path)
+        let holdCenter = adjusted.last?.center ?? fallback.center
+        let holdZoom = adjusted.last?.zoomMultiplier ?? fallback.zoomMultiplier
+        adjusted.append(AutoFocusCameraSample(time: placement.start, center: holdCenter, zoomMultiplier: holdZoom))
+        adjusted.append(AutoFocusCameraSample(time: placement.end, center: holdCenter, zoomMultiplier: holdZoom))
       }
     }
 
@@ -334,10 +364,12 @@ nonisolated enum VideoEditorAutoFocusEngine {
       if placement.clip.isPrimary {
         let relativeStart = placement.clip.sourceStart - trimStart
         let relativeEnd = placement.clip.sourceEnd - trimStart
+        let startState = sampleState(at: relativeStart, in: path)
         adjusted.append(
           AutoFocusCameraSample(
             time: placement.start,
-            center: center(at: relativeStart, in: path)
+            center: startState.center,
+            zoomMultiplier: startState.zoomMultiplier
           )
         )
         adjusted.append(contentsOf: path.compactMap { sample in
@@ -345,19 +377,24 @@ nonisolated enum VideoEditorAutoFocusEngine {
           let absolute = trimStart + sample.time
           return AutoFocusCameraSample(
             time: placement.sequenceTime(atSource: absolute),
-            center: sample.center
+            center: sample.center,
+            zoomMultiplier: sample.zoomMultiplier
           )
         })
+        let endState = sampleState(at: relativeEnd, in: path)
         adjusted.append(
           AutoFocusCameraSample(
             time: placement.end,
-            center: center(at: relativeEnd, in: path)
+            center: endState.center,
+            zoomMultiplier: endState.zoomMultiplier
           )
         )
       } else {
-        let holdCenter = adjusted.last?.center ?? center(at: 0, in: path)
-        adjusted.append(AutoFocusCameraSample(time: placement.start, center: holdCenter))
-        adjusted.append(AutoFocusCameraSample(time: placement.end, center: holdCenter))
+        let fallback = sampleState(at: 0, in: path)
+        let holdCenter = adjusted.last?.center ?? fallback.center
+        let holdZoom = adjusted.last?.zoomMultiplier ?? fallback.zoomMultiplier
+        adjusted.append(AutoFocusCameraSample(time: placement.start, center: holdCenter, zoomMultiplier: holdZoom))
+        adjusted.append(AutoFocusCameraSample(time: placement.end, center: holdCenter, zoomMultiplier: holdZoom))
       }
     }
     guard !adjusted.isEmpty else { return [] }
@@ -366,19 +403,140 @@ nonisolated enum VideoEditorAutoFocusEngine {
     return deduplicated(adjusted)
   }
 
+  /// Upsamples sparse Smart Auto-Zoom keyframes through a 120Hz exact critically-damped
+  /// physical spring camera rig (`ζ = 1.0`, zero overshoot, C² continuous velocity) with
+  /// subtle look-ahead anticipation so pans, arc pullbacks, and outcome reframes flow as
+  /// one unbroken cinema-gimbal motion with zero velocity kinks.
+  static func buildSmartSplinePath(
+    from keyframes: [AutoFocusCameraSample],
+    zoomLevel: CGFloat
+  ) -> [AutoFocusCameraSample] {
+    let sorted = deduplicated(keyframes.sorted { $0.time < $1.time })
+    guard !sorted.isEmpty else { return [] }
+
+    let clampedZoom = zoomLevel.clamped(to: AutoFocusSettings.zoomRange)
+    func clampedSample(time: TimeInterval, center: CGPoint, multiplier: CGFloat) -> AutoFocusCameraSample {
+      let safeMultiplier = multiplier.clamped(to: 0 ... 1.5)
+      let effectiveZoom = (1.0 + (clampedZoom - 1.0) * safeMultiplier).clamped(to: AutoFocusSettings.zoomRange)
+      let halfW = 0.5 / max(effectiveZoom, 1.0)
+      let halfH = 0.5 / max(effectiveZoom, 1.0)
+      return AutoFocusCameraSample(
+        time: time,
+        center: clampCenter(center.clampedToUnitRect, cropHalfWidth: halfW, cropHalfHeight: halfH),
+        zoomMultiplier: safeMultiplier
+      )
+    }
+
+    guard sorted.count >= 2 else {
+      let only = sorted[0]
+      return [clampedSample(time: only.time, center: only.center, multiplier: only.zoomMultiplier)]
+    }
+
+    // Evaluate the C² smootherstep guide curve at any timestamp t.
+    func guideState(at time: TimeInterval) -> (x: Double, y: Double, mult: Double) {
+      if time <= sorted[0].time {
+        return (Double(sorted[0].center.x), Double(sorted[0].center.y), Double(sorted[0].zoomMultiplier))
+      }
+      let last = sorted[sorted.count - 1]
+      if time >= last.time {
+        return (Double(last.center.x), Double(last.center.y), Double(last.zoomMultiplier))
+      }
+      var low = 0
+      var high = sorted.count - 1
+      while low + 1 < high {
+        let mid = (low + high) / 2
+        if sorted[mid].time <= time { low = mid } else { high = mid }
+      }
+      let a = sorted[low]
+      let b = sorted[high]
+      let span = max(b.time - a.time, 0.0001)
+      let u = ((time - a.time) / span).clamped(to: 0 ... 1)
+      let e = ZoomCalculator.smootherstep(u)
+      return (
+        x: Double(a.center.x) + Double(b.center.x - a.center.x) * e,
+        y: Double(a.center.y) + Double(b.center.y - a.center.y) * e,
+        mult: Double(a.zoomMultiplier) + Double(b.zoomMultiplier - a.zoomMultiplier) * e
+      )
+    }
+
+    // Exact analytical step for critically-damped harmonic spring: x'' + 2ωx' + ω²(x - target) = 0.
+    func stepCriticallyDamped(
+      value: inout Double,
+      velocity: inout Double,
+      target: Double,
+      omega: Double,
+      dt: Double
+    ) {
+      let decay = exp(-omega * dt)
+      let delta = value - target
+      let temp = (velocity + omega * delta) * dt
+      value = target + (delta + temp) * decay
+      velocity = (velocity - omega * temp) * decay
+    }
+
+    let startTime = sorted[0].time
+    let endTime = sorted[sorted.count - 1].time
+    let totalDuration = max(endTime - startTime, 0.0001)
+    let dt: TimeInterval = 1.0 / 120.0
+    let totalSteps = max(1, Int(ceil(totalDuration / dt)))
+
+    // Look-ahead compensates spring phase lag so the gimbal lands precisely on action beats.
+    let lookAhead: TimeInterval = 0.11
+    let positionOmega: Double = 9.2
+    let zoomOmega: Double = 7.8
+
+    var x = Double(sorted[0].center.x)
+    var y = Double(sorted[0].center.y)
+    var mult = Double(sorted[0].zoomMultiplier)
+    var vx = 0.0
+    var vy = 0.0
+    var vMult = 0.0
+
+    var result: [AutoFocusCameraSample] = []
+    result.reserveCapacity(totalSteps + 2)
+    result.append(clampedSample(time: startTime, center: CGPoint(x: x, y: y), multiplier: CGFloat(mult)))
+
+    for step in 1 ... totalSteps {
+      let t = min(endTime, startTime + Double(step) * dt)
+      let stepDt = max(t - (startTime + Double(step - 1) * dt), 0.0001)
+      let target = guideState(at: min(endTime, t + lookAhead))
+
+      stepCriticallyDamped(value: &x, velocity: &vx, target: target.x, omega: positionOmega, dt: stepDt)
+      stepCriticallyDamped(value: &y, velocity: &vy, target: target.y, omega: positionOmega, dt: stepDt)
+      stepCriticallyDamped(value: &mult, velocity: &vMult, target: target.mult, omega: zoomOmega, dt: stepDt)
+
+      result.append(
+        clampedSample(
+          time: t,
+          center: CGPoint(x: x, y: y),
+          multiplier: CGFloat(mult)
+        )
+      )
+    }
+
+    return deduplicated(result)
+  }
+
   private static func center(at time: TimeInterval, in path: [AutoFocusCameraSample]) -> CGPoint {
+    sampleState(at: time, in: path).center
+  }
+
+  private static func sampleState(
+    at time: TimeInterval,
+    in path: [AutoFocusCameraSample]
+  ) -> (center: CGPoint, zoomMultiplier: CGFloat) {
     guard let firstSample = path.first else {
-      return CGPoint(x: 0.5, y: 0.5)
+      return (CGPoint(x: 0.5, y: 0.5), 1.0)
     }
     guard let lastSample = path.last else {
-      return firstSample.center
+      return (firstSample.center, firstSample.zoomMultiplier)
     }
 
     if time <= firstSample.time {
-      return firstSample.center
+      return (firstSample.center, firstSample.zoomMultiplier)
     }
     if time >= lastSample.time {
-      return lastSample.center
+      return (lastSample.center, lastSample.zoomMultiplier)
     }
 
     var low = 0
@@ -398,9 +556,12 @@ nonisolated enum VideoEditorAutoFocusEngine {
     let duration = max(next.time - previous.time, 0.0001)
     let progress = ((time - previous.time) / duration).clamped(to: 0 ... 1)
 
-    return CGPoint(
-      x: previous.center.x + (next.center.x - previous.center.x) * progress,
-      y: previous.center.y + (next.center.y - previous.center.y) * progress
+    return (
+      center: CGPoint(
+        x: previous.center.x + (next.center.x - previous.center.x) * progress,
+        y: previous.center.y + (next.center.y - previous.center.y) * progress
+      ),
+      zoomMultiplier: previous.zoomMultiplier + (next.zoomMultiplier - previous.zoomMultiplier) * progress
     )
   }
 
@@ -581,12 +742,14 @@ actor VideoEditorAutoFocusWorker {
     let zoomLevel: CGFloat
     let followSpeed: Double
     let focusMargin: CGFloat
+    let smartKeyframes: [AutoFocusCameraSample]?
 
     init(_ segment: ZoomSegment) {
       zoomType = segment.zoomType.rawValue
       zoomLevel = segment.zoomLevel
       followSpeed = segment.followSpeed
       focusMargin = segment.focusMargin
+      smartKeyframes = segment.smartKeyframes
     }
   }
 

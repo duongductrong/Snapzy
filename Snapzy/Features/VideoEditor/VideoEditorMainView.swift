@@ -173,6 +173,25 @@ struct VideoEditorMainView: View {
       }
       .animation(.spring(response: 0.4, dampingFraction: 0.85), value: state.isExporting)
     }
+    .alert(
+      L10n.VideoEditor.smartAutoZoomConfirmTitle,
+      isPresented: $state.showSmartAutoZoomConfirmation
+    ) {
+      Button(L10n.VideoEditor.smartAutoZoomKeepAndFillGaps) {
+        state.confirmSmartAutoZoom(policy: .fillGaps)
+      }
+      .keyboardShortcut(.defaultAction)
+
+      Button(L10n.VideoEditor.smartAutoZoomReplaceAll, role: .destructive) {
+        state.confirmSmartAutoZoom(policy: .replaceAll)
+      }
+
+      Button(L10n.Common.cancel, role: .cancel) {
+        state.cancelSmartAutoZoomConfirmation()
+      }
+    } message: {
+      Text(L10n.VideoEditor.smartAutoZoomConfirmMessage)
+    }
     .ignoresSafeArea(.all, edges: .top)
     .task {
       await state.loadMetadata()

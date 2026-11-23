@@ -7762,6 +7762,91 @@ nonisolated enum L10n {
       defaultValue: "Zoom Item",
       comment: "Header title for the selected zoom item in the video editor sidebar"
     )
+    static let smartAutoZoomTitle = string(
+      "video-editor.smart-auto-zoom-title",
+      defaultValue: "Smart Auto-Zoom",
+      comment: "Section header for action- and outcome-aware smart auto-zoom in the video editor zoom sidebar"
+    )
+    static let smartAutoZoomSubtle = string(
+      "video-editor.smart-auto-zoom-subtle",
+      defaultValue: "Subtle",
+      comment: "Subtle intensity preset for Smart Auto-Zoom"
+    )
+    static let smartAutoZoomBalanced = string(
+      "video-editor.smart-auto-zoom-balanced",
+      defaultValue: "Balanced",
+      comment: "Balanced intensity preset for Smart Auto-Zoom"
+    )
+    static let smartAutoZoomDynamic = string(
+      "video-editor.smart-auto-zoom-dynamic",
+      defaultValue: "Dynamic",
+      comment: "Dynamic intensity preset for Smart Auto-Zoom"
+    )
+    static let smartAutoZoomGenerate = string(
+      "video-editor.smart-auto-zoom-generate",
+      defaultValue: "Auto-Generate Zooms",
+      comment: "Button label to generate Smart Auto-Zoom segments"
+    )
+    static let smartAutoZoomRegenerate = string(
+      "video-editor.smart-auto-zoom-regenerate",
+      defaultValue: "Regenerate Smart Zooms",
+      comment: "Button label to regenerate Smart Auto-Zoom segments"
+    )
+    static let smartAutoZoomAnalyzing = string(
+      "video-editor.smart-auto-zoom-analyzing",
+      defaultValue: "Analyzing Actions…",
+      comment: "Status label shown while Smart Auto-Zoom analyzes actions and visual outcomes"
+    )
+    static let smartAutoZoomDescription = string(
+      "video-editor.smart-auto-zoom-description",
+      defaultValue: "Zooms into clicks, drags, and typing, reframes for UI results, and zooms out cleanly on transitions.",
+      comment: "Description of Smart Auto-Zoom behavior in the video editor sidebar"
+    )
+    static let smartAutoZoomNoActionsDetected = string(
+      "video-editor.smart-auto-zoom-no-actions",
+      defaultValue: "No actions detected. Existing zooms were left unchanged.",
+      comment: "Notice shown when Smart Auto-Zoom finds no actions to zoom into"
+    )
+    static let smartAutoZoomConfirmTitle = string(
+      "video-editor.smart-auto-zoom-confirm-title",
+      defaultValue: "Existing Zooms Found",
+      comment: "Alert title when Smart Auto-Zoom is triggered on a timeline with user zooms"
+    )
+    static let smartAutoZoomConfirmMessage = string(
+      "video-editor.smart-auto-zoom-confirm-message",
+      defaultValue: "You already have custom zooms on this timeline. Keep them and fill the open gaps, or replace all zooms?",
+      comment: "Alert message explaining options when user zooms already exist"
+    )
+    static let smartAutoZoomKeepAndFillGaps = string(
+      "video-editor.smart-auto-zoom-keep-fill-gaps",
+      defaultValue: "Keep My Zooms & Fill Gaps",
+      comment: "Default action button that preserves user zooms and adds generated zooms only in non-overlapping gaps"
+    )
+    static let smartAutoZoomReplaceAll = string(
+      "video-editor.smart-auto-zoom-replace-all",
+      defaultValue: "Replace All",
+      comment: "Destructive action button that replaces all zooms on the timeline with generated Smart Auto-Zooms"
+    )
+    static let motionBlurTitle = string(
+      "video-editor.motion-blur-title",
+      defaultValue: "Motion Blur",
+      comment: "Section header for camera and cursor motion blur in the video editor sidebar"
+    )
+    static let motionBlurStrength = string(
+      "video-editor.motion-blur-strength",
+      defaultValue: "Shutter Strength",
+      comment: "Slider label for motion blur shutter strength"
+    )
+    static let motionBlurCursor = string(
+      "video-editor.motion-blur-cursor",
+      defaultValue: "Cursor Motion Blur",
+      comment: "Toggle label for directional cursor motion blur"
+    )
+    static let motionBlurDescription = string(
+      "video-editor.motion-blur-description",
+      defaultValue: "Adds GPU shutter-angle blur during fast zoom transitions, pans, and cursor flicks.",
+      comment: "Description of motion blur in the video editor sidebar"
+    )
     static let followMouse = string(
       "video-editor.follow-mouse",
       defaultValue: "Follow Mouse",

@@ -33,6 +33,7 @@ nonisolated struct VideoEditorSessionData: Equatable {
   var cursorSettings: VideoEditorCursorSettings?
   var cameraSettings: VideoEditorCameraSettings?
   var captions: VideoEditorCaptions?
+  var motionBlurSettings: VideoEditorMotionBlurSettings?
 
   init(
     sourceSnapshotURL: URL,
@@ -50,7 +51,8 @@ nonisolated struct VideoEditorSessionData: Equatable {
     isMuted: Bool = false,
     cursorSettings: VideoEditorCursorSettings? = nil,
     cameraSettings: VideoEditorCameraSettings? = nil,
-    captions: VideoEditorCaptions? = nil
+    captions: VideoEditorCaptions? = nil,
+    motionBlurSettings: VideoEditorMotionBlurSettings? = nil
   ) {
     self.sourceSnapshotURL = sourceSnapshotURL
     self.recordingMetadata = recordingMetadata
@@ -68,6 +70,7 @@ nonisolated struct VideoEditorSessionData: Equatable {
     self.cursorSettings = cursorSettings
     self.cameraSettings = cameraSettings
     self.captions = captions
+    self.motionBlurSettings = motionBlurSettings
   }
 }
 
@@ -90,6 +93,7 @@ nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
   var cursorSettings: VideoEditorCursorSettings?
   var cameraSettings: VideoEditorCameraSettings?
   var captions: VideoEditorCaptions?
+  var motionBlurSettings: VideoEditorMotionBlurSettings?
 
   init(sessionData: VideoEditorSessionData) {
     clips = sessionData.clips
@@ -107,6 +111,7 @@ nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
     cursorSettings = sessionData.cursorSettings
     cameraSettings = sessionData.cameraSettings
     captions = sessionData.captions
+    motionBlurSettings = sessionData.motionBlurSettings
   }
 
   func sessionData(
@@ -129,7 +134,8 @@ nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
       isMuted: isMuted,
       cursorSettings: cursorSettings,
       cameraSettings: cameraSettings,
-      captions: captions
+      captions: captions,
+      motionBlurSettings: motionBlurSettings
     )
   }
 }
@@ -205,7 +211,8 @@ extension VideoEditorSessionData {
       isMuted: state.isMuted,
       cursorSettings: state.hasEditableCursor ? state.cursorSettings : nil,
       cameraSettings: state.hasEditableCamera ? state.cameraSettings : nil,
-      captions: state.captions.isEmpty ? nil : state.captions
+      captions: state.captions.isEmpty ? nil : state.captions,
+      motionBlurSettings: state.motionBlurSettings
     )
   }
 }

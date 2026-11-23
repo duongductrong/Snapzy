@@ -20,6 +20,7 @@ struct VideoEditorExportSnapshot {
   let exportSettings: ExportSettings
   let audioTrackRoles: [VideoEditorAudioTrackRole]
   let zoomTransitionDuration: TimeInterval
+  let motionBlurSettings: VideoEditorMotionBlurSettings
   let backgroundStyle: BackgroundStyle
   let backgroundPadding: CGFloat
   let backgroundCornerRadius: CGFloat
@@ -53,6 +54,7 @@ struct VideoEditorExportSnapshot {
     exportSettings = state.exportSettings
     audioTrackRoles = state.audioTrackRoles
     zoomTransitionDuration = state.zoomTransitionDuration
+    motionBlurSettings = state.motionBlurSettings
     backgroundStyle = state.backgroundStyle
     backgroundPadding = state.backgroundPadding
     backgroundCornerRadius = state.backgroundCornerRadius
