@@ -68,6 +68,9 @@ struct KeyCapGroupView: View {
 /// Ghost glass pill shown when a shortcut row has no assignment yet.
 /// Mirrors the keycap silhouette but with muted ink and a quieter substrate.
 struct KeyCapPlaceholderView: View {
+  static let placeholderTint: Double = 0.06
+  static let placeholderBorderOpacity: Double = 0.12
+
   let title: String
   var symbol: String = "return"
   var minWidth: CGFloat = 104
@@ -85,8 +88,12 @@ struct KeyCapPlaceholderView: View {
     .liquidGlassSurface(
       shape: Capsule(style: .continuous),
       substrate: 0.30,
-      tint: 0.0,
+      tint: Self.placeholderTint,
       highlight: .none
+    )
+    .overlay(
+      Capsule(style: .continuous)
+        .strokeBorder(Color.primary.opacity(Self.placeholderBorderOpacity), lineWidth: 0.75)
     )
     .fixedSize(horizontal: true, vertical: false)
   }

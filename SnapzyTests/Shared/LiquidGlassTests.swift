@@ -410,4 +410,11 @@ final class LiquidGlassTests: XCTestCase {
     XCTAssertTrue(cancelCalled)
     XCTAssertTrue(confirmCalled)
   }
+
+  /// Regression: KeyCapPlaceholderView must carry a subtle adaptive tint and border so it
+  /// remains legible on white Light Mode cards when Liquid Glass fallback is active.
+  func testKeyCapPlaceholderView_hasVisibleTintAndBorderForLegacyLightMode() {
+    XCTAssertGreaterThan(KeyCapPlaceholderView.placeholderTint, 0)
+    XCTAssertGreaterThan(KeyCapPlaceholderView.placeholderBorderOpacity, 0)
+  }
 }
