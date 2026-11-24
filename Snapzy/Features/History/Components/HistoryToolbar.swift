@@ -15,7 +15,8 @@ struct HistoryToolbar: View {
   let onClearSelection: () -> Void
   let onDeleteSelection: () -> Void
 
-  @AppStorage(PreferencesKeys.historyBackgroundStyle) private var backgroundStyle: HistoryBackgroundStyle = .defaultStyle
+  @AppStorage(PreferencesKeys.historyBackgroundStyle) private var backgroundStyle: HistoryBackgroundStyle =
+    .defaultStyle
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
@@ -118,20 +119,36 @@ struct HistoryToolbar: View {
     .foregroundColor(isDestructive ? .red : .primary.opacity(0.82))
   }
 
-  private var chromeSurfaceFill: AnyShapeStyle {
+  static func chromeSurfaceFillColor(
+    backgroundStyle: HistoryBackgroundStyle,
+    colorScheme: ColorScheme
+  ) -> Color {
     if backgroundStyle == .solid {
       return colorScheme == .dark
-        ? AnyShapeStyle(Color.white.opacity(0.07))
-        : AnyShapeStyle(Color.white.opacity(0.76))
+        ? Color.white.opacity(0.07)
+        : Color.black.opacity(0.06)
     }
 
     return colorScheme == .dark
-      ? AnyShapeStyle(Color.white.opacity(0.07))
-      : AnyShapeStyle(Color.white.opacity(0.52))
+      ? Color.white.opacity(0.07)
+      : Color.black.opacity(0.05)
+  }
+
+  static func chromeSurfaceBorderColor(colorScheme: ColorScheme) -> Color {
+    colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.08)
+  }
+
+  private var chromeSurfaceFill: AnyShapeStyle {
+    AnyShapeStyle(
+      Self.chromeSurfaceFillColor(
+        backgroundStyle: backgroundStyle,
+        colorScheme: colorScheme
+      )
+    )
   }
 
   private var chromeSurfaceBorder: Color {
-    colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.64)
+    Self.chromeSurfaceBorderColor(colorScheme: colorScheme)
   }
 
   private var chromeSurfaceShadow: Color {

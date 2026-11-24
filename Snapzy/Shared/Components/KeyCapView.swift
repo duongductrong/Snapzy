@@ -68,6 +68,9 @@ struct KeyCapGroupView: View {
 /// Ghost glass pill shown when a shortcut row has no assignment yet.
 /// Mirrors the keycap silhouette but with muted ink and a quieter substrate.
 struct KeyCapPlaceholderView: View {
+  /// Subtle adaptive tint used by the legacy `LiquidGlassSurface` composite in Light Mode.
+  /// On macOS 26+ native Liquid Glass, `.glassEffect` ignores `tint` and `placeholderBorderOpacity`
+  /// provides the capsule outline.
   static let placeholderTint: Double = 0.06
   static let placeholderBorderOpacity: Double = 0.12
 
