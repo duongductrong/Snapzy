@@ -262,10 +262,16 @@ final class AutomationStore: ObservableObject {
     copy.name = L10n.Automations.copyName(original.displayName)
     copy.presetID = nil
     copy.hotkey = nil
+    var idMap: [UUID: UUID] = [:]
     copy.steps = copy.steps.map { step in
-      var step = step
-      step.id = UUID()
-      return step
+      var fresh = step
+      fresh.id = UUID()
+      idMap[step.id] = fresh.id
+      return fresh
+    }
+    if let canvas = copy.canvas {
+      for step in canvas.detached.joined() { idMap[step.id] = UUID() }
+      copy.canvas = canvas.remapped(idMap)
     }
     let normalized = copy.normalized()
     if let index = automations.firstIndex(where: { $0.id == id }) {

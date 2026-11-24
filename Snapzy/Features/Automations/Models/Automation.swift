@@ -559,6 +559,8 @@ struct Automation: Identifiable, Equatable {
   /// Second opt-in: the URL scheme and Shortcuts may run this automation even
   /// though it contains script / Shortcut steps. Never imported.
   var allowExternalCode: Bool
+  /// Node positions and unconnected steps from the canvas editor. Never run.
+  var canvas: AutomationCanvasLayout?
 
   init(
     id: UUID = UUID(),
@@ -572,7 +574,8 @@ struct Automation: Identifiable, Equatable {
     presetID: String? = nil,
     schemaVersion: Int = Automation.currentSchemaVersion,
     needsReview: Bool = false,
-    allowExternalCode: Bool = false
+    allowExternalCode: Bool = false,
+    canvas: AutomationCanvasLayout? = nil
   ) {
     self.id = id
     self.name = name
@@ -586,6 +589,7 @@ struct Automation: Identifiable, Equatable {
     self.schemaVersion = schemaVersion
     self.needsReview = needsReview
     self.allowExternalCode = allowExternalCode
+    self.canvas = canvas
   }
 
   /// The keyboard shortcut trigger, if any. Setting `nil` removes it.
@@ -690,6 +694,13 @@ struct Automation: Identifiable, Equatable {
     if copy.steps.count > Self.maxSteps {
       copy.steps = Array(copy.steps.prefix(Self.maxSteps))
     }
+    if let canvas = copy.canvas {
+      let layout = canvas.normalized(
+        keepingStepIDs: Set(copy.steps.map(\.id)),
+        room: Self.maxSteps - copy.steps.count
+      )
+      copy.canvas = layout.positions.isEmpty && layout.detached.isEmpty ? nil : layout
+    }
     // A default after-capture automation may legitimately do nothing (every matrix cell off).
     if !copy.isSystemDefault, !copy.steps.contains(where: { $0.action != nil }) {
       copy.steps.insert(AutomationStep(.copyImage), at: 0)
@@ -742,7 +753,7 @@ struct Automation: Identifiable, Equatable {
 extension Automation: Codable {
   private enum CodingKeys: String, CodingKey {
     case id, name, symbol, isEnabled, triggers, source, steps, externalInvocation, presetID, schemaVersion
-    case needsReview, allowExternalCode
+    case needsReview, allowExternalCode, canvas
   }
 
   init(from decoder: Decoder) throws {
@@ -759,6 +770,7 @@ extension Automation: Codable {
     schemaVersion = (try? container.decode(Int.self, forKey: .schemaVersion)) ?? 1
     needsReview = (try? container.decode(Bool.self, forKey: .needsReview)) ?? false
     allowExternalCode = (try? container.decode(Bool.self, forKey: .allowExternalCode)) ?? false
+    canvas = try? container.decodeIfPresent(AutomationCanvasLayout.self, forKey: .canvas)
     // Older data is migrated in memory; it is written back in the current schema.
     if schemaVersion < Self.currentSchemaVersion || steps.contains(where: { $0.action?.kind == .uploadAndCopyLink }) {
       self = migrated()
@@ -779,5 +791,6 @@ extension Automation: Codable {
     try container.encode(max(schemaVersion, Self.currentSchemaVersion), forKey: .schemaVersion)
     if needsReview { try container.encode(true, forKey: .needsReview) }
     if allowExternalCode { try container.encode(true, forKey: .allowExternalCode) }
+    try container.encodeIfPresent(canvas, forKey: .canvas)
   }
 }

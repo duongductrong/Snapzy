@@ -112,7 +112,9 @@ enum AutomationSystemDefault {
       triggers: [],
       source: source(for: type, save: matrix[.save] ?? true),
       steps: steps,
-      presetID: presetID(for: type)
+      presetID: presetID(for: type),
+      // Canvas layout and unconnected steps survive matrix edits.
+      canvas: previous?.canvas
     )
   }
 

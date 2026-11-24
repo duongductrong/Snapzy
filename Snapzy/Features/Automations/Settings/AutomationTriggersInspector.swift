@@ -9,18 +9,46 @@
 import SwiftUI
 
 struct AutomationTriggersInspector: View {
+  /// The canvas editor splits this inspector across its Trigger and Source nodes.
+  enum Part {
+    case all
+    case triggers
+    case source
+  }
+
   @Binding var automation: Automation
   @Binding var shortcutIssue: ShortcutValidationIssue?
+  var part: Part = .all
+  /// Source node only: the source menu, which the list editor shows in its header.
+  var lastCaptureSpec: Binding<AutomationCaptureSpec?>?
   @AppStorage(PreferencesKeys.urlSchemeEnabled) private var urlSchemeEnabled = true
 
   var body: some View {
     Form {
-      Section {
-        sourceOptions
-      } header: {
-        Text(L10n.Automations.sourceLabel)
+      if part != .triggers {
+        Section {
+          if part == .source, let lastCaptureSpec {
+            AutomationSourcePicker(
+              automation: $automation,
+              lastCaptureSpec: lastCaptureSpec,
+              onSourceChange: { shortcutIssue = nil }
+            )
+          }
+          sourceOptions
+        } header: {
+          Text(L10n.Automations.sourceLabel)
+        }
       }
 
+      if part != .source {
+        triggerSections
+      }
+    }
+    .formStyle(.grouped)
+  }
+
+  @ViewBuilder
+  private var triggerSections: some View {
       if automation.runsWithoutInput {
         Section {
           ShortcutRecorderView(
@@ -46,8 +74,6 @@ struct AutomationTriggersInspector: View {
       }
 
       AutomationExternalSection(automation: $automation, isURLSchemeEnabled: urlSchemeEnabled)
-    }
-    .formStyle(.grouped)
   }
 
   @ViewBuilder

@@ -275,4 +275,6 @@ enum PreferencesKeys {
   static let automationsRunSingleFileTriggerDirectly = "automations.runSingleFileTriggerDirectly"
   /// Last app version that refreshed the Services menu (Finder "Run Snapzy Automation…").
   static let automationsServicesRegisteredVersion = "automations.servicesRegisteredVersion"
+  /// Which editor Edit / New opens: `list` (sheet) or `canvas` (node window).
+  static let automationsEditorStyle = "automations.editorStyle"
 }

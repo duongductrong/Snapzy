@@ -93,6 +93,8 @@ enum AutomationRecipeCodec {
     copy.externalInvocation = false
     copy.allowExternalCode = false
     copy.needsReview = false
+    // Layout and unconnected steps stay on this Mac.
+    copy.canvas = nil
     copy.steps = copy.steps.map { step in
       guard case .saveToFolder(var config)? = step.action,
             case .bookmark = config.folder else { return step }
@@ -136,6 +138,8 @@ enum AutomationRecipeCodec {
       copy.hotkey = nil
       copy.externalInvocation = false
       copy.allowExternalCode = false
+      // Layout and unconnected steps never come in from another Mac.
+      copy.canvas = nil
       copy.steps = copy.steps.map { step in
         var step = step
         step.id = UUID()

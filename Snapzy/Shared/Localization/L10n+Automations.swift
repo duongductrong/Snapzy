@@ -9,6 +9,248 @@ import Foundation
 
 extension L10n {
   nonisolated enum Automations {
+    // MARK: Canvas editor
+    static let canvasSaved = string(
+      "automations.canvas.saved",
+      defaultValue: "Saved",
+      comment: "Canvas: no unsaved changes"
+    )
+    static let canvasUnsaved = string(
+      "automations.canvas.unsaved",
+      defaultValue: "Unsaved changes",
+      comment: "Canvas: tooltip of the unsaved-changes dot"
+    )
+    static let canvasShowMinimap = string(
+      "automations.canvas.show-minimap",
+      defaultValue: "Show Minimap",
+      comment: "Canvas menu toggle"
+    )
+    static let canvasMinimap = string(
+      "automations.canvas.minimap",
+      defaultValue: "Overview: click or drag to move around",
+      comment: "Tooltip of the canvas minimap"
+    )
+    static let canvasDeletedTitle = string(
+      "automations.canvas.deleted-title",
+      defaultValue: "This automation was deleted",
+      comment: "Alert title: saving a canvas whose automation was deleted in Settings"
+    )
+    static let canvasDeletedMessage = string(
+      "automations.canvas.deleted-message",
+      defaultValue: "It was removed in Settings while this window was open, so there is nothing to save it to.",
+      comment: "Alert message for the deleted automation"
+    )
+    static let editorStyleLabel = string(
+      "automations.editor-style.label",
+      defaultValue: "Editor",
+      comment: "Label of the picker choosing which automation editor opens"
+    )
+    static let editorStyleList = string(
+      "automations.editor-style.list",
+      defaultValue: "List",
+      comment: "Automation editor option: steps as a list in a sheet"
+    )
+    static let editorStyleCanvas = string(
+      "automations.editor-style.canvas",
+      defaultValue: "Canvas",
+      comment: "Automation editor option: node canvas in its own window"
+    )
+    static let editorStyleHelp = string(
+      "automations.editor-style.help",
+      defaultValue: "Choose what Edit and New open: the list editor or the node canvas.",
+      comment: "Tooltip of the editor style picker"
+    )
+    static let canvasOpenInCanvas = string(
+      "automations.canvas.open-in-canvas",
+      defaultValue: "Open in Canvas",
+      comment: "Menu item / button: edit this automation in the node canvas window"
+    )
+    static let canvasOpenInCanvasHelp = string(
+      "automations.canvas.open-in-canvas-help",
+      defaultValue: "Continue editing this automation as connected nodes in a separate window.",
+      comment: "Tooltip of the Open in Canvas button in the list editor"
+    )
+    static let canvasOpenInList = string(
+      "automations.canvas.open-in-list",
+      defaultValue: "Open in List Editor",
+      comment: "Menu item: edit this automation in the list editor sheet"
+    )
+    static let canvasTriggerNode = string(
+      "automations.canvas.trigger-node",
+      defaultValue: "Trigger",
+      comment: "Title of the canvas node that starts the automation"
+    )
+    static let canvasTriggerCaption = string(
+      "automations.canvas.trigger-caption",
+      defaultValue: "Start",
+      comment: "Small caption above the trigger node"
+    )
+    static let canvasAfterCapture = string(
+      "automations.canvas.after-capture",
+      defaultValue: "After every capture",
+      comment: "Trigger node subtitle of a default after-capture automation"
+    )
+    static let canvasTriggerMenuBar = string(
+      "automations.canvas.trigger.menu-bar",
+      defaultValue: "Menu bar",
+      comment: "Trigger node: listed in the menu bar"
+    )
+    static let canvasTriggerQuickAccess = string(
+      "automations.canvas.trigger.quick-access",
+      defaultValue: "Quick Access",
+      comment: "Trigger node: listed in Quick Access"
+    )
+    static let canvasTriggerHistory = string(
+      "automations.canvas.trigger.history",
+      defaultValue: "History",
+      comment: "Trigger node: listed in History"
+    )
+    static let canvasTriggerFinder = string(
+      "automations.canvas.trigger.finder",
+      defaultValue: "Finder",
+      comment: "Trigger node: offered by the Finder service"
+    )
+    static let canvasTriggerCaptureToolbar = string(
+      "automations.canvas.trigger.capture-toolbar",
+      defaultValue: "Capture toolbar",
+      comment: "Trigger node: a button in the capture toolbar"
+    )
+    static let canvasTriggerExternal = string(
+      "automations.canvas.trigger.external",
+      defaultValue: "Other apps",
+      comment: "Trigger node: other apps may run it (URL scheme, CLI, Shortcuts)"
+    )
+    static let canvasTriggerNone = string(
+      "automations.canvas.trigger.none",
+      defaultValue: "No trigger yet",
+      comment: "Trigger node subtitle when nothing runs the automation"
+    )
+    static let canvasStepDisabled = string(
+      "automations.canvas.step-disabled",
+      defaultValue: "Step is off",
+      comment: "Tooltip on a disabled step node"
+    )
+    static let canvasDetachedHelp = string(
+      "automations.canvas.detached-help",
+      defaultValue: "Not connected: this step won’t run until you link it into the chain.",
+      comment: "Tooltip / banner on a step node not linked from the source"
+    )
+    static let canvasConnectHelp = string(
+      "automations.canvas.connect-help",
+      defaultValue: "Drag to another node to connect, or onto empty space to add a step",
+      comment: "Tooltip on a node's output handle"
+    )
+    static let canvasOtherwise = string(
+      "automations.canvas.otherwise",
+      defaultValue: "Otherwise",
+      comment: "Label on the dashed jump a condition takes when it does not hold"
+    )
+    static let canvasEnd = string(
+      "automations.canvas.end",
+      defaultValue: "End",
+      comment: "Label: the run ends here"
+    )
+    static let canvasInsertStep = string(
+      "automations.canvas.insert-step",
+      defaultValue: "Insert Step",
+      comment: "Button on a link: add a step between two nodes"
+    )
+    static let canvasDisconnect = string(
+      "automations.canvas.disconnect",
+      defaultValue: "Disconnect",
+      comment: "Button / menu item: remove the link after a node"
+    )
+    static let canvasEnableStep = string(
+      "automations.canvas.enable-step",
+      defaultValue: "Turn Step On",
+      comment: "Context menu: enable a step node"
+    )
+    static let canvasDisableStep = string(
+      "automations.canvas.disable-step",
+      defaultValue: "Turn Step Off",
+      comment: "Context menu: disable a step node"
+    )
+    static let canvasSearchSteps = string(
+      "automations.canvas.search-steps",
+      defaultValue: "Search steps",
+      comment: "Placeholder of the canvas add-step search field"
+    )
+    static let canvasNoMatchingSteps = string(
+      "automations.canvas.no-matching-steps",
+      defaultValue: "No matching steps",
+      comment: "Shown when the step search finds nothing"
+    )
+    static let canvasAddStepHelp = string(
+      "automations.canvas.add-step-help",
+      defaultValue: "Add a step after the selected node (Tab)",
+      comment: "Tooltip of the canvas Add Step button"
+    )
+    static let canvasTidyUp = string(
+      "automations.canvas.tidy-up",
+      defaultValue: "Tidy Up",
+      comment: "Toolbar button: lay the nodes out in rows"
+    )
+    static let canvasToggleInspector = string(
+      "automations.canvas.toggle-inspector",
+      defaultValue: "Show or Hide Inspector",
+      comment: "Toolbar button tooltip"
+    )
+    static let canvasZoomIn = string(
+      "automations.canvas.zoom-in",
+      defaultValue: "Zoom In",
+      comment: "Canvas zoom button"
+    )
+    static let canvasZoomOut = string(
+      "automations.canvas.zoom-out",
+      defaultValue: "Zoom Out",
+      comment: "Canvas zoom button"
+    )
+    static let canvasActualSize = string(
+      "automations.canvas.actual-size",
+      defaultValue: "Actual Size",
+      comment: "Canvas zoom: reset to 100 %"
+    )
+    static let canvasZoomToFit = string(
+      "automations.canvas.zoom-to-fit",
+      defaultValue: "Zoom to Fit",
+      comment: "Canvas zoom: show every node"
+    )
+    static let canvasInspectorHint = string(
+      "automations.canvas.inspector-hint",
+      defaultValue: "Select a node to edit it. Drag a node’s handle onto another node to connect them, or press Tab to add a step.",
+      comment: "Inspector placeholder when nothing is selected on the canvas"
+    )
+    static let canvasHint = string(
+      "automations.canvas.hint",
+      defaultValue: "Drag to pan · Pinch or ⌘-scroll to zoom",
+      comment: "Canvas footer hint"
+    )
+    static func canvasDetachedCount(_ count: Int) -> String {
+      format(
+        "automations.canvas.detached-count",
+        defaultValue: "%d step(s) not connected",
+        comment: "Canvas footer; %d is the number of unconnected steps",
+        count
+      )
+    }
+    static func canvasDiscardTitle(_ name: String) -> String {
+      format(
+        "automations.canvas.discard-title",
+        defaultValue: "Save changes to “%@”?",
+        comment: "Alert when closing the canvas with unsaved edits; %@ is the automation name",
+        name
+      )
+    }
+    static let canvasDiscardMessage = string(
+      "automations.canvas.discard-message",
+      defaultValue: "Your edits in the canvas haven’t been saved.",
+      comment: "Alert message when closing the canvas with unsaved edits"
+    )
+    static let canvasDiscard = string(
+      "automations.canvas.discard",
+      defaultValue: "Discard Changes",
+      comment: "Alert button: close the canvas without saving"
+    )
     static let defaultName = string(
       "automations.default-name",
       defaultValue: "Automation",

@@ -21,10 +21,20 @@ private struct SystemDefaultEditorModifier: ViewModifier {
   @Binding var resetting: CaptureType?
   @ObservedObject private var store = AutomationStore.shared
   @ObservedObject private var cloudManager = CloudManager.shared
+  @AppStorage(PreferencesKeys.automationsEditorStyle) private var editorStyle: AutomationEditorStyle = .list
 
   func body(content: Content) -> some View {
     content
-      .sheet(item: $editing) { type in
+      .onChange(of: editing) { type in
+        // Canvas style: the default automation opens in the canvas window instead of the sheet.
+        guard editorStyle == .canvas, let type else { return }
+        editing = nil
+        AutomationEditorRouter.openCanvas(store.defaultAutomation(for: type), isNew: false)
+      }
+      .sheet(item: Binding(
+        get: { editorStyle == .list ? editing : nil },
+        set: { editing = $0 }
+      )) { type in
         AutomationEditorSheet(
           automation: store.defaultAutomation(for: type),
           isNew: false,
@@ -33,7 +43,11 @@ private struct SystemDefaultEditorModifier: ViewModifier {
             store.update(saved)
             editing = nil
           },
-          onCancel: { editing = nil }
+          onCancel: { editing = nil },
+          onOpenInCanvas: { current in
+            editing = nil
+            AutomationEditorRouter.openCanvas(current, isNew: false)
+          }
         )
       }
       .alert(

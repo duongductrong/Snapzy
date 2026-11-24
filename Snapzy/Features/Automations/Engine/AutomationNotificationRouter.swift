@@ -154,4 +154,6 @@ final class AutomationSettingsNavigation: ObservableObject {
   static let shared = AutomationSettingsNavigation()
 
   @Published var page: Page = .automations
+  /// The canvas asked to continue in the list editor; Settings → Automations presents it.
+  @Published var listEditorRequest: AutomationEditorRequest?
 }

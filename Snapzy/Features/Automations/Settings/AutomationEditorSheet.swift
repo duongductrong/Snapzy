@@ -20,6 +20,8 @@ struct AutomationEditorSheet: View {
   let isCloudConfigured: Bool
   let onSave: (Automation) -> Void
   let onCancel: () -> Void
+  /// Continue editing this draft in the canvas window.
+  let onOpenInCanvas: ((Automation) -> Void)?
 
   @State private var automation: Automation
   @State private var selection: AutomationEditorSelection? = .triggers
@@ -34,7 +36,8 @@ struct AutomationEditorSheet: View {
     isNew: Bool,
     isCloudConfigured: Bool,
     onSave: @escaping (Automation) -> Void,
-    onCancel: @escaping () -> Void
+    onCancel: @escaping () -> Void,
+    onOpenInCanvas: ((Automation) -> Void)? = nil
   ) {
     var editable = automation.migrated()
     // Show presets under their localized name; renaming makes it a custom name.
@@ -48,6 +51,7 @@ struct AutomationEditorSheet: View {
     self.isCloudConfigured = isCloudConfigured
     self.onSave = onSave
     self.onCancel = onCancel
+    self.onOpenInCanvas = onOpenInCanvas
   }
 
   var body: some View {
@@ -213,6 +217,14 @@ struct AutomationEditorSheet: View {
         .font(.caption)
       }
       Spacer()
+      if let onOpenInCanvas {
+        Button {
+          onOpenInCanvas(automation)
+        } label: {
+          Label(L10n.Automations.canvasOpenInCanvas, systemImage: "point.3.connected.trianglepath.dotted")
+        }
+        .help(L10n.Automations.canvasOpenInCanvasHelp)
+      }
       Button(L10n.Common.cancel, role: .cancel, action: onCancel)
         .keyboardShortcut(.cancelAction)
       Button(L10n.Common.save, action: save)
@@ -233,23 +245,11 @@ struct AutomationEditorSheet: View {
 
   private var hasDuplicateName: Bool {
     guard !automation.isSystemDefault else { return false }
-    return !AutomationStore.shared.duplicateNameIDs(for: storedForm(automation)).isEmpty
-  }
-
-  /// An untouched preset name goes back to its stored form so it keeps following the app language.
-  private func storedForm(_ candidate: Automation) -> Automation {
-    var copy = candidate
-    if let type = copy.systemCaptureType, copy.name == AutomationSystemDefault.localizedName(for: type) {
-      copy.name = AutomationSystemDefault.storedName(for: type)
-    }
-    if let preset = copy.presetID.flatMap(AutomationPreset.init(rawValue:)), copy.name == preset.localizedName {
-      copy.name = preset.storedName
-    }
-    return copy
+    return !AutomationStore.shared.duplicateNameIDs(for: automation.storedForm()).isEmpty
   }
 
   private func save() {
-    var saved = storedForm(automation.normalized())
+    var saved = automation.normalized().storedForm()
     // Saving from the editor is the review an imported automation waits for.
     saved.needsReview = false
     onSave(saved)

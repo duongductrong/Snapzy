@@ -330,6 +330,28 @@ One shortcut (`unifiedCapture`, unbound by default; `snapzy://capture/toolbar`) 
 
 List rows show a "Needs setup" badge with a Set Up… button when a step misses a setting (e.g. Docs Shot without a folder), or "Imported — review before it can run" with Review. The Source & Triggers inspector adds **Finder & menu bar drop** (M5) and **Capture toolbar** (M6) to Show In. For a system default automation the editor hides Source and Triggers. Below the list: **Advanced** ("Allow script & Shortcut steps", "Skip the picker when one automation fits") and **Secrets** (`AutomationAdvancedSection.swift`).
 
+## Canvas editor
+
+A second editor for the same automations, n8n-style: nodes on a canvas in their own window. Both editors stay available; the segmented **List | Canvas** picker in the Automations section header (`automations.editorStyle`, default `list`) sets which one Edit and New open. The ⋯ menu always offers the other one (**Open in Canvas** / **Open in List Editor**), the list sheet has an **Open in Canvas** button and the canvas ⋯ menu hands its draft back to the list editor (`AutomationEditorRouter`, `AutomationSettingsNavigation.listEditorRequest`). Default after-capture automations open in the canvas too (source and trigger read-only).
+
+The run model does not change: the canvas edits `trigger → source → steps`.
+
+The window is full bleed (transparent title-less titlebar, `fullSizeContentView`): the canvas fills it under the traffic lights and every control floats on glass (`canvasFloatingSurface`: native glass on macOS 26+ with Liquid Glass on, in-window material otherwise; colors in `AutomationCanvasTheme`). Name pill with a saved/unsaved dot top-left; Add, Tidy Up, ⋯ (Open in List Editor, Show Minimap, Show Inspector) and Save top-right; issue and "not connected" chips top-center; zoom capsule bottom-left; minimap bottom-right (only while some node is off screen; click or drag to move); a hint toast that fades after 5 s. The inspector is a floating panel that slides in when a node is selected (× or Esc closes it) and the canvas pans so the selection stays clear of it. Structural edits run on one spring (`AutomationCanvasTheme.spring`); links are animatable shapes so they follow nodes, and links touching the selection flow (animated dash). The first view fits everything but never below 85 %, so a long chain starts at the left edge instead.
+
+| Part | Behavior |
+| --- | --- |
+| Nodes | **Trigger** (shortcut, Show In, Other apps) → **Source** (fixed link) → steps. A step node shows icon (tinted by group), title, config summary, issue badge, paused / unconnected badge |
+| Run order | Steps reachable from Source, following links. Each node has at most one link in and one out |
+| Unconnected steps | Kept on the canvas (dashed, "Not connected") and saved in `Automation.canvas.detached`; never run, never validated |
+| Linking | Drag a node's output handle onto a node (cuts that node's old incoming link and the source node's old outgoing link; loops are refused), or onto empty space to add a step there. Hover a link: **+** inserts a step, ✂ cuts it |
+| Adding | "+" past the last node, toolbar **Add Step** / Tab (after the selection), double-click empty space (unconnected). A searchable picker lists the step groups |
+| Editing | Click a node: inspector on the right (`AutomationTriggersInspector` split into `.triggers` / `.source`, `AutomationStepInspector`). Context menu: turn on/off, duplicate (⌘D), disconnect, delete (⌫ joins the neighbours) |
+| Conditions | "Otherwise" drawn as a dashed orange jump to the step after the skip range (or a stub to **End**). After any structural edit `AutomationCanvasGraph` recomputes `skip(n)` so the branch keeps the same steps (a step added inside joins it, a removed one leaves) |
+| Viewport | Drag background or two-finger scroll to pan; pinch, ⌘-scroll or a mouse wheel to zoom around the pointer (25–200 %); ⌘= / ⌘- / ⌘0 (fit), click the percentage for 100 %. **Tidy Up** lays the run chain on one row and each unconnected chain below. Nodes are drawn at the zoomed size (not scaled bitmaps) so text stays sharp |
+| Save | ⌘S or the Save capsule (shows "Saved" when clean) saves and keeps the window open (normalized like the sheet; clears `needsReview`). Closing with unsaved edits asks Save / Cancel / Discard |
+
+`Automation.canvas` (`AutomationCanvasLayout`) is optional JSON: `positions` (node centers keyed `trigger`, `source` or step UUID) and `detached` (arrays of steps in link order). `normalized()` drops positions of missing steps and caps detached steps so steps + detached ≤ `maxSteps`. Recipes strip it; config.toml does not carry it; duplicating remaps it to the new step ids.
+
 ## Configuration (TOML)
 
 One keyed table per automation (the parser has no arrays of tables); steps are keyed sub-tables in run order; see `SnapzyConfigurationAutomationsCodec` and `SnapzyConfigurationAutomationStepCodec`.
@@ -504,6 +526,15 @@ The store also keeps stored entries it cannot decode and writes them back, so on
 | `Snapzy/Features/Automations/Models/AutomationJSONValue.swift` | Raw JSON for unknown parts |
 | `Snapzy/Features/Automations/Models/AutomationPreset.swift` | Built-in presets |
 | `Snapzy/Features/Automations/Services/AutomationStore.swift` | Persistence, CRUD, seeding |
+| `Snapzy/Features/Automations/Models/AutomationCanvasLayout.swift` | Canvas node positions + unconnected steps (`Automation.canvas`) |
+| `Snapzy/Features/Automations/Canvas/AutomationCanvasGraph.swift` | Node graph: links, run chain, detached chains, connect / insert / remove, skip reconciliation, auto layout |
+| `Snapzy/Features/Automations/Canvas/AutomationCanvasEditorModel.swift` | Viewport (pan / zoom / fit), selection, picker, save / dirty state |
+| `Snapzy/Features/Automations/Canvas/AutomationCanvasView.swift` | Interactive canvas (gestures, links, nodes, add-step picker, keys) |
+| `Snapzy/Features/Automations/Canvas/AutomationCanvasEditorView.swift` | Full-bleed window content: floating name pill, actions, chips, zoom, inspector panel, minimap |
+| `Snapzy/Features/Automations/Canvas/AutomationCanvasTheme.swift` | Canvas colors, spring, floating glass surface, round buttons |
+| `Snapzy/Features/Automations/Canvas/AutomationCanvasWindowController.swift` | One window per automation, save, close confirmation |
+| `Snapzy/Features/Automations/Canvas/AutomationCanvasEventMonitor.swift` | Scroll / pinch / key monitor scoped to the canvas |
+| `Snapzy/Features/Automations/Canvas/AutomationEditorRouter.swift` | Editor style preference, list ↔ canvas handoff |
 | `Snapzy/Features/Automations/Engine/AutomationLauncher.swift` | Single entry point: resolve, gate, capture or input run, outcome; `AutomationCaptureStarting` seam |
 | `Snapzy/Features/Automations/Engine/AutomationInvocation.swift` | Invocation kinds, `AutomationRef`, file kinds, `AutomationInput`, rejections, run report, trigger slots |
 | `Snapzy/Features/Automations/Engine/AutomationRunner.swift` | Run registry (`begin` / `complete` / `abandon` with `onFinish`), `run(input:)`, execution, fallback, outcome |
@@ -570,6 +601,7 @@ The store also keeps stored entries it cannot decode and writes them back, so on
 | --- | --- |
 | Model coding, normalization, triggers, `.input` | `SnapzyTests/Features/Automations/AutomationModelTests.swift` |
 | Store, ref resolution, slot queries | `SnapzyTests/Features/Automations/AutomationStoreTests.swift` |
+| Canvas graph (links, detached chains, skip ranges, layout persistence, viewport) | `SnapzyTests/Features/Automations/AutomationCanvasGraphTests.swift` |
 | Runner (fake environment, input runs, file kinds) | `SnapzyTests/Features/Automations/AutomationRunnerTests.swift` |
 | Launcher gate order, outcomes, intent support | `SnapzyTests/Features/Automations/AutomationLauncherTests.swift` |
 | URL route parsing | `SnapzyTests/App/SnapzyDeepLinkHandlerTests.swift` |

@@ -23,6 +23,7 @@ struct AutomationsSettingsView: View {
   @State private var isGalleryPresented = false
   @State private var pendingDelete: Automation?
   @State private var validationIssues: [UUID: ShortcutValidationIssue] = [:]
+  @AppStorage(PreferencesKeys.automationsEditorStyle) private var editorStyle: AutomationEditorStyle = .list
 
   var body: some View {
     Form {
@@ -79,9 +80,15 @@ struct AutomationsSettingsView: View {
           validationIssues[saved.id] = nil
           editorDraft = nil
         },
-        onCancel: { editorDraft = nil }
+        onCancel: { editorDraft = nil },
+        onOpenInCanvas: { current in
+          editorDraft = nil
+          AutomationEditorRouter.openCanvas(current, isNew: draft.isNew)
+        }
       )
     }
+    .onAppear(perform: consumeListEditorRequest)
+    .onChange(of: navigation.listEditorRequest) { _ in consumeListEditorRequest() }
     .alert(
       pendingDelete.map { L10n.Automations.deleteConfirmTitle($0.displayName) } ?? "",
       isPresented: Binding(
@@ -122,7 +129,9 @@ struct AutomationsSettingsView: View {
             validationIssue: validationIssues[automation.id],
             onToggle: { setEnabled($0, for: automation) },
             onShortcutChanged: { handleShortcutChange($0, for: automation.id) },
-            onEdit: { editorDraft = AutomationEditorDraft(automation: automation, isNew: false) },
+            alternateEditor: editorStyle == .canvas ? .list : .canvas,
+            onEdit: { edit(automation, isNew: false) },
+            onEditAlternate: { edit(automation, isNew: false, style: editorStyle == .canvas ? .list : .canvas) },
             onDuplicate: { store.duplicate(id: automation.id) },
             onExport: { AutomationExporter.export([automation], suggestedName: automation.displayName) },
             onCopyTOML: { AutomationExporter.copyTOML(automation) },
@@ -131,19 +140,32 @@ struct AutomationsSettingsView: View {
         }
         .onMove { store.move(fromOffsets: $0, toOffset: $1) }
       } header: {
-        VStack(alignment: .leading, spacing: 2) {
-          Text(L10n.Automations.listTitle)
-          Text(L10n.Automations.listDescription)
-            .font(.caption)
-            .fontWeight(.regular)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .center, spacing: 12) {
+          VStack(alignment: .leading, spacing: 2) {
+            Text(L10n.Automations.listTitle)
+            Text(L10n.Automations.listDescription)
+              .font(.caption)
+              .fontWeight(.regular)
+              .foregroundStyle(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+          Spacer(minLength: 8)
+          Picker(L10n.Automations.editorStyleLabel, selection: $editorStyle) {
+            ForEach(AutomationEditorStyle.allCases) { style in
+              Label(style.title, systemImage: style.symbol).tag(style)
+            }
+          }
+          .pickerStyle(.segmented)
+          .labelsHidden()
+          .fixedSize()
+          .help(L10n.Automations.editorStyleHelp)
+          .accessibilityLabel(L10n.Automations.editorStyleLabel)
         }
         .textCase(nil)
       } footer: {
         HStack(spacing: 12) {
           Button {
-            editorDraft = AutomationEditorDraft(automation: makeNewAutomation(), isNew: true)
+            edit(makeNewAutomation(), isNew: true)
           } label: {
             Label(L10n.Automations.newButton, systemImage: "plus")
           }
@@ -186,6 +208,22 @@ struct AutomationsSettingsView: View {
     case .automations: L10n.Automations.pageAutomations
     case .activity: L10n.Automations.pageActivity
     }
+  }
+
+  /// Opens the editor picked in the header (or `style`) on `automation`.
+  private func edit(_ automation: Automation, isNew: Bool, style: AutomationEditorStyle? = nil) {
+    switch style ?? editorStyle {
+    case .list:
+      editorDraft = AutomationEditorDraft(automation: automation, isNew: isNew)
+    case .canvas:
+      AutomationEditorRouter.openCanvas(automation, isNew: isNew)
+    }
+  }
+
+  private func consumeListEditorRequest() {
+    guard let request = navigation.listEditorRequest else { return }
+    navigation.listEditorRequest = nil
+    editorDraft = AutomationEditorDraft(automation: request.automation, isNew: request.isNew)
   }
 
   private func makeNewAutomation() -> Automation {
@@ -233,7 +271,10 @@ private struct AutomationRow: View {
   let validationIssue: ShortcutValidationIssue?
   let onToggle: (Bool) -> Void
   let onShortcutChanged: (ShortcutConfig?) -> Bool
+  /// The editor that is not the default; offered as "Open in …".
+  let alternateEditor: AutomationEditorStyle
   let onEdit: () -> Void
+  let onEditAlternate: () -> Void
   let onDuplicate: () -> Void
   let onExport: () -> Void
   let onCopyTOML: () -> Void
@@ -383,6 +424,11 @@ private struct AutomationRow: View {
   private var menuItems: some View {
     Button(L10n.Common.edit, action: onEdit)
       .disabled(automation.hasUnsupportedSource)
+    Button(
+      alternateEditor == .canvas ? L10n.Automations.canvasOpenInCanvas : L10n.Automations.canvasOpenInList,
+      action: onEditAlternate
+    )
+    .disabled(automation.hasUnsupportedSource)
     Button(L10n.Automations.duplicate, action: onDuplicate)
       .disabled(!canDuplicate || automation.hasUnsupportedSource)
     Divider()
