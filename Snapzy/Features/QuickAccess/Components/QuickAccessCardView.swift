@@ -850,14 +850,13 @@ struct QuickAccessCardView: View {
     cloudUploadProgress = 0
     manager.pauseCountdownForActivity(item.id)
     let uploadStartTime = Date()
-    let oldCloudKey = item.cloudKey  // Save old key for cleanup
     DiagnosticLogger.shared.log(
       .info,
       .cloud,
       "Quick access cloud upload started",
       context: [
         "fileName": item.url.lastPathComponent,
-        "hasOldCloudKey": oldCloudKey == nil ? "false" : "true",
+        "hasOldCloudKey": item.cloudKey == nil ? "false" : "true",
       ]
     )
 
@@ -872,17 +871,10 @@ struct QuickAccessCardView: View {
       }
 
       do {
-        // Fresh key per upload (new URL avoids CDN cache); the old object is removed.
-        let shareService = CloudShareService.shared
-        let result = try await shareService.upload(fileURL: item.url, replacingKey: oldCloudKey)
-
-        // Update item with new cloud URL and key
-        manager.setCloudURL(id: item.id, url: result.publicURL, key: result.key)
-
-        // Auto-copy cloud link
-        shareService.copyToPasteboard(
-          CloudShareService.linkText(for: result.publicURL, fileURL: item.url, format: .url)
-        )
+        // The automation Upload + Copy Link steps (milestone 6): a fresh key per
+        // upload (new URL avoids CDN cache), the old object removed, the card's
+        // cloud link set and the URL copied.
+        try await QuickAccessActionPerformer.shared.upload(item)
 
         // Ensure minimum visual duration (~600ms total)
         let elapsed = Date().timeIntervalSince(uploadStartTime)

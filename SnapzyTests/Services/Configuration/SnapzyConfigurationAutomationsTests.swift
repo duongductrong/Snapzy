@@ -44,6 +44,27 @@ final class SnapzyConfigurationAutomationsTests: XCTestCase {
     XCTAssertEqual(imported[1].captureSpec, AutomationCaptureSpec(mode: .activeWindow, saveToExportDirectory: true))
   }
 
+  /// Milestone 6: a custom default after-capture pipeline survives a round trip
+  /// as the default (preset id kept) and doesn't count against the cap.
+  func testCustomDefaultAutomationRoundTripsAsSystemDefault() throws {
+    var custom = AutomationSystemDefault.make(for: .screenshot, matrix: AutomationSystemDefault.defaultMatrix(for: .screenshot))
+    custom.steps.append(AutomationStep(.notify))
+    let users = (0..<AutomationStore.maxAutomations).map {
+      Automation(name: "User \($0)", source: .input, steps: [AutomationStep(.copyFile)])
+    }
+
+    var writer = SimpleTOMLWriter()
+    SnapzyConfigurationAutomationsCodec.write(users + [custom], to: &writer)
+    let result = SnapzyConfigurationAutomationsCodec.parse(try SimpleTOMLParser.parse(writer.output), storedAutomation: { _ in nil })
+
+    let imported = try XCTUnwrap(result.automations)
+    XCTAssertTrue(result.warnings.isEmpty, "\(result.warnings)")
+    XCTAssertEqual(imported.filter { !$0.isSystemDefault }.count, AutomationStore.maxAutomations)
+    let system = try XCTUnwrap(imported.first(where: \.isSystemDefault))
+    XCTAssertEqual(system.systemCaptureType, .screenshot)
+    XCTAssertEqual(system.activeActions.map(\.kind), [.copyFile, .showQuickAccess, .notify])
+  }
+
   func testMissingSectionLeavesAutomationsUntouched() throws {
     let document = try SimpleTOMLParser.parse("schema_version = 1\n")
     XCTAssertNil(SnapzyConfigurationAutomationsCodec.parse(document).automations)

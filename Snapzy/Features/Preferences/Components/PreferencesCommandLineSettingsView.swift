@@ -113,8 +113,7 @@ struct CommandLineSettingsView: View {
   }
 
   private func copyHomebrewCommand() {
-    NSPasteboard.general.clearContents()
-    NSPasteboard.general.setString(CLIToolInstaller.homebrewUpgradeCommand, forType: .string)
+    ClipboardHelper.copyText(CLIToolInstaller.homebrewUpgradeCommand)
   }
 
   private func updateTool(install: Bool) {

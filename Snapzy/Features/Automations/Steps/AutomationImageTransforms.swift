@@ -157,3 +157,81 @@ nonisolated enum AutomationImageTransforms {
     return candidate
   }
 }
+
+// MARK: - Redact (milestone 6)
+
+extension AutomationImageTransforms {
+  /// Covers `regions` (pixels, bottom-left origin) and writes the result into
+  /// `directory` in the source's format. Pixelate blocks scale with the region
+  /// so text stays unreadable whatever its size.
+  static func redact(
+    _ source: URL,
+    regions: [CGRect],
+    style: AutomationRedactConfig.Style,
+    into directory: URL,
+    baseName: String
+  ) throws -> AutomationImageTransformResult {
+    let info = try sourceInfo(source)
+    guard let image = QuickAccessImageOptimizer.loadImage(at: source) else { throw AutomationImageTransformError.unreadable }
+    let width = image.width
+    let height = image.height
+    let colorSpace = image.colorSpace.flatMap { $0.model == .rgb ? $0 : nil }
+      ?? CGColorSpace(name: CGColorSpace.sRGB)
+      ?? CGColorSpaceCreateDeviceRGB()
+    guard let context = CGContext(
+      data: nil,
+      width: width,
+      height: height,
+      bitsPerComponent: 8,
+      bytesPerRow: 0,
+      space: colorSpace,
+      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else { throw AutomationImageTransformError.encodeFailed }
+
+    let bounds = CGRect(x: 0, y: 0, width: width, height: height)
+    let size = bounds.size
+    context.draw(image, in: bounds)
+    for region in regions {
+      let rect = region.standardized.intersection(bounds).integral
+      guard !rect.isEmpty, rect.width >= 1, rect.height >= 1 else { continue }
+      switch style {
+      case .solid:
+        context.setFillColor(CGColor(gray: 0, alpha: 1))
+        context.fill(rect)
+      case .pixelate:
+        BlurEffectRenderer.drawPixelatedRegion(
+          in: context,
+          sourceCGImage: image,
+          sourceSize: size,
+          sourceRegion: rect,
+          destRegion: rect,
+          pixelSize: max(BlurEffectRenderer.defaultPixelSize, min(rect.width, rect.height) / 3)
+        )
+      case .blur:
+        BlurEffectRenderer.drawGaussianRegion(
+          in: context,
+          sourceCGImage: image,
+          sourceSize: size,
+          sourceRegion: rect,
+          destRegion: rect,
+          quality: .export
+        )
+      }
+    }
+
+    guard let output = context.makeImage() else { throw AutomationImageTransformError.encodeFailed }
+    let fileExtension = encodableExtension(source.pathExtension)
+    guard let data = QuickAccessImageOptimizer.encode(output, fileExtension: fileExtension, scale: info.nativeScale) else {
+      throw AutomationImageTransformError.encodeFailed
+    }
+    let url = uniqueURL(in: directory, baseName: baseName, fileExtension: fileExtension)
+    try data.write(to: url, options: .atomic)
+    return AutomationImageTransformResult(
+      url: url,
+      pixelWidth: width,
+      pixelHeight: height,
+      fellBackToPNG: fileExtension != source.pathExtension.lowercased(),
+      exceedsFileSizeLimit: false
+    )
+  }
+}

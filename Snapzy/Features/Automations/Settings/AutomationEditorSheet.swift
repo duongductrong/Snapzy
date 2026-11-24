@@ -40,6 +40,10 @@ struct AutomationEditorSheet: View {
     // Show presets under their localized name; renaming makes it a custom name.
     editable.name = automation.displayName
     _automation = State(initialValue: editable)
+    // A default after-capture automation opens on its first step: it has no triggers.
+    if editable.isSystemDefault {
+      _selection = State(initialValue: editable.steps.first.map { .step($0.id) })
+    }
     self.isNew = isNew
     self.isCloudConfigured = isCloudConfigured
     self.onSave = onSave
@@ -52,6 +56,10 @@ struct AutomationEditorSheet: View {
       Divider()
       if automation.needsReview {
         reviewBanner
+        Divider()
+      }
+      if automation.isSystemDefault {
+        systemDefaultBanner
         Divider()
       }
       HStack(spacing: 0) {
@@ -73,48 +81,60 @@ struct AutomationEditorSheet: View {
     HStack(alignment: .center, spacing: 12) {
       PreferencesSymbolTile(symbol: automation.symbol ?? automation.sourceSymbol, size: 34, duotone: true)
 
-      VStack(alignment: .leading, spacing: 2) {
-        TextField(L10n.Automations.nameLabel, text: $automation.name, prompt: Text(L10n.Automations.defaultName))
-          .textFieldStyle(.plain)
+      if automation.isSystemDefault {
+        Text(automation.displayName)
           .font(.system(size: 17, weight: .semibold))
-          .focused($isNameFocused)
           .padding(.horizontal, 8)
-          .frame(height: Self.headerControlHeight)
-          .background(
-            Radius.rect(Radius.control(forHeight: Self.headerControlHeight))
-              .fill(Color.primary.opacity(isNameFocused ? 0.07 : (isHoveringName ? 0.05 : 0)))
-          )
-          .overlay(
-            Radius.rect(Radius.control(forHeight: Self.headerControlHeight))
-              .strokeBorder(Color.accentColor.opacity(isNameFocused ? 0.55 : 0), lineWidth: 1)
-          )
-          .onHover { isHoveringName = $0 }
-          .animation(.easeOut(duration: 0.15), value: isNameFocused)
-          .animation(.easeOut(duration: 0.15), value: isHoveringName)
-          .accessibilityLabel(L10n.Automations.nameLabel)
-        if hasDuplicateName {
-          Label(L10n.Automations.duplicateNameWarning, systemImage: "exclamationmark.triangle.fill")
-            .font(.caption)
-            .foregroundStyle(.orange)
-            .padding(.leading, 8)
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-
-      HStack(spacing: 8) {
-        Text(L10n.Automations.sourceLabel)
-          .foregroundStyle(.secondary)
-        AutomationSourcePicker(
-          automation: $automation,
-          lastCaptureSpec: $lastCaptureSpec,
-          onSourceChange: { shortcutIssue = nil }
-        )
-        .labelsHidden()
-        .fixedSize()
+          .frame(maxWidth: .infinity, alignment: .leading)
+      } else {
+        nameAndSource
       }
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
+  }
+
+  @ViewBuilder
+  private var nameAndSource: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      TextField(L10n.Automations.nameLabel, text: $automation.name, prompt: Text(L10n.Automations.defaultName))
+        .textFieldStyle(.plain)
+        .font(.system(size: 17, weight: .semibold))
+        .focused($isNameFocused)
+        .padding(.horizontal, 8)
+        .frame(height: Self.headerControlHeight)
+        .background(
+          Radius.rect(Radius.control(forHeight: Self.headerControlHeight))
+            .fill(Color.primary.opacity(isNameFocused ? 0.07 : (isHoveringName ? 0.05 : 0)))
+        )
+        .overlay(
+          Radius.rect(Radius.control(forHeight: Self.headerControlHeight))
+            .strokeBorder(Color.accentColor.opacity(isNameFocused ? 0.55 : 0), lineWidth: 1)
+        )
+        .onHover { isHoveringName = $0 }
+        .animation(.easeOut(duration: 0.15), value: isNameFocused)
+        .animation(.easeOut(duration: 0.15), value: isHoveringName)
+        .accessibilityLabel(L10n.Automations.nameLabel)
+      if hasDuplicateName {
+        Label(L10n.Automations.duplicateNameWarning, systemImage: "exclamationmark.triangle.fill")
+          .font(.caption)
+          .foregroundStyle(.orange)
+          .padding(.leading, 8)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+
+    HStack(spacing: 8) {
+      Text(L10n.Automations.sourceLabel)
+        .foregroundStyle(.secondary)
+      AutomationSourcePicker(
+        automation: $automation,
+        lastCaptureSpec: $lastCaptureSpec,
+        onSourceChange: { shortcutIssue = nil }
+      )
+      .labelsHidden()
+      .fixedSize()
+    }
   }
 
   private static let headerControlHeight: CGFloat = 30
@@ -129,6 +149,16 @@ struct AutomationEditorSheet: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 8)
       .background(Color.orange.opacity(0.08))
+  }
+
+  private var systemDefaultBanner: some View {
+    Label(L10n.Automations.systemDefaultEditorNote, systemImage: "info.circle")
+      .font(.callout)
+      .foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 8)
   }
 
   // MARK: - Inspector
@@ -149,8 +179,10 @@ struct AutomationEditorSheet: View {
       } else {
         placeholder
       }
-    case .triggers?:
+    case .triggers? where !automation.isSystemDefault:
       AutomationTriggersInspector(automation: $automation, shortcutIssue: $shortcutIssue)
+    case .triggers?:
+      placeholder
     case nil:
       placeholder
     }
@@ -200,12 +232,16 @@ struct AutomationEditorSheet: View {
   }
 
   private var hasDuplicateName: Bool {
-    !AutomationStore.shared.duplicateNameIDs(for: storedForm(automation)).isEmpty
+    guard !automation.isSystemDefault else { return false }
+    return !AutomationStore.shared.duplicateNameIDs(for: storedForm(automation)).isEmpty
   }
 
   /// An untouched preset name goes back to its stored form so it keeps following the app language.
   private func storedForm(_ candidate: Automation) -> Automation {
     var copy = candidate
+    if let type = copy.systemCaptureType, copy.name == AutomationSystemDefault.localizedName(for: type) {
+      copy.name = AutomationSystemDefault.storedName(for: type)
+    }
     if let preset = copy.presetID.flatMap(AutomationPreset.init(rawValue:)), copy.name == preset.localizedName {
       copy.name = preset.storedName
     }

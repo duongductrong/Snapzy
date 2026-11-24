@@ -55,6 +55,10 @@ final class AutomationRunner {
 
   private enum RunSource {
     case capture
+    /// A capture not started by an automation, running its default
+    /// after-capture automation (milestone 6). Like `.capture`, but the
+    /// capture mode is unknown.
+    case standardCapture
     case input(AutomationInput)
   }
 
@@ -130,6 +134,7 @@ final class AutomationRunner {
 
   /// The capture behind `routing` was cancelled or failed before saving a file.
   func abandon(routing: PostCaptureRouting) {
+    CaptureToolbarController.shared.abandon(routing: routing)
     guard case .automation(let runID) = routing,
           let pending = pendingRuns.removeValue(forKey: runID) else { return }
     DiagnosticLogger.shared.log(.info, .action, "Automation run ended without a capture", context: ["runID": runID.uuidString])
@@ -186,10 +191,62 @@ final class AutomationRunner {
 
   // MARK: - Execution
 
-  /// Runs the steps on freshly captured files.
+  /// Runs the steps on freshly captured files. `quiet`: no progress HUD and
+  /// only failures logged (instant capture toolbar actions).
   @discardableResult
-  func run(_ automation: Automation, files: [URL], runID: UUID = UUID()) async -> Result? {
-    await execute(automation, files: files, source: .capture, runID: runID, invocation: .hotkey, app: frontmostApp())
+  func run(
+    _ automation: Automation,
+    files: [URL],
+    invocation: AutomationInvocation = .hotkey,
+    quiet: Bool = false,
+    runID: UUID = UUID()
+  ) async -> Result? {
+    await execute(automation, files: files, source: .capture, runID: runID, invocation: invocation, app: frontmostApp(), quiet: quiet)
+  }
+
+  /// Milestone 6: a standard capture runs its default after-capture automation.
+  /// `pinToScreen` / `skipQuickAccess` are the capture path's runtime flags.
+  /// While the automation is still the simple matrix form the run is quiet:
+  /// no progress HUD, and only failures reach the activity log.
+  @discardableResult
+  func runDefault(
+    _ automation: Automation,
+    type: CaptureType,
+    files: [URL],
+    pinToScreen: Bool = false,
+    skipQuickAccess: Bool = false,
+    runID: UUID = UUID(),
+    environment: AutomationRunEnvironment? = nil
+  ) async -> Result? {
+    var runtime = automation.migrated()
+    if automation.needsReview {
+      // An imported custom pipeline with webhook / script / AI steps waits for
+      // the editor's review: until then the simple steps it implies run.
+      DiagnosticLogger.shared.log(.warning, .action, "Default automation needs review; running its simple form")
+      runtime = AutomationSystemDefault.make(
+        for: type,
+        matrix: AutomationSystemDefault.lenientMatrix(automation, type: type),
+        reusing: automation
+      )
+    }
+    // Decided before the runtime Pin / Quick Access changes, which aren't customizations.
+    let quiet = !runtime.isCustomizedSystemDefault
+    runtime.steps = AutomationSystemDefault.runtimeSteps(
+      runtime.steps,
+      type: type,
+      pinToScreen: pinToScreen,
+      skipQuickAccess: skipQuickAccess
+    )
+    return await execute(
+      runtime,
+      files: files,
+      source: .standardCapture,
+      runID: runID,
+      invocation: .afterCapture,
+      app: frontmostApp(),
+      quiet: quiet,
+      environment: environment
+    )
   }
 
   /// Runs the steps on files handed in by a trigger. No capture, no canvas
@@ -219,8 +276,11 @@ final class AutomationRunner {
     source: RunSource,
     runID: UUID,
     invocation: AutomationInvocation,
-    app: AutomationAppSnapshot
+    app: AutomationAppSnapshot,
+    quiet: Bool = false,
+    environment override: AutomationRunEnvironment? = nil
   ) async -> Result? {
+    let environment = override ?? self.environment
     let automation = snapshot.migrated()
     let existing = files.filter { FileManager.default.fileExists(atPath: $0.path) }
     guard !existing.isEmpty else {
@@ -249,7 +309,7 @@ final class AutomationRunner {
 
     let recordsHistory: Bool
     switch source {
-    case .capture:
+    case .capture, .standardCapture:
       recordsHistory = true
       // An explicit canvas preset step decides instead of the default preset.
       if !automation.contains(.applyCanvasPreset) {
@@ -266,9 +326,11 @@ final class AutomationRunner {
       }
     }
 
-    environment.runDidUpdate(.started(runID: runID, name: automation.displayName))
+    if !quiet {
+      environment.runDidUpdate(.started(runID: runID, name: automation.displayName))
+    }
     let initialState = state
-    let task = Task { @MainActor [environment = self.environment, now = self.now] () -> StepLoopResult in
+    let task = Task { @MainActor [environment, now = self.now] () -> StepLoopResult in
       await Self.runSteps(
         automation.steps,
         state: initialState,
@@ -316,24 +378,29 @@ final class AutomationRunner {
         )
       )
     }
-    environment.runDidUpdate(.finished(runID: runID))
+    if !quiet {
+      environment.runDidUpdate(.finished(runID: runID))
+    }
 
     let durationMs = Int(now().timeIntervalSince(startedAt) * 1000)
-    environment.recordRun(AutomationRunRecord(
-      id: runID,
-      automationID: automation.id,
-      automationName: automation.displayName,
-      invocation: invocation.rawValue,
-      startedAt: startedAt,
-      durationMs: durationMs,
-      outcome: outcome,
-      steps: steps,
-      inputFiles: state.inputFiles.map(\.path),
-      link: state.payload.link?.absoluteString,
-      text: state.payload.text,
-      savedPaths: state.payload.savedFile.map { [$0.path] } ?? [],
-      warnings: state.warnings.map { AutomationSecretStore.mask($0, values: state.secretValues) }
-    ))
+    // A plain after-capture run is every capture: only its failures are worth a log entry.
+    if !quiet || outcome != .succeeded {
+      environment.recordRun(AutomationRunRecord(
+        id: runID,
+        automationID: automation.id,
+        automationName: automation.displayName,
+        invocation: invocation.rawValue,
+        startedAt: startedAt,
+        durationMs: durationMs,
+        outcome: outcome,
+        steps: steps,
+        inputFiles: state.inputFiles.map(\.path),
+        link: state.payload.link?.absoluteString,
+        text: state.payload.text,
+        savedPaths: state.payload.savedFile.map { [$0.path] } ?? [],
+        warnings: state.warnings.map { AutomationSecretStore.mask($0, values: state.secretValues) }
+      ))
+    }
 
     DiagnosticLogger.shared.log(
       isError ? .warning : .info,
@@ -474,11 +541,19 @@ final class AutomationRunner {
 
       environment.runDidUpdate(.step(runID: runID, title: action.kind.displayName))
       let startedAt = now()
+      state.stepDetail = nil
       do {
         try await handler.run(action, files: stepFiles, state: &state, environment: environment)
         let duration = milliseconds(since: startedAt, now: now)
         logStep(action, runID: runID, durationMs: duration, error: nil)
-        records.append(.init(kind: action.kind.rawValue, durationMs: duration, status: .succeeded, error: nil))
+        records.append(.init(
+          kind: action.kind.rawValue,
+          durationMs: duration,
+          status: .succeeded,
+          error: nil,
+          detail: state.stepDetail
+        ))
+        state.stepDetail = nil
       } catch {
         let duration = milliseconds(since: startedAt, now: now)
         if error is CancellationError || Task.isCancelled {
@@ -569,7 +644,7 @@ final class AutomationRunner {
       let thumbnail = state.payload.files.first { $0.kind == .image }?.url
       guard let picked = await environment.pick(title: title, thumbnail: thumbnail, choices: choices) else {
         // Never lose a capture: a dismissed picker leaves a Quick Access card for it.
-        if state.context.captureMode != nil, state.quickAccessItemIDs.isEmpty, !state.didCopyImage,
+        if state.context.captureMode != nil || state.context.invocation == .afterCapture, state.quickAccessItemIDs.isEmpty, !state.didCopyImage,
            let original = state.inputFiles.first,
            let itemID = await environment.showQuickAccess(
              original,

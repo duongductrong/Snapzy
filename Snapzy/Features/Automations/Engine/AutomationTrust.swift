@@ -62,6 +62,9 @@ enum AutomationTrust {
       return true
     case .upload(let config):
       return config.destination != .default
+    // Sends every capture it runs on to an AI provider (milestone 6).
+    case .aiAnnotate:
+      return true
     default:
       return tier(of: action) == .code
     }

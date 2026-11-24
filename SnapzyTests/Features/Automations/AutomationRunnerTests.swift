@@ -60,6 +60,23 @@ final class FakeAutomationEnvironment: AutomationRunEnvironment {
   /// Answers for the picker, in order; `nil` = the user cancelled.
   var pickAnswers: [AutomationPickerChoice.Value?] = []
   var presentedPickers: [(title: String, choices: [AutomationPickerChoice])] = []
+  /// Side effects in the order they happened (milestone 6 parity tests).
+  var events: [AutomationStepKind] = []
+  // Milestone 6 AI steps
+  var redactionRegions: [AutomationRedactionRegion] = []
+  var redactionScans: [(URL, AutomationRedactConfig)] = []
+  var describedText = "A screenshot of a settings window"
+  var describeCalls: [(URL, AutomationAIAnnotateConfig, Bool)] = []
+
+  func detectSensitiveRegions(in url: URL, config: AutomationRedactConfig) async throws -> [AutomationRedactionRegion] {
+    redactionScans.append((url, config))
+    return redactionRegions
+  }
+
+  func describeImage(_ url: URL, config: AutomationAIAnnotateConfig, interactive: Bool) async throws -> String {
+    describeCalls.append((url, config, interactive))
+    return describedText
+  }
 
   func automation(id: UUID) -> Automation? { storedAutomations[id] }
 
@@ -75,12 +92,14 @@ final class FakeAutomationEnvironment: AutomationRunEnvironment {
   }
 
   func copyMedia(_ url: URL) -> Int {
+    events.append(.copyFile)
     copiedMedia.append(url)
     changeCount += 1
     return changeCount
   }
 
   func copyImages(_ urls: [URL]) -> Int {
+    events.append(.copyFile)
     copiedImages.append(urls)
     changeCount += 1
     return changeCount
@@ -144,6 +163,7 @@ final class FakeAutomationEnvironment: AutomationRunEnvironment {
   }
 
   func showQuickAccess(_ url: URL, kind _: AutomationFileKind, sessionData _: AnnotationSessionData?) async -> UUID? {
+    events.append(.showQuickAccess)
     quickAccessShown.append(url)
     return UUID()
   }
@@ -153,6 +173,7 @@ final class FakeAutomationEnvironment: AutomationRunEnvironment {
   }
 
   func openAnnotate(_ url: URL, quickAccessItemID: UUID?, sessionData _: AnnotationSessionData?) {
+    events.append(.openAnnotate)
     annotated.append((url, quickAccessItemID))
   }
 
@@ -167,6 +188,7 @@ final class FakeAutomationEnvironment: AutomationRunEnvironment {
   }
 
   func pin(_ url: URL) async -> Bool {
+    events.append(.pin)
     pinned.append(url)
     return true
   }

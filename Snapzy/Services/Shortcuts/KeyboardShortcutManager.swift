@@ -507,6 +507,9 @@ enum GlobalShortcutKind: String, CaseIterable, Codable {
   case history
   case pickColor
   case measureScreen
+  /// Select an area, then pick an action from a toolbar (milestone 6, #498).
+  /// A capture mode, not a combination: the only kind added since automations.
+  case unifiedCapture
 
   var isSystemConflictRelevant: Bool {
     switch self {
@@ -565,6 +568,8 @@ extension GlobalShortcutKind {
       return L10n.Actions.openHistory
     case .pickColor:
       return L10n.Actions.pickColor
+    case .unifiedCapture:
+      return L10n.CaptureToolbar.shortcutTitle
     case .measureScreen:
       return L10n.Actions.measureScreen
     case .translate:
@@ -601,6 +606,8 @@ enum ShortcutAction: Equatable {
   case pickColor
   case measureScreen
   case captureTranslate
+  /// Unified capture with the action toolbar (milestone 6, #498).
+  case captureWithToolbar
   /// A user automation's keyboard trigger.
   case runAutomation(UUID)
 }
@@ -644,6 +651,7 @@ final class KeyboardShortcutManager {
   private(set) var delayedCaptureShortcut: ShortcutConfig
   private(set) var delayedFullscreenShortcut: ShortcutConfig
   private(set) var pickColorShortcut: ShortcutConfig
+  private(set) var unifiedCaptureShortcut: ShortcutConfig
   private(set) var measureScreenShortcut: ShortcutConfig
   private(set) var translateShortcut: ShortcutConfig
   private(set) var isEnabled: Bool = false
@@ -709,6 +717,7 @@ final class KeyboardShortcutManager {
   private var delayedCaptureHotkeyRef: EventHotKeyRef?
   private var delayedFullscreenHotkeyRef: EventHotKeyRef?
   private var pickColorHotkeyRef: EventHotKeyRef?
+  private var unifiedCaptureHotkeyRef: EventHotKeyRef?
   private var measureScreenHotkeyRef: EventHotKeyRef?
   private var translateHotkeyRef: EventHotKeyRef?
 
@@ -759,6 +768,7 @@ final class KeyboardShortcutManager {
   private let pickColorHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464F), id: 24)         // "ZSFO"
   private let measureScreenHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4650), id: 25)     // "ZSFP"
   private let translateHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4651), id: 26)         // "ZSFQ"
+  private let unifiedCaptureHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4652), id: 27)    // "ZSFR"
 
   private var eventHandler: EventHandlerRef?
 
@@ -785,6 +795,7 @@ final class KeyboardShortcutManager {
   private let delayedCaptureShortcutKey = "delayedCaptureShortcut"
   private let delayedFullscreenShortcutKey = "delayedFullscreenShortcut"
   private let pickColorShortcutKey = "pickColorShortcut"
+  private let unifiedCaptureShortcutKey = "unifiedCaptureShortcut"
   private let measureScreenShortcutKey = "measureScreenShortcut"
   private let translateShortcutKey = "translateShortcut"
   private let shortcutsEnabledKey = "shortcutsEnabled"
@@ -814,6 +825,7 @@ final class KeyboardShortcutManager {
     delayedCaptureShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
     delayedFullscreenShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
     pickColorShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
+    unifiedCaptureShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
     measureScreenShortcut = .defaultMeasureScreen
     translateShortcut = .defaultTranslate
     loadShortcuts()
@@ -967,6 +979,7 @@ final class KeyboardShortcutManager {
     case .objectCutout: return objectCutoutShortcut
     case .history: return historyShortcut
     case .pickColor: return pickColorShortcut
+    case .unifiedCapture: return unifiedCaptureShortcut
     case .measureScreen: return measureScreenShortcut
     case .translate: return translateShortcut
     }
@@ -1125,6 +1138,17 @@ final class KeyboardShortcutManager {
     mutateShortcutRegistration {
       setShortcut(config, for: .pickColor) {
         pickColorShortcut = $0
+      }
+      saveShortcuts()
+      saveClearedShortcuts()
+    }
+  }
+
+  /// Update the capture-with-toolbar shortcut (unbound by default).
+  func setUnifiedCaptureShortcut(_ config: ShortcutConfig?) {
+    mutateShortcutRegistration {
+      setShortcut(config, for: .unifiedCapture) {
+        unifiedCaptureShortcut = $0
       }
       saveShortcuts()
       saveClearedShortcuts()
@@ -1322,6 +1346,11 @@ final class KeyboardShortcutManager {
     } else if let data = try? encoder.encode(pickColorShortcut) {
       UserDefaults.standard.set(data, forKey: pickColorShortcutKey)
     }
+    if clearedShortcuts.contains(.unifiedCapture) {
+      UserDefaults.standard.removeObject(forKey: unifiedCaptureShortcutKey)
+    } else if let data = try? encoder.encode(unifiedCaptureShortcut) {
+      UserDefaults.standard.set(data, forKey: unifiedCaptureShortcutKey)
+    }
     if clearedShortcuts.contains(.measureScreen) {
       UserDefaults.standard.removeObject(forKey: measureScreenShortcutKey)
     } else if let data = try? encoder.encode(measureScreenShortcut) {
@@ -1422,6 +1451,11 @@ final class KeyboardShortcutManager {
       let config = try? decoder.decode(ShortcutConfig.self, from: delayedFullscreenData)
     {
       delayedFullscreenShortcut = config
+    }
+    if let unifiedCaptureData = UserDefaults.standard.data(forKey: unifiedCaptureShortcutKey),
+      let config = try? decoder.decode(ShortcutConfig.self, from: unifiedCaptureData)
+    {
+      unifiedCaptureShortcut = config
     }
     if let pickColorData = UserDefaults.standard.data(forKey: pickColorShortcutKey),
       let config = try? decoder.decode(ShortcutConfig.self, from: pickColorData)
@@ -1549,6 +1583,11 @@ final class KeyboardShortcutManager {
     if UserDefaults.standard.data(forKey: pickColorShortcutKey) == nil,
        !clearedShortcuts.contains(.pickColor) {
       clearedShortcuts.insert(.pickColor)
+      didMutate = true
+    }
+    if UserDefaults.standard.data(forKey: unifiedCaptureShortcutKey) == nil,
+       !clearedShortcuts.contains(.unifiedCapture) {
+      clearedShortcuts.insert(.unifiedCapture)
       didMutate = true
     }
     if didMutate {
@@ -1707,6 +1746,9 @@ final class KeyboardShortcutManager {
     case translateHotkeyID.id:
       actionName = "translate"
       action = .captureTranslate
+    case unifiedCaptureHotkeyID.id:
+      actionName = "unified-capture"
+      action = .captureWithToolbar
     default:
       guard let automationID = automationIDsByHotkeyID[id] else { return }
       actionName = "automation:\(automationID.uuidString.prefix(8))"
@@ -1884,6 +1926,12 @@ final class KeyboardShortcutManager {
       config: shortcut(for: .translate),
       hotkeyID: translateHotkeyID,
       ref: &translateHotkeyRef
+    )
+    registerShortcutIfNeeded(
+      kind: .unifiedCapture,
+      config: shortcut(for: .unifiedCapture),
+      hotkeyID: unifiedCaptureHotkeyID,
+      ref: &unifiedCaptureHotkeyRef
     )
 
     logRegistrationAudit()
@@ -2213,6 +2261,10 @@ final class KeyboardShortcutManager {
     if let ref = translateHotkeyRef {
       UnregisterEventHotKey(ref)
       translateHotkeyRef = nil
+    }
+    if let ref = unifiedCaptureHotkeyRef {
+      UnregisterEventHotKey(ref)
+      unifiedCaptureHotkeyRef = nil
     }
   }
 

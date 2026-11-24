@@ -86,6 +86,12 @@ protocol AutomationRunEnvironment: AnyObject {
   /// Shows the picker HUD; `nil` when the user cancelled.
   func pick(title: String, thumbnail: URL?, choices: [AutomationPickerChoice]) async -> AutomationPickerChoice?
 
+  // AI steps (milestone 6). Defaults in `AutomationAISteps.swift`.
+  /// Sensitive regions to cover in `url`, in pixels with a bottom-left origin.
+  func detectSensitiveRegions(in url: URL, config: AutomationRedactConfig) async throws -> [AutomationRedactionRegion]
+  /// Text the user's AI provider writes about the image. `interactive` = may ask for consent.
+  func describeImage(_ url: URL, config: AutomationAIAnnotateConfig, interactive: Bool) async throws -> String
+
   func recordHistory(_ url: URL, kind: AutomationFileKind) async
   func notify(title: String, body: String, isError: Bool, context: AutomationNotificationContext?) async
   func runDidUpdate(_ update: AutomationRunUpdate)
@@ -93,8 +99,9 @@ protocol AutomationRunEnvironment: AnyObject {
 }
 
 /// Production environment backed by the app's singletons.
+/// Not final: standard captures subclass it to use the post-capture handler's services.
 @MainActor
-final class LiveAutomationRunEnvironment: AutomationRunEnvironment {
+class LiveAutomationRunEnvironment: AutomationRunEnvironment {
   func prepareScreenshot(_ url: URL) -> AnnotationSessionData? {
     PostCaptureActionHandler.shared.applyDefaultPreset(toScreenshot: url)
   }

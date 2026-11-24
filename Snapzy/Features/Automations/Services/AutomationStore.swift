@@ -5,34 +5,158 @@
 //  Persists automations as JSON in UserDefaults and seeds the built-in presets
 //  once. Changes publish through `$automations`, which re-registers hotkeys.
 //
+//  Milestone 6: the two default after-capture automations live apart in
+//  `systemAutomations` (own key, outside the 20-item cap and the user list).
+//  They are built from the after-capture matrix on first launch and are the
+//  source of truth since; every change is mirrored back to the legacy matrix
+//  (`onSystemDefaultChanged`) for readers of it and for a downgrade.
+//
 
 import Combine
 import Foundation
 
 @MainActor
 final class AutomationStore: ObservableObject {
-  static let shared = AutomationStore()
   static let maxAutomations = 20
 
   @Published private(set) var automations: [Automation] = []
+  /// "Default after screenshot" / "Default after recording" (milestone 6).
+  @Published private(set) var systemAutomations: [Automation] = []
+
+  /// Mirrors a default automation into the legacy after-capture matrix.
+  var onSystemDefaultChanged: ((CaptureType, [AfterCaptureAction: Bool]) -> Void)?
 
   private let defaults: UserDefaults
   /// Stored entries this build cannot decode. Kept and written back so one bad
   /// or newer entry never erases the others or itself.
   private var undecodableEntries: [AutomationJSONValue] = []
 
-  init(defaults: UserDefaults = .standard) {
+  /// `matrix` reads the stored after-capture matrix; it seeds the default
+  /// automations the first time this build runs.
+  init(
+    defaults: UserDefaults = .standard,
+    matrix: ((CaptureType) -> [AfterCaptureAction: Bool])? = nil
+  ) {
     self.defaults = defaults
     let loaded = Self.load(from: defaults)
     automations = loaded.automations
     undecodableEntries = loaded.undecodable
     seedPresetsIfNeeded()
+    loadSystemDefaults(matrix: matrix ?? AutomationSystemDefault.defaultMatrix(for:))
   }
+
+  /// The shared store owns the after-capture matrix: matrix setters write the
+  /// default automations, which mirror back into `PreferencesManager`.
+  static let shared: AutomationStore = {
+    let preferences = PreferencesManager.shared
+    let store = AutomationStore(defaults: .standard, matrix: { preferences.storedMatrix(for: $0) })
+    store.onSystemDefaultChanged = { type, matrix in
+      preferences.adoptDefaultAutomationMatrix(matrix, for: type)
+    }
+    preferences.defaultAutomationWriter = { [weak store] action, type, enabled in
+      store?.setDefaultMatrixAction(action, for: type, enabled: enabled)
+    }
+    // The automations are the source of truth: the matrix follows them.
+    for type in CaptureType.allCases {
+      preferences.adoptDefaultAutomationMatrix(store.defaultMatrix(for: type), for: type)
+    }
+    return store
+  }()
 
   // MARK: - Queries
 
   func automation(id: UUID) -> Automation? {
-    automations.first { $0.id == id }
+    automations.first { $0.id == id } ?? systemAutomations.first { $0.id == id }
+  }
+
+  // MARK: - Default after-capture automations
+
+  /// The automation a standard capture of `type` runs.
+  func defaultAutomation(for type: CaptureType) -> Automation {
+    systemAutomations.first { $0.systemCaptureType == type }
+      ?? AutomationSystemDefault.make(for: type, matrix: AutomationSystemDefault.defaultMatrix(for: type))
+  }
+
+  /// Best-effort matrix of the default automation (custom pipelines included).
+  func defaultMatrix(for type: CaptureType) -> [AfterCaptureAction: Bool] {
+    AutomationSystemDefault.lenientMatrix(defaultAutomation(for: type), type: type)
+  }
+
+  /// One matrix cell changed (After Capture settings, config import).
+  func setDefaultMatrixAction(_ action: AfterCaptureAction, for type: CaptureType, enabled: Bool) {
+    let current = defaultAutomation(for: type)
+    updateSystemDefault(AutomationSystemDefault.setting(action, to: enabled, in: current, type: type))
+  }
+
+  /// Rebuilds a custom default pipeline as the simple form its steps come closest to.
+  func resetDefaultAutomation(for type: CaptureType) {
+    let current = defaultAutomation(for: type)
+    let matrix = AutomationSystemDefault.lenientMatrix(current, type: type)
+    var simple = AutomationSystemDefault.make(for: type, matrix: matrix, reusing: current)
+    simple.name = AutomationSystemDefault.storedName(for: type)
+    updateSystemDefault(simple)
+  }
+
+  /// Replaces a default automation (editor save, config import). Keeps its id,
+  /// preset id and stored name so it stays the default for `type`.
+  private func updateSystemDefault(_ automation: Automation) {
+    guard let type = automation.systemCaptureType else { return }
+    var normalized = automation
+    normalized.id = AutomationSystemDefault.id(for: type)
+    normalized.presetID = AutomationSystemDefault.presetID(for: type)
+    normalized = normalized.normalized()
+    if let index = systemAutomations.firstIndex(where: { $0.systemCaptureType == type }) {
+      guard systemAutomations[index] != normalized else { return }
+      systemAutomations[index] = normalized
+    } else {
+      systemAutomations.append(normalized)
+    }
+    persistSystemDefaults()
+    onSystemDefaultChanged?(type, AutomationSystemDefault.lenientMatrix(normalized, type: type))
+  }
+
+  /// Replaces both defaults from a configuration file. Types it doesn't name keep theirs.
+  func replaceSystemDefaults(_ imported: [Automation]) {
+    for automation in imported where automation.isSystemDefault {
+      updateSystemDefault(automation)
+    }
+  }
+
+  private func loadSystemDefaults(matrix: (CaptureType) -> [AfterCaptureAction: Bool]) {
+    var loaded: [Automation] = []
+    if let data = defaults.data(forKey: PreferencesKeys.automationsSystemDefaults) {
+      // Entry by entry: one unreadable default must not reset the other.
+      let entries = (try? JSONDecoder().decode([AutomationJSONValue].self, from: data)) ?? []
+      for entry in entries {
+        do {
+          let automation = try JSONDecoder().decode(Automation.self, from: JSONEncoder().encode(entry))
+          if automation.isSystemDefault { loaded.append(automation) }
+        } catch {
+          DiagnosticLogger.shared.logError(.action, error, "Default automation entry unreadable; rebuilt from the matrix")
+        }
+      }
+    }
+    var migrated = false
+    for type in CaptureType.allCases where !loaded.contains(where: { $0.systemCaptureType == type }) {
+      // First launch of milestone 6 (or unreadable data): build it from the matrix.
+      loaded.append(AutomationSystemDefault.make(for: type, matrix: matrix(type)))
+      migrated = true
+    }
+    systemAutomations = CaptureType.allCases.compactMap { type in
+      loaded.first { $0.systemCaptureType == type }?.normalized()
+    }
+    if migrated {
+      persistSystemDefaults()
+      DiagnosticLogger.shared.log(.info, .action, "Default after-capture automations created from the matrix")
+    }
+  }
+
+  private func persistSystemDefaults() {
+    do {
+      defaults.set(try JSONEncoder().encode(systemAutomations), forKey: PreferencesKeys.automationsSystemDefaults)
+    } catch {
+      DiagnosticLogger.shared.logError(.action, error, "Default automations save failed")
+    }
   }
 
   /// Finds an automation by id, or by name (trimmed, case-insensitive, matching
@@ -108,13 +232,17 @@ final class AutomationStore: ObservableObject {
 
   @discardableResult
   func add(_ automation: Automation) -> Bool {
-    guard canAdd else { return false }
+    guard canAdd, !automation.isSystemDefault else { return false }
     automations.append(automation.normalized())
     persist()
     return true
   }
 
   func update(_ automation: Automation) {
+    if automation.isSystemDefault {
+      updateSystemDefault(automation)
+      return
+    }
     guard let index = automations.firstIndex(where: { $0.id == automation.id }) else { return }
     let normalized = automation.normalized()
     guard automations[index] != normalized else { return }
@@ -124,7 +252,7 @@ final class AutomationStore: ObservableObject {
 
   @discardableResult
   func duplicate(id: UUID) -> Automation? {
-    guard canAdd, let original = automation(id: id) else { return nil }
+    guard canAdd, let original = automation(id: id), !original.isSystemDefault else { return nil }
     var copy = original
     copy.id = UUID()
     copy.name = L10n.Automations.copyName(original.displayName)
@@ -185,7 +313,9 @@ final class AutomationStore: ObservableObject {
 
   /// Replace everything (configuration import). Keeps the cap and normalizes.
   func replaceAll(_ newAutomations: [Automation]) {
-    automations = Array(newAutomations.prefix(Self.maxAutomations)).map { $0.normalized() }
+    replaceSystemDefaults(newAutomations)
+    let user = newAutomations.filter { !$0.isSystemDefault }
+    automations = Array(user.prefix(Self.maxAutomations)).map { $0.normalized() }
     defaults.set(true, forKey: PreferencesKeys.automationsSeeded)
     persist()
   }

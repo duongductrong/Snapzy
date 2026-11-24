@@ -299,6 +299,34 @@ enum SnapzyConfigurationImporter {
     }
     collectAfterCapture(&reader, type: .screenshot, mutations: &mutations)
     collectAfterCapture(&reader, type: .recording, mutations: &mutations)
+    collectCaptureToolbar(&reader, defaults: defaults, mutations: &mutations)
+  }
+
+  /// `[capture.toolbar]` (milestone 6, #498).
+  private static func collectCaptureToolbar(
+    _ reader: inout SnapzyConfigurationReader,
+    defaults: UserDefaults,
+    mutations: inout [() -> Void]
+  ) {
+    let buttons = reader.stringArray("capture", "toolbar", "buttons")
+    let hidden = reader.stringArray("capture", "toolbar", "hidden")
+    let doubleClick = reader.string("capture", "toolbar", "double_click")
+    let showsForArea = reader.bool("capture", "toolbar", "show_for_area")
+    guard buttons != nil || doubleClick != nil || showsForArea != nil else { return }
+    var warnings: [String] = []
+    let store = defaults == UserDefaults.standard
+      ? CaptureToolbarConfigurationStore.shared
+      : CaptureToolbarConfigurationStore(defaults: defaults)
+    let configuration = CaptureToolbarConfiguration.fromTOML(
+      buttons: buttons,
+      hidden: hidden,
+      doubleClick: doubleClick,
+      showsForArea: showsForArea,
+      base: store.configuration,
+      warnings: &warnings
+    )
+    warnings.forEach { reader.warning($0) }
+    mutations.append { store.update(configuration) }
   }
 
   private static func collectRecording(

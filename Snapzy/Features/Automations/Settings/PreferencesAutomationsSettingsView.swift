@@ -18,7 +18,9 @@ struct AutomationsSettingsView: View {
   @ObservedObject private var store = AutomationStore.shared
   @ObservedObject private var cloudManager = CloudManager.shared
   @ObservedObject private var navigation = AutomationSettingsNavigation.shared
+  @ObservedObject private var importer = AutomationImportCoordinator.shared
   @State private var editorDraft: AutomationEditorDraft?
+  @State private var isGalleryPresented = false
   @State private var pendingDelete: Automation?
   @State private var validationIssues: [UUID: ShortcutValidationIssue] = [:]
 
@@ -46,12 +48,23 @@ struct AutomationsSettingsView: View {
       if navigation.page == .activity {
         AutomationActivitySection()
       } else {
+        AutomationSystemDefaultSection()
         automationsSection
         AutomationAdvancedSection()
         AutomationSecretsSection()
       }
     }
     .formStyle(.grouped)
+    .sheet(isPresented: $isGalleryPresented) {
+      AutomationGallerySheet(onClose: { isGalleryPresented = false })
+    }
+    .sheet(item: $importer.pending) { request in
+      AutomationImportSheet(
+        request: request,
+        onImport: { importer.importSelected($0) },
+        onCancel: { importer.pending = nil }
+      )
+    }
     .sheet(item: $editorDraft) { draft in
       AutomationEditorSheet(
         automation: draft.automation,
@@ -111,6 +124,8 @@ struct AutomationsSettingsView: View {
             onShortcutChanged: { handleShortcutChange($0, for: automation.id) },
             onEdit: { editorDraft = AutomationEditorDraft(automation: automation, isNew: false) },
             onDuplicate: { store.duplicate(id: automation.id) },
+            onExport: { AutomationExporter.export([automation], suggestedName: automation.displayName) },
+            onCopyTOML: { AutomationExporter.copyTOML(automation) },
             onDelete: { pendingDelete = automation }
           )
         }
@@ -136,13 +151,23 @@ struct AutomationsSettingsView: View {
           .fixedSize()
           .disabled(!store.canAdd)
 
-          if !store.missingPresets.isEmpty {
-            Button(L10n.Automations.restorePresets) {
-              store.restoreMissingPresets()
-            }
+          // Milestone 6: the gallery replaces "Restore built-in".
+          Button(L10n.Automations.galleryButton) { isGalleryPresented = true }
             .buttonStyle(.link)
-            .disabled(!store.canAdd)
+
+          Menu {
+            Button(L10n.Automations.importButton) { AutomationExporter.chooseFileToImport() }
+            Button(L10n.Automations.exportAll) {
+              AutomationExporter.export(store.automations, suggestedName: L10n.Automations.pageAutomations)
+            }
+            .disabled(store.automations.isEmpty)
+          } label: {
+            Text(L10n.Automations.importButton)
+          } primaryAction: {
+            AutomationExporter.chooseFileToImport()
           }
+          .menuStyle(.borderlessButton)
+          .fixedSize()
 
           Spacer()
 
@@ -210,6 +235,8 @@ private struct AutomationRow: View {
   let onShortcutChanged: (ShortcutConfig?) -> Bool
   let onEdit: () -> Void
   let onDuplicate: () -> Void
+  let onExport: () -> Void
+  let onCopyTOML: () -> Void
   let onDelete: () -> Void
 
   @State private var isHovering = false
@@ -358,6 +385,10 @@ private struct AutomationRow: View {
       .disabled(automation.hasUnsupportedSource)
     Button(L10n.Automations.duplicate, action: onDuplicate)
       .disabled(!canDuplicate || automation.hasUnsupportedSource)
+    Divider()
+    Button(L10n.Automations.exportButton, action: onExport)
+      .disabled(automation.hasUnsupportedSource)
+    Button(L10n.Automations.copyTOML, action: onCopyTOML)
     Divider()
     Button(L10n.Common.delete, role: .destructive, action: onDelete)
   }

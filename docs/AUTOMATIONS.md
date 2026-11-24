@@ -1,12 +1,12 @@
 # Automations
 
-An automation is a named pipeline: **trigger → source → ordered steps**. M1 (issue #675) shipped hotkey triggers, screenshot capture sources and five steps. M2 ("Triggers everywhere") adds menu bar, Quick Access, History, URL scheme, CLI and Shortcuts triggers, plus a source that runs on a handed-in file. M3 ("Transform & deliver") makes steps typed and composable (free order, repeats, per-step settings), adds transform and deliver steps, recording / GIF / scrolling / clipboard sources, a two-pane editor, an Activity log, notification actions and run cancellation. M5 ("Context & choice") adds control steps (condition, stop, run automation, ask), a richer run context (app bundle id, window title, capture mode), a run-time picker HUD, Finder's "Run Snapzy Automation…" service and drops on the menu bar icon. Every trigger goes through one entry point, `AutomationLauncher`.
+An automation is a named pipeline: **trigger → source → ordered steps**. M1 (issue #675) shipped hotkey triggers, screenshot capture sources and five steps. M2 ("Triggers everywhere") adds menu bar, Quick Access, History, URL scheme, CLI and Shortcuts triggers, plus a source that runs on a handed-in file. M3 ("Transform & deliver") makes steps typed and composable (free order, repeats, per-step settings), adds transform and deliver steps, recording / GIF / scrolling / clipboard sources, a two-pane editor, an Activity log, notification actions and run cancellation. M5 ("Context & choice") adds control steps (condition, stop, run automation, ask), a richer run context (app bundle id, window title, capture mode), a run-time picker HUD, Finder's "Run Snapzy Automation…" service and drops on the menu bar icon. M6 ("Unification") turns the after-capture matrix into two editable **default automations**, runs Quick Access Copy / Upload through the same step handlers, adds the unified capture toolbar (#498) whose buttons are automations, the `redact` and AI Describe steps, and shareable `.snapzyautomation` recipes with a gallery. Every trigger goes through one entry point, `AutomationLauncher`; the two capture-bound exceptions (after-capture default, capture toolbar) already hold a capture and call `AutomationRunner` directly.
 
 ## Concepts
 
 | Part | Values | Stored as |
 | --- | --- | --- |
-| Trigger | `hotkey(ShortcutConfig)`, `menuBar`, `quickAccessAction`, `historyAction`, `finderQuickAction` (M5: Finder service + menu bar drop) | `{"kind":"hotkey","shortcut":{…}}`, `{"kind":"menuBar"}`, … |
+| Trigger | `hotkey(ShortcutConfig)`, `menuBar`, `quickAccessAction`, `historyAction`, `finderQuickAction` (M5: Finder service + menu bar drop), `captureToolbar` (M6: button in the capture toolbar) | `{"kind":"hotkey","shortcut":{…}}`, `{"kind":"menuBar"}`, … |
 | Source | `capture(mode, saveToExportDirectory, recordingOutput)` (screenshots `area`, `fullscreen`, `activeWindow`, `applicationWindow`, `scrolling`; recordings `recordingArea`, `recordingWindow` with `recordingOutput` `video` \| `gif`), `input` ("Run on a File"), `clipboardImage` | `{"kind":"capture","mode":"recordingArea","saveToExportDirectory":false,"recordingOutput":"gif"}`, `{"kind":"input"}`, `{"kind":"clipboardImage"}` |
 | Steps | See [Steps](#steps). Each step: `id`, `kind`, optional `config` object, `isEnabled`, `onFailure` (`stop` \| `continue`) | `{"id":…,"kind":"resize","config":{"mode":"maxDimension","maxDimension":1600},"isEnabled":true,"onFailure":"stop"}` |
 | `externalInvocation` | Bool: URL scheme, CLI and Shortcuts may run it (see [External gate](#external-gate)) | `external_invocation` |
@@ -15,8 +15,8 @@ An automation is a named pipeline: **trigger → source → ordered steps**. M1 
 - **Forward compatibility**: a trigger, source or step kind this build does not know decodes to `.unsupported(raw JSON)` and re-encodes unchanged (`AutomationJSONValue`). Unsupported steps are skipped when run; an automation with an unsupported source is shown disabled ("made with a newer version") and rejected by the launcher.
 - **Schema 2 migration**: M1/M2 data (`schemaVersion` 1) decodes unchanged except `uploadAndCopyLink(format)`, which becomes `upload` (same step id) + `copyLink(url | markdown)` (deterministic derived id), both with the original `isEnabled` / `onFailure`. Encoding never writes the legacy kind. `Automation.migrated()` does the same in memory (the runner and editor call it).
 - **Normalization** (`Automation.normalized()`): migrated, trimmed name (max 60, fallback "Automation"), steps keep the user's order and may repeat (max 20, at least one), at most one hotkey, one of each simple trigger. An `.input` automation loses `hotkey` and `menuBar` (nothing to run on); `clipboardImage` keeps them (`runsWithoutInput`). The chain itself is checked by the [validator](#chain-validation), not normalization.
-- **Presets** (`AutomationPreset`): **Quick Copy** (area → copy image → notify), **Cloud Share** (area → copy image → upload → copy link → notify), **Docs Shot** (active window → canvas preset → resize 1600 → WebP 85 → save to folder `{date}-{appName}` → copy `![{file.basename}]({saved.relativeURL})` → notify; ships **disabled** with a "Needs setup" badge until a folder is picked), **GIF Share** (record area as GIF → upload → copy link → notify), **Translate Snip** (area → OCR → translate → copy text → notify), **Share Menu** (M5: area → ask [Quick Copy, Cloud Share, Docs Shot]), **Design Router** (M5: active window → condition(app is Figma / Sketch, else skip 3) → save to folder `{appName}/{datetime}` → notify → stop → save to export folder → notify; ships **disabled** until the design folder is picked). Presets are created in `AutomationPreset.creationOrder` so Share Menu's Ask choices resolve to the seeded automations' ids (`makeAutomation(resolve:)`). Seeded once (`automations.seeded`) on fresh installs; existing users get the new ones from "Restore built-in". Shortcuts unbound, temp destination, offered on Quick Access + History. Untouched preset names are stored in English and shown localized (`displayName`).
-- **Store** (`AutomationStore`): JSON array in UserDefaults `automations.items`, cap 20, CRUD + move + duplicate (clears shortcut and preset id) + restore missing presets + `replaceAll` for config import. Lookup: `resolve(ref)` (id, or name trimmed + case-insensitive, matching stored or displayed name; several matches → `ambiguousName`), `duplicateNameIDs(for:)` (editor warning; names are not unique), `automations(for: slot, fileKind:)` (enabled, supported source, slot flag, and with `fileKind` at least one enabled step accepting it).
+- **Presets** (`AutomationPreset`): **Quick Copy** (area → copy image → notify), **Cloud Share** (area → copy image → upload → copy link → notify), **Docs Shot** (active window → canvas preset → resize 1600 → WebP 85 → save to folder `{date}-{appName}` → copy `![{file.basename}]({saved.relativeURL})` → notify; ships **disabled** with a "Needs setup" badge until a folder is picked), **GIF Share** (record area as GIF → upload → copy link → notify), **Translate Snip** (area → OCR → translate → copy text → notify), **Share Menu** (M5: area → ask [Quick Copy, Cloud Share, Docs Shot]), **Design Router** (M5: active window → condition(app is Figma / Sketch, else skip 3) → save to folder `{appName}/{datetime}` → notify → stop → save to export folder → notify; ships **disabled** until the design folder is picked). **Safe Share** (M6: area → redact → upload → copy link → notify; local redact before anything leaves the Mac). Presets are created in `AutomationPreset.creationOrder` so Share Menu's Ask choices resolve to the seeded automations' ids (`makeAutomation(resolve:)`). Seeded once (`automations.seeded`) on fresh installs; existing users add the new ones from the Gallery (M6; it replaced the "Restore built-in" button, `restoreMissingPresets` stays in the store). Shortcuts unbound, temp destination, offered on Quick Access + History. Untouched preset names are stored in English and shown localized (`displayName`).
+- **Store** (`AutomationStore`): JSON array in UserDefaults `automations.items`, cap 20, CRUD + move + duplicate (clears shortcut and preset id) + restore missing presets + `replaceAll` for config import. M6 adds `systemAutomations` (see [Default automations](#default-automations-after-capture-milestone-6)): kept apart from `automations` (own key, outside the 20-item cap and the user list), found by `automation(id:)`, never added / duplicated / exported through the normal paths. Lookup: `resolve(ref)` (id, or name trimmed + case-insensitive, matching stored or displayed name; several matches → `ambiguousName`), `duplicateNameIDs(for:)` (editor warning; names are not unique), `automations(for: slot, fileKind:)` (enabled, supported source, slot flag, and with `fileKind` at least one enabled step accepting it).
 
 ## Triggers
 
@@ -31,8 +31,10 @@ An automation is a named pipeline: **trigger → source → ordered steps**. M1 
 | Shortcuts / Spotlight / Siri | `appIntent` | `RunAutomationIntent` → `AutomationIntentSupport.launch` | yes | yes | `Files` parameter |
 | Finder ▸ Quick Actions / Services ▸ Run Snapzy Automation… (M5) | `finder` | `AutomationServicesProvider.runAutomationService` → `AutomationFileTriggers.run` | no | skipped | selected files |
 | Files dropped on the menu bar icon (M5) | `menuBarDrop` | `AutomationStatusItemDropTarget` → `AutomationFileTriggers.run` | no | skipped | dropped files |
+| Default after capture (M6) | `afterCapture` | `PostCaptureActionHandler.runDefaultAutomation` → `AutomationRunner.runDefault` (no launcher: a standard capture already exists) | no | the capture itself | n/a |
+| Capture toolbar button (M6, #498) | `captureToolbar` | `CaptureToolbarController.perform` → `AutomationRunner.run(invocation: .captureToolbar)` (the capture it was selected for; not the launcher, so the controller itself skips disabled / needs-review automations) | no | the toolbar's capture | n/a |
 
-- `AutomationInvocation.isExternal` = `urlScheme`, `cli`, `appIntent`. Every run logs `Automation run started` with `invocation` and `source` (`capture` / `input`).
+- `AutomationInvocation.isExternal` = `urlScheme`, `cli`, `appIntent` (`afterCapture` and `captureToolbar` are internal). Every run logs `Automation run started` with `invocation` and `source` (`capture` / `input`).
 - Menu bar: `MenuBarItemKind.automations` (capture group, symbol `bolt`), hidden when no automation has the menu bar flag; submenu lists them (symbol, display name, hotkey as key equivalent, disabled without Screen Recording permission) + "Manage Automations…" (opens Settings → Automations). Customizable like other items in Settings → Menu Bar.
 - Quick Access / History show a "Run Automation" submenu only when the store has matching automations for the item's file kind (see [QUICK_ACCESS.md](QUICK_ACCESS.md#run-automation), [HISTORY.md](HISTORY.md#run-automation)).
 - **Finder & menu bar drop** (M5, `Triggers/AutomationFileTriggers.swift`): `NSServices` entry in `Info.plist` (`NSMessage = runAutomationService`, `NSSendFileTypes` image / movie / GIF); `AutomationServicesProvider.install()` sets `NSApp.servicesProvider` in `AppCoordinator.applicationDidFinishLaunching` and calls `NSUpdateDynamicServices()` once per app version (`automations.servicesRegisteredVersion`). If the entry is missing, enable it under System Settings ▸ Keyboard ▸ Keyboard Shortcuts ▸ Services (the system caches Services; QA on a clean account with the app in /Applications). The status item's window is registered for `.fileURL` drags; supported files highlight the icon. Both paths keep only image / video / GIF file URLs (`supportedFiles`, no file promises: web images from Safari are out of scope), list automations with **Show in Finder & menu bar drop** (`showsInFinder`, slot `.finder`) whose steps accept **every** file kind, show the [picker](#picker-hud) (or run directly when only one fits and Advanced → **Skip the picker when one automation fits** is on, `automations.runSingleFileTriggerDirectly`), (never for an automation that reaches script / Shortcut steps: any app can invoke a Service), then launch an input run on all files (first-file semantics as for other input runs). Nothing eligible or no supported file → toast.
@@ -77,7 +79,7 @@ Gate order (`AutomationLauncher.gate`, first failure wins):
 Then, for a capture run: `needsFile` if no `captureSpec`, `captureInProgress` if `captureStarter` is nil, then the capture blocker (`permissionRequired` after triggering the permission request, or `captureInProgress` while a selection or capture is active). Input runs skip the permission and busy checks. Rejections log `Automation launch rejected` (`invocation`, `reason`, `automation`). Passing `input` to a capture-source automation runs on the files and skips the capture; empty `files` counts as no input.
 
 - **Awaitable**: `begin(_:invocation:onFinish:)` keeps a callback per run; `complete` calls it with the report, `abandon` (capture cancelled) and the 30-minute stale prune call it with `.cancelled`. The CLI holds the request open until then (server limit for `automation.run`: 15 min, `CLIConnection.automationRunTimeout`; other methods have none while running).
-- **Routing** (capture runs): `PostCaptureRouting` (`.standard` / `.automation(runID)`) rides inside `CaptureContext`, which travels from each capture entry point through every selection path to `saveImage`. Window selections rebuild the context from the window's PID and copy the routing over. Fullscreen calls the handler directly with the same routing.
+- **Routing** (capture runs): `PostCaptureRouting` (`.standard` / `.automation(runID)` / M6 `.captureToolbar(sessionID)`) rides inside `CaptureContext`, which travels from each capture entry point through every selection path to `saveImage`. Window selections rebuild the context from the window's PID and copy the routing over. Fullscreen calls the handler directly with the same routing.
 - **Snapshot**: `begin` stores a copy of the automation under a run id; edits during a capture do not affect that run. An unknown run id falls back to standard routing so the capture is never dropped.
 - **Override semantics** (capture runs): skips the global after-capture matrix entirely, including Save: `saveToExportDirectory` picks export vs temp directory (`TempCaptureManager.resolveSaveDirectory(saveOverride:)`). The default Annotate canvas preset is applied (`prepareScreenshot`) and History is recorded.
 - **Scope**: area (incl. switching to window selection inside the overlay), application window, fullscreen, active window, scrolling and recording (area / window) flows carry routing (see [Recording, GIF and scrolling sources](#recording-gif-and-scrolling-sources)). OCR, object cutout, smart element, area annotate, delayed and repeat-area captures stay standard; OCR is a step instead.
@@ -179,7 +181,9 @@ Capture runs still bake the default Annotate canvas preset into fresh screenshot
 | `condition(match, predicates, otherwise)` (M5) | any → passthrough | Evaluated by the runner (`AutomationConditionEvaluator`). Holds → next step; else `otherwise`: `stop` ends the run successfully, `skip:n` skips the next n steps of the list (disabled ones count). No predicates = holds |
 | `stop` (M5) | any | Ends the run successfully (outcome message from the last delivery). Inside a nested run it returns to the caller |
 | `runAutomation(automationID)` (M5) | any → target's output | Runs the target's **steps** (not its source / triggers) on the current payload, then continues. Target must exist, be enabled, not need review; depth ≤ 3 (`AutomationControlLimits.maxDepth`) and no cycles (checked at run time and by the validator). A nested abort fails this step (its `onFailure` applies); the run outcome counts the nested steps themselves (`StepRecord.leaves`). Code steps in the target are rechecked when it starts |
-| `ask(prompt, choices)` (M5) | any | Shows the [picker](#picker-hud) (title = prompt or automation name, thumbnail = first image). Choices: `automation(id)` → runs it like `runAutomation`, then **ends** this run; `continue` → next step; `stop` → ends. Unavailable targets (missing, off, needs review, already running) are hidden; none left → failure. Cancel / Esc → run `cancelled` (no notification); for a capture run with nothing delivered yet, the capture gets a Quick Access card so it is never lost. Cancelling the run (HUD) closes the picker. No timeout; the run HUD shows "Waiting for choice" |
+| `ask(prompt, choices)` (M5) | any | Shows the [picker](#picker-hud) (title = prompt or automation name, thumbnail = first image). Choices: `automation(id)` → runs it like `runAutomation`, then **ends** this run; `continue` → next step; `stop` → ends. Unavailable targets (missing, off, needs review, already running) are hidden; none left → failure. Cancel / Esc → run `cancelled` (no notification); for a capture run (or a default after-capture run) with nothing delivered yet, the capture gets a Quick Access card so it is never lost. Cancelling the run (HUD) closes the picker. No timeout; the run HUD shows "Waiting for choice" |
+| `redact(categories, style)` (M6) | image → image | See [AI steps](#ai-steps-milestone-6). Local: Vision text + sensitive-data detector + face / body detection, covers regions with pixelate / blur / solid box. No regions = success, file untouched |
+| `aiAnnotate(prompt, provider)` (M6, "AI Describe") | image → +text | See [AI steps](#ai-steps-milestone-6). The user's AI endpoint / agent CLI writes text about the image (alt text by default) → `{text}`. Trust network |
 
 `uploadAndCopyLink` remains decodable (legacy) and runs as `upload` + `copyLink` if built in code.
 
@@ -220,7 +224,7 @@ Capture runs still bake the default Annotate canvas preset into fresh screenshot
 
 ### Chain validation
 
-`AutomationChainValidator.validate` walks enabled steps starting from the source's kinds (screenshot / scrolling / clipboard → image; recording → video or gif; input → any file kind): a step whose `accepts` has nothing available → `.needs(kinds)` (blocks Save and launch: `invalid_chain`); missing settings → `.missingConfig(folder | template | canvasPreset | uploader | webhookURL | script | shortcut | app | secret(name) | automation | choices | condition | skipRange)` ("Needs setup"; runs fail at that step; `condition` with an empty predicate **blocks**, since it would silently stop or skip every run). Example: `translate → …` without `ocr` is rejected; `ocr → translate → copyText` is valid.
+`AutomationChainValidator.validate` walks enabled steps starting from the source's kinds (screenshot / scrolling / clipboard → image; recording → video or gif; input → any file kind): a step whose `accepts` has nothing available → `.needs(kinds)` (blocks Save and launch: `invalid_chain`); missing settings → `.missingConfig(folder | template | canvasPreset | uploader | webhookURL | script | shortcut | app | secret(name) | automation | choices | condition | skipRange)` ("Needs setup"; runs fail at that step; `condition` with an empty predicate **blocks**, since it would silently stop or skip every run). Example: `translate → …` without `ocr` is rejected; `ocr → translate → copyText` is valid. M6 adds an advice-only issue `.redactAfterNetwork` (`isWarning`, never blocks and is not "Needs setup"): shown when a Redact step runs after a step that already left the Mac (any non-local step except translate), since Redact only protects what comes after it.
 
 M5 path analysis: the walk tracks a set of kind-sets per position. A condition sends its paths to the next step **and** to its `otherwise` target (`stop` → end, `skip:n` → n steps later; past the end → `skipRange`), so a step only one path can feed is still reported (`condition(else skip 1) · ocr · translate` flags Translate). Steps after `stop` are unreachable and not checked. `runAutomation` / `ask` follow the target with the current kinds (missing / unset → `missingConfig(.automation)`, disabled Run Automation target → same; cycle or depth > 3 → `.recursion`; target with blocking issues for these kinds → `.targetCannotRun`; both block). The kinds after them are what the target hands back (its end, stop or failed condition). The launcher validates with the store as lookup.
 
@@ -239,13 +243,13 @@ Least privilege for steps that reach outside Snapzy (`Engine/AutomationTrust.swi
 | Tier | Steps | Allowed when |
 | --- | --- | --- |
 | `local` | everything else, share sheet, open in app | Always |
-| `network` | `upload`, `webhook`, `translate` | The destination is configured (Cloud, custom uploader, webhook URL) |
+| `network` | `upload`, `webhook`, `translate`, `aiAnnotate` (M6) | The destination is configured (Cloud, custom uploader, webhook URL) |
 | `code` | `runScript`, `runShortcut` | Settings → Automations → Advanced → **Allow script & Shortcut steps** (`automations.allowCodeSteps`, off). Never set by an imported file |
 
 - Each handler declares `trust`; `Automation.maxTrust` is the highest among enabled steps. The launcher refuses `code_steps_disabled`; the runner checks again (`environment.allowsCodeSteps`) so a direct run cannot bypass it.
 - **External + code**: URL scheme and Shortcuts runs of an automation with code steps also need `Automation.allowExternalCode` (toggle under Run from Other Apps, shown only with code steps). It is cleared when `externalInvocation` is off and never imported. The CLI does not need it.
 - **Secrets** (`Services/AutomationSecretStore.swift`): name → Keychain item (service `com.trongduong.snapzy.automations`, account = a UUID); UserDefaults `automations.secrets` holds only names and accounts. Templates reference them as `{secret:NAME}`; `AutomationVariables.renderAllowingSecrets` resolves them in the same pass as payload tokens, so a payload value containing `{secret:…}` (OCR text, a file name) stays literal. Allowed in webhook URL / headers / body and custom uploader templates only; never in pasteboard text. Resolved values go into `AutomationRunState.secretValues` and are masked (`••••`) in step errors, the run log, warnings, notifications and diagnostics. A missing secret is a "Needs setup" issue and fails the step. Settings → Automations → **Secrets**: add, replace value (write-only), copy `{secret:NAME}`, delete. Custom uploaders resolve secrets through the same store (`CustomUploaderSecrets.provider`, set at launch).
-- **Referenced automations (M5)**: `Automation.reachableAutomations(lookup:)` follows Run Automation / Ask targets (each once). The launcher applies the code-step switch, the external-code opt-in and `needs_review` to all of them (`effectiveMaxTrust`), so an automation can't reach a script step through another one. The editor shows the external-code toggle when a referenced automation has code steps. `runAutomation` and `ask` count as review-sensitive on import (they may run the user's own automations from a trigger those don't allow).
+- **Referenced automations (M5)**: `Automation.reachableAutomations(lookup:)` follows Run Automation / Ask targets (each once). The launcher applies the code-step switch, the external-code opt-in and `needs_review` to all of them (`effectiveMaxTrust`), so an automation can't reach a script step through another one. The editor shows the external-code toggle when a referenced automation has code steps. `runAutomation` and `ask` count as review-sensitive on import (they may run the user's own automations from a trigger those don't allow); so does `aiAnnotate` (M6: it sends every capture it runs on to an AI provider).
 - **Review flag**: `Automation.needsReview`. An import (TOML; recipes later) flags an automation whose review-relevant part — webhook, custom-uploader and code steps with their settings, plus `externalInvocation` — differs from the automation **already stored on this Mac** with the same id (or there is none). The file's own `data` JSON is never the baseline. Flagged automations are refused (`needs_review`), show "Imported — review before it can run" with a Review button, and the editor shows a banner; saving from the editor clears the flag. Re-importing what this Mac exported does not flag.
 
 ## Activity log and notification actions
@@ -253,6 +257,48 @@ Least privilege for steps that reach outside Snapzy (`Engine/AutomationTrust.swi
 - `AutomationRunLog` (`Engine/AutomationRunLog.swift`): newest-first ring buffer of 100 `AutomationRunRecord`s in `Application Support/Snapzy/automation-runs.json` (debounced write, flushed on quit). Record: run id, automation, invocation, start, duration, outcome (`succeeded`, `partial`, `failed`, `cancelled`), per-step kind / duration / status / error, `detail` (M5: "Condition met / not met", "Skipped by condition", chosen automation, "Choice cancelled") and nested `children` (Run Automation / Ask; shown indented, and counted for the outcome), input paths, link, text (truncated to 200), saved paths, warnings. No image data. Off switch `automations.activityLogEnabled`.
 - Settings → Automations has an **Automations | Activity** segment (`AutomationSettingsNavigation`); Activity rows expand to steps and offer Show Input, Run Again (input run, `invocation: .retry`), Copy Link, Show Saved File, and Clear Activity.
 - Notifications carry categories registered by `AutomationNotificationRouter.install()` at launch: `automation.failed` (Retry, Open Activity), `automation.succeeded.link` (Open Link), `automation.succeeded.file` (Show in Finder). Retry re-runs the automation on the run's input files (the capture), so an offline Cloud Share can be retried after reconnecting. Clicking the banner does the most useful action for that outcome. The toast fallback has no actions.
+
+## Default automations (after capture, milestone 6)
+
+The after-capture matrix is stored as two **system automations**, "Default after screenshot" and "Default after recording" (`AutomationSystemDefault`, `Models/AutomationSystemDefaults.swift`). A standard capture (`PostCaptureRouting.standard`) runs the one for its type; see [POST_CAPTURE.md](POST_CAPTURE.md).
+
+| Matrix cell | Default automation |
+| --- | --- |
+| Save | Source flag `saveToExportDirectory` |
+| Copy file | `copyFile` |
+| Quick Access | `showQuickAccess` |
+| Open Annotate (screenshots only; the recording cell is disabled) | `openAnnotate` |
+
+- **Identity**: stable ids (`5A1D0000-0000-4000-8000-00000000000{1,2}`), `presetID` `system-default-screenshot` / `system-default-recording`, source `.capture(area | recordingArea)` (no new source kind), stored name in English and shown localized while untouched. `Automation.isSystemDefault` / `systemCaptureType` derive from the preset id. `normalized()` clears triggers, keeps it enabled and never external, and lets it have zero steps (every cell off).
+- **Store**: UserDefaults `automations.systemDefaults`, decoded entry by entry (one unreadable default is rebuilt from the matrix without resetting the other). On the first launch of M6 it is built from the stored matrix (`PreferencesManager.storedMatrix`), logged as "Default after-capture automations created from the matrix". `defaultAutomation(for:)`, `setDefaultMatrixAction(_:for:enabled:)`, `resetDefaultAutomation(for:)`, `replaceSystemDefaults` (config import). Each change mirrors back into the legacy `afterCaptureActions` key (`onSystemDefaultChanged` → `adoptDefaultAutomationMatrix`; `PreferencesManager.setAction` writes through `defaultAutomationWriter`), so matrix readers (temp vs export, edited-capture clipboard copy, TOML `capture.after.*`) and a downgraded build keep working. `AppCoordinator` touches `AutomationStore.shared` first so nothing writes the matrix before the migration.
+- **Simple vs custom**: `project(_:type:)` returns the matrix the steps exactly equal (matrix order copy → Quick Access → Annotate, nothing disabled / repeated), else `nil` = custom (`isCustomizedSystemDefault`). `lenientMatrix` is the best-effort matrix of any default. `setting(_:to:in:type:)` flips one cell: rebuilt in matrix order while simple, only adds / removes steps of that kind while custom. Reset to Simple rebuilds the simple form from `lenientMatrix`.
+- **Needs review**: a default flagged `needsReview` (an imported custom pipeline with webhook / script / AI steps) logs a warning and runs only the simple form its steps imply (`lenientMatrix`) until it is reviewed and saved in the editor.
+- **Run** (`AutomationRunner.runDefault`): invocation `afterCapture`, `RunSource.standardCapture` (like a capture run, capture mode unknown). Runtime flags `pinToScreen` (a `pin` step inserted before Open Annotate) and `skipQuickAccess` (recording toolbars that already show a card: Quick Access dropped) go through `AutomationSystemDefault.runtimeSteps`. While the automation is simple the run is **quiet**: no run HUD, and only failures reach the Activity log. `StandardCaptureRunEnvironment` reuses the handler's Quick Access manager and preset applier so Pin pins the card the run created and Annotate opens that card's item.
+- **UI**: Settings → Automations "Default after capture" section (Edit, Reset to Simple, "Custom" badge); Settings → Capture → After Capture "Customize Pipeline…" menu plus a summary row per custom type. Matrix cells of a custom type are disabled except Save. The editor hides Source and Triggers for system automations.
+- **TOML**: `capture.after.*` is still written and read. A custom default pipeline is also exported as `[automations.<id>]` with `preset = "system-default-screenshot"` / `"system-default-recording"`; import maps it back (not counted in the 20-automation cap). See [CONFIGURATION.md](CONFIGURATION.md).
+- **Dual-run diagnostics**: `PostCaptureActionHandler.logParity` compares what the legacy matrix handler would have done with the automation's effective steps and logs "After-capture parity mismatch" (warning for a simple pipeline, debug for a custom one). `executeActions` stays as the fallback when no default automation is injected and as the reference; removing it and the write-through waits for one beta without mismatch reports.
+
+## Capture toolbar (#498, milestone 6)
+
+One shortcut (`unifiedCapture`, unbound by default; `snapzy://capture/toolbar`) → normal area selection → a toolbar under the selection. Buttons are step pipelines run on the capture (Copy, Save, Upload, Pin, Annotate, Text) or the default after-capture automation (Screenshot), plus every automation with the **Capture toolbar** trigger (`AutomationTrigger.captureToolbar`, `Automation.showsInCaptureToolbar`, TOML `capture_toolbar = true`; enabled, reviewed, able to take an image). Runs use invocation `captureToolbar`. Cancelling the area selection ends the toolbar session; fallbacks (disabled / needs-review automation button) and automation buttons apply the default Save choice before running, like Screenshot. Flow, accelerators, settings and TOML: [CAPTURE.md](CAPTURE.md#capture-toolbar-498).
+
+## AI steps (milestone 6)
+
+`Steps/AutomationAISteps.swift`, configs in `Models/AutomationAIConfigs.swift`, inspectors in `Settings/StepInspectors/AutomationAIInspectors.swift`.
+
+- **`redact`** (trust local): categories `emails`, `phoneNumbers`, `urls`, `paymentCards`, `credentials`, `faces`, `people` (defaults: emails, phone numbers, payment cards, credentials); style `pixelate` (default), `blur`, `solid`. `AutomationSensitiveDataScanner` runs Vision text recognition and the Annotate sensitive-data detector (`AnnotateSensitiveRedactionService.detectRegions`) for text categories, and face / body detection (`detectVisualRegions`) for `faces` / `people`; `AutomationImageTransforms.redact` draws the regions (pixelate block size scales with the region, blur uses `BlurEffectRenderer`) into a working copy in the source's format. Zero regions, or no categories, is a successful no-op. The run log row keeps only "N areas covered", never the text. Nothing leaves the Mac.
+- **`aiAnnotate`** (shown as **AI Describe**, trust network, review-sensitive on import): the image and a prompt (default "Write concise alt text for this screenshot.", max 2000 chars) go to the user's AI provider; the answer becomes `{text}` (output is text only; drawing on the image is a follow-up). Provider: `settings` (Settings → AI selection), `endpoint:<uuid>` or `cli:<kind>`. It runs through `AgentSession` with a one-tool toolbox (`write_result`); a plain-prose reply also works. Timeout 120 s. **Apple Intelligence cannot look at images**, so a Settings choice of Automatic / Apple Intelligence reports "No AI provider can look at images". A remote provider needs the one-time consent with scope `automation` (`AgentRemoteConsent`, separate from the Annotate and Video Editor consents); a run nobody watches (CLI, Shortcuts, URL scheme) cannot ask and fails until the user agrees once from Snapzy. See [AI.md](AI.md#privacy).
+- Presets: **Safe Share** (area → redact → upload → copy link → notify). TOML tokens `redact` (`categories`, `style`) and `ai_annotate` (`prompt`, `provider`).
+
+## Sharing and gallery (milestone 6)
+
+`Sharing/AutomationRecipe.swift` (format, import coordinator) and `Sharing/AutomationSharingViews.swift` (gallery, import sheet, export / import panels).
+
+- **Format** `.snapzyautomation` (UTI `com.trongduong.snapzy.automation`, conforms to `public.json`; exported type and document type in `Info.plist`): JSON `{"format":"snapzy-automation","version":1,"exportedBy":"Snapzy <version>","automations":[…Automation JSON…]}`. Newer versions are refused; entries this build cannot decode are skipped.
+- **Export** strips what belongs to this Mac or its trust decisions: hotkey, `presetID`, `externalInvocation` / `allowExternalCode`, `needsReview`, folder bookmarks (the path stays as a hint in the step). System defaults are never exported. Secret values never live in an automation (only `{secret:NAME}` references).
+- **Import** (`prepareForImport`): new ids for automations and steps, Run Automation / Ask targets re-pointed inside the file, no hotkey or external opt-ins, review flag by the M4 rule (nothing on this Mac to compare with, so every webhook / script / Shortcut / custom-uploader / `aiAnnotate` automation is flagged). The import sheet lists each automation with trust badge, **Needs setup** and **Review** badges; picked ones that still need setup (folder, uploader) are added **off**. Up to the 20-automation cap.
+- **Sources**: Settings → Automations **Import…** (and **Export All…**, which writes the user's list), opening / double-clicking a `.snapzyautomation` file (`AppDelegate.application(_:open:)`), and `snapzy://automation/import?url=https://…` (asks for confirmation showing the host before downloading; https only, at most 256 KB, redirects must stay https, 20 s timeout; URL imports always start disabled; subject to the URL scheme toggle). Files opened from disk are capped at 1 MB. Row menu: **Export…** and **Copy as TOML** (single-automation TOML).
+- **Gallery** (button **Gallery…**, replaces "Restore built-in"): built-in presets grouped by persona (`AutomationRecipePersona`: sharing, docs and design, support, reading, privacy) with description, trust badge, step preview and a "needs setup" note; **Add** creates it (it ships off when it needs a folder first, e.g. Docs Shot, Design Router); a preset already in the list shows "Added". Share Menu's Ask choices point at the presets already in the list.
 
 ## Hotkeys
 
@@ -271,7 +317,7 @@ Least privilege for steps that reach outside Snapzy (`Engine/AutomationTrust.swi
 
 ## Settings → Automations
 
-`AutomationsSettingsView` (`Snapzy/Features/Automations/Settings/`): hero, list rows (shortcut recorder with enable toggle, or a plain toggle for input automations; summary; `link` badge when externally invocable; cloud-not-configured warning with link to Cloud; ⋯ menu: edit, duplicate, delete), drag reorder, New / Restore built-in buttons, cap message. Deep link: `snapzy://automations` or `snapzy://settings?tab=automations`.
+`AutomationsSettingsView` (`Snapzy/Features/Automations/Settings/`): hero, list rows (shortcut recorder with enable toggle, or a plain toggle for input automations; summary; `link` badge when externally invocable; cloud-not-configured warning with link to Cloud; ⋯ menu: edit, duplicate, **Export…**, **Copy as TOML**, delete), drag reorder, New / **Gallery…** / **Import…** (menu: Import…, Export All…) buttons, cap message. M6 puts a **Default after capture** section (the two [default automations](#default-automations-after-capture-milestone-6)) above the list, and the import sheet opens here for recipe files and URLs. Deep link: `snapzy://automations` or `snapzy://settings?tab=automations`.
 
 `AutomationEditorSheet` (min 780×560) is two panes:
 
@@ -282,7 +328,7 @@ Least privilege for steps that reach outside Snapzy (`Engine/AutomationTrust.swi
 | Right: inspector | Source & Triggers (`AutomationTriggersInspector`): recording output (video / GIF), save-to-export, shortcut, Show In toggles, **Run from Other Apps** (`AutomationExternalSection`). Step (`AutomationStepInspector`): description, issues, per-kind settings (`StepInspectors/*`: canvas preset, resize, convert / Optimize preset, OCR QR, translate target, GIF fps / width, link style + custom template, text template, folder picker + name template + conflict + preview; `AutomationIntegrationInspectors`: upload destination, webhook preset / method / URL / headers / body / response, script editor + shell + output + env-var cheat sheet, Shortcut picker + Open in Shortcuts, share service, app chooser; "Insert Secret" key menus; a lock banner on script / Shortcut steps while code steps are off; `AutomationControlInspectors`: condition match all / any, predicate rows (app chips with is / is not, multi-select menus for modes / triggers / file kinds, size fields, text contains), otherwise stop / skip n with an out-of-range warning and a readable sentence (`AutomationConditionText`); Run Automation picker (not itself, warns when the target is off); Ask title, ordered choices (automations, Continue, Stop Here; max 12)), "If this step fails: Stop / Continue". Template fields have a token help popover and a live preview |
 | Footer | First validation issue (click selects the step); **Save is disabled while any `.needs` issue exists** |
 
-List rows show a "Needs setup" badge with a Set Up… button when a step misses a setting (e.g. Docs Shot without a folder), or "Imported — review before it can run" with Review. The Source & Triggers inspector adds **Finder & menu bar drop** (M5) to Show In. Below the list: **Advanced** ("Allow script & Shortcut steps", "Skip the picker when one automation fits") and **Secrets** (`AutomationAdvancedSection.swift`).
+List rows show a "Needs setup" badge with a Set Up… button when a step misses a setting (e.g. Docs Shot without a folder), or "Imported — review before it can run" with Review. The Source & Triggers inspector adds **Finder & menu bar drop** (M5) and **Capture toolbar** (M6) to Show In. For a system default automation the editor hides Source and Triggers. Below the list: **Advanced** ("Allow script & Shortcut steps", "Skip the picker when one automation fits") and **Secrets** (`AutomationAdvancedSection.swift`).
 
 ## Configuration (TOML)
 
@@ -304,6 +350,7 @@ menu_bar = false
 quick_access = true
 history = true
 finder = false              # M5: Finder "Run Snapzy Automation…" + menu bar drop
+capture_toolbar = false     # M6: button in the unified capture toolbar
 external_invocation = false
 
 [automations.8f0c2a6e-….steps.01]
@@ -334,7 +381,7 @@ template = "![{file.basename}]({saved.relativeURL})"
 on_failure = "continue"     # optional; enabled = false to keep a step off
 ```
 
-Step kinds: `copy_image`, `copy_file`, `show_quick_access`, `open_annotate`, `notify`, `apply_canvas_preset`, `resize`, `convert`, `strip_metadata`, `ocr` (`language`, `include_qr`), `translate` (`target`), `convert_to_gif` (`fps`, `max_width`), `upload` (`destination` = custom uploader UUID, omitted for the Cloud default), `copy_link` (`style` url | markdown | html | bbcode | custom, `template`), `copy_text` (`template`), `save_to_folder`, `reveal`, `pin`, `webhook`, `run_script`, `run_shortcut`, `share_sheet` (`service` picker | airdrop | messages | mail | a sharing service name), `open_in_app` (`app` bundle id, `app_name`). Unknown keys warn.
+Step kinds: `copy_image`, `copy_file`, `show_quick_access`, `open_annotate`, `notify`, `apply_canvas_preset`, `resize`, `convert`, `strip_metadata`, `ocr` (`language`, `include_qr`), `translate` (`target`), `convert_to_gif` (`fps`, `max_width`), `upload` (`destination` = custom uploader UUID, omitted for the Cloud default), `copy_link` (`style` url | markdown | html | bbcode | custom, `template`), `copy_text` (`template`), `save_to_folder`, `reveal`, `pin`, `webhook`, `run_script`, `run_shortcut`, `share_sheet` (`service` picker | airdrop | messages | mail | a sharing service name), `open_in_app` (`app` bundle id, `app_name`), `redact` (`categories`, `style`), `ai_annotate` (`prompt`, `provider`). Unknown keys warn.
 
 ```toml
 [automations.8f0c2a6e-….steps.03]
@@ -390,6 +437,40 @@ choices = ["3b1e…", "Cloud Share", "continue", "stop"]
 
 [automations.8f0c2a6e-….steps.09]
 kind = "stop"
+```
+
+```toml
+# Milestone 6 AI steps
+[automations.8f0c2a6e-….steps.01]
+kind = "redact"
+categories = ["emails", "phoneNumbers", "paymentCards", "credentials"]   # + urls | faces | people
+style = "pixelate"                      # pixelate | blur | solid
+
+[automations.8f0c2a6e-….steps.04]
+kind = "ai_annotate"                    # shown as "AI Describe"; output is text ({text})
+prompt = "Write concise alt text for this screenshot."
+provider = "settings"                   # settings | endpoint:<uuid> | cli:<kind>
+```
+
+The default after-capture pipelines (M6) are exported as a normal table only once they are custom (beyond what `capture.after.*` can express); `preset` carries `system-default-screenshot` / `system-default-recording` and import writes them back into the defaults (they do not count against the 20-automation cap):
+
+```toml
+[automations.5A1D0000-0000-4000-8000-000000000001]
+name = "Default after screenshot"
+preset = "system-default-screenshot"
+save_to_export = true
+capture = "area"
+
+[automations.5A1D0000-0000-4000-8000-000000000001.steps.01]
+kind = "copy_file"
+
+[automations.5A1D0000-0000-4000-8000-000000000001.steps.02]
+kind = "resize"
+mode = "max_dimension"
+max_dimension = 1600
+
+[automations.5A1D0000-0000-4000-8000-000000000001.steps.03]
+kind = "show_quick_access"
 ```
 
 Predicate keys: `modes` (capture tokens as for `capture`), `invocations` (`hotkey`, `menuBar`, `quickAccess`, `history`, `finder`, `menuBarDrop`, `urlScheme`, `cli`, `appIntent`), `kinds` (`image`, `video`, `gif`), `bytes`, `contains`. An unknown predicate `type` is written with `json` and survives a round trip. Targets are always exported as ids.
@@ -472,6 +553,15 @@ The store also keeps stored entries it cannot decode and writes them back, so on
 | `Snapzy/Features/Automations/Settings/StepInspectors/AutomationControlInspectors.swift` | M5 Condition (predicate rows, app picker, sentence), Run Automation, Ask inspectors |
 | `Snapzy/Features/Automations/Settings/AutomationRouteByAppSheet.swift` | M5 "Route by App…" helper (inserts `condition · steps · stop`) |
 | `Snapzy/Features/Automations/Settings/AutomationConditionText.swift` | M5 readable condition sentences, invocation / file kind names |
+| `Snapzy/Features/Automations/Models/AutomationSystemDefaults.swift` | M6 default after-capture automations: matrix ↔ steps mapping, projection, runtime flags, legacy effects |
+| `Snapzy/Features/Automations/Engine/StandardCaptureRunEnvironment.swift` | M6 environment for a standard capture's default run (Pin / Annotate on the card the run made) |
+| `Snapzy/Features/Automations/Settings/AutomationSystemDefaultViews.swift` | M6 "Default after capture" section, Capture settings "Customize Pipeline…" row, shared editor / reset modifier |
+| `Snapzy/Features/Automations/Steps/AutomationAISteps.swift`, `Models/AutomationAIConfigs.swift`, `Settings/StepInspectors/AutomationAIInspectors.swift` | M6 `redact` and AI Describe (`aiAnnotate`): handlers, scanner, describer + toolbox, configs, inspectors |
+| `Snapzy/Features/Automations/Sharing/AutomationRecipe.swift`, `AutomationSharingViews.swift` | M6 `.snapzyautomation` codec, import coordinator, gallery, import sheet, export / import panels |
+| `Snapzy/Features/QuickAccess/Services/QuickAccessActionPerformer.swift` | M6 Quick Access Copy / Upload through step handlers ([QUICK_ACCESS.md](QUICK_ACCESS.md#actions)) |
+| `Snapzy/Features/CaptureToolbar/*` | M6 unified capture toolbar: configuration + store, controller, view, settings section ([CAPTURE.md](CAPTURE.md#capture-toolbar-498)) |
+| `Snapzy/Services/Capture/PostCaptureActionHandler.swift` | `.standard` branch runs the default automation; dual-run parity diagnostics |
+| `scripts/check-automation-signals.sh` | Success-signal greps (one pasteboard writer, one upload path, no upload / pasteboard in the QA card, shortcut kinds, `executeActions` callers) |
 | `Snapzy/Shared/Localization/L10n+Automations.swift` | Strings (`automations.` → `Features/Automations.xcstrings`) |
 
 ## Tests
@@ -489,14 +579,21 @@ The store also keeps stored entries it cannot decode and writes them back, so on
 | M3 steps through the runner (working files, OCR / translate, templates, save to folder, cancel, run record) | `SnapzyTests/Features/Automations/AutomationStepsTests.swift` |
 | Validator, variables, image transforms on real files, folder store, run log, notification routing | `SnapzyTests/Features/Automations/AutomationEngineV2Tests.swift` |
 | M5: context variables and capture-context merge, predicate table, condition skip / stop, run automation (nesting, cycle, depth), ask (choice, continue, stop, cancel, hidden targets), path validation, cycles, trust propagation, picker keys, pasteboard parsing, eligible automations, recipes and seeding, JSON + keyed TOML round trips | `SnapzyTests/Features/Automations/AutomationControlFlowTests.swift` |
+| M6 defaults: matrix ↔ steps projection, parity of every matrix combination × capture type × pin / skip flags against golden legacy effects, runtime flags, store migration / mirror / reset, custom defaults, TOML round trip | `SnapzyTests/Features/Automations/AutomationSystemDefaultTests.swift`, `SnapzyTests/Services/Capture/PostCaptureActionHandlerTests.swift` (automation path + side-by-side legacy parity, recordings with `skipQuickAccess`), `SnapzyTests/Services/Configuration/SnapzyConfigurationAutomationsTests.swift` |
+| M6 Quick Access Copy / Upload on step handlers | `SnapzyTests/Features/QuickAccess/QuickAccessActionPerformerTests.swift` |
+| M6 capture toolbar: configuration + normalization, accelerators, visible entries, TOML, key resolver, positioning, built-in pipelines, trigger / deep link / shortcut kind | `SnapzyTests/Features/CaptureToolbar/CaptureToolbarTests.swift` |
+| M6 `redact` (renderer, offline Vision email detection, category filter, no-op, Safe Share, redact-after-upload warning), AI Describe (network trust, review on import, `write_result` toolbox, text hand-off), config JSON / TOML round trips | `SnapzyTests/Features/Automations/AutomationAIStepsTests.swift` |
+| M6 recipes: export strips machine state and leaks no secrets, import re-points references and flags review, system defaults excluded, foreign / newer / empty files rejected, https-only URLs, import selection, gallery covers every preset | `SnapzyTests/Features/Automations/AutomationRecipeTests.swift` |
 | M4: trust tiers at launch, external code opt-in, review flag (incl. forged `data`), secrets render / mask / store, webhook / script / Shortcut / share / open steps, real-shell no-interpolation, process timeout, TOML round trip of integration steps | `SnapzyTests/Features/Automations/AutomationIntegrationTests.swift` |
 
 ## Related docs
 
-- [`POST_CAPTURE.md`](POST_CAPTURE.md) — standard routing and the after-capture matrix automations bypass
+- [`POST_CAPTURE.md`](POST_CAPTURE.md) — standard routing: the default after-capture automations, parity diagnostics
 - [`SHORTCUTS.md`](SHORTCUTS.md) — hotkey engine and validation, `snapzy://automation/run`
 - [`CLI.md`](CLI.md) — `snapzy automation list / run`
-- [`QUICK_ACCESS.md`](QUICK_ACCESS.md), [`HISTORY.md`](HISTORY.md) — Run Automation menus
+- [`QUICK_ACCESS.md`](QUICK_ACCESS.md), [`HISTORY.md`](HISTORY.md) — Run Automation menus, card Copy / Upload through steps
+- [`CAPTURE.md`](CAPTURE.md) — capture toolbar (#498)
+- [`AI.md`](AI.md) — providers and consent behind AI Describe
 - [`CLOUD.md`](CLOUD.md) — providers behind `CloudShareService`
 - [`RECORDING.md`](RECORDING.md), [`SCROLLING_CAPTURE.md`](SCROLLING_CAPTURE.md) — capture flows automations route
 - [`CONFIGURATION.md`](CONFIGURATION.md) — TOML sync

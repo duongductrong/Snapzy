@@ -103,6 +103,10 @@ struct AutomationStepInspector: View {
       RunAutomationInspector(config: binding(config, AutomationStepAction.runAutomation), excluding: automationID)
     case .ask(let config)?:
       AskInspector(config: binding(config, AutomationStepAction.ask), excluding: automationID)
+    case .redact(let config)?:
+      RedactInspector(config: binding(config, AutomationStepAction.redact))
+    case .aiAnnotate(let config)?:
+      AIAnnotateInspector(config: binding(config, AutomationStepAction.aiAnnotate))
     default:
       EmptyView()
     }
@@ -145,6 +149,8 @@ extension AutomationStepKind {
     case .stop: L10n.Automations.describeStop
     case .runAutomation: L10n.Automations.describeRunAutomation
     case .ask: L10n.Automations.describeAsk
+    case .redact: L10n.Automations.describeRedact
+    case .aiAnnotate: L10n.Automations.describeAIAnnotate
     case .showQuickAccess, .openAnnotate, .uploadAndCopyLink: nil
     }
   }

@@ -24,6 +24,10 @@ enum AutomationInvocation: String, CaseIterable, Sendable {
   case finder
   /// Files dropped on the menu bar icon.
   case menuBarDrop
+  /// A standard capture ran its default after-capture automation (milestone 6).
+  case afterCapture
+  /// A capture toolbar button (milestone 6, #498).
+  case captureToolbar
 
   var isExternal: Bool {
     self == .urlScheme || self == .cli || self == .appIntent

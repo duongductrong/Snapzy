@@ -101,7 +101,7 @@ enum AutomationStepGroup: CaseIterable, Identifiable {
 
   var kinds: [AutomationStepKind] {
     switch self {
-    case .transform: [.applyCanvasPreset, .resize, .convert, .stripMetadata, .ocr, .translate, .convertToGIF]
+    case .transform: [.applyCanvasPreset, .resize, .convert, .stripMetadata, .redact, .ocr, .translate, .aiAnnotate, .convertToGIF]
     case .deliver: [.copyImage, .upload, .copyLink, .copyText, .saveToFolder, .reveal, .pin, .showQuickAccess, .openAnnotate]
     case .integrations: [.webhook, .shareSheet, .openInApp, .runShortcut, .runScript]
     case .control: [.condition, .ask, .runAutomation, .stop, .notify]
@@ -139,6 +139,8 @@ extension AutomationStepKind {
     case .stop: L10n.Automations.stepStop
     case .runAutomation: L10n.Automations.stepRunAutomation
     case .ask: L10n.Automations.stepAsk
+    case .redact: L10n.Automations.stepRedact
+    case .aiAnnotate: L10n.Automations.stepAIAnnotate
     }
   }
 
@@ -171,6 +173,8 @@ extension AutomationStepKind {
     case .stop: "stop.circle"
     case .runAutomation: "arrow.turn.down.right"
     case .ask: "list.bullet.rectangle"
+    case .redact: "eye.slash.circle"
+    case .aiAnnotate: "sparkles"
     }
   }
 }
@@ -233,6 +237,11 @@ extension AutomationStepAction {
     case .ask(let config):
       guard !config.choices.isEmpty else { return L10n.Automations.issueChoices }
       return config.choices.map(AutomationDisplay.choiceTitle).joined(separator: " · ")
+    case .redact(let config):
+      guard !config.categories.isEmpty else { return L10n.Automations.redactNothing }
+      return config.categories.map(\.displayName).joined(separator: ", ")
+    case .aiAnnotate(let config):
+      return config.trimmedPrompt
     case .copyImage, .showQuickAccess, .openAnnotate, .notify, .stripMetadata,
          .copyFile, .reveal, .pin, .stop:
       return ""
@@ -294,6 +303,7 @@ extension AutomationChainIssue {
     case .missingConfig(.skipRange): return L10n.Automations.issueSkipRange
     case .recursion: return L10n.Automations.issueRecursion
     case .targetCannotRun: return L10n.Automations.issueTargetCannotRun
+    case .redactAfterNetwork: return L10n.Automations.issueRedactAfterNetwork
     }
   }
 }
@@ -326,7 +336,7 @@ extension Automation {
   /// A step still needs a setting (e.g. a folder) before the automation can run.
   @MainActor
   var needsSetup: Bool {
-    AutomationChainValidator.validate(self).contains { !$0.blocksRun }
+    AutomationChainValidator.validate(self).contains { !$0.blocksRun && !$0.isWarning }
   }
 
   var sourceSymbol: String {

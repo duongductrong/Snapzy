@@ -175,9 +175,7 @@ struct VideoEditorBottomBar: View {
         state.cloudKey = result.key
 
         // Copy cloud link to pasteboard
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(result.publicURL.absoluteString, forType: .string)
+        ClipboardHelper.copyText(result.publicURL.absoluteString)
 
         // Ensure minimum visual duration (~600ms total)
         let elapsed = Date().timeIntervalSince(uploadStartTime)

@@ -139,6 +139,7 @@ flowchart LR
 - **Send screenshot image** (`annotateAgent.sendImage`, default on): off sends only the scene text (recognized text blocks, detected elements, annotations, canvas). For video, off keeps `get_frame` images on the Mac (the tool still returns the text read off the frame).
 - Captions (panel or `generate_captions`) are transcribed on this Mac (SpeechAnalyzer on macOS 26, otherwise on-device SFSpeech); no audio leaves the Mac. The remote transcription engine exists but is not offered in the UI yet; it will only run after an explicit opt-in.
 - The tools only touch the canvas; there is no export/upload/send tool. Text in a screenshot can still try to steer the model (prompt injection), which is why every run is one undo step.
+- Automations (M6): the **AI Describe** step (`aiAnnotate`) sends each capture it runs on, with its prompt, to the provider chosen in Settings → AI (an endpoint or agent CLI; Apple Intelligence cannot read images, so Automatic / Apple Intelligence give "No AI provider can look at images"). It asks separately (`AgentRemoteConsent.scope` `automation`, id `…#automation`; agreeing for Annotate or Video does not cover it). A run nobody watches (CLI, Shortcuts, URL scheme) cannot ask and fails until the user agrees once from Snapzy. Output is text only (`{text}`), 120 s timeout, one `write_result` tool. The Redact step is local (Vision, no provider). See [AUTOMATIONS.md](AUTOMATIONS.md#ai-steps-milestone-6).
 - Known limit: Codex and OpenCode still merge the user's global config, so **their other MCP servers stay available** to the model; Claude Code still loads the user's hooks, `CLAUDE.md` and skills. The CLI consent message and Settings → AI say so.
 
 ## Settings → AI (`PreferencesAISettingsView.swift`)
@@ -178,6 +179,7 @@ CLI paths, consent and learned endpoint capabilities are per-Mac and never expor
 | `Snapzy/Features/Agent/AgentEndpointProvider.swift`, `AnnotateAgentEndpointProbe.swift` | Endpoint provider (tools + plan mode, tool images), capability store, Test |
 | `Snapzy/Features/Agent/AgentBridge.swift`, `CLI/` | MCP session tokens, CLI detection, process, adapters, `AgentCLIProvider` |
 | `Snapzy/Features/Agent/AgentRemoteConsent.swift`, `AnnotateAgentAISettings.swift` | Consent (with surface scope), shared stored options (time limit, image) |
+| `Snapzy/Features/Automations/Steps/AutomationAISteps.swift` | AI Describe step: provider resolution, `automation` consent scope, `write_result` toolbox (and the local Redact step) |
 | `Snapzy/Features/Annotate/Agent/AnnotateAgentToolbox.swift`, `…ToolCatalog.swift`, `…Scene.swift`, `…Types.swift`, `…Surface.swift` | Annotate tools, JSON schemas, scene, coordinates, transactions/undo, surface text |
 | `Snapzy/Features/Annotate/Agent/AnnotateAgentController.swift` | Annotate prompt state, run loop, consent, notices, conversation |
 | `Snapzy/Features/Annotate/Agent/AnnotateAgentAppleIntelligenceProvider.swift` | Apple Intelligence provider and status |
@@ -196,5 +198,6 @@ CLI paths, consent and learned endpoint capabilities are per-Mac and never expor
 - `AnnotateAgentAppleIntelligenceTests` — live opt-in `TEST_RUNNER_SNAPZY_LIVE_AI=1`.
 - `AnnotateAgentEndpointProviderTests` — live opt-in `TEST_RUNNER_SNAPZY_LIVE_ENDPOINT="<base>|<model>"` (`…_MODE=plan`).
 - `AnnotateAgentCLIProviderTests` — fixtures for all three CLIs; live opt-in `TEST_RUNNER_SNAPZY_LIVE_CLI="opencode|opencode-go/deepseek-v4.1-flash"`.
+- `AutomationAIStepsTests` — AI Describe through the runner with a fake environment, toolbox, config round trips (no live provider).
 - `MCPServerTests` (SnapzyCLIKit) — `snapzy mcp` protocol.
 - `VideoEditorAgentToolboxTests`, `VideoEditorAgentControllerTests`, `VideoEditorAgentAnalyzerTests`, `VideoEditorAgentVisionTests`, `VideoEditorAgentAppleIntelligenceTests`, `VideoEditorShortcutManagerTests` — video tools, undo, perception (fixture recording), shortcut. Live opt-ins: `testLiveVideoPrompts`, `testLiveActivityPrompts`, `testLiveVisionPrompts` (`TEST_RUNNER_SNAPZY_LIVE_CLI` / `TEST_RUNNER_SNAPZY_LIVE_AI=1`).

@@ -430,7 +430,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   /// recent OS releases. We only act on file URLs here so that the existing
   /// Apple Event handler for `snapzy://` deep links keeps working.
   func application(_ application: NSApplication, open urls: [URL]) {
-    let fileURLs = urls.filter { $0.isFileURL }
+    // Milestone 6: `.snapzyautomation` recipes open the import sheet.
+    let recipeURLs = urls.filter { $0.isFileURL && AutomationImportCoordinator.isRecipeFile($0) }
+    for recipe in recipeURLs {
+      AutomationImportCoordinator.shared.open(fileURL: recipe)
+    }
+    let fileURLs = urls.filter { $0.isFileURL && !AutomationImportCoordinator.isRecipeFile($0) }
     guard !fileURLs.isEmpty else { return }
 
     DiagnosticLogger.shared.log(

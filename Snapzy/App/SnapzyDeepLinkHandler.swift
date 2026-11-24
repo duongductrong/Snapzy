@@ -65,6 +65,8 @@ struct SnapzyDeepLinkHandler {
       screenCaptureViewModel.captureActiveWindow()
     case .captureAreaAnnotate:
       screenCaptureViewModel.captureAreaAnnotate()
+    case .captureWithToolbar:
+      screenCaptureViewModel.captureWithToolbar()
     case .captureScrolling:
       screenCaptureViewModel.captureScrolling()
     case .captureOCR:
@@ -108,6 +110,10 @@ struct SnapzyDeepLinkHandler {
       AppStatusBarController.shared.openPreferencesWindow(tab: tab)
     case .runAutomation(let ref):
       runAutomation(ref, url: url)
+    case .importAutomation(let remote):
+      // Downloads (https, ≤ 256 KB) into the import sheet; nothing is added or enabled on its own.
+      AutomationImportCoordinator.shared.open(remoteURL: remote)
+      NSApp.activate(ignoringOtherApps: true)
     }
   }
 
@@ -134,6 +140,8 @@ enum SnapzyDeepLinkAction: Equatable {
   case captureApplication
   case captureActiveWindow
   case captureAreaAnnotate
+  /// Unified capture with the action toolbar (milestone 6, #498).
+  case captureWithToolbar
   case captureScrolling
   case captureOCR
   case captureTranslate
@@ -151,6 +159,8 @@ enum SnapzyDeepLinkAction: Equatable {
   case showShortcuts
   case openSettings(PreferencesTab?)
   case runAutomation(AutomationRef)
+  /// `snapzy://automation/import?url=https://…` (milestone 6).
+  case importAutomation(URL)
 
   init?(url: URL) {
     guard url.scheme?.lowercased() == "snapzy" else { return nil }
@@ -180,6 +190,8 @@ enum SnapzyDeepLinkAction: Equatable {
       self = .captureActiveWindow
     case "capture/area-annotate", "capture-area-annotate", "area-annotate", "screenshot/area-annotate":
       self = .captureAreaAnnotate
+    case "capture/toolbar", "capture-toolbar", "toolbar", "capture/unified":
+      self = .captureWithToolbar
     case "capture/scrolling", "scrolling-capture", "capture-scrolling", "scrolling", "screenshot/scrolling":
       self = .captureScrolling
     case "capture/ocr", "capture/text", "capture-text", "ocr", "text":
@@ -213,6 +225,11 @@ enum SnapzyDeepLinkAction: Equatable {
     case "automation/run", "automations/run", "workflow/run":
       guard let ref = Self.automationRef(from: components) else { return nil }
       self = .runAutomation(ref)
+    case "automation/import", "automations/import":
+      guard let raw = components?.queryItems?.first(where: { $0.name == "url" })?.value,
+            let remote = URL(string: raw), remote.scheme?.lowercased() == "https"
+      else { return nil }
+      self = .importAutomation(remote)
     case "automations", "automation", "workflows":
       self = .openSettings(.automations)
     case "settings", "preferences":
@@ -236,6 +253,7 @@ enum SnapzyDeepLinkAction: Equatable {
     case .captureApplication: return "captureApplication"
     case .captureActiveWindow: return "captureActiveWindow"
     case .captureAreaAnnotate: return "captureAreaAnnotate"
+    case .captureWithToolbar: return "captureWithToolbar"
     case .captureScrolling: return "captureScrolling"
     case .captureOCR: return "captureOCR"
     case .captureTranslate: return "captureTranslate"
@@ -253,6 +271,7 @@ enum SnapzyDeepLinkAction: Equatable {
     case .showShortcuts: return "showShortcuts"
     case .openSettings(let tab): return "openSettings(\(String(describing: tab)))"
     case .runAutomation: return "runAutomation"
+    case .importAutomation: return "importAutomation"
     }
   }
 

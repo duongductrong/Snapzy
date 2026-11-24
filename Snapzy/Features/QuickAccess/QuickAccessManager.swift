@@ -1141,53 +1141,29 @@ final class QuickAccessManager: ObservableObject {
       return
     }
 
-    // If cloud URL is available, copy the cloud link as text
-    if let cloudURL = item.cloudURL {
-      let pasteboard = NSPasteboard.general
-      pasteboard.clearContents()
-      pasteboard.setString(cloudURL.absoluteString, forType: .string)
-      DiagnosticLogger.shared.log(
-        .info,
-        .clipboard,
-        "Quick access copied cloud link to clipboard",
-        context: ["fileName": item.url.lastPathComponent]
-      )
-      dismissCard(id: id)
-      QuickAccessSound.copy.play()
-      return
-    }
-
+    // Milestone 6: the write goes through the automation copy steps
+    // (`QuickAccessActionPerformer`); the cloud link wins once uploaded.
+    // It must finish before the card goes: removing a card deletes its temp
+    // file, which a pending image read would then miss.
     let url = item.url
-    let isVideo = item.isVideo
-
-    // Load data and write to clipboard BEFORE removing the card.
-    // removeItem/removeScreenshot deletes temp files, which would cause
-    // reads to fail if done after removal.
-    if isVideo {
-      ClipboardHelper.copyMediaFile(from: url)
+    // Keep the card (and its temp file) alive while the copy runs.
+    pauseCountdownForActivity(id)
+    Task { @MainActor in
+      defer { self.resumeCountdownForActivity(id) }
+      guard self.items.contains(where: { $0.id == id }) else { return }
+      await QuickAccessActionPerformer.shared.copy(item)
       DiagnosticLogger.shared.log(
         .info,
         .clipboard,
-        "Quick access copied video file to clipboard",
+        item.cloudURL != nil ? "Quick access copied cloud link to clipboard"
+          : (item.isVideo ? "Quick access copied video file to clipboard" : "Quick access copied image to clipboard"),
         context: ["fileName": url.lastPathComponent]
       )
-    } else {
-      ClipboardHelper.copyImage(from: url)
-      DiagnosticLogger.shared.log(
-        .info,
-        .clipboard,
-        "Quick access copied image to clipboard",
-        context: ["fileName": url.lastPathComponent]
-      )
+      // Remove the card without deleting the temp file (same as drag-to-app):
+      // the receiving app reads it at paste time. Orphans are cleaned on launch.
+      self.dismissCard(id: id)
+      QuickAccessSound.copy.play()
     }
-
-    // Remove card from UI without deleting the temp file (same as drag-to-app).
-    dismissCard(id: id)
-
-    // File-based clipboard: the file must stay on disk so the receiving app
-    // can read it at paste time. Orphaned temp files are cleaned on next launch.
-
-    QuickAccessSound.copy.play()
   }
 
   /// Delete item from disk and remove from stack

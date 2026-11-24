@@ -17,8 +17,11 @@ struct AutomationStepListView: View {
   var body: some View {
     VStack(spacing: 0) {
       List(selection: $selection) {
-        AutomationListRowLayout(symbol: "bolt.circle", title: L10n.Automations.triggersRow)
-          .tag(AutomationEditorSelection.triggers)
+        // A default after-capture automation has no source or triggers to edit.
+        if !automation.isSystemDefault {
+          AutomationListRowLayout(symbol: "bolt.circle", title: L10n.Automations.triggersRow)
+            .tag(AutomationEditorSelection.triggers)
+        }
 
         Section(L10n.Automations.stepsLabel) {
           ForEach($automation.steps) { $step in
@@ -149,7 +152,7 @@ struct AutomationStepListView: View {
     if automation.steps.indices.contains(index) {
       selection = .step(automation.steps[index].id)
     } else {
-      selection = automation.steps.last.map { .step($0.id) } ?? .triggers
+      selection = automation.steps.last.map { .step($0.id) } ?? (automation.isSystemDefault ? nil : .triggers)
     }
   }
 

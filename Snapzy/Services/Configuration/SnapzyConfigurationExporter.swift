@@ -26,7 +26,10 @@ enum SnapzyConfigurationExporter {
     writeCloud(&writer, defaults: defaults)
     writeAnnotate(&writer, defaults: defaults)
     writeShortcuts(&writer)
-    SnapzyConfigurationAutomationsCodec.write(AutomationStore.shared.automations, to: &writer)
+    // A default after-capture pipeline the `capture.after.*` keys can't express
+    // is written as an automation too (milestone 6); simple ones stay keys only.
+    let customDefaults = AutomationStore.shared.systemAutomations.filter(\.isCustomizedSystemDefault)
+    SnapzyConfigurationAutomationsCodec.write(AutomationStore.shared.automations + customDefaults, to: &writer)
 
     return writer.output
   }
@@ -111,6 +114,14 @@ enum SnapzyConfigurationExporter {
 
     writeAfterCapture(&writer, type: .screenshot)
     writeAfterCapture(&writer, type: .recording)
+
+    // Unified capture toolbar (milestone 6, #498).
+    let toolbar = CaptureToolbarConfigurationStore.shared.configuration
+    writer.section("capture.toolbar")
+    writer.value("show_for_area", toolbar.showsForAreaShortcut)
+    writer.value("double_click", toolbar.doubleClickAction?.token ?? "none")
+    writer.stringArray("buttons", toolbar.tomlButtons)
+    writer.stringArray("hidden", toolbar.tomlHidden)
   }
 
   private static func writeRecording(_ writer: inout SimpleTOMLWriter, defaults: UserDefaults) {

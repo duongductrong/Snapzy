@@ -21,6 +21,7 @@
 //    quick_access = true
 //    history = true
 //    finder = false               # Finder "Run Snapzy Automation…" + menu bar drop
+//    capture_toolbar = false      # button in the unified capture toolbar (milestone 6)
 //    external_invocation = false
 //    data = "{…}"   # full JSON; keeps what the keys can't (newer steps or
 //                   # sources). Keys win when edited.
@@ -94,6 +95,7 @@ enum SnapzyConfigurationAutomationsCodec {
       writer.value("quick_access", automation.showsInQuickAccess)
       writer.value("history", automation.showsInHistory)
       writer.value("finder", automation.showsInFinder)
+      writer.value("capture_toolbar", automation.showsInCaptureToolbar)
       writer.value("external_invocation", automation.externalInvocation)
 
       for (stepIndex, step) in automation.steps.flatMap(\.migrated).enumerated() {
@@ -244,11 +246,16 @@ enum SnapzyConfigurationAutomationsCodec {
       if let history = fields["history"]?.boolValue {
         automation.showsInHistory = history
       }
+      if let captureToolbar = fields["capture_toolbar"]?.boolValue {
+        automation.showsInCaptureToolbar = captureToolbar
+      }
       if let finder = fields["finder"]?.boolValue {
         automation.showsInFinder = finder
       }
-      automation.presetID = fields["preset"]?.stringValue.flatMap { AutomationPreset(rawValue: $0)?.rawValue }
-        ?? (fields["preset"] == nil ? base?.presetID : nil)
+      // Built-in presets, and the default after-capture automations (milestone 6).
+      automation.presetID = fields["preset"]?.stringValue.flatMap {
+        AutomationPreset(rawValue: $0)?.rawValue ?? (AutomationSystemDefault.captureType(presetID: $0) != nil ? $0 : nil)
+      } ?? (fields["preset"] == nil ? base?.presetID : nil)
       if automation.symbol == nil {
         automation.symbol = automation.presetID.flatMap(AutomationPreset.init(rawValue:))?.symbol
       }
@@ -275,11 +282,15 @@ enum SnapzyConfigurationAutomationsCodec {
       parsed.append((fields["order"]?.intValue ?? Int.max, reviewed))
     }
 
-    var automations = parsed.sorted { $0.order < $1.order }.map(\.automation)
+    let sorted = parsed.sorted { $0.order < $1.order }.map(\.automation)
+    // Default after-capture automations don't count against the cap.
+    let systemDefaults = sorted.filter(\.isSystemDefault)
+    var automations = sorted.filter { !$0.isSystemDefault }
     if automations.count > AutomationStore.maxAutomations {
       warnings.append("Only the first \(AutomationStore.maxAutomations) automations were imported")
       automations = Array(automations.prefix(AutomationStore.maxAutomations))
     }
+    automations += systemDefaults
 
     var seenHotkeys = Set<String>()
     for index in automations.indices {

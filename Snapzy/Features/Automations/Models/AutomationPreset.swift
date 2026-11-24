@@ -19,6 +19,8 @@ enum AutomationPreset: String, CaseIterable {
   // Milestone 5
   case shareMenu = "share-menu"
   case designRouter = "design-router"
+  // Milestone 6
+  case safeShare = "safe-share"
 
   /// Bundle ids Design Router sends to the design folder (Figma, Sketch).
   static let designAppBundleIDs = ["com.figma.Desktop", "com.bohemiancoding.sketch3"]
@@ -37,6 +39,7 @@ enum AutomationPreset: String, CaseIterable {
     case .translateSnip: "Translate Snip"
     case .shareMenu: "Share Menu"
     case .designRouter: "Design Router"
+    case .safeShare: "Safe Share"
     }
   }
 
@@ -49,6 +52,7 @@ enum AutomationPreset: String, CaseIterable {
     case .translateSnip: L10n.Automations.presetTranslateSnip
     case .shareMenu: L10n.Automations.presetShareMenu
     case .designRouter: L10n.Automations.presetDesignRouter
+    case .safeShare: L10n.Automations.presetSafeShare
     }
   }
 
@@ -61,6 +65,7 @@ enum AutomationPreset: String, CaseIterable {
     case .translateSnip: "character.bubble"
     case .shareMenu: "list.bullet.rectangle"
     case .designRouter: "arrow.triangle.branch"
+    case .safeShare: "eye.slash.circle"
     }
   }
 
@@ -137,6 +142,15 @@ enum AutomationPreset: String, CaseIterable {
       ]
       // Needs the design folder before it can run.
       isEnabled = false
+    case .safeShare:
+      // Cover emails, numbers and tokens on this Mac before the image is uploaded.
+      source = .capture(AutomationCaptureSpec(mode: .area, saveToExportDirectory: false))
+      steps = [
+        AutomationStep(.redact(AutomationRedactConfig())),
+        AutomationStep(.upload(AutomationUploadConfig())),
+        AutomationStep(.copyLink(AutomationLinkTemplate(style: .url))),
+        AutomationStep(.notify),
+      ]
     }
     return Automation(
       name: storedName,
@@ -148,5 +162,57 @@ enum AutomationPreset: String, CaseIterable {
       steps: steps,
       presetID: rawValue
     )
+  }
+}
+
+// MARK: - Gallery (milestone 6)
+
+/// Who a built-in recipe is for (roadmap §2); groups the gallery.
+enum AutomationRecipePersona: CaseIterable, Identifiable {
+  case sharing
+  case docsAndDesign
+  case support
+  case reading
+  case privacy
+
+  var id: Self { self }
+
+  var title: String {
+    switch self {
+    case .sharing: L10n.Automations.personaSharing
+    case .docsAndDesign: L10n.Automations.personaDocsDesign
+    case .support: L10n.Automations.personaSupport
+    case .reading: L10n.Automations.personaReading
+    case .privacy: L10n.Automations.personaPrivacy
+    }
+  }
+
+  var presets: [AutomationPreset] {
+    AutomationPreset.allCases.filter { $0.persona == self }
+  }
+}
+
+extension AutomationPreset {
+  var persona: AutomationRecipePersona {
+    switch self {
+    case .quickCopy, .cloudShare, .shareMenu: .sharing
+    case .docsShot, .designRouter: .docsAndDesign
+    case .gifShare: .support
+    case .translateSnip: .reading
+    case .safeShare: .privacy
+    }
+  }
+
+  var galleryDescription: String {
+    switch self {
+    case .quickCopy: L10n.Automations.galleryQuickCopy
+    case .cloudShare: L10n.Automations.galleryCloudShare
+    case .docsShot: L10n.Automations.galleryDocsShot
+    case .gifShare: L10n.Automations.galleryGIFShare
+    case .translateSnip: L10n.Automations.galleryTranslateSnip
+    case .shareMenu: L10n.Automations.galleryShareMenu
+    case .designRouter: L10n.Automations.galleryDesignRouter
+    case .safeShare: L10n.Automations.gallerySafeShare
+    }
   }
 }

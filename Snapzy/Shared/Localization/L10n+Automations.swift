@@ -2311,5 +2311,589 @@ extension L10n {
       defaultValue: "Design Router",
       comment: "Built-in automation: save Figma/Sketch windows to a design folder, others to the export folder"
     )
+
+    // MARK: - Milestone 6: default after-capture automations
+
+    static let systemDefaultScreenshotName = string(
+      "automations.system-default.screenshot.name",
+      defaultValue: "Default after screenshot",
+      comment: "Name of the built-in automation every standard screenshot runs"
+    )
+    static let systemDefaultRecordingName = string(
+      "automations.system-default.recording.name",
+      defaultValue: "Default after recording",
+      comment: "Name of the built-in automation every standard recording runs"
+    )
+    static let invocationAfterCapture = string(
+      "automations.invocation.after-capture",
+      defaultValue: "After capture",
+      comment: "Name of a way an automation was started: a normal capture ran its default automation"
+    )
+    static let systemDefaultSection = string(
+      "automations.system-default.section",
+      defaultValue: "Default after capture",
+      comment: "Settings section listing the two default after-capture automations"
+    )
+    static let systemDefaultSectionFooter = string(
+      "automations.system-default.section-footer",
+      defaultValue: "Every screenshot or recording not started by an automation runs these steps. The After Capture options in Capture settings edit the same pipelines.",
+      comment: "Footer of the default after-capture section"
+    )
+    static let systemDefaultCustomize = string(
+      "automations.system-default.customize",
+      defaultValue: "Customize Pipeline…",
+      comment: "Button: open the default after-capture automation in the full editor"
+    )
+    static let systemDefaultEdit = string(
+      "automations.system-default.edit",
+      defaultValue: "Edit…",
+      comment: "Button: edit a custom default after-capture pipeline"
+    )
+    static let systemDefaultReset = string(
+      "automations.system-default.reset",
+      defaultValue: "Reset to Simple",
+      comment: "Button: turn a custom default after-capture pipeline back into the simple checkbox form"
+    )
+    static let systemDefaultResetConfirm = string(
+      "automations.system-default.reset-confirm",
+      defaultValue: "Steps the checkboxes can't show are removed.",
+      comment: "Confirmation message before resetting a custom after-capture pipeline"
+    )
+    static let systemDefaultCustomBadge = string(
+      "automations.system-default.custom-badge",
+      defaultValue: "Custom",
+      comment: "Badge: this capture type runs a custom after-capture pipeline"
+    )
+    static func systemDefaultCustomSummary(_ kind: String) -> String {
+      format(
+        "automations.system-default.custom-summary",
+        defaultValue: "%@ runs a custom pipeline",
+        comment: "Row in After Capture settings. %@ = Screenshot or Recording",
+        kind
+      )
+    }
+    static let systemDefaultNoSteps = string(
+      "automations.system-default.no-steps",
+      defaultValue: "Save only",
+      comment: "Summary of a default after-capture automation with no steps"
+    )
+    static let systemDefaultEditorNote = string(
+      "automations.system-default.editor-note",
+      defaultValue: "Runs after every capture that no automation started. Its Save option is in Capture settings.",
+      comment: "Banner in the editor for a default after-capture automation"
+    )
+
+    // MARK: - Milestone 6: AI steps (redact, AI describe)
+
+    static let stepRedact = string(
+      "automations.step.redact",
+      defaultValue: "Redact",
+      comment: "Step name: cover sensitive data (emails, tokens, faces) in the image"
+    )
+    static let stepAIAnnotate = string(
+      "automations.step.ai-annotate",
+      defaultValue: "AI Describe",
+      comment: "Step name: an AI provider writes text about the image (alt text, summary)"
+    )
+    static let describeRedact = string(
+      "automations.step.redact.describe",
+      defaultValue: "Finds emails, phone numbers, card numbers, tokens, faces or people on this Mac and covers them. Put it before any upload.",
+      comment: "Inspector description of the Redact step"
+    )
+    static let describeAIAnnotate = string(
+      "automations.step.ai-annotate.describe",
+      defaultValue: "Sends the image and your prompt to your AI provider. Its answer becomes {text} for Copy Text, Save or a webhook.",
+      comment: "Inspector description of the AI Describe step"
+    )
+    static let redactCategoriesLabel = string(
+      "automations.redact.categories",
+      defaultValue: "Cover",
+      comment: "Redact inspector section header: which kinds of data to cover"
+    )
+    static let redactEmails = string(
+      "automations.redact.emails",
+      defaultValue: "Email addresses",
+      comment: "Redact category"
+    )
+    static let redactPhoneNumbers = string(
+      "automations.redact.phone-numbers",
+      defaultValue: "Phone numbers",
+      comment: "Redact category"
+    )
+    static let redactURLs = string(
+      "automations.redact.urls",
+      defaultValue: "Links",
+      comment: "Redact category"
+    )
+    static let redactPaymentCards = string(
+      "automations.redact.payment-cards",
+      defaultValue: "Payment cards",
+      comment: "Redact category: card numbers, expiry dates, cardholder names"
+    )
+    static let redactCredentials = string(
+      "automations.redact.credentials",
+      defaultValue: "Passwords & tokens",
+      comment: "Redact category: passwords, API keys, access tokens"
+    )
+    static let redactFaces = string(
+      "automations.redact.faces",
+      defaultValue: "Faces",
+      comment: "Redact category"
+    )
+    static let redactPeople = string(
+      "automations.redact.people",
+      defaultValue: "People",
+      comment: "Redact category: whole bodies"
+    )
+    static let redactStyleLabel = string(
+      "automations.redact.style",
+      defaultValue: "Style",
+      comment: "Redact inspector picker label"
+    )
+    static let redactStylePixelate = string(
+      "automations.redact.style.pixelate",
+      defaultValue: "Pixelate",
+      comment: "Redact style"
+    )
+    static let redactStyleBlur = string(
+      "automations.redact.style.blur",
+      defaultValue: "Blur",
+      comment: "Redact style"
+    )
+    static let redactStyleSolid = string(
+      "automations.redact.style.solid",
+      defaultValue: "Black box",
+      comment: "Redact style: solid black rectangle"
+    )
+    static let redactPrivacyNote = string(
+      "automations.redact.privacy-note",
+      defaultValue: "Detection runs on this Mac. Nothing is sent anywhere, and the run log keeps only how many areas were covered.",
+      comment: "Redact inspector footer"
+    )
+    static let redactNothing = string(
+      "automations.redact.nothing",
+      defaultValue: "Nothing selected",
+      comment: "Redact step summary when no category is on"
+    )
+    static let aiPromptLabel = string(
+      "automations.ai.prompt",
+      defaultValue: "Prompt",
+      comment: "AI Describe inspector field"
+    )
+    static let aiProviderLabel = string(
+      "automations.ai.provider",
+      defaultValue: "AI provider",
+      comment: "AI Describe inspector picker"
+    )
+    static let aiProviderSettings = string(
+      "automations.ai.provider.settings",
+      defaultValue: "As in AI settings",
+      comment: "AI Describe provider choice: the provider chosen in Settings"
+    )
+    static let aiPrivacyNote = string(
+      "automations.ai.privacy-note",
+      defaultValue: "The image leaves this Mac. Snapzy asks once per provider before sending; runs from the CLI or Shortcuts fail until you have agreed.",
+      comment: "AI Describe inspector footer"
+    )
+    static let aiOutputNote = string(
+      "automations.ai.output-note",
+      defaultValue: "Apple Intelligence can't see images, so pick an AI endpoint or agent CLI.",
+      comment: "AI Describe inspector footer"
+    )
+    static let errorAINotConfigured = string(
+      "automations.error.ai-not-configured",
+      defaultValue: "No AI provider can look at images. Add an AI endpoint or agent CLI in Settings → AI.",
+      comment: "Run error of the AI Describe step"
+    )
+    static let issueRedactAfterNetwork = string(
+      "automations.issue.redact-after-network",
+      defaultValue: "Runs after the image was already sent; move Redact up",
+      comment: "Editor warning: the Redact step comes after an upload or webhook"
+    )
+    static func logRedactedCount(_ count: Int) -> String {
+      format(
+        "automations.log.redacted-count",
+        defaultValue: "%lld areas covered",
+        comment: "Run log detail of the Redact step. %lld = number of covered areas",
+        count
+      )
+    }
+    static func errorAIConsent(_ name: String) -> String {
+      format(
+        "automations.error.ai-consent",
+        defaultValue: "Sending images to %@ isn't allowed yet. Run this automation from Snapzy once to agree.",
+        comment: "Run error of the AI Describe step. %@ = provider name",
+        name
+      )
+    }
+    static func aiConsentTitle(_ name: String) -> String {
+      format(
+        "automations.ai.consent.title",
+        defaultValue: "Send captures to %@?",
+        comment: "Consent alert title. %@ = AI provider name",
+        name
+      )
+    }
+    static func aiConsentMessage(_ host: String) -> String {
+      format(
+        "automations.ai.consent.message",
+        defaultValue: "This automation sends each capture it runs on, with your prompt, to %@. Only agree if you trust that service with your screenshots.",
+        comment: "Consent alert message. %@ = host name",
+        host
+      )
+    }
+    static func aiConsentMessageCLI(_ name: String) -> String {
+      format(
+        "automations.ai.consent.message-cli",
+        defaultValue: "This automation hands each capture it runs on, with your prompt, to %@, which forwards it to its own model provider and may load your MCP servers and hooks.",
+        comment: "Consent alert message for agent CLIs. %@ = CLI name",
+        name
+      )
+    }
+    static let invocationCaptureToolbar = string(
+      "automations.invocation.capture-toolbar",
+      defaultValue: "Capture toolbar",
+      comment: "Name of a way an automation was started: a capture toolbar button"
+    )
+    static let showInCaptureToolbar = string(
+      "automations.trigger.capture-toolbar",
+      defaultValue: "Capture toolbar",
+      comment: "Trigger toggle: show this automation as a capture toolbar button"
+    )
+    static func importURLConfirmTitle(_ host: String) -> String {
+      format(
+        "automations.import.url-confirm.title",
+        defaultValue: "Download automations from %@?",
+        comment: "Alert before importing a recipe from a link. %@ = host name",
+        host
+      )
+    }
+    static let importURLConfirmMessage = string(
+      "automations.import.url-confirm.message",
+      defaultValue: "Snapzy downloads the file and shows what it contains. Nothing is added or turned on until you choose to import.",
+      comment: "Alert message before importing a recipe from a link"
+    )
+    static let importURLConfirmButton = string(
+      "automations.import.url-confirm.button",
+      defaultValue: "Download",
+      comment: "Alert button: download the recipe file"
+    )
+    static let presetSafeShare = string(
+      "automations.preset.safe-share",
+      defaultValue: "Safe Share",
+      comment: "Built-in automation: capture an area, cover sensitive data, upload and copy the link"
+    )
+
+    // MARK: - Milestone 6: recipe gallery & sharing
+
+    static let personaSharing = string(
+      "automations.persona.sharing",
+      defaultValue: "Chat & sharing",
+      comment: "Gallery group: recipes for sharing captures in chats"
+    )
+    static let personaDocsDesign = string(
+      "automations.persona.docs-design",
+      defaultValue: "Docs & design",
+      comment: "Gallery group"
+    )
+    static let personaSupport = string(
+      "automations.persona.support",
+      defaultValue: "Support & QA",
+      comment: "Gallery group"
+    )
+    static let personaReading = string(
+      "automations.persona.reading",
+      defaultValue: "Reading & translation",
+      comment: "Gallery group"
+    )
+    static let personaPrivacy = string(
+      "automations.persona.privacy",
+      defaultValue: "Privacy",
+      comment: "Gallery group"
+    )
+    static let galleryQuickCopy = string(
+      "automations.gallery.quick-copy",
+      defaultValue: "Capture an area and copy the image, ready to paste in a chat.",
+      comment: "Gallery description"
+    )
+    static let galleryCloudShare = string(
+      "automations.gallery.cloud-share",
+      defaultValue: "Copy the image, upload it and copy its link.",
+      comment: "Gallery description"
+    )
+    static let galleryDocsShot = string(
+      "automations.gallery.docs-shot",
+      defaultValue: "Window capture with your canvas preset, resized to 1600 px, saved as WebP to your docs folder with a Markdown link copied.",
+      comment: "Gallery description"
+    )
+    static let galleryGIFShare = string(
+      "automations.gallery.gif-share",
+      defaultValue: "Record an area as a GIF, upload it and copy the link.",
+      comment: "Gallery description"
+    )
+    static let galleryTranslateSnip = string(
+      "automations.gallery.translate-snip",
+      defaultValue: "Read the text in an area, translate it and copy the result.",
+      comment: "Gallery description"
+    )
+    static let galleryShareMenu = string(
+      "automations.gallery.share-menu",
+      defaultValue: "One shortcut, then pick Quick Copy, Cloud Share or Docs Shot after capturing.",
+      comment: "Gallery description"
+    )
+    static let galleryDesignRouter = string(
+      "automations.gallery.design-router",
+      defaultValue: "Figma and Sketch windows go to your design folder, everything else to the export folder.",
+      comment: "Gallery description"
+    )
+    static let gallerySafeShare = string(
+      "automations.gallery.safe-share",
+      defaultValue: "Cover emails, phone and card numbers and tokens on this Mac, then upload and copy the link.",
+      comment: "Gallery description"
+    )
+    static let galleryTitle = string(
+      "automations.gallery.title",
+      defaultValue: "Gallery",
+      comment: "Sheet title: built-in automation recipes"
+    )
+    static let galleryButton = string(
+      "automations.gallery.button",
+      defaultValue: "Gallery…",
+      comment: "Button: open the built-in recipe gallery"
+    )
+    static let galleryAdd = string(
+      "automations.gallery.add",
+      defaultValue: "Add",
+      comment: "Gallery button: add this recipe as a new automation"
+    )
+    static let galleryAdded = string(
+      "automations.gallery.added",
+      defaultValue: "Added",
+      comment: "Gallery label: this recipe is already in the list"
+    )
+    static let galleryNeedsSetupNote = string(
+      "automations.gallery.needs-setup",
+      defaultValue: "Added off until you choose a folder",
+      comment: "Gallery note under recipes that need a folder"
+    )
+    static let importButton = string(
+      "automations.import.button",
+      defaultValue: "Import…",
+      comment: "Button: import automations from a .snapzyautomation file"
+    )
+    static let importTitle = string(
+      "automations.import.title",
+      defaultValue: "Import Automations",
+      comment: "Import sheet title"
+    )
+    static let importConfirm = string(
+      "automations.import.confirm",
+      defaultValue: "Import",
+      comment: "Import sheet confirm button"
+    )
+    static let importNeedsSetup = string(
+      "automations.import.needs-setup",
+      defaultValue: "Needs setup",
+      comment: "Import sheet badge: a folder, uploader or secret must be chosen first"
+    )
+    static let importNeedsReview = string(
+      "automations.import.needs-review",
+      defaultValue: "Review before use",
+      comment: "Import sheet badge: webhook, script or AI steps must be reviewed in the editor"
+    )
+    static let importDisabledNote = string(
+      "automations.import.disabled-note",
+      defaultValue: "Imported automations from a link start turned off.",
+      comment: "Import sheet footer for URL imports"
+    )
+    static let importOverCap = string(
+      "automations.import.over-cap",
+      defaultValue: "Only the first ones fit: you can have up to 20 automations.",
+      comment: "Import sheet warning"
+    )
+    static let trustLocal = string(
+      "automations.trust.local",
+      defaultValue: "On this Mac",
+      comment: "Trust badge: all steps run locally"
+    )
+    static let trustNetwork = string(
+      "automations.trust.network",
+      defaultValue: "Uses the network",
+      comment: "Trust badge: uploads, webhooks or AI"
+    )
+    static let trustCode = string(
+      "automations.trust.code",
+      defaultValue: "Runs code",
+      comment: "Trust badge: scripts or Shortcuts"
+    )
+    static let exportButton = string(
+      "automations.export.button",
+      defaultValue: "Export…",
+      comment: "Menu item: save the automation as a .snapzyautomation file"
+    )
+    static let copyTOML = string(
+      "automations.export.copy-toml",
+      defaultValue: "Copy as TOML",
+      comment: "Menu item: copy the automation as a config-file snippet"
+    )
+    static let copiedTOML = string(
+      "automations.export.copied-toml",
+      defaultValue: "TOML copied",
+      comment: "Toast after copying a TOML snippet"
+    )
+    static let exportAll = string(
+      "automations.export.all",
+      defaultValue: "Export All…",
+      comment: "Button: save every automation in one .snapzyautomation file"
+    )
+    static let recipeErrorNotARecipe = string(
+      "automations.recipe.error.not-a-recipe",
+      defaultValue: "This isn't a Snapzy automation file.",
+      comment: "Import error"
+    )
+    static let recipeErrorEmpty = string(
+      "automations.recipe.error.empty",
+      defaultValue: "The file has no automations this version of Snapzy can read.",
+      comment: "Import error"
+    )
+    static let recipeErrorTooLarge = string(
+      "automations.recipe.error.too-large",
+      defaultValue: "The file is too large (links: 256 KB, files: 1 MB).",
+      comment: "Import error"
+    )
+    static let recipeErrorInsecureURL = string(
+      "automations.recipe.error.insecure-url",
+      defaultValue: "Automations can only be imported from https:// links.",
+      comment: "Import error"
+    )
+    static func recipeErrorVersion(_ version: Int) -> String {
+      format(
+        "automations.recipe.error.version",
+        defaultValue: "This file needs a newer Snapzy (format %lld).",
+        comment: "Import error. %lld = file format version",
+        version
+      )
+    }
+  }
+
+  nonisolated enum CaptureToolbar {
+    static let screenshot = L10n.string(
+      "automations.toolbar.screenshot",
+      defaultValue: "Screenshot",
+      comment: "Capture toolbar button: keep the capture and run the default after-capture steps"
+    )
+    static let copy = L10n.string(
+      "automations.toolbar.copy",
+      defaultValue: "Copy",
+      comment: "Capture toolbar button"
+    )
+    static let save = L10n.string(
+      "automations.toolbar.save",
+      defaultValue: "Save",
+      comment: "Capture toolbar button"
+    )
+    static let upload = L10n.string(
+      "automations.toolbar.upload",
+      defaultValue: "Upload",
+      comment: "Capture toolbar button"
+    )
+    static let pin = L10n.string(
+      "automations.toolbar.pin",
+      defaultValue: "Pin",
+      comment: "Capture toolbar button"
+    )
+    static let annotate = L10n.string(
+      "automations.toolbar.annotate",
+      defaultValue: "Annotate",
+      comment: "Capture toolbar button"
+    )
+    static let text = L10n.string(
+      "automations.toolbar.text",
+      defaultValue: "Text",
+      comment: "Capture toolbar button: recognize and copy the text"
+    )
+    static let record = L10n.string(
+      "automations.toolbar.record",
+      defaultValue: "Record",
+      comment: "Capture toolbar button: record this area"
+    )
+    static let scroll = L10n.string(
+      "automations.toolbar.scroll",
+      defaultValue: "Scroll",
+      comment: "Capture toolbar button: scrolling capture of this area"
+    )
+    static let cancelHelp = L10n.string(
+      "automations.toolbar.cancel-help",
+      defaultValue: "Cancel (Esc)",
+      comment: "Capture toolbar close button tooltip"
+    )
+    static let accessibilityLabel = L10n.string(
+      "automations.toolbar.accessibility",
+      defaultValue: "Capture actions",
+      comment: "VoiceOver label of the capture toolbar"
+    )
+    static let shortcutTitle = L10n.string(
+      "automations.toolbar.shortcut",
+      defaultValue: "Capture with Toolbar",
+      comment: "Shortcut / menu name: select an area, then pick an action from a toolbar"
+    )
+    static let settingsSection = L10n.string(
+      "automations.toolbar.settings.section",
+      defaultValue: "Capture toolbar",
+      comment: "Capture settings section title"
+    )
+    static let settingsDescription = L10n.string(
+      "automations.toolbar.settings.description",
+      defaultValue: "Select an area, then pick what to do from a toolbar under it. Press a button's letter, Return for the first one, or Esc to cancel.",
+      comment: "Capture settings section description"
+    )
+    static let showForArea = L10n.string(
+      "automations.toolbar.settings.show-for-area",
+      defaultValue: "Also use the toolbar for Capture Area",
+      comment: "Toggle: the area shortcut ends in the toolbar too"
+    )
+    static let doubleClickLabel = L10n.string(
+      "automations.toolbar.settings.double-click",
+      defaultValue: "Double-click in selection",
+      comment: "Picker label: what double-clicking inside the selection does"
+    )
+    static let doubleClickNone = L10n.string(
+      "automations.toolbar.settings.double-click-none",
+      defaultValue: "Nothing",
+      comment: "Double-click action choice"
+    )
+    static let itemsHeader = L10n.string(
+      "automations.toolbar.settings.items",
+      defaultValue: "Buttons",
+      comment: "Settings list header"
+    )
+    static let acceleratorLabel = L10n.string(
+      "automations.toolbar.settings.accelerator",
+      defaultValue: "Key",
+      comment: "Column / field: single-key accelerator"
+    )
+    static let acceleratorTaken = L10n.string(
+      "automations.toolbar.settings.accelerator-taken",
+      defaultValue: "Already used by another button",
+      comment: "Validation message"
+    )
+    static let automationsNote = L10n.string(
+      "automations.toolbar.settings.automations-note",
+      defaultValue: "Automations appear here when “Capture toolbar” is on in their triggers.",
+      comment: "Settings footer"
+    )
+    static let resetButton = L10n.string(
+      "automations.toolbar.settings.reset",
+      defaultValue: "Reset Toolbar",
+      comment: "Button: restore the default toolbar"
+    )
+    static func acceleratorHint(_ key: String) -> String {
+      L10n.format(
+        "automations.toolbar.accelerator-hint",
+        defaultValue: "Press %@",
+        comment: "VoiceOver hint. %@ = key",
+        key
+      )
+    }
   }
 }

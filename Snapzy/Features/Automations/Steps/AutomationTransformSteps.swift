@@ -10,11 +10,11 @@
 import Foundation
 
 /// Runs a nonisolated file transform off the main actor.
-private func offMain<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+func offMain<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
   try await Task.detached(priority: .userInitiated, operation: work).value
 }
 
-private extension AutomationRunState {
+extension AutomationRunState {
   /// Base name for a working file derived from `url`.
   func workingBaseName(for url: URL) -> String {
     let original = payload.files.first { $0.url == url }?.original ?? url
@@ -27,7 +27,7 @@ private extension AutomationRunState {
   }
 }
 
-private func mapTransformError(_ error: Error) -> Error {
+func mapTransformError(_ error: Error) -> Error {
   switch error {
   case AutomationImageTransformError.unreadable: AutomationStepError.noFile
   case AutomationImageTransformError.encodeFailed: AutomationStepError.renderFailed

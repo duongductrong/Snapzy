@@ -814,12 +814,10 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         let fileAccess = SandboxFileAccessManager.shared.beginAccessingURL(fileURL)
         defer { fileAccess.stop() }
 
-        let result = try await CloudManager.shared.upload(fileURL: fileURL)
+        let result = try await CloudShareService.shared.upload(fileURL: fileURL)
 
         // Store cloud link on pasteboard
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(result.publicURL.absoluteString, forType: .string)
+        ClipboardHelper.copyText(result.publicURL.absoluteString)
 
         SoundManager.play("Pop")
 

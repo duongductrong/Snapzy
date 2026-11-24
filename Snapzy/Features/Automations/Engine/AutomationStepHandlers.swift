@@ -50,6 +50,9 @@ struct AutomationRunState {
   var warnings: [String] = []
   /// Secret values a step resolved; masked out of errors and the run log.
   var secretValues: Set<String> = []
+  /// A note the step that just ran leaves for its run log row (e.g. "3 areas
+  /// covered"). The runner takes it after each step.
+  var stepDetail: String?
 
   init(
     runID: UUID,
@@ -224,6 +227,8 @@ enum AutomationStepRegistry {
     case .shareSheet: ShareSheetStepHandler()
     case .openInApp: OpenInAppStepHandler()
     case .condition, .stop, .runAutomation, .ask: ControlStepHandler()
+    case .redact: RedactStepHandler()
+    case .aiAnnotate: AIAnnotateStepHandler()
     }
   }
 

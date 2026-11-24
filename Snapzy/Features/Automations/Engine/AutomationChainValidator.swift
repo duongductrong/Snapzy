@@ -37,6 +37,8 @@ struct AutomationChainIssue: Equatable, Sendable {
     case recursion
     /// The automation Run Automation / Ask runs has a step with nothing to work on here.
     case targetCannotRun
+    /// Redact runs after a step that already sent the image off the Mac (milestone 6).
+    case redactAfterNetwork
   }
 
   enum Field: Equatable, Sendable {
@@ -71,8 +73,13 @@ struct AutomationChainIssue: Equatable, Sendable {
     case .needs, .recursion, .targetCannotRun: true
     // An unset predicate would silently end (or skip) every run.
     case .missingConfig(.condition): true
-    case .missingConfig: false
+    case .missingConfig, .redactAfterNetwork: false
     }
+  }
+
+  /// Advice only: the automation runs as is and needs no setup.
+  var isWarning: Bool {
+    reason == .redactAfterNetwork
   }
 }
 
@@ -102,6 +109,24 @@ enum AutomationChainValidator {
     )
     let initial = initialKinds ?? automation.source.initialPayloadKinds
     return analyze(automation.steps, paths: [initial], chain: [automation.id], checks: checks).issues
+      + redactOrderIssues(automation.steps)
+  }
+
+  /// Redact protects only what comes after it: warn when an earlier step
+  /// already uploaded / sent the image.
+  private static func redactOrderIssues(_ steps: [AutomationStep]) -> [AutomationChainIssue] {
+    var sentOff = false
+    var issues: [AutomationChainIssue] = []
+    for step in steps where step.isEnabled {
+      guard let action = step.action else { continue }
+      if action.kind == .redact, sentOff {
+        issues.append(AutomationChainIssue(stepID: step.id, reason: .redactAfterNetwork))
+      }
+      if AutomationTrust.tier(of: action) != .local, action.kind != .translate {
+        sentOff = true
+      }
+    }
+    return issues
   }
 
   static func blockingIssues(

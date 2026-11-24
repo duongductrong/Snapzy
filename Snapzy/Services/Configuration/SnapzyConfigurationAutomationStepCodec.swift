@@ -47,6 +47,8 @@ enum SnapzyConfigurationAutomationStepCodec {
     case .stop: "stop"
     case .runAutomation: "run_automation"
     case .ask: "ask"
+    case .redact: "redact"
+    case .aiAnnotate: "ai_annotate"
     }
   }
 
@@ -77,6 +79,8 @@ enum SnapzyConfigurationAutomationStepCodec {
     case .condition: ["match", "otherwise", "predicates"]
     case .runAutomation: ["target"]
     case .ask: ["prompt", "choices"]
+    case .redact: ["categories", "style"]
+    case .aiAnnotate: ["prompt", "provider"]
     default: []
     }
   }
@@ -190,6 +194,12 @@ enum SnapzyConfigurationAutomationStepCodec {
     case .ask(let config):
       if !config.prompt.isEmpty { writer.value("prompt", config.prompt) }
       writer.stringArray("choices", config.choices.map(\.token))
+    case .redact(let config):
+      writer.stringArray("categories", config.categories.map(\.rawValue))
+      writer.value("style", config.style.rawValue)
+    case .aiAnnotate(let config):
+      writer.value("prompt", config.prompt)
+      writer.value("provider", config.provider.persistedValue)
     case .copyImage, .showQuickAccess, .openAnnotate, .notify, .stripMetadata,
          .copyFile, .reveal, .pin, .stop:
       break
@@ -501,6 +511,29 @@ enum SnapzyConfigurationAutomationStepCodec {
         }
       }
       action = .ask(config)
+    case .redact:
+      var categories: [AutomationRedactConfig.Category] = []
+      for raw in fields["categories"]?.stringArrayValue ?? AutomationRedactConfig.defaultCategories.map(\.rawValue) {
+        if let category = AutomationRedactConfig.Category(rawValue: raw) {
+          categories.append(category)
+        } else {
+          warnings.append("\(path).categories: unknown category \"\(raw)\" ignored")
+        }
+      }
+      var style = AutomationRedactConfig.Style.pixelate
+      if let raw = string("style") {
+        if let parsed = AutomationRedactConfig.Style(rawValue: raw.lowercased()) {
+          style = parsed
+        } else {
+          warnings.append("\(path).style must be pixelate, blur or solid; using pixelate")
+        }
+      }
+      action = .redact(AutomationRedactConfig(categories: categories, style: style))
+    case .aiAnnotate:
+      action = .aiAnnotate(AutomationAIAnnotateConfig(
+        prompt: string("prompt") ?? AutomationAIAnnotateConfig.defaultPrompt,
+        provider: .init(persistedValue: string("provider"))
+      ))
     }
 
     var onFailure = AutomationFailurePolicy.stop

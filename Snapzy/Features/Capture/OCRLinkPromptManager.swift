@@ -315,8 +315,7 @@ private struct OCRLinkRowCard: View {
       HStack(spacing: 4) {
         // Copy Button
         Button {
-          NSPasteboard.general.clearContents()
-          NSPasteboard.general.setString(link.absoluteString, forType: .string)
+          ClipboardHelper.copyText(link.absoluteString)
           withAnimation(.easeInOut(duration: 0.15)) {
             isCopied = true
           }

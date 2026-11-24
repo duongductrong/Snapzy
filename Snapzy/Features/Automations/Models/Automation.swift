@@ -137,6 +137,8 @@ enum AutomationTrigger: Equatable {
   /// Offered by Finder's "Run Snapzy Automation…" service and when files are
   /// dropped on the menu bar icon (milestone 5).
   case finderQuickAction
+  /// A button in the unified capture toolbar (milestone 6, #498).
+  case captureToolbar
   case unsupported(AutomationJSONValue)
 
   /// Stored kinds without a payload, keyed by their JSON `kind`.
@@ -145,6 +147,7 @@ enum AutomationTrigger: Equatable {
     "quickAccessAction": .quickAccessAction,
     "historyAction": .historyAction,
     "finderQuickAction": .finderQuickAction,
+    "captureToolbar": .captureToolbar,
   ]
 
   fileprivate var simpleKind: String? {
@@ -153,6 +156,7 @@ enum AutomationTrigger: Equatable {
     case .quickAccessAction: "quickAccessAction"
     case .historyAction: "historyAction"
     case .finderQuickAction: "finderQuickAction"
+    case .captureToolbar: "captureToolbar"
     case .hotkey, .unsupported: nil
     }
   }
@@ -184,7 +188,7 @@ extension AutomationTrigger: Codable {
       var container = encoder.container(keyedBy: CodingKeys.self)
       try container.encode("hotkey", forKey: .kind)
       try container.encode(shortcut, forKey: .shortcut)
-    case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction:
+    case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction, .captureToolbar:
       var container = encoder.container(keyedBy: CodingKeys.self)
       try container.encode(simpleKind, forKey: .kind)
     case .unsupported(let raw):
@@ -248,6 +252,9 @@ enum AutomationStepAction: Equatable {
   case stop
   case runAutomation(AutomationRunAutomationConfig)
   case ask(AutomationAskConfig)
+  // AI (milestone 6)
+  case redact(AutomationRedactConfig)
+  case aiAnnotate(AutomationAIAnnotateConfig)
 
   var kind: AutomationStepKind {
     switch self {
@@ -279,6 +286,8 @@ enum AutomationStepAction: Equatable {
     case .stop: .stop
     case .runAutomation: .runAutomation
     case .ask: .ask
+    case .redact: .redact
+    case .aiAnnotate: .aiAnnotate
     }
   }
 
@@ -321,6 +330,8 @@ enum AutomationStepKind: String, Codable, CaseIterable, Identifiable, Sendable {
   case stop
   case runAutomation
   case ask
+  case redact
+  case aiAnnotate
 
   var id: String { rawValue }
 
@@ -363,6 +374,8 @@ enum AutomationStepKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case .stop: .stop
     case .runAutomation: .runAutomation(AutomationRunAutomationConfig())
     case .ask: .ask(AutomationAskConfig())
+    case .redact: .redact(AutomationRedactConfig())
+    case .aiAnnotate: .aiAnnotate(AutomationAIAnnotateConfig())
     }
   }
 }
@@ -473,6 +486,8 @@ extension AutomationStep: Codable {
     case .stop: .stop
     case .runAutomation: .runAutomation(config(AutomationRunAutomationConfig()))
     case .ask: .ask(config(AutomationAskConfig()))
+    case .redact: .redact(config(AutomationRedactConfig()))
+    case .aiAnnotate: .aiAnnotate(config(AutomationAIAnnotateConfig()))
     }
     content = .action(action)
   }
@@ -507,6 +522,8 @@ extension AutomationStep: Codable {
     case .condition(let config): try container.encode(config, forKey: .config)
     case .runAutomation(let config): try container.encode(config, forKey: .config)
     case .ask(let config): try container.encode(config, forKey: .config)
+    case .redact(let config): try container.encode(config, forKey: .config)
+    case .aiAnnotate(let config): try container.encode(config, forKey: .config)
     case .copyImage, .showQuickAccess, .openAnnotate, .notify, .stripMetadata,
          .copyFile, .reveal, .pin, .stop:
       break
@@ -611,6 +628,12 @@ struct Automation: Identifiable, Equatable {
     set { setTrigger(.finderQuickAction, on: newValue) }
   }
 
+  /// A button in the unified capture toolbar (milestone 6).
+  var showsInCaptureToolbar: Bool {
+    get { triggers.contains(.captureToolbar) }
+    set { setTrigger(.captureToolbar, on: newValue) }
+  }
+
   private mutating func setTrigger(_ trigger: AutomationTrigger, on: Bool) {
     triggers.removeAll { $0 == trigger }
     if on { triggers.append(trigger) }
@@ -667,8 +690,17 @@ struct Automation: Identifiable, Equatable {
     if copy.steps.count > Self.maxSteps {
       copy.steps = Array(copy.steps.prefix(Self.maxSteps))
     }
-    if !copy.steps.contains(where: { $0.action != nil }) {
+    // A default after-capture automation may legitimately do nothing (every matrix cell off).
+    if !copy.isSystemDefault, !copy.steps.contains(where: { $0.action != nil }) {
       copy.steps.insert(AutomationStep(.copyImage), at: 0)
+    }
+    if copy.isSystemDefault {
+      // Runs on every standard capture: no triggers, always on, never external.
+      copy.triggers = []
+      copy.isEnabled = true
+      copy.externalInvocation = false
+      copy.allowExternalCode = false
+      return copy
     }
 
     // The second opt-in only means something while the first is on.
@@ -686,7 +718,7 @@ struct Automation: Identifiable, Equatable {
         return !keptHotkey
       case .menuBar where needsInput:
         return false
-      case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction:
+      case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction, .captureToolbar:
         return seenSimple.insert(trigger.simpleKind ?? "").inserted
       case .unsupported:
         return true
@@ -697,6 +729,9 @@ struct Automation: Identifiable, Equatable {
 
   /// Name shown in the UI: built-in presets follow the app language until renamed.
   var displayName: String {
+    if let type = systemCaptureType, name == AutomationSystemDefault.storedName(for: type) {
+      return AutomationSystemDefault.localizedName(for: type)
+    }
     if let presetID, let preset = AutomationPreset(rawValue: presetID), name == preset.storedName {
       return preset.localizedName
     }

@@ -1,6 +1,6 @@
 # Post-Capture Routing
 
-Post-capture routing is everything that happens after a capture file exists: destination selection, clipboard copy, Quick Access handoff, annotate auto-open, and history recording. This doc covers `PostCaptureActionHandler`, `TempCaptureManager`, and their supporting services as of HEAD.
+Post-capture routing is everything that happens after a capture file exists: destination selection, clipboard copy, Quick Access handoff, annotate auto-open, and history recording. Since milestone 6 a standard capture runs its **default after-capture automation**, the editable form of the after-capture matrix. This doc covers `PostCaptureActionHandler`, `TempCaptureManager`, and their supporting services as of HEAD.
 
 ## Trigger Wiring
 
@@ -10,15 +10,37 @@ Post-capture routing is everything that happens after a capture file exists: des
 - **OCR exception**: Capture Text is the only capture path that writes no file — recognized text/QR payloads go straight to the pasteboard as plain text, so no post-capture routing runs. See [`CAPTURE.md`](CAPTURE.md).
 - Scrolling capture saves through `saveProcessedImage`, so it enters routing through the same publisher as any screenshot. See [`SCROLLING_CAPTURE.md`](SCROLLING_CAPTURE.md).
 
-## Automation Routing
+## Routing
 
-Every interactive screenshot carries a `PostCaptureRouting` inside its `CaptureContext`; `ScreenCaptureManager` emits `CaptureCompletionEvent(url, routing)`. `.standard` runs the matrix below. `.automation(runID)` (set by `AutomationLauncher` through `ScreenCaptureViewModel.startAutomationCapture`) hands the files to `AutomationRunner` instead: the matrix — including Save, which the automation decides through `TempCaptureManager.resolveSaveDirectory(saveOverride:)` — is skipped, the default canvas preset is still applied (unless the automation has an Apply canvas preset step), and history is still recorded. See [`AUTOMATIONS.md`](AUTOMATIONS.md).
+Every interactive screenshot carries a `PostCaptureRouting` inside its `CaptureContext`; `ScreenCaptureManager` emits `CaptureCompletionEvent(url, routing)`.
 
-Scrolling captures pass the routing into `saveProcessedImage(context:)`, so the stitched image takes the same path. Recordings started by an automation keep the routing in `RecordingCoordinator`: on stop, GIF output is converted and studio recordings flattened without a Quick Access card, then `AutomationRunner.complete` runs the steps instead of `handleVideoCapture`; the recording's save folder follows the automation (`makeRecordingSavePlan(saveOverride:)`). Deleting or cancelling a recording, or cancelling a scrolling session, abandons the run.
+| Routing | Set by | What runs |
+| --- | --- | --- |
+| `.standard` | every normal capture (shortcut, menu, deep link, recording stop) | The **default after-capture automation** for the capture type (below) |
+| `.automation(runID)` | `AutomationLauncher` through `ScreenCaptureViewModel.startAutomationCapture` | `AutomationRunner.complete` runs that automation's steps instead: the default automation — including its Save flag, which the automation decides through `TempCaptureManager.resolveSaveDirectory(saveOverride:)` — is skipped, the default canvas preset is still applied (unless the automation has an Apply canvas preset step), and history is still recorded. See [`AUTOMATIONS.md`](AUTOMATIONS.md) |
+| `.captureToolbar(sessionID)` | `ScreenCaptureViewModel.captureWithToolbar` (M6, #498) | `CaptureToolbarController.present`: the capture waits in the temp folder under a toolbar; the chosen button decides (Screenshot re-enters `.standard`). See [`CAPTURE.md`](CAPTURE.md#capture-toolbar-498) |
+
+Scrolling captures pass the routing into `saveProcessedImage(context:)`, so the stitched image takes the same path. Recordings started by an automation keep the routing in `RecordingCoordinator`: on stop, GIF output is converted and studio recordings flattened without a Quick Access card, then `AutomationRunner.complete` runs the steps instead of `handleVideoCapture`; the recording's save folder follows the automation (`makeRecordingSavePlan(saveOverride:)`). Deleting or cancelling a recording, or cancelling a scrolling session, abandons the run. A stale toolbar session never drops a capture: it falls back to `.standard`. Cancelling the toolbar's area selection ends its session; toolbar fallbacks and automation buttons apply the default Save choice before running.
+
+## Default After-Capture Automations
+
+Since milestone 6 the after-capture matrix is stored as two editable **system automations** ("Default after screenshot" / "Default after recording", `AutomationStore.defaultAutomation(for:)`). `PostCaptureActionHandler` no longer decides what happens: its `.standard` branch (`handleScreenshotCapture`, `handleScreenshotCaptures`, `handleVideoCapture`) calls `runDefaultAutomation`, which runs the automation through `AutomationRunner.runDefault` with a `StandardCaptureRunEnvironment`. Model, store, mapping and UI: [`AUTOMATIONS.md`](AUTOMATIONS.md#default-automations-after-capture-milestone-6).
+
+- **Simple mode** (what the matrix can show): steps are exactly copy file → Show Quick Access → Open Annotate for the enabled cells, Save is a flag on the source. The matrix UI edits it, one cell at a time. Anything else (other steps, order, disabled steps) is a **custom pipeline**, edited with Settings → Capture → After Capture → **Customize Pipeline…** or Settings → Automations → Default after capture; the matrix then keeps only its Save cell for that type, and **Reset to Simple** rebuilds the matrix form.
+- **Needs review**: an imported custom default pipeline flagged for review runs only its simple matrix form until it is reviewed in the editor.
+- **Runtime flags** (capture path, not settings): `pinToScreen` (inline annotate Pin) inserts a `pin` step before Open Annotate; `skipQuickAccess` (GIF flow, recording toolbars that already added a card) drops Show Quick Access. Both apply to simple and custom pipelines.
+- **Quiet runs**: while the default is simple, the run shows no progress HUD and writes an Activity-log row only on failure (it runs for every capture). A custom pipeline behaves like any automation run (HUD after 1.5 s, logged), invocation `afterCapture`.
+- **Same behavior as before** for existing users: the first launch of M6 builds both defaults from the stored matrix (`afterCaptureActions`), so nothing changes until the user customizes. The matrix key stays written for readers of it (temp-vs-export decision, `copyEditedCaptureToClipboardIfEnabled`, TOML `capture.after.*`) and for a downgrade.
+
+### Parity and dual-run diagnostics
+
+The default run must equal the legacy matrix handler. Locked by `AutomationSystemDefaultTests.testEveryMatrixCombinationRunsLegacyEffectsInOrder` (all 16 matrix combinations × screenshot / recording × `pinToScreen` × `skipQuickAccess`, against golden effects written out from the legacy handler; also asserts History, preset prepare and quiet run) and `PostCaptureActionHandlerTests` (the automation path next to the legacy executor, including recordings with `skipQuickAccess`). At runtime `PostCaptureActionHandler.logParity` computes what `executeActions` would have done (stored matrix + flags: `AutomationSystemDefault.legacyEffects`) and compares it with the effective automation steps (`runtimeSteps` → `effects(of:)`). A difference logs **"After-capture parity mismatch"** with `captureType`, `legacy`, `automation` and `custom` — `.warning` for a simple pipeline (a bug), `.debug` for a custom one (on purpose).
+
+`executeActions` (below) is intentionally still in the tree: it is the fallback when no default automation is injected (unit tests) and the dual-run reference. Removing it, the diagnostics and the legacy matrix write-through is gated on one beta without parity-mismatch reports (M6 phase 06).
 
 ## After-Capture Action Matrix
 
-`AfterCaptureAction` (`Snapzy/Features/Preferences/PreferencesManager.swift`) has 4 cases as of HEAD, each gated per `CaptureType` (`.screenshot`, `.recording`):
+`AfterCaptureAction` (`Snapzy/Features/Preferences/PreferencesManager.swift`) has 4 cases as of HEAD, each gated per `CaptureType` (`.screenshot`, `.recording`). They are the simple-mode view of the default automations:
 
 | Action | Screenshot default | Recording default | Effect |
 | --- | --- | --- | --- |
@@ -27,8 +49,8 @@ Scrolling captures pass the routing into `saveProcessedImage(context:)`, so the 
 | `copyFile` | ON | ON | Copies file/image to the pasteboard |
 | `openAnnotate` | OFF (screenshot only) | n/a | Auto-opens the Annotate editor |
 
-- The matrix is stored as `[AfterCaptureAction: [CaptureType: Bool]]` JSON-encoded in `UserDefaults` under the `afterCaptureActions` key via `PreferencesManager`; unset entries fall back to the defaults above. See [`PREFERENCES.md`](PREFERENCES.md).
-- `AfterCaptureAction.uploadToCloud` was **removed** at commit `dd4ccd5` (with its TOML key `upload_to_cloud`). Cloud upload is now manual-only: Quick Access cards, Annotate, Video Editor, and History surfaces, gated on `CloudManager.isConfigured` plus the `uploadToCloud` Quick Access action configuration. Nothing in `PostCaptureActionHandler` auto-uploads. See [`CLOUD.md`](CLOUD.md) and [`CONFIGURATION.md`](CONFIGURATION.md).
+- The matrix is stored as `[AfterCaptureAction: [CaptureType: Bool]]` JSON-encoded in `UserDefaults` under the `afterCaptureActions` key via `PreferencesManager`; unset entries fall back to the defaults above. Since M6 the default automations (`automations.systemDefaults`) are the source of truth and mirror into this key on every change (`adoptDefaultAutomationMatrix`); `PreferencesManager.setAction` writes through `AutomationStore.setDefaultMatrixAction`. See [`PREFERENCES.md`](PREFERENCES.md).
+- `AfterCaptureAction.uploadToCloud` was **removed** at commit `dd4ccd5` (with its TOML key `upload_to_cloud`). Cloud upload is now manual-only: Quick Access cards, Annotate, Video Editor, and History surfaces, gated on `CloudManager.isConfigured` plus the `uploadToCloud` Quick Access action configuration. Nothing in `PostCaptureActionHandler` auto-uploads (a custom default pipeline may add an Upload step on purpose). See [`CLOUD.md`](CLOUD.md) and [`CONFIGURATION.md`](CONFIGURATION.md).
 
 ```mermaid
 flowchart TD
@@ -38,22 +60,23 @@ flowchart TD
     B -->|Recording: Yes| E["Record in processing dir, move final video to export directory"]
     B -->|Recording: No| F["Record in processing dir, move final video to temp capture root"]
 
-    C --> G["PostCaptureActionHandler"]
+    C --> G["PostCaptureActionHandler (.standard)"]
     D --> G
     E --> G
     F --> G
 
-    G --> H["ScreenshotPresetAutoApplier.applyDefaultPresetIfNeeded (screenshots)"]
-    H --> I{"Copy file enabled?"}
-    I -->|Yes| J["ClipboardHelper.copyImage / copyMediaFile (FIRST)"]
+    G --> R["AutomationRunner.runDefault(default automation, pinToScreen, skipQuickAccess)"]
+    R --> H["ScreenshotPresetAutoApplier.applyDefaultPresetIfNeeded (screenshots)"]
+    H --> I{"Copy file step?"}
+    I -->|Yes| J["ClipboardHelper.copyImage / copyMediaFile (FIRST in simple mode)"]
     I -->|No| K
-    J --> K{"Show Quick Access enabled?"}
+    J --> K{"Show Quick Access step?"}
     K -->|Yes| L["QuickAccessManager.addScreenshot / addVideo"]
     K -->|No| M
     L --> M{"pinToScreen requested?"}
-    M -->|Yes| N["Pin window via QuickAccessManager"]
+    M -->|Yes| N["Pin step: pin window via QuickAccessManager"]
     M -->|No| O
-    N --> O{"openAnnotate enabled (screenshot only)?"}
+    N --> O{"Open Annotate step (screenshot only)?"}
     O -->|Yes| P["AnnotateManager.openAnnotation"]
     O -->|No| Q
     P --> Q["CaptureHistoryStore.addCapture"]
@@ -61,23 +84,25 @@ flowchart TD
 
 ## Execution Order
 
-`executeActions(for:url:skipQuickAccess:pinToScreen:)` runs on the main actor in a deliberate order:
+`AutomationRunner.runDefault` runs on the main actor; `PostCaptureActionHandler.runDefaultAutomation` wraps it:
 
 1. **Scoped file access** — `SandboxFileAccessing.beginAccessingURL(url)` wraps the whole sequence (security-scoped bookmark access for files outside the container); missing files bail out with a diagnostic log.
-2. **Preset auto-apply (screenshots)** — `ScreenshotPresetAutoApplier.applyDefaultPresetIfNeeded(to:)` checks the default Annotate canvas preset; when it changes the canvas it renders effects through the lightweight `AnnotateExporter.renderCanvasEffects(sourceImage:effects:)` path (no full `AnnotateState`), atomically rewrites the screenshot file, and returns `AnnotationSessionData` which is persisted via `AnnotationSessionStore` and cached on the Quick Access item so the capture reopens editable. See [`ANNOTATE.md`](ANNOTATE.md).
-3. **copyFile FIRST** — clipboard copy runs before any thumbnail generation, overlay presentation, or editor work so auto-copy is never blocked by slower UI actions.
-4. **showQuickAccess** — `QuickAccessManager.addScreenshot(url:)` / `addVideo(url:)`; skipped when `skipQuickAccess` is true (GIF two-step flow).
-5. **pinToScreen** — optional caller flag (inline annotate Pin): pins the existing Quick Access item or pins directly from URL.
-6. **openAnnotate** — screenshots only; opens through `AnnotateManager` with the Quick Access item when one exists, otherwise from the URL with preset session data.
-7. **History record** — screenshots read pixel dimensions via `CGImageSource`; videos read duration and track `naturalSize` via `AVURLAsset` (macOS 15 async load APIs with older fallbacks); `.gif` extension maps to the GIF history type.
+2. **Parity log** — `logParity` (see above).
+3. **Preset auto-apply (screenshots)** — `StandardCaptureRunEnvironment.prepareScreenshot` → `applyDefaultPreset(toScreenshot:)` → `ScreenshotPresetAutoApplier.applyDefaultPresetIfNeeded(to:)`: when the default Annotate canvas preset changes the canvas it renders effects through the lightweight `AnnotateExporter.renderCanvasEffects(sourceImage:effects:)` path (no full `AnnotateState`), atomically rewrites the screenshot file, and returns `AnnotationSessionData` which is persisted via `AnnotationSessionStore` and cached on the Quick Access item so the capture reopens editable. Skipped when the default pipeline itself has an Apply canvas preset step. See [`ANNOTATE.md`](ANNOTATE.md).
+4. **Steps in order** — simple mode: **copyFile FIRST** (clipboard copy runs before any thumbnail generation, overlay presentation, or editor work so auto-copy is never blocked by slower UI actions), **showQuickAccess** (`addScreenshot(url:)` / `addVideo(url:)`; dropped by `skipQuickAccess`), **pin** (flag only: pins the card this run created, or pins directly from the URL), **openAnnotate** (screenshots only; opens the run's card item when one exists, otherwise from the URL with the preset session data).
+5. **History record** — the runner records the capture (`recordsHistory` for standard captures): screenshots read pixel dimensions via `CGImageSource`; videos read duration and track `naturalSize` via `AVURLAsset` (macOS 15 async load APIs with older fallbacks); `.gif` extension maps to the GIF history type.
 
-Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegates single-URL batches to the normal path, auto-applies presets per file, copies all file URLs at once (`ClipboardHelper.copyFileURLs`), adds every file to Quick Access, opens only the **first** capture in Annotate, and records each file in history.
+Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegates single-URL batches to the normal path, runs the default automation once over all files (preset auto-applied per file, all file URLs copied at once through `ClipboardHelper.copyFileURLs`, every file added to Quick Access, only the **first** capture opened in Annotate), and records each file in history.
 
-`copyEditedCaptureToClipboardIfEnabled(for:url:)` re-runs the clipboard automation after an in-place edit save (Annotate/Video Editor) when `copyFile` is enabled for that capture type.
+`copyEditedCaptureToClipboardIfEnabled(for:url:)` re-runs the clipboard automation after an in-place edit save (Annotate/Video Editor) when `copyFile` is enabled for that capture type (read from the mirrored matrix).
+
+### Legacy executor
+
+`executeActions(for:url:skipQuickAccess:pinToScreen:)` is the pre-M6 implementation with the same order (scoped access, preset auto-apply, copyFile first, showQuickAccess, pinToScreen, openAnnotate, History). It runs only when `PostCaptureActionHandler` has no default automation provider (tests construct it that way) and defines the legacy effects the diagnostics compare against. `scripts/check-automation-signals.sh` asserts nothing outside `PostCaptureActionHandler.swift` calls it.
 
 ## Destination Logic
 
-- `AfterCaptureAction.save` is **not** a post-write callback:
+- `AfterCaptureAction.save` is **not** a post-write callback (since M6 it is the default automation's `saveToExportDirectory` flag, mirrored into the matrix key that these resolvers read):
   - **Screenshots**: `TempCaptureManager.resolveSaveDirectory(for:exportDirectory:)` decides the destination **before** the write — export directory when ON, temp directory when OFF.
   - **Recordings**: the AVAssetWriter always writes into a per-session `Captures/RecordingProcessing/<UUID>/` directory first (`TempCaptureManager.makeRecordingSavePlan`); after the writer finishes, the final video moves to the export directory (Save ON) or the temp capture root (Save OFF) and the processing directory plus writer sidecars are deleted. A failed final move falls back to a unique name in the temp root (`makeRecoveredRecordingURL`).
 - **Export directory**: `SandboxFileAccessManager.resolvedExportDirectoryURL()` resolves the stored security-scoped bookmark (removing invalid bookmarks), falling back to a default location; first-use flows prompt through `ensureExportDirectoryForOperation(promptMessage:)`. See [`PREFERENCES.md`](PREFERENCES.md).
@@ -131,7 +156,12 @@ Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegate
 
 | File | Responsibility |
 | --- | --- |
-| `Snapzy/Services/Capture/PostCaptureActionHandler.swift` | Post-capture action execution, ordering, batch handling, history records |
+| `Snapzy/Services/Capture/PostCaptureActionHandler.swift` | `.standard` routing: runs the default automation, parity diagnostics, batch handling; legacy `executeActions` fallback / reference |
+| `Snapzy/Features/Automations/Models/AutomationSystemDefaults.swift` | Matrix ↔ default-automation mapping, projection, runtime flags (`pinToScreen`, `skipQuickAccess`), legacy effects |
+| `Snapzy/Features/Automations/Engine/StandardCaptureRunEnvironment.swift` | Run environment for the default automation (Quick Access manager, preset applier, Pin / Annotate on the run's card) |
+| `Snapzy/Features/Automations/Engine/AutomationRunner.swift` | `runDefault`: quiet standard-capture run, invocation `afterCapture` |
+| `Snapzy/Features/Automations/Services/AutomationStore.swift` | `systemAutomations`, migration from the matrix, mirror back into `PreferencesManager` |
+| `Snapzy/Features/CaptureToolbar/CaptureToolbarController.swift` | `.captureToolbar` routing: toolbar session around the capture |
 | `Snapzy/Services/Capture/TempCaptureManager.swift` | Save-vs-temp destination, recording save plan, temp lifecycle, orphan cleanup |
 | `Snapzy/Services/Capture/ScreenCaptureManager.swift` | `captureCompletedPublisher`, `ImageFormat`, file writing, native output scale |
 | `Snapzy/Services/Capture/CaptureOutputNaming.swift` | Naming templates, context tokens, sanitization, unique dedupe |
@@ -140,7 +170,7 @@ Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegate
 | `Snapzy/Services/Clipboard/ClipboardHelper.swift` | Format-aware single-item pasteboard writes |
 | `Snapzy/Services/FileAccess/SandboxFileAccessManager.swift` | Security-scoped export-directory bookmarks and scoped access |
 | `Snapzy/Services/FileAccess/CaptureStorageManager.swift` | Captures cache sizing and clearing (Settings → History) |
-| `Snapzy/Features/Preferences/PreferencesManager.swift` | `AfterCaptureAction` matrix storage and defaults |
+| `Snapzy/Features/Preferences/PreferencesManager.swift` | `AfterCaptureAction` matrix storage and defaults (mirror of the default automations) |
 
 ## Related docs
 
@@ -148,9 +178,11 @@ Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegate
 - [`SCROLLING_CAPTURE.md`](SCROLLING_CAPTURE.md) — long-screenshot save path into routing
 - [`RECORDING.md`](RECORDING.md) — recording writer, GIF two-step flow
 - [`QUICK_ACCESS.md`](QUICK_ACCESS.md) — card stack, actions, countdown, pin windows
+- [`AUTOMATIONS.md`](AUTOMATIONS.md) — default automations, runner, steps, triggers
 - [`ANNOTATE.md`](ANNOTATE.md) — preset auto-apply and editable sessions
 - [`HISTORY.md`](HISTORY.md) — history records, retention, cache clearing
 - [`CLOUD.md`](CLOUD.md) — manual cloud upload entry points
 - [`PREFERENCES.md`](PREFERENCES.md) — after-capture matrix and export folder settings
-- [`CONFIGURATION.md`](CONFIGURATION.md) — TOML keys for after-capture actions
+- [`SHORTCUTS.md`](SHORTCUTS.md) — `unifiedCapture` shortcut and `snapzy://capture/toolbar`
+- [`CONFIGURATION.md`](CONFIGURATION.md) — TOML keys for after-capture actions and custom default pipelines
 - [`LOCALIZATION.md`](LOCALIZATION.md) — ownership of post-capture copy

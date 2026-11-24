@@ -35,6 +35,9 @@ final class AppCoordinator {
       context: ["previousCrash": didCrash ? "true" : "false"]
     )
     LegacyLicenseCleanupService.shared.runIfNeeded()
+    // The default after-capture automations own the matrix from here on: load
+    // (or migrate) them before anything, a config import included, writes it.
+    _ = AutomationStore.shared
     // Finder ▸ Quick Actions / Services ▸ "Run Snapzy Automation…".
     AutomationServicesProvider.shared.install()
 
