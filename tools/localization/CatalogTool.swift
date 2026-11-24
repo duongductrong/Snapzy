@@ -246,6 +246,23 @@ func extractL10nKeys() throws -> Set<String> {
     }
   }
 
+  // App Intents metadata must be compile-time literals, so those strings are
+  // declared as `LocalizedStringResource("key", ...)` at the use site instead of
+  // going through the L10n helpers. Count them as referenced keys.
+  let sourceRoot = repoRoot.appendingPathComponent("Snapzy")
+  let resourceRegex = try NSRegularExpression(pattern: #"LocalizedStringResource\(\s*"([a-z0-9][a-z0-9.-]*\.[a-z0-9][a-z0-9.-]*)""#)
+  let sourceEnumerator = fileManager.enumerator(at: sourceRoot, includingPropertiesForKeys: [.isRegularFileKey])
+  while case let fileURL as URL = sourceEnumerator?.nextObject() {
+    guard fileURL.pathExtension == "swift" else { continue }
+
+    let content = try String(contentsOf: fileURL, encoding: .utf8)
+    let range = NSRange(content.startIndex ..< content.endIndex, in: content)
+    for match in resourceRegex.matches(in: content, range: range) {
+      guard let range = Range(match.range(at: 1), in: content) else { continue }
+      keys.insert(String(content[range]))
+    }
+  }
+
   return keys
 }
 
