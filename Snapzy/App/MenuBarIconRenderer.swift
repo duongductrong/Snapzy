@@ -16,8 +16,14 @@ final class MenuBarIconRenderer {
   private let appSupportFolderName = "Snapzy"
   private let customIconFolderName = "MenuBarIcon"
   private let customIconFileName = "custom.png"
+  /// Overrides the folder holding `custom.png`; nil uses Application Support.
+  private let customIconDirectory: URL?
 
-  private init() {}
+  /// - Parameter customIconDirectory: Tests pass a temporary folder so they never
+  ///   touch the user's real custom icon. Production code uses `shared`.
+  init(customIconDirectory: URL? = nil) {
+    self.customIconDirectory = customIconDirectory
+  }
 
   // MARK: - Rendering
 
@@ -80,7 +86,8 @@ final class MenuBarIconRenderer {
   }
 
   /// Renders the user-imported PNG with alpha-bounds normalization so its
-  /// visible content matches the bundled icon's 89% canvas occupancy.
+  /// visible content matches the bundled icon's 89% canvas occupancy and is
+  /// centered on the canvas, even when the artwork sits off-center in its PNG.
   private func makeCustomStatusImage() -> NSImage? {
     guard let url = customIconURL,
           fileManager.fileExists(atPath: url.path),
@@ -91,26 +98,19 @@ final class MenuBarIconRenderer {
 
     let canvasSize = NSSize(width: 18, height: 18)
     let targetVisibleOccupancy: CGFloat = 0.89
-    let imageSize = NSSize(width: cgImage.width, height: cgImage.height)
 
-    let drawSize: NSSize
-    if let alphaBounds = Self.alphaBoundingBox(of: cgImage), !alphaBounds.isEmpty {
-      // Scale from source pixel coordinates to the 18pt canvas so the larger visible
-      // dimension fills the target occupancy while preserving aspect ratio.
-      let fitScale = min(
-        canvasSize.width * targetVisibleOccupancy / alphaBounds.width,
-        canvasSize.height * targetVisibleOccupancy / alphaBounds.height
-      )
-      guard fitScale.isFinite, fitScale > 0 else { return nil }
-      drawSize = NSSize(width: imageSize.width * fitScale, height: imageSize.height * fitScale)
-    } else {
-      // Fully opaque (or undetectable bounds): fit the longest side to the target.
-      let fit = min(
-        canvasSize.width * targetVisibleOccupancy / imageSize.width,
-        canvasSize.height * targetVisibleOccupancy / imageSize.height
-      )
-      drawSize = NSSize(width: imageSize.width * fit, height: imageSize.height * fit)
-    }
+    // Crop to the visible artwork so transparent padding (centered or not) is
+    // dropped; fully opaque images keep their whole frame.
+    let content = Self.visibleContent(of: cgImage)
+    let contentSize = NSSize(width: content.width, height: content.height)
+
+    // Fit the longer visible side to the target occupancy, preserving aspect ratio.
+    let fitScale = min(
+      canvasSize.width * targetVisibleOccupancy / contentSize.width,
+      canvasSize.height * targetVisibleOccupancy / contentSize.height
+    )
+    guard fitScale.isFinite, fitScale > 0 else { return nil }
+    let drawSize = NSSize(width: contentSize.width * fitScale, height: contentSize.height * fitScale)
 
     let drawRect = NSRect(
       x: (canvasSize.width - drawSize.width) / 2,
@@ -121,9 +121,9 @@ final class MenuBarIconRenderer {
 
     let rendered = NSImage(size: canvasSize)
     rendered.lockFocus()
-    source.draw(
+    NSImage(cgImage: content, size: contentSize).draw(
       in: drawRect,
-      from: NSRect(origin: .zero, size: source.size),
+      from: NSRect(origin: .zero, size: contentSize),
       operation: .copy,
       fraction: 1.0
     )
@@ -133,10 +133,26 @@ final class MenuBarIconRenderer {
     return rendered
   }
 
+  /// The image cropped to its alpha bounds, or the image itself when it has no
+  /// transparent padding to trim.
+  private static func visibleContent(of cgImage: CGImage) -> CGImage {
+    let fullRect = CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
+    guard let alphaBounds = alphaBoundingBox(of: cgImage) else { return cgImage }
+    // Alpha bounds use top-left-origin pixel coordinates, matching `cropping(to:)`.
+    let cropRect = alphaBounds.integral.intersection(fullRect)
+    guard !cropRect.isEmpty, let cropped = cgImage.cropping(to: cropRect) else { return cgImage }
+    return cropped
+  }
+
   // MARK: - Custom Icon Storage
 
-  /// URL of the stored custom icon: Application Support/Snapzy/MenuBarIcon/custom.png
+  /// URL of the stored custom icon: Application Support/Snapzy/MenuBarIcon/custom.png,
+  /// or `custom.png` inside the injected directory.
   var customIconURL: URL? {
+    if let customIconDirectory {
+      return customIconDirectory.appendingPathComponent(customIconFileName, isDirectory: false)
+    }
+
     guard
       let appSupportURL = fileManager.urls(
         for: .applicationSupportDirectory, in: .userDomainMask
@@ -202,8 +218,8 @@ final class MenuBarIconRenderer {
 
   // MARK: - Alpha Bounds
 
-  /// Alpha bounding box of the image in pixel coordinates, detected on a
-  /// downsampled bitmap. Returns nil when the image has no transparent pixels.
+  /// Alpha bounding box of the image in top-left-origin pixel coordinates,
+  /// detected on a downsampled bitmap. Returns nil when the image has no transparent pixels.
   static nonisolated func alphaBoundingBox(of cgImage: CGImage) -> CGRect? {
     let sampleSize = 128
     var bitmap = [UInt8](repeating: 0, count: sampleSize * sampleSize * 4)

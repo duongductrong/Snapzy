@@ -125,53 +125,102 @@ final class MenuBarItemImageTests: XCTestCase {
   /// Regression: importing a high-resolution transparent PNG (e.g. 256×256 hollow ring)
   /// must scale into the 18×18pt menu bar canvas rather than multiplying raw pixel dimensions.
   func testCustomStatusImage_scalesHighResTransparentPNGInto18ptCanvas() throws {
-    let pixelSize = 256
-    let sourceImage = NSImage(size: NSSize(width: pixelSize, height: pixelSize))
-    sourceImage.lockFocus()
-    NSColor.clear.setFill()
-    NSRect(x: 0, y: 0, width: pixelSize, height: pixelSize).fill()
-    let ring = NSBezierPath()
-    ring.appendOval(in: NSRect(x: 28, y: 28, width: 200, height: 200))
-    ring.appendOval(in: NSRect(x: 84, y: 84, width: 88, height: 88))
-    ring.windingRule = .evenOdd
-    NSColor.black.setFill()
-    ring.fill()
-    sourceImage.unlockFocus()
-
-    let tiff = try XCTUnwrap(sourceImage.tiffRepresentation)
-    let bmp = try XCTUnwrap(NSBitmapImageRep(data: tiff))
-    let png = try XCTUnwrap(bmp.representation(using: .png, properties: [:]))
-
-    let customURL = try XCTUnwrap(MenuBarIconRenderer.shared.customIconURL)
-    let backupData = try? Data(contentsOf: customURL)
-    defer {
-      if let backupData {
-        try? backupData.write(to: customURL)
-      } else {
-        try? FileManager.default.removeItem(at: customURL)
-      }
+    let renderer = try makeIsolatedRenderer()
+    try writeCustomIcon(for: renderer, pixelSize: 256) {
+      let ring = NSBezierPath()
+      ring.appendOval(in: NSRect(x: 28, y: 28, width: 200, height: 200))
+      ring.appendOval(in: NSRect(x: 84, y: 84, width: 88, height: 88))
+      ring.windingRule = .evenOdd
+      ring.fill()
     }
 
-    try FileManager.default.createDirectory(
-      at: customURL.deletingLastPathComponent(),
-      withIntermediateDirectories: true
-    )
-    try png.write(to: customURL, options: .atomic)
-
-    let rendered = try XCTUnwrap(MenuBarIconRenderer.shared.statusImage(for: .custom))
+    let (rendered, bounds, pixels) = try renderVisibleBounds(renderer)
     XCTAssertEqual(rendered.size, NSSize(width: 18, height: 18))
     XCTAssertTrue(rendered.isTemplate)
 
-    let cgRendered = try XCTUnwrap(rendered.cgImage(forProposedRect: nil, context: nil, hints: nil))
-    let alphaBounds = try XCTUnwrap(
-      MenuBarIconRenderer.alphaBoundingBox(of: cgRendered),
-      "Rendered 18pt icon must contain visible ring pixels, not a blank hollow crop"
-    )
-    let occupancy = max(
-      alphaBounds.width / CGFloat(cgRendered.width),
-      alphaBounds.height / CGFloat(cgRendered.height)
-    )
+    let occupancy = max(bounds.width, bounds.height) / pixels
     XCTAssertGreaterThan(occupancy, 0.75, "Visible ring should fill ~89% of the 18pt canvas")
     XCTAssertLessThanOrEqual(occupancy, 1.0)
+  }
+
+  /// Artwork sitting in one corner of its PNG must still render fully visible and
+  /// centered, since only the alpha-bounds region is drawn.
+  func testCustomStatusImage_centersOffCenterArtwork() throws {
+    let renderer = try makeIsolatedRenderer()
+    // Asymmetric 60×40 block in the top-left corner of a 256×256 canvas.
+    try writeCustomIcon(for: renderer, pixelSize: 256) {
+      NSRect(x: 10, y: 256 - 10 - 40, width: 60, height: 40).fill()
+    }
+
+    let (_, bounds, pixels) = try renderVisibleBounds(renderer)
+    let tolerance = pixels * 0.08
+    XCTAssertEqual(bounds.midX, pixels / 2, accuracy: tolerance, "Artwork should be horizontally centered")
+    XCTAssertEqual(bounds.midY, pixels / 2, accuracy: tolerance, "Artwork should be vertically centered")
+    XCTAssertEqual(bounds.width / pixels, 0.89, accuracy: 0.08, "Longer side should fill ~89%")
+    XCTAssertEqual(bounds.height / bounds.width, 40.0 / 60.0, accuracy: 0.12, "Aspect ratio should be kept")
+  }
+
+  func testCustomIconURL_usesInjectedDirectory() throws {
+    let renderer = try makeIsolatedRenderer()
+    let url = try XCTUnwrap(renderer.customIconURL)
+    XCTAssertEqual(url.lastPathComponent, "custom.png")
+    XCTAssertNotEqual(url, MenuBarIconRenderer.shared.customIconURL)
+    XCTAssertFalse(renderer.hasCustomIcon)
+  }
+
+  // MARK: - Helpers
+
+  /// Renderer bound to a per-test temporary folder, so the user's real
+  /// Application Support custom icon is never read or overwritten.
+  private func makeIsolatedRenderer() throws -> MenuBarIconRenderer {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("MenuBarIconRendererTests-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+    return MenuBarIconRenderer(customIconDirectory: directory)
+  }
+
+  /// Draws black artwork on a transparent square canvas and stores it as the custom PNG.
+  private func writeCustomIcon(
+    for renderer: MenuBarIconRenderer,
+    pixelSize: Int,
+    drawing: () -> Void
+  ) throws {
+    let bitmap = try XCTUnwrap(NSBitmapImageRep(
+      bitmapDataPlanes: nil,
+      pixelsWide: pixelSize,
+      pixelsHigh: pixelSize,
+      bitsPerSample: 8,
+      samplesPerPixel: 4,
+      hasAlpha: true,
+      isPlanar: false,
+      colorSpaceName: .deviceRGB,
+      bytesPerRow: 0,
+      bitsPerPixel: 0
+    ))
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
+    NSColor.clear.setFill()
+    NSRect(x: 0, y: 0, width: pixelSize, height: pixelSize).fill(using: .copy)
+    NSColor.black.setFill()
+    drawing()
+    NSGraphicsContext.restoreGraphicsState()
+
+    let png = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+    try png.write(to: XCTUnwrap(renderer.customIconURL), options: .atomic)
+  }
+
+  /// Renders the custom style and returns its visible alpha bounds plus the
+  /// rendered bitmap's side length in pixels (scale-independent).
+  private func renderVisibleBounds(
+    _ renderer: MenuBarIconRenderer
+  ) throws -> (NSImage, CGRect, CGFloat) {
+    let rendered = try XCTUnwrap(renderer.statusImage(for: .custom))
+    let cgRendered = try XCTUnwrap(rendered.cgImage(forProposedRect: nil, context: nil, hints: nil))
+    let bounds = try XCTUnwrap(
+      MenuBarIconRenderer.alphaBoundingBox(of: cgRendered),
+      "Rendered 18pt icon must contain visible pixels, not a blank crop"
+    )
+    return (rendered, bounds, CGFloat(cgRendered.width))
   }
 }
