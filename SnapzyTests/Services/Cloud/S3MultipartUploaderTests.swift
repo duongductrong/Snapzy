@@ -175,4 +175,48 @@ final class S3MultipartUploaderTests: XCTestCase {
       XCTAssertTrue(isAborted, "Expected AbortMultipartUpload to be called")
     }
   }
+
+  /// Regression: a trailing-slash endpoint must not produce `//bucket` in any multipart request.
+  func testMultipartUpload_trailingSlashEndpoint_usesSingleSlash() async throws {
+    let session = MockURLSession { request in
+      let urlString = request.url?.absoluteString ?? ""
+      if request.httpMethod == "POST" && urlString.contains("?uploads") {
+        let xml = "<InitiateMultipartUploadResult><UploadId>id-1</UploadId></InitiateMultipartUploadResult>"
+        return MockURLSession.makeResponse(statusCode: 200, data: Data(xml.utf8))
+      }
+      if request.httpMethod == "PUT" {
+        let response = HTTPURLResponse(
+          url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["ETag": "\"etag\""]
+        )!
+        return (Data(), response)
+      }
+      return MockURLSession.makeResponse(statusCode: 200)
+    }
+
+    let uploader = S3MultipartUploader(
+      accessKey: "access",
+      secretKey: "secret",
+      region: "us-east-1",
+      endpoint: URL(string: "https://s3.amazonaws.com/")!,
+      bucket: "test-bucket",
+      session: session,
+      partSize: 10
+    )
+
+    let result = try await uploader.upload(
+      fileURL: tempFileURL,
+      key: "test-key.bin",
+      contentType: "application/octet-stream",
+      expireTime: .day7
+    ) { _ in }
+
+    XCTAssertEqual(result.publicURL.absoluteString, "https://s3.amazonaws.com/test-bucket/test-key.bin")
+    XCTAssertEqual(session.requests.count, 5)
+    for request in session.requests {
+      XCTAssertTrue(
+        request.url?.absoluteString.hasPrefix("https://s3.amazonaws.com/test-bucket/") == true,
+        "unexpected URL \(request.url?.absoluteString ?? "nil")"
+      )
+    }
+  }
 }

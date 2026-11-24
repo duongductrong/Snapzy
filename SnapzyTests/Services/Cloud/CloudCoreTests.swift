@@ -716,4 +716,31 @@ final class CloudCoreTests: XCTestCase {
       "1%2FK7MDENG%2BbPxRfiCY%3D%3D"
     )
   }
+
+  /// Regression: an endpoint with a trailing slash (e.g. `https://minio.local:9000/`) must not
+  /// produce `//bucket` in validate or lifecycle requests.
+  func testS3CloudProvider_trailingSlashEndpoint_validateAndLifecycleUseSingleSlash() async throws {
+    let config = CloudConfiguration(
+      providerType: .awsS3,
+      bucket: "test-bucket",
+      region: "us-east-1",
+      endpoint: " https://minio.local:9000// ",
+      customDomain: nil,
+      expireTime: .day7
+    )
+    let mockSession = MockURLSession { _ in
+      MockURLSession.makeResponse(statusCode: 200)
+    }
+    let provider = S3CloudProvider(config: config, accessKey: "AKIATEST", secretKey: "SECRET", session: mockSession)
+
+    try await provider.validate()
+    try await provider.removeExpiration()
+
+    XCTAssertEqual(mockSession.requests.first?.url?.absoluteString, "https://minio.local:9000/test-bucket")
+    let urls = mockSession.requests.compactMap { $0.url?.absoluteString }
+    XCTAssertGreaterThan(urls.count, 1)
+    for url in urls {
+      XCTAssertFalse(url.contains("9000//"), "double slash in \(url)")
+    }
+  }
 }

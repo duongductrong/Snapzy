@@ -37,7 +37,7 @@ final class S3MultipartUploader {
     self.accessKey = accessKey
     self.secretKey = secretKey
     self.region = region
-    self.endpoint = endpoint
+    self.endpoint = URL(string: S3CloudProvider.trimmingTrailingSlashes(endpoint.absoluteString)) ?? endpoint
     self.bucket = bucket
     self.session = session
     self.partSize = partSize
@@ -247,12 +247,7 @@ final class S3MultipartUploader {
     let (data, response) = try await session.data(for: signedRequest)
     try validateResponse(response, data: data, operation: "CompleteMultipartUpload")
 
-    // URL is S3 target object URL
-    if let customDomain = CloudManager.shared.cachedConfiguration?.customDomain, !customDomain.isEmpty {
-      let scheme = customDomain.hasPrefix("http") ? "" : "https://"
-      return URL(string: "\(scheme)\(customDomain)/\(key)")!
-    }
-
+    // Path-style object URL; S3CloudProvider swaps in its custom-domain public URL.
     return URL(string: "\(endpoint.absoluteString)/\(bucket)/\(key)")!
   }
 

@@ -31,8 +31,8 @@ final class S3CloudProvider: CloudProvider {
     self.region = config.region.isEmpty ? "us-east-1" : config.region
     self.customDomain = config.customDomain
 
-    if let endpointStr = config.endpoint, !endpointStr.isEmpty {
-      self.endpoint = URL(string: endpointStr)!
+    if let endpointStr = config.endpoint?.trimmingCharacters(in: .whitespacesAndNewlines), !endpointStr.isEmpty {
+      self.endpoint = URL(string: Self.trimmingTrailingSlashes(endpointStr))!
     } else {
       // Default S3 endpoint (path-style)
       self.endpoint = URL(string: "https://s3.\(self.region).amazonaws.com")!
@@ -67,12 +67,19 @@ final class S3CloudProvider: CloudProvider {
 
     // Route to multipart uploader if file size exceeds threshold
     if fileSize > S3MultipartUploader.multipartThreshold {
-      return try await multipartUploader.upload(
+      let result = try await multipartUploader.upload(
         fileURL: fileURL,
         key: key,
         contentType: contentType,
         expireTime: expireTime,
         progress: progress
+      )
+      // Same public URL rules as single-part uploads (custom domain of this provider's config).
+      return CloudUploadResult(
+        publicURL: generatePublicURL(for: key),
+        key: result.key,
+        fileSize: result.fileSize,
+        uploadedAt: result.uploadedAt
       )
     }
 
@@ -383,9 +390,18 @@ final class S3CloudProvider: CloudProvider {
 
   private func buildObjectURL(key: String) -> URL {
     // Path-style: https://s3.region.amazonaws.com/bucket/key
-    let baseEndpoint = endpoint.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    let baseEndpoint = Self.trimmingTrailingSlashes(endpoint.absoluteString)
     let trimmedKey = key.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     return URL(string: "\(baseEndpoint)/\(bucket)/\(trimmedKey)")!
+  }
+
+  /// Drops trailing `/` so `"\(endpoint)/\(bucket)"` never produces `//` (e.g. `https://minio:9000/`).
+  static func trimmingTrailingSlashes(_ value: String) -> String {
+    var result = value
+    while result.hasSuffix("/") {
+      result.removeLast()
+    }
+    return result
   }
 
   /// Keys stay under `objectPrefix` so lifecycle expiry and usage stats apply to both styles.
