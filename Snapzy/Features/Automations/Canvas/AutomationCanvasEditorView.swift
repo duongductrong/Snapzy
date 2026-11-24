@@ -2,43 +2,88 @@
 //  AutomationCanvasEditorView.swift
 //  Snapzy
 //
-//  Window content of the canvas editor, laid out like a native document window:
-//  the canvas on the left, an inspector sidebar on the right (toggled from the
-//  toolbar), and a thin status bar along the bottom with issues and zoom. The
-//  window's toolbar (AppKit) holds the actions; see AutomationCanvasWindowController.
+//  Window content of the canvas editor. The canvas fills the whole window, title
+//  bar included; everything else floats over it on Liquid Glass: the header
+//  (name, add, tidy up, zoom, save, more, inspector) along the top, issues and
+//  the zoom pop-up along the bottom, and the inspector as a panel on the right. The canvas model knows which
+//  area these cover so fitting and revealing aim for the part left visible.
 //
 
 import SwiftUI
 
 struct AutomationCanvasEditorView: View {
   @ObservedObject var model: AutomationCanvasEditorModel
+  @ObservedObject var titlebar: AutomationCanvasTitlebarMetrics
   let isCloudConfigured: Bool
   let onSave: () -> Void
+  let onOpenInList: (() -> Void)?
 
-  private static let inspectorWidth: CGFloat = 300
+  private static let margin: CGFloat = 12
+
+  /// Top of the header: centered on the traffic lights, or the margin when they
+  /// are hidden.
+  private var headerTop: CGFloat {
+    guard let centerY = titlebar.buttonsCenterY else { return Self.margin }
+    return max(0, centerY - AutomationCanvasTheme.headerHeight / 2)
+  }
+
+  /// Leading inset of the header, past the traffic lights.
+  private var headerLeading: CGFloat {
+    guard let trailingX = titlebar.buttonsTrailingX else { return 0 }
+    return max(0, trailingX + 16 - Self.margin)
+  }
 
   var body: some View {
-    VStack(spacing: 0) {
-      HStack(spacing: 0) {
-        ZStack(alignment: .bottomTrailing) {
-          AutomationCanvasView(model: model, camera: model.camera)
-          AutomationCanvasMinimapSlot(model: model, camera: model.camera)
-            .padding(12)
-        }
-        if model.isInspectorVisible {
-          Divider()
-          AutomationCanvasInspector(model: model, isCloudConfigured: isCloudConfigured)
-            .frame(width: Self.inspectorWidth)
-        }
-      }
-      Divider()
-      AutomationCanvasStatusBar(model: model)
+    ZStack {
+      AutomationCanvasView(model: model, camera: model.camera)
+        .ignoresSafeArea()
+      chrome
     }
     .background(shortcuts)
     .frame(minWidth: 760, minHeight: 480)
   }
 
-  /// Keyboard shortcuts of the toolbar actions (AppKit toolbar items have none).
+  /// Floating bars and the inspector panel. Empty space passes clicks through to
+  /// the canvas.
+  private var chrome: some View {
+    VStack(spacing: Self.margin) {
+      AutomationCanvasTopBar(model: model, onSave: onSave, onOpenInList: onOpenInList)
+        .padding(.leading, headerLeading)
+      // Two layers: the bottom bar (zoom, status, minimap) spans the full width,
+      // and the inspector floats above it at full height, overlapping the
+      // minimap in the corner rather than pushing it aside.
+      ZStack(alignment: .bottomTrailing) {
+        HStack(alignment: .bottom, spacing: 8) {
+          AutomationCanvasZoomMenu(model: model, camera: model.camera)
+          AutomationCanvasStatusPill(model: model)
+          Spacer(minLength: 8)
+          AutomationCanvasMinimapSlot(model: model, camera: model.camera)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        if model.isInspectorVisible {
+          AutomationCanvasInspector(model: model, isCloudConfigured: isCloudConfigured)
+            .frame(width: AutomationCanvasEditorModel.inspectorWidth)
+            .frame(maxHeight: .infinity)
+            .background(
+              GeometryReader { proxy in
+                Color.clear
+                  .onAppear { model.inspectorFrame = proxy.frame(in: .global) }
+                  .onChange(of: proxy.frame(in: .global)) { model.inspectorFrame = $0 }
+                  .onDisappear { model.inspectorFrame = .null }
+              }
+            )
+            .transition(.move(edge: .trailing).combined(with: .opacity))
+        }
+      }
+      .frame(maxHeight: .infinity)
+    }
+    .padding([.horizontal, .bottom], Self.margin)
+    .padding(.top, headerTop)
+    .ignoresSafeArea(.container, edges: .top)
+    .animation(.easeOut(duration: 0.18), value: model.isInspectorVisible)
+  }
+
+  /// Keyboard shortcuts of the bar actions.
   private var shortcuts: some View {
     ZStack {
       Button(L10n.Common.save, action: onSave)
@@ -49,6 +94,8 @@ struct AutomationCanvasEditorView: View {
         .keyboardShortcut("-", modifiers: .command)
       Button(L10n.Automations.canvasZoomToFit) { model.zoomToFit() }
         .keyboardShortcut("0", modifiers: .command)
+      Button(L10n.Automations.canvasToggleInspector) { model.isInspectorVisible.toggle() }
+        .keyboardShortcut("i", modifiers: [.command, .option])
     }
     .opacity(0)
     .frame(width: 0, height: 0)
@@ -57,43 +104,250 @@ struct AutomationCanvasEditorView: View {
   }
 }
 
-// MARK: - Status bar
+private let barShape = Capsule(style: .continuous)
 
-/// Bottom bar: the first issue (click to jump to it), unconnected steps, zoom.
-private struct AutomationCanvasStatusBar: View {
+/// A run of header buttons sharing one glass capsule, sized like a macOS 26
+/// toolbar item group.
+private struct AutomationCanvasBarGroup<Content: View>: View {
+  @ViewBuilder let content: Content
+
+  var body: some View {
+    HStack(spacing: 0) { content }
+      .buttonStyle(AutomationCanvasHeaderButtonStyle())
+      .padding(.horizontal, AutomationCanvasTheme.headerHoverInset)
+      .frame(height: AutomationCanvasTheme.headerHeight)
+      .canvasFloating(barShape)
+  }
+}
+
+/// Hairline between buttons of one group, like zoom out | zoom in.
+private struct AutomationCanvasBarDivider: View {
+  var body: some View {
+    Rectangle()
+      .fill(AutomationCanvasTheme.hairline)
+      .frame(width: 1, height: 18)
+      .padding(.horizontal, 2)
+  }
+}
+
+private struct AutomationCanvasBarIcon: View {
+  let symbol: String
+  let help: String
+  var isActive = false
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: symbol)
+        .foregroundStyle(isActive ? Color.accentColor : Color.primary)
+    }
+    .help(help)
+    .accessibilityLabel(help)
+  }
+}
+
+/// Button of the header groups: a toolbar-sized symbol with a capsule hover
+/// highlight inside the group's glass.
+private struct AutomationCanvasHeaderButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    AutomationCanvasHeaderButtonBody(configuration: configuration)
+  }
+}
+
+private struct AutomationCanvasHeaderButtonBody: View {
+  let configuration: ButtonStyleConfiguration
+  @Environment(\.isEnabled) private var isEnabled
+  @State private var isHovered = false
+
+  var body: some View {
+    configuration.label
+      .font(.system(size: AutomationCanvasTheme.headerIconSize, weight: .regular))
+      .foregroundStyle(isEnabled ? Color.primary : Color.secondary.opacity(0.6))
+      .frame(minWidth: AutomationCanvasTheme.headerButtonSize, minHeight: AutomationCanvasTheme.headerButtonSize)
+      .background(
+        Capsule(style: .continuous)
+          .fill(Color.primary.opacity(configuration.isPressed ? 0.14 : (isHovered && isEnabled ? 0.08 : 0)))
+          .padding(AutomationCanvasTheme.headerHoverInset)
+      )
+      .contentShape(Capsule(style: .continuous))
+      .onHover { isHovered = $0 }
+  }
+}
+
+// MARK: - Top bar
+
+/// The window's header, floating: the automation's name (with "Unsaved
+/// changes" under it), add and tidy up on the left; zoom, fit, save, more and
+/// the inspector toggle on the right.
+private struct AutomationCanvasTopBar: View {
+  @ObservedObject var model: AutomationCanvasEditorModel
+  let onSave: () -> Void
+  let onOpenInList: (() -> Void)?
+
+  private var canSave: Bool {
+    model.hasUnsavedChanges && !model.issues.contains(where: \.blocksRun)
+  }
+
+  var body: some View {
+    HStack(spacing: 10) {
+      title
+      AutomationCanvasBarGroup {
+        AutomationCanvasBarIcon(symbol: "plus", help: L10n.Automations.canvasAddStepHelp) {
+          model.openPicker(after: model.selection)
+        }
+        .disabled(!model.canAddStep)
+        AutomationCanvasBarIcon(symbol: "rectangle.3.group", help: L10n.Automations.canvasTidyUp) {
+          model.tidyUp()
+        }
+      }
+      Spacer(minLength: 8)
+      AutomationCanvasBarGroup {
+        AutomationCanvasBarIcon(symbol: "minus.magnifyingglass", help: L10n.Automations.canvasZoomOut) {
+          withAnimation(.easeOut(duration: 0.15)) { model.zoom(by: 1 / 1.25) }
+        }
+        AutomationCanvasBarDivider()
+        AutomationCanvasBarIcon(symbol: "plus.magnifyingglass", help: L10n.Automations.canvasZoomIn) {
+          withAnimation(.easeOut(duration: 0.15)) { model.zoom(by: 1.25) }
+        }
+      }
+      AutomationCanvasBarGroup {
+        AutomationCanvasBarIcon(
+          symbol: "arrow.up.left.and.down.right.magnifyingglass",
+          help: L10n.Automations.canvasZoomToFit
+        ) {
+          withAnimation(.easeOut(duration: 0.2)) { model.zoomToFit() }
+        }
+      }
+      AutomationCanvasBarGroup {
+        Button(action: onSave) {
+          Text(L10n.Common.save)
+            .font(.system(size: 14, weight: .medium))
+            .padding(.horizontal, 12)
+        }
+        .disabled(!canSave)
+        .help(L10n.Common.save)
+      }
+      AutomationCanvasBarGroup {
+        Menu {
+          if let onOpenInList {
+            Button(L10n.Automations.canvasOpenInList, action: onOpenInList)
+            Divider()
+          }
+          Toggle(L10n.Automations.canvasShowMinimap, isOn: $model.isMinimapVisible)
+        } label: {
+          Image(systemName: "ellipsis.circle")
+            .font(.system(size: AutomationCanvasTheme.headerIconSize, weight: .regular))
+            .frame(width: AutomationCanvasTheme.headerButtonSize, height: AutomationCanvasTheme.headerButtonSize)
+            .contentShape(Capsule(style: .continuous))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(L10n.Automations.moreActions)
+        .accessibilityLabel(L10n.Automations.moreActions)
+        AutomationCanvasBarIcon(
+          symbol: "sidebar.right",
+          help: L10n.Automations.canvasToggleInspector,
+          isActive: model.isInspectorVisible
+        ) {
+          model.isInspectorVisible.toggle()
+        }
+      }
+    }
+  }
+
+  /// Name and subtitle, like a window title; clicking shows the automation's own
+  /// settings in the inspector.
+  /// The name as shown, or `nil` while it is blank.
+  private var displayName: String? {
+    let name = model.automation.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+    return name.isEmpty ? nil : name
+  }
+
+  private var title: some View {
+    Button {
+      model.selection = nil
+      model.isInspectorVisible = true
+    } label: {
+      // One line, centered on the traffic lights: the name (or the default
+      // name, dimmed, while it is empty) and a small badge for unsaved edits.
+      HStack(spacing: 8) {
+        Text(displayName ?? L10n.Automations.defaultName)
+          .font(.system(size: 15, weight: .bold))
+          .foregroundStyle(displayName == nil ? Color.secondary : Color.primary)
+          .lineLimit(1)
+          .truncationMode(.tail)
+          .layoutPriority(1)
+        if model.hasUnsavedChanges {
+          HStack(spacing: 4) {
+            Circle()
+              .fill(Color.orange)
+              .frame(width: 6, height: 6)
+            Text(L10n.Automations.canvasUnsaved)
+              .font(.system(size: 11, weight: .medium))
+              .foregroundStyle(.secondary)
+              .lineLimit(1)
+          }
+          .padding(.horizontal, 8)
+          .frame(height: 20)
+          .background(Capsule(style: .continuous).fill(Color.primary.opacity(0.07)))
+          .fixedSize()
+          .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        }
+      }
+      .animation(.easeOut(duration: 0.15), value: model.hasUnsavedChanges)
+      .frame(height: AutomationCanvasTheme.headerHeight)
+      .frame(maxWidth: 360, alignment: .leading)
+      .fixedSize(horizontal: true, vertical: false)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .help(L10n.Automations.nameLabel)
+  }
+}
+
+// MARK: - Bottom bar
+
+/// The first issue (click to jump to it) and the count of unconnected steps;
+/// hidden when there is nothing to report.
+private struct AutomationCanvasStatusPill: View {
   @ObservedObject var model: AutomationCanvasEditorModel
 
   var body: some View {
-    HStack(spacing: 12) {
-      if let issue = model.issues.first {
-        Button {
-          model.selection = .step(issue.stepID)
-          model.isInspectorVisible = true
-          model.reveal(.step(issue.stepID))
-        } label: {
-          HStack(spacing: 4) {
-            Image(systemName: issue.blocksRun ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
-              .symbolRenderingMode(.multicolor)
-            Text(L10n.Automations.issuesSummary(model.issues.count, issue.message))
-              .lineLimit(1)
-              .truncationMode(.tail)
+    let issue = model.issues.first
+    if issue != nil || model.detachedCount > 0 {
+      HStack(spacing: 12) {
+        if let issue {
+          Button {
+            model.selection = .step(issue.stepID)
+            model.isInspectorVisible = true
+            model.reveal(.step(issue.stepID))
+          } label: {
+            HStack(spacing: 5) {
+              Image(systemName: issue.blocksRun ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
+                .symbolRenderingMode(.multicolor)
+              Text(L10n.Automations.issuesSummary(model.issues.count, issue.message))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            }
+            .contentShape(Rectangle())
           }
+          .buttonStyle(.plain)
         }
-        .buttonStyle(.borderless)
-        .foregroundStyle(.primary)
+        if model.detachedCount > 0 {
+          Label(L10n.Automations.canvasDetachedCount(model.detachedCount), systemImage: "link.badge.plus")
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+        }
       }
-      if model.detachedCount > 0 {
-        Label(L10n.Automations.canvasDetachedCount(model.detachedCount), systemImage: "link.badge.plus")
-          .foregroundStyle(.secondary)
-          .lineLimit(1)
-      }
-      Spacer(minLength: 8)
-      AutomationCanvasZoomMenu(model: model, camera: model.camera)
+      .font(.system(size: 11))
+      .padding(.horizontal, 12)
+      .frame(height: 26)
+      .frame(maxWidth: 480, alignment: .leading)
+      .fixedSize(horizontal: true, vertical: false)
+      .canvasFloating(barShape)
+      .transition(.opacity)
     }
-    .font(.system(size: 11))
-    .padding(.horizontal, 10)
-    .frame(height: 24)
-    .background(Color(nsColor: .windowBackgroundColor))
   }
 }
 
@@ -114,10 +368,13 @@ private struct AutomationCanvasZoomMenu: View {
       }
     } label: {
       Text(verbatim: Self.percent(camera.viewport.scale))
-        .monospacedDigit()
+        .font(.system(size: 11).monospacedDigit())
     }
     .menuStyle(.borderlessButton)
     .fixedSize()
+    .padding(.horizontal, 12)
+    .frame(height: 26)
+    .canvasFloating(barShape)
     .help(L10n.Automations.canvasZoomToFit)
   }
 
@@ -128,13 +385,14 @@ private struct AutomationCanvasZoomMenu: View {
 
 // MARK: - Inspector
 
-/// Sidebar inspector: the selected node's settings, or the automation's own when
-/// nothing is selected.
+/// Floating inspector panel: the selected node's settings, or the automation's
+/// own when nothing is selected.
 private struct AutomationCanvasInspector: View {
   @ObservedObject var model: AutomationCanvasEditorModel
   let isCloudConfigured: Bool
 
   var body: some View {
+    let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
     VStack(spacing: 0) {
       header
       Divider()
@@ -142,7 +400,8 @@ private struct AutomationCanvasInspector: View {
         .scrollContentBackground(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    .background(Color(nsColor: .windowBackgroundColor))
+    .clipShape(shape)
+    .canvasFloating(shape)
   }
 
   // MARK: Header
@@ -297,7 +556,7 @@ private struct AutomationCanvasMinimapSlot: View {
   @ObservedObject var camera: AutomationCanvasCamera
 
   var body: some View {
-    let visible = CGRect(origin: .zero, size: camera.canvasSize)
+    let visible = model.unobscuredRect
     let offscreen = !visible.contains(camera.viewport.toScreen(model.graph.bounds))
     if model.isMinimapVisible && offscreen {
       AutomationCanvasMinimap(model: model, camera: camera)
@@ -314,7 +573,7 @@ struct AutomationCanvasMinimap: View {
   @State private var dragWorld: CGRect?
 
   var body: some View {
-    let shape = RoundedRectangle(cornerRadius: Radius.controlS, style: .continuous)
+    let shape = RoundedRectangle(cornerRadius: Radius.controlL, style: .continuous)
     let world = dragWorld ?? worldRect
     Canvas { context, size in
       let map = mapping(world: world, size: size)
@@ -329,9 +588,7 @@ struct AutomationCanvasMinimap: View {
     }
     .padding(8)
     .frame(width: Self.size.width, height: Self.size.height)
-    .background(shape.fill(AutomationCanvasTheme.card))
-    .overlay(shape.strokeBorder(AutomationCanvasTheme.hairline, lineWidth: 0.5))
-    .shadow(color: AutomationCanvasTheme.shadow, radius: 2, y: 1)
+    .canvasFloating(shape)
     .contentShape(shape)
     .gesture(
       DragGesture(minimumDistance: 0)

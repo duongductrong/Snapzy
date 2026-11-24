@@ -25,8 +25,6 @@ struct AutomationCanvasView: View {
   @State private var hoveredLink: AutomationCanvasLink?
   @State private var didInitialFit = false
   @State private var pointer: CGPoint?
-  /// Where the step picker popover points; kept after it closes so it can animate out.
-  @State private var pickerAnchor: CGPoint = .zero
 
   private static let gridSnap: CGFloat = 8
 
@@ -42,15 +40,17 @@ struct AutomationCanvasView: View {
         nodes
         pendingConnection
           .allowsHitTesting(false)
-        pickerAnchorView
+        pickerLayer
       }
+      .animation(.easeOut(duration: 0.16), value: model.picker != nil)
       .frame(width: geometry.size.width, height: geometry.size.height)
       .coordinateSpace(name: AutomationCanvasNodeInfo.coordinateSpace)
       .background(
         AutomationCanvasEventMonitor(
           onPan: { camera.viewport.pan(by: $0) },
           onZoom: { model.zoom(by: $0, around: $1) },
-          onKey: handleKey
+          onKey: handleKey,
+          isOverPanel: isOverPanel
         )
       )
       .clipped()
@@ -269,6 +269,8 @@ struct AutomationCanvasView: View {
         model.selection = node
         model.reveal(node)
       }
+      // Simultaneous so the single click still selects without a delay.
+      .simultaneousGesture(TapGesture(count: 2).onEnded { model.openSettings(for: node) })
       .contextMenu { contextMenu(for: node) }
     }
   }
@@ -362,27 +364,38 @@ struct AutomationCanvasView: View {
 
   // MARK: - Picker
 
-  /// An invisible point the step picker popover hangs off.
-  private var pickerAnchorView: some View {
-    Color.clear
-      .frame(width: 1, height: 1)
-      .position(model.picker?.anchor ?? pickerAnchor)
-      .allowsHitTesting(false)
-      .popover(
-        isPresented: Binding(
-          get: { model.picker != nil },
-          set: { if !$0 { model.picker = nil } }
-        ),
-        arrowEdge: .trailing
-      ) {
-        AutomationCanvasNodePicker(
-          onPick: { model.addStep($0, request: model.picker) },
-          onClose: { model.picker = nil }
-        )
-      }
-      .onChange(of: model.picker?.anchor) { anchor in
-        if let anchor { pickerAnchor = anchor }
-      }
+  /// The step picker floats next to where it was opened, kept inside the part of
+  /// the canvas the bars and the inspector leave visible.
+  @ViewBuilder
+  private var pickerLayer: some View {
+    if let request = model.picker {
+      let frame = pickerFrame(for: request)
+      AutomationCanvasNodePicker(
+        onPick: { model.addStep($0, request: model.picker) },
+        onClose: { model.picker = nil }
+      )
+      .position(x: frame.midX, y: frame.midY)
+      .transition(.scale(scale: 0.96).combined(with: .opacity))
+    }
+  }
+
+  /// To the right of the anchor, or to its left when there is no room.
+  private func pickerFrame(for request: AutomationCanvasEditorModel.PickerRequest) -> CGRect {
+    let size = AutomationCanvasNodePicker.size
+    let area = model.unobscuredRect.insetBy(dx: 12, dy: 0)
+    let gap: CGFloat = 16
+    var x = request.anchor.x + gap
+    if x + size.width > area.maxX { x = request.anchor.x - gap - size.width }
+    x = min(max(x, area.minX), max(area.minX, area.maxX - size.width))
+    var y = request.anchor.y - size.height / 2
+    y = min(max(y, area.minY), max(area.minY, area.maxY - size.height))
+    return CGRect(origin: CGPoint(x: x, y: y), size: size)
+  }
+
+  private func isOverPanel(_ point: CGPoint) -> Bool {
+    if model.inspectorFrame.contains(point) { return true }
+    if let request = model.picker, pickerFrame(for: request).contains(point) { return true }
+    return false
   }
 
   // MARK: - Keys
@@ -423,7 +436,7 @@ private struct AutomationCanvasLinkActions: View {
   let onDisconnect: () -> Void
 
   var body: some View {
-    let shape = RoundedRectangle(cornerRadius: Radius.controlS, style: .continuous)
+    let shape = RoundedRectangle(cornerRadius: Radius.controlM, style: .continuous)
     HStack(spacing: 0) {
       Button(action: onInsert) {
         Image(systemName: "plus")
@@ -443,19 +456,20 @@ private struct AutomationCanvasLinkActions: View {
       .help(L10n.Automations.canvasDisconnect)
       .accessibilityLabel(L10n.Automations.canvasDisconnect)
     }
-    .buttonStyle(.borderless)
+    .buttonStyle(AutomationCanvasBarButtonStyle())
     .font(.system(size: 11, weight: .medium))
-    .background(shape.fill(AutomationCanvasTheme.card))
-    .overlay(shape.strokeBorder(AutomationCanvasTheme.hairline, lineWidth: 0.5))
-    .shadow(color: AutomationCanvasTheme.shadow, radius: 2, y: 1)
+    .padding(2)
+    .canvasFloating(shape)
   }
 }
 
 // MARK: - Add-step picker
 
-/// Step library with search, shown in a popover from "+" buttons, Tab,
+/// Floating step library with search, opened from "+" buttons, Tab,
 /// double-click or by dropping a link on empty space. Rows highlight like menu items.
 struct AutomationCanvasNodePicker: View {
+  static let size = CGSize(width: 280, height: 380)
+
   let onPick: (AutomationStepKind) -> Void
   let onClose: () -> Void
 
@@ -476,15 +490,32 @@ struct AutomationCanvasNodePicker: View {
   }
 
   var body: some View {
+    let shape = RoundedRectangle(cornerRadius: Radius.panel, style: .continuous)
     VStack(spacing: 0) {
-      TextField(L10n.Automations.canvasSearchSteps, text: $query)
-        .textFieldStyle(.roundedBorder)
-        .focused($isSearchFocused)
-        .onSubmit {
-          if let first = groups.first?.kinds.first { onPick(first) }
+      HStack(spacing: 8) {
+        Image(systemName: "magnifyingglass")
+          .font(.system(size: 13))
+          .foregroundStyle(.secondary)
+        TextField(L10n.Automations.canvasSearchSteps, text: $query)
+          .textFieldStyle(.plain)
+          .font(.system(size: 14))
+          .focused($isSearchFocused)
+          .onSubmit {
+            if let first = groups.first?.kinds.first { onPick(first) }
+          }
+        Button(action: onClose) {
+          Image(systemName: "xmark")
+            .font(.system(size: 10, weight: .semibold))
         }
-        .padding(10)
+        .buttonStyle(AutomationCanvasBarButtonStyle())
+        .help(L10n.Common.cancel)
+        .accessibilityLabel(L10n.Common.cancel)
+      }
+      .padding(.leading, 14)
+      .padding(.trailing, 8)
+      .frame(height: 44)
       Divider()
+        .padding(.horizontal, 10)
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 0) {
           if groups.isEmpty {
@@ -514,11 +545,12 @@ struct AutomationCanvasNodePicker: View {
             }
           }
         }
-        .padding(.horizontal, 5)
-        .padding(.vertical, 5)
+        .padding(6)
       }
     }
-    .frame(width: 260, height: 360)
+    .frame(width: Self.size.width, height: Self.size.height)
+    .clipShape(shape)
+    .canvasFloating(shape)
     .onAppear { isSearchFocused = true }
     .onExitCommand(perform: onClose)
   }
@@ -548,10 +580,10 @@ private struct AutomationCanvasPickerRow: View {
           .lineLimit(1)
         Spacer(minLength: 0)
       }
-      .padding(.horizontal, 6)
-      .frame(height: 26)
+      .padding(.horizontal, 8)
+      .frame(height: 30)
       .background(
-        RoundedRectangle(cornerRadius: Radius.controlXS, style: .continuous)
+        RoundedRectangle(cornerRadius: Radius.controlS, style: .continuous)
           .fill(isHighlighted ? Color.accentColor : Color.clear)
       )
       .contentShape(Rectangle())

@@ -3,10 +3,11 @@
 //  Snapzy
 //
 //  Opens the canvas editor in its own resizable window, one per automation.
-//  The window is a standard titled window with a unified AppKit toolbar (add,
-//  tidy up, zoom, save, inspector); the title is the automation's name and the
-//  subtitle says when there are unsaved changes. Save writes to the store and
-//  keeps the window open; closing with unsaved edits asks first.
+//  The canvas fills the window under a transparent title bar: only the traffic
+//  lights stay, and the name, actions, zoom and inspector float over the canvas
+//  (see AutomationCanvasEditorView). The window title is still set, for the
+//  Window menu and Mission Control. Save writes to the store and keeps the
+//  window open; closing with unsaved edits asks first.
 //
 
 import AppKit
@@ -53,11 +54,12 @@ final class AutomationCanvasWindowController {
 }
 
 @MainActor
-private final class AutomationCanvasWindowSession: NSObject, NSWindowDelegate, NSToolbarDelegate, NSToolbarItemValidation, NSMenuItemValidation {
+private final class AutomationCanvasWindowSession: NSObject, NSWindowDelegate {
   let window: NSWindow
   private let model: AutomationCanvasEditorModel
   private let onOpenInList: ((Automation, Bool) -> Void)?
   private let onClosed: (UUID) -> Void
+  private let titlebar = AutomationCanvasTitlebarMetrics()
   private var observers = Set<AnyCancellable>()
   private var allowsClose = false
 
@@ -72,7 +74,7 @@ private final class AutomationCanvasWindowSession: NSObject, NSWindowDelegate, N
     self.onClosed = onClosed
     window = NSWindow(
       contentRect: NSRect(x: 0, y: 0, width: 1180, height: 760),
-      styleMask: [.titled, .closable, .miniaturizable, .resizable],
+      styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
       backing: .buffered,
       defer: false
     )
@@ -85,20 +87,33 @@ private final class AutomationCanvasWindowSession: NSObject, NSWindowDelegate, N
     window.tabbingMode = .disallowed
     window.isMovableByWindowBackground = false
     window.appearance = ThemeManager.shared.nsAppearance
-    window.contentView = NSHostingView(rootView: AutomationCanvasRoot(
-      model: model,
-      onSave: { [weak self] in self?.save() }
-    ))
+    window.titlebarAppearsTransparent = true
+    window.titleVisibility = .hidden
+    window.backgroundColor = .underPageBackgroundColor
+    // An empty unified toolbar only makes the title bar as tall as a toolbar
+    // window's, so the traffic lights sit centered in the row the floating
+    // actions share. It has no items and, with the transparent title bar, no bar.
     let toolbar = NSToolbar(identifier: "AutomationCanvasToolbar")
-    toolbar.delegate = self
     toolbar.displayMode = .iconOnly
     toolbar.allowsUserCustomization = false
     window.toolbar = toolbar
     window.toolbarStyle = .unified
+    window.titlebarSeparatorStyle = .none
+    let hostingView = NSHostingView(rootView: AutomationCanvasRoot(
+      model: model,
+      titlebar: titlebar,
+      onSave: { [weak self] in self?.save() },
+      onOpenInList: onOpenInList == nil ? nil : { [weak self] in self?.openInList() }
+    ))
+    if #available(macOS 14.0, *) {
+      // The window's toolbar and title are managed here, not by SwiftUI.
+      hostingView.sceneBridgingOptions = []
+    }
+    window.contentView = hostingView
     updateChrome()
 
-    // Title, subtitle and toolbar state follow the model, a run loop turn later
-    // (objectWillChange fires before the change lands).
+    // The title follows the model, a run loop turn later (objectWillChange fires
+    // before the change lands).
     model.objectWillChange
       .receive(on: RunLoop.main)
       .sink { [weak self] _ in self?.updateChrome() }
@@ -107,11 +122,44 @@ private final class AutomationCanvasWindowSession: NSObject, NSWindowDelegate, N
       .receive(on: RunLoop.main)
       .sink { [weak self] _ in self?.window.appearance = ThemeManager.shared.nsAppearance }
       .store(in: &observers)
+    let center = NotificationCenter.default
+    for name in [
+      NSWindow.didResizeNotification,
+      NSWindow.didEnterFullScreenNotification,
+      NSWindow.didExitFullScreenNotification,
+    ] {
+      center.publisher(for: name, object: window)
+        .receive(on: RunLoop.main)
+        .sink { [weak self] _ in self?.updateTitlebarMetrics() }
+        .store(in: &observers)
+    }
   }
 
   func show() {
     if !window.isVisible { window.center() }
     window.makeKeyAndOrderFront(nil)
+    updateTitlebarMetrics()
+    DispatchQueue.main.async { [weak self] in self?.updateTitlebarMetrics() }
+  }
+
+  /// Where the traffic lights are, from the top-left of the content, so the
+  /// floating header lines up with them. In full screen they are hidden with
+  /// the menu bar and the header takes their place.
+  private func updateTitlebarMetrics() {
+    guard
+      !window.styleMask.contains(.fullScreen),
+      let close = window.standardWindowButton(.closeButton),
+      let zoom = window.standardWindowButton(.zoomButton),
+      !close.isHidden,
+      let content = window.contentView
+    else {
+      titlebar.update(centerY: nil, trailingX: nil)
+      return
+    }
+    let closeRect = content.convert(close.convert(close.bounds, to: nil), from: nil)
+    let zoomRect = content.convert(zoom.convert(zoom.bounds, to: nil), from: nil)
+    let centerY = content.isFlipped ? closeRect.midY : content.bounds.height - closeRect.midY
+    titlebar.update(centerY: centerY, trailingX: zoomRect.maxX)
   }
 
   // MARK: - Actions
@@ -158,162 +206,7 @@ private final class AutomationCanvasWindowSession: NSObject, NSWindowDelegate, N
     let name = model.automation.name.trimmingCharacters(in: .whitespacesAndNewlines)
     let title = name.isEmpty ? L10n.Automations.defaultName : name
     if window.title != title { window.title = title }
-    let subtitle = model.hasUnsavedChanges ? L10n.Automations.canvasUnsaved : ""
-    if window.subtitle != subtitle { window.subtitle = subtitle }
-    window.toolbar?.validateVisibleItems()
-  }
-
-  // MARK: - Toolbar
-
-  private enum Item {
-    static let addStep = NSToolbarItem.Identifier("automationCanvas.addStep")
-    static let tidyUp = NSToolbarItem.Identifier("automationCanvas.tidyUp")
-    static let zoom = NSToolbarItem.Identifier("automationCanvas.zoom")
-    static let zoomToFit = NSToolbarItem.Identifier("automationCanvas.zoomToFit")
-    static let save = NSToolbarItem.Identifier("automationCanvas.save")
-    static let more = NSToolbarItem.Identifier("automationCanvas.more")
-    static let inspector = NSToolbarItem.Identifier("automationCanvas.inspector")
-  }
-
-  func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    [Item.addStep, Item.tidyUp, .flexibleSpace, Item.zoom, Item.zoomToFit, .space, Item.save, Item.more, Item.inspector]
-  }
-
-  func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-    toolbarDefaultItemIdentifiers(toolbar)
-  }
-
-  func toolbar(
-    _ toolbar: NSToolbar,
-    itemForItemIdentifier identifier: NSToolbarItem.Identifier,
-    willBeInsertedIntoToolbar flag: Bool
-  ) -> NSToolbarItem? {
-    switch identifier {
-    case Item.addStep:
-      return button(identifier, symbol: "plus", label: L10n.Automations.addStep, help: L10n.Automations.canvasAddStepHelp, action: #selector(addStep))
-    case Item.tidyUp:
-      return button(identifier, symbol: "rectangle.3.group", label: L10n.Automations.canvasTidyUp, help: L10n.Automations.canvasTidyUp, action: #selector(tidyUp))
-    case Item.zoomToFit:
-      return button(
-        identifier,
-        symbol: "arrow.up.left.and.down.right.magnifyingglass",
-        label: L10n.Automations.canvasZoomToFit,
-        help: L10n.Automations.canvasZoomToFit,
-        action: #selector(zoomToFit)
-      )
-    case Item.inspector:
-      return button(identifier, symbol: "sidebar.right", label: L10n.Automations.canvasToggleInspector, help: L10n.Automations.canvasToggleInspector, action: #selector(toggleInspector))
-    case Item.zoom:
-      let images = ["minus.magnifyingglass", "plus.magnifyingglass"].compactMap {
-        NSImage(systemSymbolName: $0, accessibilityDescription: nil)
-      }
-      let group = NSToolbarItemGroup(
-        itemIdentifier: identifier,
-        images: images,
-        selectionMode: .momentary,
-        labels: [L10n.Automations.canvasZoomOut, L10n.Automations.canvasZoomIn],
-        target: self,
-        action: #selector(zoomSegment(_:))
-      )
-      group.label = L10n.Automations.canvasZoomIn
-      for (item, help) in zip(group.subitems, [L10n.Automations.canvasZoomOut, L10n.Automations.canvasZoomIn]) {
-        item.toolTip = help
-      }
-      return group
-    case Item.save:
-      let item = NSToolbarItem(itemIdentifier: identifier)
-      item.title = L10n.Common.save
-      item.label = L10n.Common.save
-      item.toolTip = L10n.Common.save
-      item.isBordered = true
-      item.target = self
-      item.action = #selector(saveFromToolbar)
-      return item
-    case Item.more:
-      let item = NSMenuToolbarItem(itemIdentifier: identifier)
-      item.image = NSImage(systemSymbolName: "ellipsis.circle", accessibilityDescription: L10n.Automations.moreActions)
-      item.label = L10n.Automations.moreActions
-      item.toolTip = L10n.Automations.moreActions
-      item.showsIndicator = false
-      let menu = NSMenu()
-      if onOpenInList != nil {
-        menu.addItem(withTitle: L10n.Automations.canvasOpenInList, action: #selector(openInListFromMenu), keyEquivalent: "").target = self
-        menu.addItem(.separator())
-      }
-      menu.addItem(withTitle: L10n.Automations.canvasShowMinimap, action: #selector(toggleMinimap), keyEquivalent: "").target = self
-      item.menu = menu
-      return item
-    default:
-      return nil
-    }
-  }
-
-  private func button(
-    _ identifier: NSToolbarItem.Identifier,
-    symbol: String,
-    label: String,
-    help: String,
-    action: Selector
-  ) -> NSToolbarItem {
-    let item = NSToolbarItem(itemIdentifier: identifier)
-    item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
-    item.label = label
-    item.toolTip = help
-    item.isBordered = true
-    item.target = self
-    item.action = action
-    return item
-  }
-
-  func validateToolbarItem(_ item: NSToolbarItem) -> Bool {
-    switch item.itemIdentifier {
-    case Item.addStep:
-      return model.canAddStep
-    case Item.save:
-      return model.hasUnsavedChanges && !model.issues.contains(where: \.blocksRun)
-    default:
-      return true
-    }
-  }
-
-  func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-    if menuItem.action == #selector(toggleMinimap) {
-      menuItem.state = model.isMinimapVisible ? .on : .off
-    }
-    return true
-  }
-
-  @objc private func addStep() {
-    model.openPicker(after: model.selection)
-  }
-
-  @objc private func tidyUp() {
-    model.tidyUp()
-  }
-
-  @objc private func zoomToFit() {
-    withAnimation(.easeOut(duration: 0.2)) { model.zoomToFit() }
-  }
-
-  @objc private func zoomSegment(_ sender: NSToolbarItemGroup) {
-    let factor: CGFloat = sender.selectedIndex == 0 ? 1 / 1.25 : 1.25
-    withAnimation(.easeOut(duration: 0.15)) { model.zoom(by: factor) }
-  }
-
-  @objc private func toggleInspector() {
-    model.isInspectorVisible.toggle()
-  }
-
-  @objc private func toggleMinimap() {
-    model.isMinimapVisible.toggle()
-  }
-
-  @objc private func saveFromToolbar() {
-    save()
-  }
-
-  @objc private func openInListFromMenu() {
-    openInList()
+    window.isDocumentEdited = model.hasUnsavedChanges
   }
 
   // MARK: - NSWindowDelegate
@@ -365,14 +258,35 @@ private final class AutomationCanvasWindowSession: NSObject, NSWindowDelegate, N
 /// Root view: injects the cloud state the inspectors need.
 private struct AutomationCanvasRoot: View {
   @ObservedObject var model: AutomationCanvasEditorModel
+  @ObservedObject var titlebar: AutomationCanvasTitlebarMetrics
   @ObservedObject private var cloudManager = CloudManager.shared
   let onSave: () -> Void
+  let onOpenInList: (() -> Void)?
 
   var body: some View {
     AutomationCanvasEditorView(
       model: model,
+      titlebar: titlebar,
       isCloudConfigured: cloudManager.isConfigured,
-      onSave: onSave
+      onSave: onSave,
+      onOpenInList: onOpenInList
     )
+  }
+}
+
+/// Position of the window's traffic lights, for lining the floating header up
+/// with them. `nil` when they are hidden (full screen).
+@MainActor
+final class AutomationCanvasTitlebarMetrics: ObservableObject {
+  /// Vertical center of the traffic lights, from the top of the content.
+  @Published private(set) var buttonsCenterY: CGFloat?
+  /// Right edge of the zoom button, from the leading edge of the content.
+  @Published private(set) var buttonsTrailingX: CGFloat?
+
+  func update(centerY: CGFloat?, trailingX: CGFloat?) {
+    let centerY = centerY.map { $0.rounded() }
+    let trailingX = trailingX.map { $0.rounded() }
+    if buttonsCenterY != centerY { buttonsCenterY = centerY }
+    if buttonsTrailingX != trailingX { buttonsTrailingX = trailingX }
   }
 }

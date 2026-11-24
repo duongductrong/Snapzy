@@ -17,6 +17,9 @@ struct AutomationCanvasEventMonitor: NSViewRepresentable {
   var onZoom: (CGFloat, CGPoint) -> Void
   /// A key the canvas may handle. Return true when handled.
   var onKey: (NSEvent) -> Bool
+  /// True when a panel floating over the canvas is under the point (canvas
+  /// coordinates); scrolls there belong to the panel.
+  var isOverPanel: (CGPoint) -> Bool = { _ in false }
 
   func makeNSView(context: Context) -> MonitorView {
     let view = MonitorView()
@@ -68,8 +71,9 @@ struct AutomationCanvasEventMonitor: NSViewRepresentable {
         return handlers.onKey(event)
       case .scrollWheel:
         let location = convert(event.locationInWindow, from: nil)
-        // Only scrolls over the canvas itself; the inspector beside it scrolls on its own.
-        guard bounds.contains(location) else { return false }
+        // Only scrolls over the canvas itself; the inspector and the step picker
+        // floating over it scroll on their own.
+        guard bounds.contains(location), !handlers.isOverPanel(location) else { return false }
         if event.modifierFlags.contains(.command) || !event.hasPreciseScrollingDeltas {
           // Mouse wheel and ⌘-scroll zoom; precise deltas are points, wheel deltas are lines.
           let delta = event.hasPreciseScrollingDeltas ? event.scrollingDeltaY * 0.01 : event.scrollingDeltaY * 0.1
@@ -81,7 +85,7 @@ struct AutomationCanvasEventMonitor: NSViewRepresentable {
         return true
       case .magnify:
         let location = convert(event.locationInWindow, from: nil)
-        guard bounds.contains(location) else { return false }
+        guard bounds.contains(location), !handlers.isOverPanel(location) else { return false }
         handlers.onZoom(1 + event.magnification, location)
         return true
       default:

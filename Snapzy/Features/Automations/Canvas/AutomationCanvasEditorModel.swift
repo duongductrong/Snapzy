@@ -181,6 +181,28 @@ final class AutomationCanvasEditorModel: ObservableObject {
     return 0
   }
 
+  /// Whether the inspector has settings to edit for `node` (double-click opens it).
+  func hasConfigurableSettings(_ node: AutomationCanvasNodeID) -> Bool {
+    switch node {
+    case .trigger, .source:
+      return !automation.isSystemDefault
+    case .step(let id):
+      switch step(id)?.action {
+      case nil, .stripMetadata?, .reveal?, .pin?, .notify?: return false
+      default: return true
+      }
+    }
+  }
+
+  /// Double-click on a node: select it and show the inspector when it has settings.
+  func openSettings(for node: AutomationCanvasNodeID) {
+    picker = nil
+    selection = node
+    guard hasConfigurableSettings(node) else { return }
+    isInspectorVisible = true
+    reveal(node)
+  }
+
   // MARK: - Editing
 
   func updateStep(_ step: AutomationStep) {
@@ -258,18 +280,45 @@ final class AutomationCanvasEditorModel: ObservableObject {
 
   // MARK: - Viewport
 
+  /// Width of the floating inspector panel.
+  static let inspectorWidth: CGFloat = 320
+
+  /// Where the inspector panel sits, in canvas coordinates (`.null` when hidden).
+  /// Reported by the editor view; scrolls over it are left to the panel.
+  var inspectorFrame: CGRect = .null
+
+  /// The part of the canvas not covered by the floating bars (top and bottom)
+  /// and the inspector panel; fitting, centering and revealing aim for it.
+  var unobscuredRect: CGRect {
+    let top: CGFloat = 64
+    let bottom: CGFloat = 46
+    let trailing: CGFloat = isInspectorVisible ? Self.inspectorWidth + 24 : 0
+    return CGRect(
+      x: 0,
+      y: top,
+      width: max(1, canvasSize.width - trailing),
+      height: max(1, canvasSize.height - top - bottom)
+    )
+  }
+
+  private var unobscuredCenter: CGPoint {
+    CGPoint(x: unobscuredRect.midX, y: unobscuredRect.midY)
+  }
+
   func zoom(by factor: CGFloat, around anchor: CGPoint? = nil) {
-    let center = anchor ?? CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
-    viewport.zoom(by: factor, around: center)
+    viewport.zoom(by: factor, around: anchor ?? unobscuredCenter)
   }
 
   func resetZoom() {
-    let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
-    viewport.zoom(by: 1 / viewport.scale, around: center)
+    viewport.zoom(by: 1 / viewport.scale, around: unobscuredCenter)
   }
 
   func zoomToFit() {
-    viewport.fit(graph.bounds, in: canvasSize, padding: 64)
+    guard !graph.bounds.isNull, canvasSize.width > 0 else { return }
+    let rect = unobscuredRect
+    viewport.fit(graph.bounds, in: rect.size, padding: 48)
+    viewport.offset.width += rect.minX
+    viewport.offset.height += rect.minY
   }
 
   /// First view of the window: fit everything, but never so small the cards are hard
@@ -281,16 +330,16 @@ final class AutomationCanvasEditorModel: ObservableObject {
     let bounds = graph.bounds
     viewport.scale = minimum
     viewport.offset = CGSize(
-      width: 64 - bounds.minX * minimum,
-      height: canvasSize.height / 2 - bounds.midY * minimum
+      width: unobscuredRect.minX + 64 - bounds.minX * minimum,
+      height: unobscuredRect.midY - bounds.midY * minimum
     )
   }
 
   /// Centers the canvas point `point` on screen (minimap clicks).
   func center(on point: CGPoint) {
     viewport.offset = CGSize(
-      width: canvasSize.width / 2 - point.x * viewport.scale,
-      height: canvasSize.height / 2 - point.y * viewport.scale
+      width: unobscuredCenter.x - point.x * viewport.scale,
+      height: unobscuredCenter.y - point.y * viewport.scale
     )
   }
 
@@ -298,7 +347,7 @@ final class AutomationCanvasEditorModel: ObservableObject {
   func reveal(_ node: AutomationCanvasNodeID) {
     guard canvasSize.width > 0 else { return }
     let frame = viewport.toScreen(graph.frame(of: node)).insetBy(dx: -32, dy: -32)
-    let visible = CGRect(origin: .zero, size: canvasSize)
+    let visible = unobscuredRect
     var delta = CGSize.zero
     if frame.minX < visible.minX { delta.width = visible.minX - frame.minX } else if frame.maxX > visible.maxX {
       delta.width = visible.maxX - frame.maxX
@@ -319,7 +368,7 @@ final class AutomationCanvasEditorModel: ObservableObject {
     guard canAddStep else { return }
     let screen = anchor
       ?? canvasPoint.map(viewport.toScreen)
-      ?? CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+      ?? unobscuredCenter
     picker = PickerRequest(after: after, detached: detached, canvasPoint: canvasPoint, anchor: screen)
   }
 
