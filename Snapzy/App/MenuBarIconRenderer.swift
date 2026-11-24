@@ -25,6 +25,10 @@ final class MenuBarIconRenderer {
     self.customIconDirectory = customIconDirectory
   }
 
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   // MARK: - Rendering
 
   /// 18pt template image for the given style. Falls back to the bundled
