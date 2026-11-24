@@ -45,8 +45,10 @@ struct VideoBackgroundSidebarView: View {
 
   private var noneButton: some View {
     Button {
-      state.backgroundStyle = .none
-      state.backgroundPadding = 0
+      var updated = state.frameSettings
+      updated.style = .none
+      updated.padding = 0
+      state.setFrameSettings(updated)
     } label: {
       Text(L10n.Common.none)
         .font(Typography.labelMedium)
@@ -80,10 +82,12 @@ struct VideoBackgroundSidebarView: View {
             preset: preset,
             isSelected: state.backgroundStyle == .gradient(preset)
           ) {
-            if state.backgroundPadding <= 0 {
-              state.backgroundPadding = 24
+            var updated = state.frameSettings
+            if updated.padding <= 0 {
+              updated.padding = 24
             }
-            state.backgroundStyle = .gradient(preset)
+            updated.style = .gradient(preset)
+            state.setFrameSettings(updated)
           }
         }
       }
@@ -162,17 +166,21 @@ struct VideoBackgroundSidebarView: View {
   }
 
   private func selectDefaultWallpaper(_ item: SystemWallpaperManager.WallpaperItem) {
-    if state.backgroundPadding <= 0 {
-      state.backgroundPadding = 24
+    var updated = state.frameSettings
+    if updated.padding <= 0 {
+      updated.padding = 24
     }
-    state.backgroundStyle = .wallpaper(item.fullImageURL)
+    updated.style = .wallpaper(item.fullImageURL)
+    state.setFrameSettings(updated)
   }
 
   private func selectCustomWallpaper(_ item: SystemWallpaperManager.WallpaperItem) {
-    if state.backgroundPadding <= 0 {
-      state.backgroundPadding = 24
+    var updated = state.frameSettings
+    if updated.padding <= 0 {
+      updated.padding = 24
     }
-    state.backgroundStyle = .wallpaper(item.fullImageURL)
+    updated.style = .wallpaper(item.fullImageURL)
+    state.setFrameSettings(updated)
   }
 
   private func addCustomWallpaper() {
@@ -192,8 +200,10 @@ struct VideoBackgroundSidebarView: View {
     wallpaperManager.removeCustomWallpaper(item)
 
     if case .wallpaper(let selectedUrl) = state.backgroundStyle, selectedUrl == url {
-      state.backgroundStyle = .none
-      state.backgroundPadding = 0
+      var updated = state.frameSettings
+      updated.style = .none
+      updated.padding = 0
+      state.setFrameSettings(updated)
     }
   }
 
@@ -216,10 +226,12 @@ struct VideoBackgroundSidebarView: View {
       },
       set: { newColor in
         if let color = newColor {
-          if state.backgroundPadding <= 0 {
-            state.backgroundPadding = 24
+          var updated = state.frameSettings
+          if updated.padding <= 0 {
+            updated.padding = 24
           }
-          state.backgroundStyle = .solidColor(color)
+          updated.style = .solidColor(color)
+          state.setFrameSettings(updated)
         }
       }
     )
@@ -241,10 +253,27 @@ struct VideoBackgroundSidebarView: View {
             }
           }
         ),
-        range: 0 ... 300
+        range: 0 ... 300,
+        onDragging: { isDragging, _ in
+          if isDragging { state.beginFrameEdit() } else { state.endFrameEdit() }
+        }
       )
-      VideoSliderRow(label: L10n.Common.shadow, value: $state.backgroundShadowIntensity, range: 0 ... 1)
-      VideoSliderRow(label: L10n.Common.corners, value: $state.backgroundCornerRadius, range: 0 ... 60)
+      VideoSliderRow(
+        label: L10n.Common.shadow,
+        value: $state.backgroundShadowIntensity,
+        range: 0 ... 1,
+        onDragging: { isDragging, _ in
+          if isDragging { state.beginFrameEdit() } else { state.endFrameEdit() }
+        }
+      )
+      VideoSliderRow(
+        label: L10n.Common.corners,
+        value: $state.backgroundCornerRadius,
+        range: 0 ... 60,
+        onDragging: { isDragging, _ in
+          if isDragging { state.beginFrameEdit() } else { state.endFrameEdit() }
+        }
+      )
     }
   }
 

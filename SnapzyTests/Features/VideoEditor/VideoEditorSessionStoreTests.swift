@@ -943,6 +943,63 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     XCTAssertFalse(state.canRedo)
   }
 
+  /// Regression: continuous background slider drags collapse into one undo step via beginFrameEdit/endFrameEdit.
+  func testFrameEdit_beginAndEndCollapseSliderDragIntoSingleUndoStep() {
+    let state = VideoEditorState(url: URL(fileURLWithPath: "/tmp/frame-undo-test.mov"))
+    let initial = state.frameSettings
+
+    state.beginFrameEdit()
+    state.backgroundPadding = 16
+    state.backgroundPadding = 32
+    state.backgroundPadding = 48
+    state.backgroundStyle = .solidColor(.white)
+    state.endFrameEdit()
+
+    XCTAssertTrue(state.canUndo)
+    XCTAssertEqual(state.backgroundPadding, 48)
+
+    state.undo()
+    XCTAssertEqual(state.frameSettings, initial)
+    XCTAssertFalse(state.canUndo)
+
+    state.redo()
+    XCTAssertEqual(state.backgroundPadding, 48)
+    XCTAssertEqual(state.backgroundStyle, .solidColor(.white))
+  }
+
+  /// Regression: changing zoomTransitionDuration must mark hasUnsavedChanges and support Undo/Redo.
+  func testZoomTransitionDuration_recordsUndoAndMarksUnsavedChanges() {
+    let previousDefault = UserDefaults.standard.object(forKey: PreferencesKeys.videoEditorZoomTransitionDuration)
+    defer {
+      if let previousDefault {
+        UserDefaults.standard.set(previousDefault, forKey: PreferencesKeys.videoEditorZoomTransitionDuration)
+      } else {
+        UserDefaults.standard.removeObject(forKey: PreferencesKeys.videoEditorZoomTransitionDuration)
+      }
+    }
+
+    let state = VideoEditorState(url: URL(fileURLWithPath: "/tmp/transition-undo-test.mov"))
+    let initial = state.zoomTransitionDuration
+    let target = initial == ZoomCalculator.defaultTransitionDuration
+      ? ZoomCalculator.smoothTransitionDuration
+      : ZoomCalculator.defaultTransitionDuration
+
+    XCTAssertFalse(state.hasUnsavedChanges)
+    state.setZoomTransitionDuration(target)
+
+    XCTAssertEqual(state.zoomTransitionDuration, target, accuracy: 0.0001)
+    XCTAssertTrue(state.hasUnsavedChanges)
+    XCTAssertTrue(state.canUndo)
+
+    state.undo()
+    XCTAssertEqual(state.zoomTransitionDuration, initial, accuracy: 0.0001)
+    XCTAssertFalse(state.hasUnsavedChanges)
+
+    state.redo()
+    XCTAssertEqual(state.zoomTransitionDuration, target, accuracy: 0.0001)
+    XCTAssertTrue(state.hasUnsavedChanges)
+  }
+
   func testSpeedGesture_finalModelAndSequenceMapUseReleasedRange() async throws {
     let videoURL = try await makeVideoFile(named: "speed-gesture.mov", duration: 12)
     let state = VideoEditorState(url: videoURL)

@@ -19,6 +19,7 @@ private struct MockupStateSnapshot: Equatable {
     let shadowIntensity: Double
     let cornerRadius: Double
     let backgroundStyle: BackgroundStyle
+    let selectedPresetId: UUID?
 }
 
 /// Central state object for mockup renderer
@@ -148,16 +149,7 @@ final class MockupState: ObservableObject {
     // MARK: - Undo/Redo
 
     func saveState() {
-        let snapshot = MockupStateSnapshot(
-            rotationX: rotationX,
-            rotationY: rotationY,
-            rotationZ: rotationZ,
-            perspective: perspective,
-            padding: padding,
-            shadowIntensity: shadowIntensity,
-            cornerRadius: cornerRadius,
-            backgroundStyle: backgroundStyle
-        )
+        let snapshot = currentSnapshot()
 
         // Avoid duplicates
         if undoStack.last != snapshot {
@@ -173,17 +165,7 @@ final class MockupState: ObservableObject {
         guard let snapshot = undoStack.popLast() else { return }
 
         // Save current state to redo stack
-        let currentSnapshot = MockupStateSnapshot(
-            rotationX: rotationX,
-            rotationY: rotationY,
-            rotationZ: rotationZ,
-            perspective: perspective,
-            padding: padding,
-            shadowIntensity: shadowIntensity,
-            cornerRadius: cornerRadius,
-            backgroundStyle: backgroundStyle
-        )
-        redoStack.append(currentSnapshot)
+        redoStack.append(currentSnapshot())
 
         // Restore snapshot
         applySnapshot(snapshot)
@@ -193,7 +175,14 @@ final class MockupState: ObservableObject {
         guard let snapshot = redoStack.popLast() else { return }
 
         // Save current state to undo stack
-        let currentSnapshot = MockupStateSnapshot(
+        undoStack.append(currentSnapshot())
+
+        // Restore snapshot
+        applySnapshot(snapshot)
+    }
+
+    private func currentSnapshot() -> MockupStateSnapshot {
+        MockupStateSnapshot(
             rotationX: rotationX,
             rotationY: rotationY,
             rotationZ: rotationZ,
@@ -201,12 +190,9 @@ final class MockupState: ObservableObject {
             padding: padding,
             shadowIntensity: shadowIntensity,
             cornerRadius: cornerRadius,
-            backgroundStyle: backgroundStyle
+            backgroundStyle: backgroundStyle,
+            selectedPresetId: selectedPresetId
         )
-        undoStack.append(currentSnapshot)
-
-        // Restore snapshot
-        applySnapshot(snapshot)
     }
 
     private func applySnapshot(_ snapshot: MockupStateSnapshot) {
@@ -218,6 +204,7 @@ final class MockupState: ObservableObject {
         shadowIntensity = snapshot.shadowIntensity
         cornerRadius = snapshot.cornerRadius
         backgroundStyle = snapshot.backgroundStyle
+        selectedPresetId = snapshot.selectedPresetId
     }
 
     // MARK: - Helpers
