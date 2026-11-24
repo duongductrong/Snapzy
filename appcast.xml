@@ -6,6 +6,23 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 2.3.0-beta.12</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>245</sparkle:version>
+      <sparkle:shortVersionString>2.3.0-beta.12</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Tue, 24 Nov 2026 18:01:40 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>🐛 Bug Fixes</h3><ul><li>avoid back-deployed isolated deinit crash in MenuBarIconRenderer (60e22922)</li><li>Record undo snapshots for Video Editor background/transition edits and Annotate crop/mockup (6a88437d)</li><li>center off-center custom menu bar icons and isolate icon tests (1aa36e53)</li><li>scale transparent custom PNG icons into 18pt canvas (5ae5830e)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v2.3.0-beta.12/Snapzy-v2.3.0-beta.12.dmg"
+        sparkle:edSignature="tf2Gwfq4pEiHIYnl++62rmE3brYYgzYVXhWaOSPeHnBrGC48sP7VXmW/A59sIUzjrp2cnpKaPvX+aNKIyOxHAQ=="
+        length="58544921"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 2.3.0-beta.11</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>244</sparkle:version>
