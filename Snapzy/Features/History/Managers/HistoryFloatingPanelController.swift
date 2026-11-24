@@ -27,10 +27,12 @@ final class HistoryFloatingPanelController {
     let size: CGSize
     let position: HistoryPanelPosition
     let cornerRadius: CGFloat
+    let becomesKey: Bool
   }
 
   private var panel: HistoryFloatingPanel?
   private weak var containerView: HistoryFloatingContainerView?
+  private static let motionKey = "history.panel.motion"
   private var position: HistoryPanelPosition = .topCenter
   private let padding: CGFloat = 20
   private var state: VisibilityState = .hidden
@@ -45,14 +47,16 @@ final class HistoryFloatingPanelController {
     _ content: Content,
     size: CGSize,
     position: HistoryPanelPosition,
-    cornerRadius: CGFloat
+    cornerRadius: CGFloat,
+    becomesKey: Bool = true
   ) {
     requestShow(
       Presentation(
         content: AnyView(content),
         size: size,
         position: position,
-        cornerRadius: cornerRadius
+        cornerRadius: cornerRadius,
+        becomesKey: becomesKey
       )
     )
   }
@@ -80,6 +84,10 @@ final class HistoryFloatingPanelController {
   /// Check if panel is onscreen or transitioning.
   var isVisible: Bool {
     state != .hidden
+  }
+
+  var panelFrame: CGRect? {
+    panel?.frame
   }
 
   /// Check if panel is intended to stay open.
@@ -136,7 +144,7 @@ final class HistoryFloatingPanelController {
       panel.alphaValue = 0
       panel.setFrame(targetFrame, display: false)
       panel.installLocalArrowEventMonitor()
-      panel.makeKeyAndOrderFront(nil)
+      orderFront(panel, becomesKey: presentation.becomesKey)
       NSAnimationContext.runAnimationGroup({ context in
         context.duration = 0.18
         context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -150,22 +158,28 @@ final class HistoryFloatingPanelController {
     }
 
     panel.alphaValue = 0
-    panel.setFrame(transitionFrame(for: targetFrame, isShowing: true), display: false)
+    panel.setFrame(targetFrame, display: false)
     panel.installLocalArrowEventMonitor()
-    panel.makeKeyAndOrderFront(nil)
+    orderFront(panel, becomesKey: presentation.becomesKey)
+    playEntranceMotion()
 
     NSAnimationContext.runAnimationGroup({ context in
-      context.duration = 0.22
-      context.timingFunction = CAMediaTimingFunction(
-        controlPoints: 0.22, 1.0, 0.36, 1.0
-      )
-      panel.animator().setFrame(targetFrame, display: true)
+      context.duration = 0.14
+      context.timingFunction = CAMediaTimingFunction(name: .easeOut)
       panel.animator().alphaValue = 1
     }, completionHandler: { [weak self] in
       MainActor.assumeIsolated {
         self?.finishShow()
       }
     })
+  }
+
+  private func orderFront(_ panel: HistoryFloatingPanel, becomesKey: Bool) {
+    if becomesKey {
+      panel.makeKeyAndOrderFront(nil)
+    } else {
+      panel.orderFrontRegardless()
+    }
   }
 
   private func finishShow() {
@@ -191,14 +205,11 @@ final class HistoryFloatingPanelController {
 
     panel.removeLocalArrowEventMonitor()
     state = .hiding
-    let targetFrame = reduceMotion ? panel.frame : transitionFrame(for: panel.frame, isShowing: false)
+    playExitMotion()
 
     NSAnimationContext.runAnimationGroup({ context in
-      context.duration = reduceMotion ? 0.14 : 0.18
+      context.duration = 0.14
       context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-      if !reduceMotion {
-        panel.animator().setFrame(targetFrame, display: true)
-      }
       panel.animator().alphaValue = 0
     }, completionHandler: { [weak self] in
       panel.close()
@@ -283,20 +294,71 @@ final class HistoryFloatingPanelController {
     return NSRect(origin: origin, size: size)
   }
 
-  private func transitionFrame(for targetFrame: NSRect, isShowing: Bool) -> NSRect {
-    let deltaY: CGFloat
+  /// The panel unfolds from the edge it belongs to instead of sliding as a whole window,
+  /// so the shadow stays put while the material settles on a spring.
+  private func playEntranceMotion() {
+    guard !reduceMotion, let layer = containerView?.layer else { return }
+    let start = CATransform3DConcat(scaleTransform(0.94), offsetTransform(dy: travelOffset))
+    layer.removeAnimation(forKey: Self.motionKey)
+    layer.transform = start
+    layer.add(entranceSpring(from: start), forKey: Self.motionKey)
+    layer.transform = CATransform3DIdentity
+  }
+
+  private func playExitMotion() {
+    guard !reduceMotion, let layer = containerView?.layer else { return }
+    let end = CATransform3DConcat(scaleTransform(0.97), offsetTransform(dy: travelOffset))
+    layer.removeAnimation(forKey: Self.motionKey)
+    let spring = CASpringAnimation(keyPath: "transform")
+    spring.fromValue = CATransform3DIdentity
+    spring.toValue = end
+    spring.mass = 1
+    spring.stiffness = 420
+    spring.damping = 42
+    layer.add(spring, forKey: Self.motionKey)
+    layer.transform = end
+  }
+
+  private func entranceSpring(from start: CATransform3D) -> CASpringAnimation {
+    let spring = CASpringAnimation(keyPath: "transform")
+    spring.fromValue = start
+    spring.toValue = CATransform3DIdentity
+    spring.mass = 1
+    spring.stiffness = 340
+    spring.damping = 32
+    return spring
+  }
+
+  private func scaleTransform(_ scale: CGFloat) -> CATransform3D {
+    let size = containerView?.bounds.size ?? .zero
+    let anchor = scaleAnchor
+    let dx = size.width * anchor.x
+    let dy = size.height * anchor.y
+    var transform = CATransform3DIdentity
+    transform = CATransform3DTranslate(transform, dx, dy, 0)
+    transform = CATransform3DScale(transform, scale, scale, 1)
+    transform = CATransform3DTranslate(transform, -dx, -dy, 0)
+    return transform
+  }
+
+  private func offsetTransform(dy: CGFloat) -> CATransform3D {
+    CATransform3DTranslate(CATransform3DIdentity, 0, dy, 0)
+  }
+
+  private var scaleAnchor: CGPoint {
+    let flipped = containerView?.isFlipped == true
     switch position {
     case .topCenter:
-      deltaY = 18
+      return CGPoint(x: 0.5, y: flipped ? 0 : 1)
     case .bottomCenter:
-      deltaY = -18
+      return CGPoint(x: 0.5, y: flipped ? 1 : 0)
     case .center:
-      deltaY = -10
+      return CGPoint(x: 0.5, y: 0.5)
     }
-    let direction = isShowing ? deltaY : -deltaY
-    var frame = targetFrame
-    frame.origin.y += direction
-    return frame
+  }
+
+  private var travelOffset: CGFloat {
+    position == .topCenter ? 8 : -8
   }
 
   private func handlePanelDidResignKey() {

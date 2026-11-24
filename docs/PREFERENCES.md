@@ -96,8 +96,9 @@ Sidebar tab after Annotate (deep link `snapzy://settings/ai`, aliases `ask`, `as
 
 ### History (`PreferencesHistorySettingsView.swift`)
 
-- **Floating Panel**: enable (`history.floating.enabled`), Panel Position (`history.floating.position`).
-- **Display**: Default Filter (all/screenshots/videos/gifs), Background Style (`history.backgroundStyle`, thumbnail picker), Panel Size scale slider (`history.floating.scale`), Max Items 3–20 (`history.floating.maxDisplayedItems`).
+- **History Experience**: Traditional (default) or Hanging (`history.displayStyle`), with a Preview History button. Both browse the same stored captures. Hanging reveals at the screen's top edge and auto-hides when the pointer leaves; it does not depend on the traditional floating-panel enable switch.
+- **Floating Panel** (Traditional only): enable (`history.floating.enabled`), Panel Position (`history.floating.position`).
+- **Display**: Default Filter (all/screenshots/videos/gifs), Max Items 3–20 (`history.floating.maxDisplayedItems`). Hanging also caps the row to the space available without scrolling. Background Style (`history.backgroundStyle`, thumbnail picker) and Panel Size (`history.floating.scale`) apply only to Traditional.
 - **Retention**: Retention Days 0–90, 0 = keep forever (`history.retentionDays`), Max Count 0–1000, 0 = unlimited (`history.maxCount`).
 - **Storage**: capture storage size + Open Capture Storage (`CaptureStorageManager`), Clear History with confirmation (`HistoryWindowController.deleteRecords`).
 - Master history enable (`history.enabled`) seeded on; see [APP_LIFECYCLE.md](APP_LIFECYCLE.md) for seeded defaults.

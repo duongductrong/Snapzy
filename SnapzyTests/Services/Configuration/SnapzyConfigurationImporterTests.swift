@@ -774,6 +774,144 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     }
   }
 
+  // MARK: - History display style
+
+  func testImportAppliesHistoryDisplayStyle() {
+    let defaults = UserDefaultsFactory.make()
+    let manager = HistoryFloatingManager.shared
+    let originalStyle = manager.displayStyle
+    defer { manager.displayStyle = originalStyle }
+
+    for expected in [HistoryDisplayStyle.hanging, .traditional] {
+      let source = """
+      schema_version = 1
+
+      [history]
+      display_style = "\(expected.rawValue)"
+      """
+
+      let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+      XCTAssertFalse(result.hasErrors)
+      XCTAssertEqual(manager.displayStyle, expected)
+    }
+  }
+
+  func testImportRejectsUnknownHistoryDisplayStyle() {
+    let defaults = UserDefaultsFactory.make()
+    let manager = HistoryFloatingManager.shared
+    let originalStyle = manager.displayStyle
+    defer { manager.displayStyle = originalStyle }
+    let source = """
+    schema_version = 1
+
+    [history]
+    display_style = "dangling"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertEqual(manager.displayStyle, originalStyle)
+  }
+
+  func testImportWithoutHistoryDisplayStyleLeavesValueUnchanged() {
+    let defaults = UserDefaultsFactory.make()
+    let manager = HistoryFloatingManager.shared
+    let originalStyle = manager.displayStyle
+    defer { manager.displayStyle = originalStyle }
+    manager.displayStyle = .hanging
+    let source = """
+    schema_version = 1
+
+    [history]
+    max_count = 250
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(manager.displayStyle, .hanging)
+  }
+
+  func testHistoryDisplayStyleRoundTrips() {
+    let manager = HistoryFloatingManager.shared
+    let originalStyle = manager.displayStyle
+    defer { manager.displayStyle = originalStyle }
+    manager.displayStyle = .hanging
+
+    let exported = SnapzyConfigurationExporter.exportTOML(defaults: UserDefaultsFactory.make())
+    XCTAssertTrue(exported.contains("display_style = \"hanging\""), exported)
+
+    let result = SnapzyConfigurationImporter.importTOML(exported, defaults: UserDefaultsFactory.make())
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(manager.displayStyle, .hanging)
+  }
+
+  func testDefaultDocumentUsesTraditionalHistoryStyle() {
+    XCTAssertTrue(SnapzyConfigurationDefaultDocument.toml().contains("display_style = \"traditional\""))
+  }
+
+  // MARK: - History top-edge reveal
+
+  func testImportAppliesHistoryEdgeReveal() {
+    let defaults = UserDefaultsFactory.make()
+    let manager = HistoryFloatingManager.shared
+    let originalReveal = manager.isEdgeRevealEnabled
+    defer { manager.isEdgeRevealEnabled = originalReveal }
+
+    for expected in [true, false] {
+      let source = """
+      schema_version = 1
+
+      [history.floating]
+      reveal_at_top_edge = \(expected)
+      """
+
+      let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+      XCTAssertFalse(result.hasErrors)
+      XCTAssertEqual(manager.isEdgeRevealEnabled, expected)
+    }
+  }
+
+  func testImportRejectsNonBooleanHistoryEdgeReveal() {
+    let defaults = UserDefaultsFactory.make()
+    let manager = HistoryFloatingManager.shared
+    let originalReveal = manager.isEdgeRevealEnabled
+    defer { manager.isEdgeRevealEnabled = originalReveal }
+    manager.isEdgeRevealEnabled = true
+    let source = """
+    schema_version = 1
+
+    [history.floating]
+    reveal_at_top_edge = "always"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertTrue(manager.isEdgeRevealEnabled)
+  }
+
+  func testHistoryEdgeRevealRoundTrips() {
+    let manager = HistoryFloatingManager.shared
+    let originalReveal = manager.isEdgeRevealEnabled
+    defer { manager.isEdgeRevealEnabled = originalReveal }
+    manager.isEdgeRevealEnabled = true
+
+    let exported = SnapzyConfigurationExporter.exportTOML(defaults: UserDefaultsFactory.make())
+    XCTAssertTrue(exported.contains("reveal_at_top_edge = true"), exported)
+
+    let result = SnapzyConfigurationImporter.importTOML(exported, defaults: UserDefaultsFactory.make())
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertTrue(manager.isEdgeRevealEnabled)
+  }
+
+  func testDefaultDocumentDisablesHistoryEdgeReveal() {
+    XCTAssertTrue(SnapzyConfigurationDefaultDocument.toml().contains("reveal_at_top_edge = false"))
+  }
+
   // MARK: - Custom OCR models
 
   func testImportAppliesCustomOCRModelsAndClearsAPIKeyFlag() throws {

@@ -17,28 +17,74 @@ struct HistorySettingsView: View {
 
   var body: some View {
     Form {
-      Section(L10n.PreferencesHistory.floatingPanelSection) {
-        SettingRow(
-          title: L10n.PreferencesHistory.floatingPanelTitle,
-          description: L10n.PreferencesHistory.floatingPanelDescription
-        ) {
-          Toggle("", isOn: $manager.isEnabled)
-            .labelsHidden()
-        }
+      Section(L10n.HistoryHanging.sectionTitle) {
+        VStack(alignment: .leading, spacing: 16) {
+          VStack(alignment: .leading, spacing: 4) {
+            Text(L10n.HistoryHanging.styleTitle)
+              .font(.headline)
+            Text(L10n.HistoryHanging.styleDescription)
+              .font(.callout)
+              .foregroundStyle(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
 
-        SettingRow(
-          title: L10n.PreferencesHistory.panelPositionTitle,
-          description: L10n.PreferencesHistory.panelPositionDescription
-        ) {
-          Picker("", selection: $manager.position) {
-            ForEach(HistoryPanelPosition.allCases, id: \.self) { position in
-              Text(position.displayName).tag(position)
+          HistorySettingsPreview(style: manager.displayStyle)
+
+          HStack(alignment: .top, spacing: 10) {
+            ForEach(HistoryDisplayStyle.allCases) { style in
+              HistoryDisplayStyleCard(
+                style: style,
+                isSelected: manager.displayStyle == style,
+                action: { manager.displayStyle = style }
+              )
             }
           }
-          .labelsHidden()
-          .pickerStyle(.menu)
-          .fixedSize()
-          .frame(width: 140, alignment: .trailing)
+          .fixedSize(horizontal: false, vertical: true)
+
+          Button(L10n.HistoryHanging.preview) {
+            manager.show()
+          }
+          .buttonStyle(.bordered)
+          .controlSize(.regular)
+          .disabled(manager.displayStyle == .traditional && !manager.isEnabled)
+        }
+        .padding(.vertical, 4)
+      }
+
+      if manager.displayStyle == .traditional {
+        Section(L10n.PreferencesHistory.floatingPanelSection) {
+          SettingRow(
+            title: L10n.PreferencesHistory.floatingPanelTitle,
+            description: L10n.PreferencesHistory.floatingPanelDescription
+          ) {
+            Toggle("", isOn: $manager.isEnabled)
+              .labelsHidden()
+          }
+
+          SettingRow(
+            title: L10n.PreferencesHistory.edgeRevealTitle,
+            description: L10n.PreferencesHistory.edgeRevealDescription
+          ) {
+            Toggle("", isOn: $manager.isEdgeRevealEnabled)
+              .labelsHidden()
+              .disabled(!manager.isEnabled)
+              .accessibilityIdentifier("history.edgeReveal")
+          }
+
+          SettingRow(
+            title: L10n.PreferencesHistory.panelPositionTitle,
+            description: L10n.PreferencesHistory.panelPositionDescription
+          ) {
+            Picker("", selection: $manager.position) {
+              ForEach(HistoryPanelPosition.allCases, id: \.self) { position in
+                Text(position.displayName).tag(position)
+              }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+            .frame(width: 140, alignment: .trailing)
+          }
         }
       }
 
@@ -59,51 +105,53 @@ struct HistorySettingsView: View {
           .frame(width: 140, alignment: .trailing)
         }
 
-        SettingRow(
-          title: L10n.PreferencesHistory.backgroundStyleTitle,
-          description: L10n.PreferencesHistory.backgroundStyleDescription,
-          alignment: .top
-        ) {
-          HistoryBackgroundStylePicker(selection: $historyBackgroundStyle, position: manager.position)
-        }
+        if manager.displayStyle == .traditional {
+          SettingRow(
+            title: L10n.PreferencesHistory.backgroundStyleTitle,
+            description: L10n.PreferencesHistory.backgroundStyleDescription,
+            alignment: .top
+          ) {
+            HistoryBackgroundStylePicker(selection: $historyBackgroundStyle, position: manager.position)
+          }
 
-        SettingRow(
-          title: L10n.PreferencesHistory.panelSizeTitle,
-          description: L10n.PreferencesHistory.panelSizeDescription
-        ) {
-          HStack(spacing: 8) {
-            Text(L10n.PreferencesHistory.panelSizeSmall)
-              .font(.caption)
-              .foregroundColor(.secondary)
-            Slider(value: $manager.panelScale.stepped(by: 0.05, in: HistoryFloatingLayout.scaleRange), in: HistoryFloatingLayout.scaleRange)
+          SettingRow(
+            title: L10n.PreferencesHistory.panelSizeTitle,
+            description: L10n.PreferencesHistory.panelSizeDescription
+          ) {
+            HStack(spacing: 8) {
+              Text(L10n.PreferencesHistory.panelSizeSmall)
+                .font(.caption)
+                .foregroundColor(.secondary)
+              Slider(value: $manager.panelScale.stepped(by: 0.05, in: HistoryFloatingLayout.scaleRange), in: HistoryFloatingLayout.scaleRange)
+                .frame(width: 120)
+              Text(L10n.PreferencesHistory.panelSizeLarge)
+                .font(.caption)
+                .foregroundColor(.secondary)
+              Text("\(Int(manager.panelScale * 100))%")
+                .frame(width: 44, alignment: .trailing)
+                .monospacedDigit()
+                .foregroundColor(.secondary)
+            }
+            .frame(width: 220, alignment: .trailing)
+          }
+
+          SettingRow(
+            title: L10n.PreferencesHistory.maxItemsTitle,
+            description: L10n.PreferencesHistory.maxItemsDescription
+          ) {
+            HStack(spacing: 8) {
+              Text("\(manager.maxDisplayedItems)")
+                .frame(width: 28, alignment: .trailing)
+                .monospacedDigit()
+                .foregroundColor(.secondary)
+              Slider(value: Binding(
+                get: { Double(manager.maxDisplayedItems) },
+                set: { manager.maxDisplayedItems = Int($0) }
+              ).stepped(by: 1, in: 3...20), in: 3...20)
               .frame(width: 120)
-            Text(L10n.PreferencesHistory.panelSizeLarge)
-              .font(.caption)
-              .foregroundColor(.secondary)
-            Text("\(Int(manager.panelScale * 100))%")
-              .frame(width: 44, alignment: .trailing)
-              .monospacedDigit()
-              .foregroundColor(.secondary)
+            }
+            .frame(width: 220, alignment: .trailing)
           }
-          .frame(width: 220, alignment: .trailing)
-        }
-
-        SettingRow(
-          title: L10n.PreferencesHistory.maxItemsTitle,
-          description: L10n.PreferencesHistory.maxItemsDescription
-        ) {
-          HStack(spacing: 8) {
-            Text("\(manager.maxDisplayedItems)")
-              .frame(width: 28, alignment: .trailing)
-              .monospacedDigit()
-              .foregroundColor(.secondary)
-            Slider(value: Binding(
-              get: { Double(manager.maxDisplayedItems) },
-              set: { manager.maxDisplayedItems = Int($0) }
-            ).stepped(by: 1, in: 3...20), in: 3...20)
-            .frame(width: 120)
-          }
-          .frame(width: 220, alignment: .trailing)
         }
       }
 
@@ -208,6 +256,75 @@ struct HistorySettingsView: View {
   private func revealCaptureStorage() {
     guard let url = storageManager.ensureCapturesDirectory() else { return }
     NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: url.path)
+  }
+}
+
+/// One style choice. The mockup lives in the preview above, so the cards stay readable: name,
+/// what the style does, and an accent ring plus a checkmark when picked.
+private struct HistoryDisplayStyleCard: View {
+  let style: HistoryDisplayStyle
+  let isSelected: Bool
+  let action: () -> Void
+
+  @State private var isHovering = false
+
+  var body: some View {
+    Button(action: action) {
+      VStack(alignment: .leading, spacing: 6) {
+        HStack(spacing: 6) {
+          Text(style.title)
+            .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
+
+          Spacer(minLength: 8)
+
+          if isSelected {
+            Image(systemName: "checkmark.circle.fill")
+              .font(.system(size: 13, weight: .semibold))
+              .foregroundStyle(Color.accentColor)
+              .transition(.scale(scale: 0.7).combined(with: .opacity))
+          }
+        }
+        .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+
+        Text(description(for: style))
+          .font(.caption)
+          .foregroundStyle(isSelected ? Color.primary.opacity(0.72) : Color.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .padding(12)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      .background(
+        Color.primary.opacity(backgroundOpacity),
+        in: Radius.rect(Radius.card)
+      )
+      .overlay(
+        Radius.rect(Radius.card)
+          .strokeBorder(
+            isSelected ? Color.accentColor : Color.primary.opacity(0.08),
+            lineWidth: isSelected ? 1.5 : 1
+          )
+      )
+      .contentShape(Radius.rect(Radius.card))
+    }
+    .buttonStyle(.plain)
+    .onHover { isHovering in self.isHovering = isHovering }
+    .animation(SnapzyMotionPreferences.shared.spec(.hover).animation, value: isHovering)
+    .animation(SnapzyMotionPreferences.shared.spec(.contentIn).animation, value: isSelected)
+    .accessibilityIdentifier("history.style.\(style.rawValue)")
+    .accessibilityLabel(style.title)
+    .accessibilityHint(description(for: style))
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+
+  private var backgroundOpacity: Double {
+    isSelected ? 0.07 : (isHovering ? 0.05 : 0.03)
+  }
+
+  private func description(for style: HistoryDisplayStyle) -> String {
+    switch style {
+    case .traditional: return L10n.HistoryHanging.traditionalDescription
+    case .hanging: return L10n.HistoryHanging.hangingDescription
+    }
   }
 }
 

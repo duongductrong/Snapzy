@@ -160,11 +160,13 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("enabled", true)
     writer.value("retention_days", 30)
     writer.value("max_count", 500)
+    writer.value("display_style", HistoryDisplayStyle.traditional.rawValue)
     writer.value("background_style", HistoryBackgroundStyle.defaultStyle.rawValue)
     writer.value("open_on_launch", false)
 
     writer.section("history.floating")
     writer.value("enabled", true)
+    writer.value("reveal_at_top_edge", false)
     writer.value("position", HistoryPanelPosition.topCenter.rawValue)
     writer.value("default_filter", "all")
     writer.value("max_displayed_items", 10)

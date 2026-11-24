@@ -13,6 +13,11 @@ import SwiftUI
 final class QuickAccessPinWindowManager {
   static let shared = QuickAccessPinWindowManager()
 
+  enum Owner {
+    case quickAccess
+    case history
+  }
+
   private var controllers: [UUID: QuickAccessPinWindowController] = [:]
 
   private init() {}
@@ -23,6 +28,7 @@ final class QuickAccessPinWindowManager {
   @discardableResult
   func show(
     item: QuickAccessItem,
+    owner: Owner = .quickAccess,
     entranceFrom: NSRect? = nil,
     onUserClose: @escaping (UUID) -> Void
   ) -> Bool {
@@ -34,7 +40,11 @@ final class QuickAccessPinWindowManager {
       return true
     }
 
-    let controller = QuickAccessPinWindowController(item: item, entranceFrom: entranceFrom)
+    let controller = QuickAccessPinWindowController(
+      item: item,
+      owner: owner,
+      entranceFrom: entranceFrom
+    )
     controller.onUserClose = { [weak self] id in
       self?.controllers[id] = nil
       onUserClose(id)
@@ -56,11 +66,9 @@ final class QuickAccessPinWindowManager {
     controllers.removeValue(forKey: id)?.close()
   }
 
-  func closeAll() {
-    for controller in controllers.values {
-      controller.close()
-    }
-    controllers.removeAll()
+  func closeAll(owner: Owner) {
+    let ids = controllers.compactMap { $0.value.owner == owner ? $0.key : nil }
+    for id in ids { close(id: id) }
   }
 
   func suspendAllMouseMonitors() {
@@ -117,7 +125,14 @@ private final class QuickAccessPinWindowController {
   /// card sits in a corner and always gives the flight somewhere to come from.
   private let entranceOrigin: CGRect?
 
-  init(item: QuickAccessItem, entranceFrom: NSRect? = nil) {
+  let owner: QuickAccessPinWindowManager.Owner
+
+  init(
+    item: QuickAccessItem,
+    owner: QuickAccessPinWindowManager.Owner = .quickAccess,
+    entranceFrom: NSRect? = nil
+  ) {
+    self.owner = owner
     id = item.id
 
     let image = Self.loadImage(for: item)

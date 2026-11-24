@@ -18,6 +18,9 @@ final class HistorySearchViewModel: ObservableObject {
   private let store = CaptureHistoryStore.shared
   private var cancellables = Set<AnyCancellable>()
 
+  // SwiftUI can release this outside a task on macOS 13–15; avoid isolated deinit back-deployment.
+  deinit {}
+
   init(
     searchTextPublisher: AnyPublisher<String, Never>? = nil,
     selectedFilterPublisher: AnyPublisher<CaptureHistoryType?, Never>? = nil,
