@@ -1500,6 +1500,8 @@ final class ScreenCaptureManager: ObservableObject {
         CaptureOriginStore.shared.record(url: url, screenRect: captureOrigin)
       }
       DiagnosticLogger.shared.log(.info, .capture, "Capture saved: \(url.lastPathComponent)")
+      // Automation conditions and variables prefer what the capture knows (window app, title).
+      AutomationRunner.shared.noteCaptureContext(context)
       if emitCompletion {
         captureCompletedSubject.send(CaptureCompletionEvent(url: url, routing: context.postCaptureRouting))
       }

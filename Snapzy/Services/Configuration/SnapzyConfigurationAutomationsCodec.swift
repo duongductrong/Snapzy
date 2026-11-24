@@ -20,6 +20,7 @@
 //    menu_bar = false
 //    quick_access = true
 //    history = true
+//    finder = false               # Finder "Run Snapzy Automation…" + menu bar drop
 //    external_invocation = false
 //    data = "{…}"   # full JSON; keeps what the keys can't (newer steps or
 //                   # sources). Keys win when edited.
@@ -32,6 +33,18 @@
 //    kind = "save_to_folder"
 //    folder = "~/repo/docs/img"   # or "export"; a bookmark is created on import
 //    name = "{date}-{appName}"
+//
+//    [automations.8f0c….steps.03]
+//    kind = "condition"
+//    match = "any"               # all | any
+//    otherwise = "skip:2"        # stop | skip:<n>
+//
+//    [automations.8f0c….steps.03.predicates.01]
+//    type = "frontmost_app"      # capture_mode, invocation, file_kind,
+//    bundle_ids = ["com.figma.Desktop"]  # pixel_size, file_size, has_text
+//
+//  `run_automation` takes `target = "<id or name>"`; `ask` takes
+//  `choices = ["<id or name>", "continue", "stop"]`.
 //
 //  Milestone 1 files used `steps = ["copy_image", "upload_copy_link:markdown"]`;
 //  that form is still read.
@@ -80,11 +93,13 @@ enum SnapzyConfigurationAutomationsCodec {
       writer.value("menu_bar", automation.showsInMenuBar)
       writer.value("quick_access", automation.showsInQuickAccess)
       writer.value("history", automation.showsInHistory)
+      writer.value("finder", automation.showsInFinder)
       writer.value("external_invocation", automation.externalInvocation)
 
       for (stepIndex, step) in automation.steps.flatMap(\.migrated).enumerated() {
-        writer.section("\(sectionName).\(automation.id.uuidString.lowercased()).steps.\(stepKey(stepIndex))")
-        SnapzyConfigurationAutomationStepCodec.write(step, to: &writer)
+        let section = "\(sectionName).\(automation.id.uuidString.lowercased()).steps.\(stepKey(stepIndex))"
+        writer.section(section)
+        SnapzyConfigurationAutomationStepCodec.write(step, to: &writer, section: section)
       }
     }
   }
@@ -120,6 +135,18 @@ enum SnapzyConfigurationAutomationsCodec {
 
     var warnings: [String] = []
     var parsed: [(order: Int, automation: Automation)] = []
+
+    // First pass: names of the file's own automations, for Run Automation / Ask targets.
+    var fileNames: [String: [UUID]] = [:]
+    for (key, value) in tables {
+      guard case .table(let fields) = value,
+            let name = fields["name"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+            !name.isEmpty
+      else { continue }
+      let id = UUID(uuidString: key)
+        ?? fields["data"]?.stringValue.flatMap { try? JSONDecoder().decode(Automation.self, from: Data($0.utf8)) }?.id
+      if let id { fileNames[name, default: []].append(id) }
+    }
 
     for key in tables.keys.sorted() {
       let path = "\(sectionName).\(key)"
@@ -161,7 +188,8 @@ enum SnapzyConfigurationAutomationsCodec {
           let result = SnapzyConfigurationAutomationStepCodec.parse(
             stepFields,
             path: "\(path).steps.\(stepKey)",
-            folderStore: folderStore
+            folderStore: folderStore,
+            fileNames: fileNames
           )
           warnings.append(contentsOf: result.warnings)
           guard var step = result.step else { continue }
@@ -215,6 +243,9 @@ enum SnapzyConfigurationAutomationsCodec {
       }
       if let history = fields["history"]?.boolValue {
         automation.showsInHistory = history
+      }
+      if let finder = fields["finder"]?.boolValue {
+        automation.showsInFinder = finder
       }
       automation.presetID = fields["preset"]?.stringValue.flatMap { AutomationPreset(rawValue: $0)?.rawValue }
         ?? (fields["preset"] == nil ? base?.presetID : nil)

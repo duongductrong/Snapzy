@@ -56,6 +56,10 @@ enum AutomationTrust {
     switch action {
     case .webhook, .runScript, .runShortcut:
       return true
+    // Runs another of the user's automations, possibly from a trigger that
+    // automation itself doesn't allow (e.g. the URL scheme).
+    case .runAutomation, .ask:
+      return true
     case .upload(let config):
       return config.destination != .default
     default:

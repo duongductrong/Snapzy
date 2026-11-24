@@ -32,7 +32,7 @@ struct AutomationExternalSection: View {
         copyableRow(L10n.Automations.externalCLILabel, value: AutomationDisplay.cliCommand(for: automation))
 
         // Second opt-in: a link or a shortcut must not run a script unless asked for.
-        if automation.containsCodeSteps {
+        if automation.effectiveMaxTrust(lookup: { AutomationStore.shared.automation(id: $0) }) == .code {
           Toggle(isOn: $automation.allowExternalCode) {
             VStack(alignment: .leading, spacing: 2) {
               Text(L10n.Automations.externalCodeToggle)

@@ -78,6 +78,8 @@ final class AutomationStore: ObservableObject {
         guard automation.showsInHistory else { return false }
       case .external:
         guard automation.externalInvocation else { return false }
+      case .finder:
+        guard automation.showsInFinder else { return false }
       }
       guard let fileKind else { return true }
       return automation.acceptsFile(of: fileKind)
@@ -86,6 +88,11 @@ final class AutomationStore: ObservableObject {
 
   private static func nameKey(_ name: String) -> String {
     name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+  }
+
+  /// The stored automation seeded from `preset`, if any.
+  private func presetAutomationID(_ preset: AutomationPreset) -> UUID? {
+    automations.first { $0.presetID == preset.rawValue }?.id
   }
 
   var canAdd: Bool {
@@ -168,10 +175,10 @@ final class AutomationStore: ObservableObject {
   }
 
   func restoreMissingPresets() {
-    let missing = missingPresets
+    let missing = Set(missingPresets)
     guard !missing.isEmpty else { return }
-    for preset in missing where canAdd {
-      automations.append(preset.makeAutomation())
+    for preset in AutomationPreset.creationOrder where missing.contains(preset) && canAdd {
+      automations.append(preset.makeAutomation(resolve: presetAutomationID))
     }
     persist()
   }
@@ -189,7 +196,14 @@ final class AutomationStore: ObservableObject {
     guard !defaults.bool(forKey: PreferencesKeys.automationsSeeded) else { return }
     defaults.set(true, forKey: PreferencesKeys.automationsSeeded)
     if automations.isEmpty, undecodableEntries.isEmpty {
-      automations = AutomationPreset.allCases.map { $0.makeAutomation() }
+      for preset in AutomationPreset.creationOrder {
+        automations.append(preset.makeAutomation(resolve: presetAutomationID))
+      }
+      // Keep the catalog order in the list.
+      automations.sort { lhs, rhs in
+        let order = AutomationPreset.allCases.map(\.rawValue)
+        return (order.firstIndex(of: lhs.presetID ?? "") ?? 0) < (order.firstIndex(of: rhs.presetID ?? "") ?? 0)
+      }
       persist()
     }
   }

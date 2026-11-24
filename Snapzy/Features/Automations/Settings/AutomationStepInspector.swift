@@ -12,6 +12,10 @@ struct AutomationStepInspector: View {
   @Binding var step: AutomationStep
   let issues: [AutomationChainIssue]
   let isCloudConfigured: Bool
+  /// The automation being edited (Run Automation / Ask can't pick it).
+  var automationID: UUID?
+  /// Steps below this one (bounds "Otherwise skip").
+  var stepsAfter = Automation.maxSteps
 
   var body: some View {
     Form {
@@ -93,6 +97,12 @@ struct AutomationStepInspector: View {
       ShareSheetInspector(config: binding(config, AutomationStepAction.shareSheet))
     case .openInApp(let config)?:
       OpenInAppInspector(config: binding(config, AutomationStepAction.openInApp))
+    case .condition(let config)?:
+      ConditionInspector(config: binding(config, AutomationStepAction.condition), stepsAfter: stepsAfter)
+    case .runAutomation(let config)?:
+      RunAutomationInspector(config: binding(config, AutomationStepAction.runAutomation), excluding: automationID)
+    case .ask(let config)?:
+      AskInspector(config: binding(config, AutomationStepAction.ask), excluding: automationID)
     default:
       EmptyView()
     }
@@ -131,6 +141,10 @@ extension AutomationStepKind {
     case .shareSheet: L10n.Automations.describeShareSheet
     case .openInApp: L10n.Automations.describeOpenInApp
     case .copyImage, .copyFile: L10n.Automations.describeCopyImage
+    case .condition: L10n.Automations.describeCondition
+    case .stop: L10n.Automations.describeStop
+    case .runAutomation: L10n.Automations.describeRunAutomation
+    case .ask: L10n.Automations.describeAsk
     case .showQuickAccess, .openAnnotate, .uploadAndCopyLink: nil
     }
   }
@@ -153,6 +167,8 @@ struct AutomationTokenHelpButton: View {
       VStack(alignment: .leading, spacing: 8) {
         Text(L10n.Automations.tokensHelp).font(.headline)
         tokenList(AutomationVariables.payloadTokens)
+        Divider()
+        tokenList(AutomationVariables.contextTokens)
         Divider()
         tokenList(AutomationVariables.namingTokens)
       }

@@ -12,6 +12,7 @@ import SwiftUI
 
 struct AutomationAdvancedSection: View {
   @AppStorage(PreferencesKeys.automationsAllowCodeSteps) private var allowsCodeSteps = false
+  @AppStorage(PreferencesKeys.automationsRunSingleFileTriggerDirectly) private var runSingleDirectly = false
 
   var body: some View {
     Section {
@@ -19,6 +20,16 @@ struct AutomationAdvancedSection: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(L10n.Automations.allowCodeStepsToggle)
           Text(L10n.Automations.allowCodeStepsDescription)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+      }
+      .toggleStyle(.switch)
+      Toggle(isOn: $runSingleDirectly) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(L10n.Automations.runSingleDirectlyToggle)
+          Text(L10n.Automations.runSingleDirectlyDescription)
             .font(.caption)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)

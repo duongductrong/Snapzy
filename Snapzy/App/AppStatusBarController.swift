@@ -19,6 +19,8 @@ final class AppStatusBarController: ObservableObject {
   // MARK: - Properties
 
   private var statusItem: NSStatusItem?
+  /// Files dropped on the icon run an automation (milestone 5).
+  private let automationDropTarget = AutomationStatusItemDropTarget()
   private var cancellables = Set<AnyCancellable>()
   private let recorder = ScreenRecordingManager.shared
   private let menuBarCustomizationStore = MenuBarCustomizationStore.shared
@@ -168,10 +170,15 @@ final class AppStatusBarController: ObservableObject {
       button.action = #selector(statusBarButtonClicked(_:))
       button.sendAction(on: [.leftMouseUp, .rightMouseUp])
       renderStatusItem()
+      automationDropTarget.attach(to: button)
     }
 
     // Occlusion is only known once the status bar window is on screen (see issue #587).
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+      // The status bar window may only exist once the item is on screen.
+      if let self, let button = self.statusItem?.button {
+        self.automationDropTarget.attach(to: button)
+      }
       self?.observeStatusItemOcclusion()
       self?.logStatusItemVisibilityIfChanged(trigger: "setup")
     }

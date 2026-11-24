@@ -30,6 +30,22 @@ nonisolated struct AutomationRunRecord: Codable, Identifiable, Equatable, Sendab
     let durationMs: Int
     let status: Status
     let error: String?
+    /// Why a control step went the way it did, e.g. "condition not met",
+    /// "skipped by condition", the chosen automation's name.
+    var detail: String? = nil
+    /// Steps of a nested run (Run Automation, Ask).
+    var children: [StepRecord]? = nil
+
+    /// This record and every nested one, depth first.
+    var flattened: [StepRecord] {
+      [self] + (children ?? []).flatMap(\.flattened)
+    }
+
+    /// Records that stand for real work: a nested run is replaced by its steps.
+    var leaves: [StepRecord] {
+      guard let children, !children.isEmpty else { return [self] }
+      return children.flatMap(\.leaves)
+    }
   }
 
   static let maxTextLength = 200

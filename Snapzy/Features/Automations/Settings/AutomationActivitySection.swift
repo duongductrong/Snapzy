@@ -70,7 +70,7 @@ private struct AutomationRunSummaryRow: View {
         .accessibilityLabel(outcomeLabel)
       VStack(alignment: .leading, spacing: 1) {
         Text(record.automationName).lineLimit(1)
-        Text("\(record.startedAt.formatted(date: .abbreviated, time: .shortened)) · \(record.invocation)")
+        Text("\(record.startedAt.formatted(date: .abbreviated, time: .shortened)) · \(Self.invocationName(record.invocation))")
           .font(.caption)
           .foregroundStyle(.secondary)
       }
@@ -79,6 +79,10 @@ private struct AutomationRunSummaryRow: View {
         .font(.caption.monospacedDigit())
         .foregroundStyle(.secondary)
     }
+  }
+
+  static func invocationName(_ raw: String) -> String {
+    AutomationInvocation(rawValue: raw)?.displayName ?? raw
   }
 
   static func duration(_ ms: Int) -> String {
@@ -116,14 +120,29 @@ private struct AutomationRunSummaryRow: View {
 private struct AutomationRunDetail: View {
   let record: AutomationRunRecord
 
+  /// Steps with nested runs (Run Automation, Ask) flattened and indented.
+  static func rows(
+    _ steps: [AutomationRunRecord.StepRecord],
+    depth: Int = 0
+  ) -> [(step: AutomationRunRecord.StepRecord, depth: Int)] {
+    steps.flatMap { step in
+      [(step, depth)] + rows(step.children ?? [], depth: depth + 1)
+    }
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      ForEach(Array(record.steps.enumerated()), id: \.offset) { _, step in
+      ForEach(Array(Self.rows(record.steps).enumerated()), id: \.offset) { _, row in
+        let step = row.step
         HStack(spacing: 6) {
           Image(systemName: symbol(step.status))
             .foregroundStyle(step.status == .failed ? .red : .secondary)
             .frame(width: 14)
           Text(AutomationStepKind(rawValue: step.kind)?.displayName ?? step.kind)
+          // Control steps say why ("Condition not met", the chosen automation).
+          if let detail = step.detail {
+            Text(detail).foregroundStyle(.secondary).lineLimit(1)
+          }
           if let error = step.error {
             Text(error).foregroundStyle(.red).lineLimit(2)
           }
@@ -133,6 +152,7 @@ private struct AutomationRunDetail: View {
             .foregroundStyle(.secondary)
         }
         .font(.caption)
+        .padding(.leading, CGFloat(row.depth) * 16)
       }
       ForEach(record.warnings, id: \.self) { warning in
         Label(warning, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange)

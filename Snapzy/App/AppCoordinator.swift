@@ -35,6 +35,8 @@ final class AppCoordinator {
       context: ["previousCrash": didCrash ? "true" : "false"]
     )
     LegacyLicenseCleanupService.shared.runIfNeeded()
+    // Finder ▸ Quick Actions / Services ▸ "Run Snapzy Automation…".
+    AutomationServicesProvider.shared.install()
 
     let defaults = UserDefaults.standard
     if defaults.object(forKey: PreferencesKeys.diagnosticsRetentionDays) == nil {

@@ -141,7 +141,9 @@ struct AutomationEditorSheet: View {
         AutomationStepInspector(
           step: $automation.steps[index],
           issues: issues.filter { $0.stepID == id },
-          isCloudConfigured: isCloudConfigured
+          isCloudConfigured: isCloudConfigured,
+          automationID: automation.id,
+          stepsAfter: automation.steps.count - index - 1
         )
         .id(id)
       } else {

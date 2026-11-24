@@ -37,6 +37,7 @@ struct AutomationTriggersInspector: View {
           .disabled(!automation.runsWithoutInput)
         Toggle(L10n.Automations.showInQuickAccess, isOn: $automation.showsInQuickAccess)
         Toggle(L10n.Automations.showInHistory, isOn: $automation.showsInHistory)
+        Toggle(L10n.Automations.showInFinder, isOn: $automation.showsInFinder)
       } header: {
         Text(L10n.Automations.showInLabel)
       } footer: {

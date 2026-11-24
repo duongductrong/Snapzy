@@ -54,12 +54,40 @@ struct AutomationRunContext {
   let automationName: String
   let invocation: AutomationInvocation
   let startedAt: Date
-  /// Frontmost app when the run started (the captured app for window captures).
+  /// The captured window's app, else the frontmost app when the run was triggered.
   let appName: String?
-  /// Not captured yet (window captures don't report it to the runner); `{window.title}` renders empty.
+  /// Window title, when the capture knows it (window captures).
   let windowTitle: String?
+  /// Bundle id of the same app; `nil` for runs on handed-in files.
+  let bundleID: String?
+  /// The capture mode of a capture-sourced run; `nil` for handed-in files.
+  let captureMode: AutomationCaptureMode?
   /// `…/Captures/AutomationRuns/<runID>/`, created on first use.
   let workingDirectory: URL
+
+  init(
+    runID: UUID,
+    automationID: UUID,
+    automationName: String,
+    invocation: AutomationInvocation,
+    startedAt: Date,
+    appName: String?,
+    windowTitle: String?,
+    bundleID: String? = nil,
+    captureMode: AutomationCaptureMode? = nil,
+    workingDirectory: URL
+  ) {
+    self.runID = runID
+    self.automationID = automationID
+    self.automationName = automationName
+    self.invocation = invocation
+    self.startedAt = startedAt
+    self.appName = appName
+    self.windowTitle = windowTitle
+    self.bundleID = bundleID
+    self.captureMode = captureMode
+    self.workingDirectory = workingDirectory
+  }
 
   static func workingDirectory(for runID: UUID) -> URL {
     TempCaptureManager.tempCaptureRootDirectory()

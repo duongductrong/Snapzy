@@ -151,7 +151,10 @@ final class AutomationModelTests: XCTestCase {
       XCTAssertNil(automation.hotkey)
       XCTAssertEqual(automation.presetID, preset.rawValue)
       XCTAssertTrue(automation.startsCapture)
-      XCTAssertEqual(automation.activeActions.last, .notify)
+      // Share Menu ends in its Ask step: the chosen automation notifies.
+      if preset != .shareMenu {
+        XCTAssertEqual(automation.activeActions.last, .notify)
+      }
     }
     XCTAssertEqual(AutomationPreset.quickCopy.makeAutomation().activeActions.first, .copyImage)
   }

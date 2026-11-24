@@ -28,8 +28,12 @@ struct AutomationVariables: Equatable {
     "{link}", "{text}", "{file.name}", "{file.basename}", "{file.ext}", "{file.path}",
     "{width}", "{height}", "{saved.path}", "{saved.relativePath}", "{saved.relativeURL}", "{automation}",
   ]
+  /// Run context (milestone 5).
+  static let contextTokens = [
+    "{app.name}", "{app.bundleID}", "{window.title}", "{capture.mode}", "{invocation}",
+  ]
   static let namingTokens = [
-    "{date}", "{time}", "{datetime}", "{appName}", "{timestamp}",
+    "{date}", "{time}", "{datetime}", "{appName}", "{windowTitle}", "{timestamp}",
   ]
 
   private(set) var values: [String: String]
@@ -40,13 +44,21 @@ struct AutomationVariables: Equatable {
 
   /// Values for the current payload; the first file stands for `{file.*}`.
   init(context: AutomationRunContext, payload: AutomationPayload, pixelSize: CGSize? = nil) {
-    let captureContext = CaptureContext(appName: context.appName, windowTitle: context.windowTitle)
+    let captureContext = CaptureContext(
+      appName: context.appName,
+      windowTitle: context.windowTitle,
+      bundleID: context.bundleID
+    )
     var values = CaptureOutputNaming.tokenValues(
       kind: payload.files.first?.kind == .image ? .screenshot : .recording,
       date: context.startedAt,
       context: captureContext
     )
     values["{automation}"] = context.automationName
+    values["{app.name}"] = context.appName ?? ""
+    values["{app.bundleID}"] = context.bundleID ?? ""
+    values["{capture.mode}"] = context.captureMode?.rawValue ?? ""
+    values["{invocation}"] = context.invocation.rawValue
     values["{link}"] = payload.link?.absoluteString ?? ""
     values["{text}"] = payload.text ?? ""
     if let file = payload.files.first?.url {

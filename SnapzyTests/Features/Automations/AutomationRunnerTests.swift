@@ -55,6 +55,19 @@ final class FakeAutomationEnvironment: AutomationRunEnvironment {
   var shared: [([Any], AutomationShareService)] = []
   var opened: [([URL], String)] = []
   var customUploaders: Set<UUID> = []
+  // Milestone 5 control steps
+  var storedAutomations: [UUID: Automation] = [:]
+  /// Answers for the picker, in order; `nil` = the user cancelled.
+  var pickAnswers: [AutomationPickerChoice.Value?] = []
+  var presentedPickers: [(title: String, choices: [AutomationPickerChoice])] = []
+
+  func automation(id: UUID) -> Automation? { storedAutomations[id] }
+
+  func pick(title: String, thumbnail _: URL?, choices: [AutomationPickerChoice]) async -> AutomationPickerChoice? {
+    presentedPickers.append((title, choices))
+    guard !pickAnswers.isEmpty, let answer = pickAnswers.removeFirst() else { return nil }
+    return choices.first { $0.value == answer }
+  }
 
   func prepareScreenshot(_ url: URL) -> AnnotationSessionData? {
     preparedScreenshots.append(url)

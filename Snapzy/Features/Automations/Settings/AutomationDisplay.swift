@@ -21,6 +21,21 @@ enum AutomationDisplay {
     "snapzy://automation/run?id=\(automation.id.uuidString)"
   }
 
+  /// Name of a stored automation, `nil` when unset or gone.
+  @MainActor
+  static func automationName(_ id: UUID?) -> String? {
+    id.flatMap { AutomationStore.shared.automation(id: $0)?.displayName }
+  }
+
+  @MainActor
+  static func choiceTitle(_ choice: AutomationAskChoice) -> String {
+    switch choice {
+    case .automation(let id): automationName(id) ?? L10n.Automations.unknownAutomation
+    case .continueRun: L10n.Automations.askContinue
+    case .stopRun: L10n.Automations.askStop
+    }
+  }
+
   /// `snapzy automation run "<name>"`, quoting the name for a POSIX shell.
   static func cliCommand(for automation: Automation) -> String {
     let name = automation.displayName.replacingOccurrences(of: "'", with: "'\\''")
@@ -89,7 +104,7 @@ enum AutomationStepGroup: CaseIterable, Identifiable {
     case .transform: [.applyCanvasPreset, .resize, .convert, .stripMetadata, .ocr, .translate, .convertToGIF]
     case .deliver: [.copyImage, .upload, .copyLink, .copyText, .saveToFolder, .reveal, .pin, .showQuickAccess, .openAnnotate]
     case .integrations: [.webhook, .shareSheet, .openInApp, .runShortcut, .runScript]
-    case .control: [.notify]
+    case .control: [.condition, .ask, .runAutomation, .stop, .notify]
     }
   }
 }
@@ -120,6 +135,10 @@ extension AutomationStepKind {
     case .runShortcut: L10n.Automations.stepRunShortcut
     case .shareSheet: L10n.Automations.stepShareSheet
     case .openInApp: L10n.Automations.stepOpenInApp
+    case .condition: L10n.Automations.stepCondition
+    case .stop: L10n.Automations.stepStop
+    case .runAutomation: L10n.Automations.stepRunAutomation
+    case .ask: L10n.Automations.stepAsk
     }
   }
 
@@ -148,6 +167,10 @@ extension AutomationStepKind {
     case .runShortcut: "square.2.layers.3d"
     case .shareSheet: "square.and.arrow.up"
     case .openInApp: "arrow.up.forward.app"
+    case .condition: "arrow.triangle.branch"
+    case .stop: "stop.circle"
+    case .runAutomation: "arrow.turn.down.right"
+    case .ask: "list.bullet.rectangle"
     }
   }
 }
@@ -203,8 +226,15 @@ extension AutomationStepAction {
       return config.service.displayName
     case .openInApp(let config):
       return config.appName.isEmpty ? (config.trimmedBundleID.isEmpty ? L10n.Automations.issueApp : config.trimmedBundleID) : config.appName
+    case .condition(let config):
+      return AutomationConditionText.sentence(config)
+    case .runAutomation(let config):
+      return AutomationDisplay.automationName(config.automationID) ?? L10n.Automations.issueAutomation
+    case .ask(let config):
+      guard !config.choices.isEmpty else { return L10n.Automations.issueChoices }
+      return config.choices.map(AutomationDisplay.choiceTitle).joined(separator: " · ")
     case .copyImage, .showQuickAccess, .openAnnotate, .notify, .stripMetadata,
-         .copyFile, .reveal, .pin:
+         .copyFile, .reveal, .pin, .stop:
       return ""
     }
   }
@@ -258,6 +288,12 @@ extension AutomationChainIssue {
     case .missingConfig(.shortcut): return L10n.Automations.issueShortcut
     case .missingConfig(.app): return L10n.Automations.issueApp
     case .missingConfig(.secret(let name)): return L10n.Automations.issueSecret(name)
+    case .missingConfig(.automation): return L10n.Automations.issueAutomation
+    case .missingConfig(.choices): return L10n.Automations.issueChoices
+    case .missingConfig(.condition): return L10n.Automations.issueCondition
+    case .missingConfig(.skipRange): return L10n.Automations.issueSkipRange
+    case .recursion: return L10n.Automations.issueRecursion
+    case .targetCannotRun: return L10n.Automations.issueTargetCannotRun
     }
   }
 }

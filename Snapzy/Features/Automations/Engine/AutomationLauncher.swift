@@ -122,11 +122,15 @@ final class AutomationLauncher {
     input: AutomationInput?
   ) -> AutomationLaunchRejection? {
     guard automation.isEnabled else { return .disabled }
+    let lookup: (UUID) -> Automation? = { [store] in store.automation(id: $0) }
+    // Run Automation / Ask targets count as part of this automation for trust.
+    let reachable = automation.reachableAutomations(lookup: lookup)
     // Imported with network / script steps nobody looked at yet.
     if automation.needsReview { return .needsReview }
+    if reachable.dropFirst().contains(where: \.needsReview) { return .needsReview }
     if invocation.isExternal, !automation.externalInvocation { return .externalNotAllowed }
     if invocation == .urlScheme, !isURLSchemeEnabled() { return .urlSchemeDisabled }
-    if automation.containsCodeSteps {
+    if reachable.contains(where: \.containsCodeSteps) {
       guard allowsCodeSteps() else { return .codeStepsDisabled }
       // A link or a shortcut must not run a script without the second opt-in
       // (the CLI is already approved per calling app).
@@ -136,7 +140,9 @@ final class AutomationLauncher {
     }
     if automation.hasUnsupportedSource { return .unsupportedSource }
     // Never start a capture (or touch a file) for a chain that cannot run.
-    if !AutomationChainValidator.blockingIssues(automation.migrated()).isEmpty { return .invalidChain }
+    if !AutomationChainValidator.blockingIssues(automation.migrated(), automationLookup: lookup).isEmpty {
+      return .invalidChain
+    }
 
     guard let files = input?.files, !files.isEmpty else {
       return automation.runsWithoutInput ? nil : .needsFile

@@ -97,6 +97,8 @@ are also accepted as aliases.
 `{appName}` resolves to the captured application's name (or frontmost app name
 for fullscreen/area captures). It resolves to an empty string when the context
 is not available.
+`{windowTitle}` (alias `{window.title}`) is the captured window's title, up to
+80 characters with `/` replaced by `-`; empty for area and fullscreen captures.
 
 ## OCR provider configuration
 

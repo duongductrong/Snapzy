@@ -43,6 +43,10 @@ enum SnapzyConfigurationAutomationStepCodec {
     case .runShortcut: "run_shortcut"
     case .shareSheet: "share_sheet"
     case .openInApp: "open_in_app"
+    case .condition: "condition"
+    case .stop: "stop"
+    case .runAutomation: "run_automation"
+    case .ask: "ask"
     }
   }
 
@@ -70,14 +74,19 @@ enum SnapzyConfigurationAutomationStepCodec {
     case .runShortcut: ["shortcut", "input", "output", "timeout"]
     case .shareSheet: ["service"]
     case .openInApp: ["app", "app_name"]
+    case .condition: ["match", "otherwise", "predicates"]
+    case .runAutomation: ["target"]
+    case .ask: ["prompt", "choices"]
     default: []
     }
   }
 
   // MARK: - Export
 
+  /// `section` is the step's own table path; conditions add
+  /// `[<section>.predicates.<nn>]` sub-tables after the step's keys.
   @MainActor
-  static func write(_ step: AutomationStep, to writer: inout SimpleTOMLWriter) {
+  static func write(_ step: AutomationStep, to writer: inout SimpleTOMLWriter, section: String? = nil) {
     guard let action = step.action else {
       if case .unsupported(let raw) = step.content {
         writer.value("kind", raw.kind ?? "unknown")
@@ -167,9 +176,128 @@ enum SnapzyConfigurationAutomationStepCodec {
     case .openInApp(let config):
       writer.value("app", config.appBundleID)
       if !config.appName.isEmpty { writer.value("app_name", config.appName) }
+    case .condition(let config):
+      writer.value("match", config.match.rawValue)
+      writer.value("otherwise", config.otherwise.token)
+      if let section {
+        for (index, predicate) in config.predicates.enumerated() {
+          writer.section("\(section).predicates.\(SnapzyConfigurationAutomationsCodec.stepKey(index))")
+          writePredicate(predicate, to: &writer)
+        }
+      }
+    case .runAutomation(let config):
+      if let id = config.automationID { writer.value("target", id.uuidString.lowercased()) }
+    case .ask(let config):
+      if !config.prompt.isEmpty { writer.value("prompt", config.prompt) }
+      writer.stringArray("choices", config.choices.map(\.token))
     case .copyImage, .showQuickAccess, .openAnnotate, .notify, .stripMetadata,
-         .copyFile, .reveal, .pin:
+         .copyFile, .reveal, .pin, .stop:
       break
+    }
+  }
+
+  private static func writePredicate(_ predicate: AutomationPredicate, to writer: inout SimpleTOMLWriter) {
+    if case .unsupported(let raw) = predicate {
+      writer.value("type", predicate.type)
+      if let data = try? JSONEncoder().encode(raw), let json = String(data: data, encoding: .utf8) {
+        writer.value("json", json)
+      }
+      return
+    }
+    writer.value("type", predicate.type)
+    switch predicate {
+    case .frontmostApp(let bundleIDs, let negate):
+      writer.stringArray("bundle_ids", bundleIDs)
+      if negate { writer.value("negate", true) }
+    case .captureMode(let modes):
+      writer.stringArray("modes", modes.map { SnapzyConfigurationAutomationsCodec.captureToken($0) })
+    case .invocation(let invocations):
+      writer.stringArray("invocations", invocations.map(\.rawValue))
+    case .fileKind(let kinds):
+      writer.stringArray("kinds", kinds.map(\.rawValue))
+    case .pixelSize(let dimension, let comparison, let value):
+      writer.value("dimension", dimension.rawValue)
+      writer.value("comparison", comparison.rawValue)
+      writer.value("value", value)
+    case .fileSize(let comparison, let bytes):
+      writer.value("comparison", comparison.rawValue)
+      writer.value("bytes", bytes)
+    case .hasText(let contains):
+      if let contains { writer.value("contains", contains) }
+    case .unsupported:
+      break
+    }
+  }
+
+  private static func parsePredicate(
+    _ fields: [String: SimpleTOMLValue],
+    path: String,
+    warnings: inout [String]
+  ) -> AutomationPredicate? {
+    guard let type = fields["type"]?.stringValue?.lowercased() else {
+      warnings.append("\(path).type is missing; predicate ignored")
+      return nil
+    }
+    func strings(_ key: String) -> [String] { fields[key]?.stringArrayValue ?? [] }
+    func comparison() -> AutomationComparison {
+      fields["comparison"]?.stringValue.flatMap { AutomationComparison(rawValue: $0.lowercased()) } ?? .greaterThan
+    }
+    switch type {
+    case "frontmost_app":
+      return .frontmostApp(bundleIDs: strings("bundle_ids"), negate: fields["negate"]?.boolValue ?? false)
+    case "capture_mode":
+      return .captureMode(strings("modes").compactMap(SnapzyConfigurationAutomationsCodec.captureMode))
+    case "invocation":
+      return .invocation(strings("invocations").compactMap { AutomationInvocation(rawValue: $0) })
+    case "file_kind":
+      return .fileKind(strings("kinds").compactMap { AutomationFileKind(rawValue: $0.lowercased()) })
+    case "pixel_size":
+      return .pixelSize(
+        dimension: fields["dimension"]?.stringValue.flatMap { AutomationDimension(rawValue: $0.lowercased()) } ?? .longest,
+        comparison: comparison(),
+        value: fields["value"]?.intValue ?? 0
+      )
+    case "file_size":
+      return .fileSize(comparison: comparison(), bytes: fields["bytes"]?.intValue ?? 0)
+    case "has_text":
+      return .hasText(contains: fields["contains"]?.stringValue)
+    default:
+      if let json = fields["json"]?.stringValue,
+         let raw = try? JSONDecoder().decode(AutomationJSONValue.self, from: Data(json.utf8))
+      {
+        return .unsupported(raw)
+      }
+      warnings.append("\(path): unknown predicate \"\(type)\" ignored")
+      return nil
+    }
+  }
+
+  /// A Run Automation / Ask target: an id, or a name resolved against the stored automations.
+  /// Names win from the file being imported (`fileNames`, lowercased → ids), so
+  /// automations can point at each other before they exist on this Mac.
+  @MainActor
+  private static func resolveTarget(
+    _ raw: String,
+    path: String,
+    fileNames: [String: [UUID]],
+    warnings: inout [String]
+  ) -> UUID? {
+    if let id = UUID(uuidString: raw.trimmingCharacters(in: .whitespaces)) { return id }
+    let key = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    if let ids = fileNames[key] {
+      if ids.count == 1 { return ids[0] }
+      warnings.append("\(path): several automations are named \"\(raw)\"; use its id")
+      return nil
+    }
+    switch AutomationStore.shared.resolve(.name(raw)) {
+    case .success(let automation):
+      return automation.id
+    case .failure(.ambiguousName):
+      warnings.append("\(path): several automations are named \"\(raw)\"; use its id")
+      return nil
+    case .failure:
+      warnings.append("\(path): no automation named \"\(raw)\"")
+      return nil
     }
   }
 
@@ -179,7 +307,8 @@ enum SnapzyConfigurationAutomationStepCodec {
   static func parse(
     _ fields: [String: SimpleTOMLValue],
     path: String,
-    folderStore: AutomationFolderAccessStore
+    folderStore: AutomationFolderAccessStore,
+    fileNames: [String: [UUID]] = [:]
   ) -> ParseResult {
     var warnings: [String] = []
     guard let kindToken = fields["kind"]?.stringValue else {
@@ -330,6 +459,48 @@ enum SnapzyConfigurationAutomationStepCodec {
     case .copyFile: action = .copyFile
     case .reveal: action = .reveal
     case .pin: action = .pin
+    case .stop: action = .stop
+    case .condition:
+      var config = AutomationConditionConfig()
+      if let raw = string("match") {
+        if let match = AutomationConditionConfig.Match(rawValue: raw.lowercased()) {
+          config.match = match
+        } else {
+          warnings.append("\(path).match must be all or any; using all")
+        }
+      }
+      if let raw = string("otherwise") {
+        if let otherwise = AutomationConditionConfig.Otherwise(token: raw) {
+          config.otherwise = otherwise
+        } else {
+          warnings.append("\(path).otherwise must be \"stop\" or \"skip:<n>\"; using stop")
+        }
+      }
+      if case .table(let tables)? = fields["predicates"] {
+        for key in tables.keys.sorted() {
+          guard case .table(let predicateFields)? = tables[key] else { continue }
+          if let predicate = parsePredicate(predicateFields, path: "\(path).predicates.\(key)", warnings: &warnings) {
+            config.predicates.append(predicate)
+          }
+        }
+      }
+      action = .condition(config)
+    case .runAutomation:
+      let target = string("target").flatMap { resolveTarget($0, path: "\(path).target", fileNames: fileNames, warnings: &warnings) }
+      action = .runAutomation(AutomationRunAutomationConfig(automationID: target))
+    case .ask:
+      var config = AutomationAskConfig(prompt: string("prompt") ?? "")
+      for raw in fields["choices"]?.stringArrayValue ?? [] {
+        switch raw.lowercased() {
+        case "continue": config.choices.append(.continueRun)
+        case "stop": config.choices.append(.stopRun)
+        default:
+          if let id = resolveTarget(raw, path: "\(path).choices", fileNames: fileNames, warnings: &warnings) {
+            config.choices.append(.automation(id))
+          }
+        }
+      }
+      action = .ask(config)
     }
 
     var onFailure = AutomationFailurePolicy.stop

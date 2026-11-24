@@ -80,6 +80,12 @@ protocol AutomationRunEnvironment: AnyObject {
   func share(_ items: [Any], service: AutomationShareService) async throws
   func open(_ items: [URL], appBundleID: String, appName: String) async throws
 
+  // Control steps (milestone 5). Defaults in `AutomationControlFlow.swift`.
+  /// A stored automation (Run Automation / Ask targets).
+  func automation(id: UUID) -> Automation?
+  /// Shows the picker HUD; `nil` when the user cancelled.
+  func pick(title: String, thumbnail: URL?, choices: [AutomationPickerChoice]) async -> AutomationPickerChoice?
+
   func recordHistory(_ url: URL, kind: AutomationFileKind) async
   func notify(title: String, body: String, isError: Bool, context: AutomationNotificationContext?) async
   func runDidUpdate(_ update: AutomationRunUpdate)
@@ -188,6 +194,14 @@ final class LiveAutomationRunEnvironment: AutomationRunEnvironment {
       throw AutomationStepError.folderUnavailable
     }
     return url
+  }
+
+  func automation(id: UUID) -> Automation? {
+    AutomationStore.shared.automation(id: id)
+  }
+
+  func pick(title: String, thumbnail: URL?, choices: [AutomationPickerChoice]) async -> AutomationPickerChoice? {
+    await AutomationPickerHUD.shared.present(title: title, thumbnail: thumbnail, choices: choices)
   }
 
   func recordHistory(_ url: URL, kind: AutomationFileKind) async {

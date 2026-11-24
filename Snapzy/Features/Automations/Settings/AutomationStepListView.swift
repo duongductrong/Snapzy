@@ -12,6 +12,7 @@ struct AutomationStepListView: View {
   @Binding var automation: Automation
   @Binding var selection: AutomationEditorSelection?
   let issues: [AutomationChainIssue]
+  @State private var isRouteByAppPresented = false
 
   var body: some View {
     VStack(spacing: 0) {
@@ -21,12 +22,16 @@ struct AutomationStepListView: View {
 
         Section(L10n.Automations.stepsLabel) {
           ForEach($automation.steps) { $step in
-            AutomationStepRow(step: $step, issue: issues.first { $0.stepID == step.id })
+            AutomationStepRow(
+              step: $step,
+              issue: issues.first { $0.stepID == step.id },
+              isInSkipRange: skippableStepIDs.contains(step.id)
+            )
               .tag(AutomationEditorSelection.step(step.id))
               .contextMenu { contextMenu(for: step.id) }
           }
           .onMove { automation.steps.move(fromOffsets: $0, toOffset: $1) }
-          .onDelete { automation.steps.remove(atOffsets: $0) }
+          .onDelete { offsets in offsets.sorted(by: >).forEach { automation.removeStep(at: $0) } }
         }
       }
       .listStyle(.sidebar)
@@ -41,6 +46,21 @@ struct AutomationStepListView: View {
     HStack(spacing: 4) {
       AutomationAddStepMenu(automation: automation, onAdd: add)
         .disabled(automation.steps.count >= Automation.maxSteps)
+      Button {
+        isRouteByAppPresented = true
+      } label: {
+        Image(systemName: "arrow.triangle.branch")
+      }
+      .help(L10n.Automations.routeByApp)
+      .accessibilityLabel(L10n.Automations.routeByApp)
+      .disabled(automation.steps.count + 3 > Automation.maxSteps)
+      .sheet(isPresented: $isRouteByAppPresented) {
+        AutomationRouteByAppSheet(
+          maxSteps: Automation.maxSteps - automation.steps.count - 2,
+          onInsert: insertRoute,
+          onCancel: { isRouteByAppPresented = false }
+        )
+      }
       Button(action: deleteSelected) {
         Image(systemName: "minus")
       }
@@ -71,8 +91,33 @@ struct AutomationStepListView: View {
     Button(L10n.Automations.moveDown) { selection = .step(id); move(by: 1) }
     Divider()
     Button(L10n.Common.delete, role: .destructive) {
-      automation.steps.removeAll { $0.id == id }
+      if let index = automation.steps.firstIndex(where: { $0.id == id }) { automation.removeStep(at: index) }
     }
+  }
+
+  /// Steps a condition's "Otherwise skip" can jump over (drawn with a bracket).
+  private var skippableStepIDs: Set<UUID> {
+    var ids = Set<UUID>()
+    for (index, step) in automation.steps.enumerated() where step.isEnabled {
+      guard case .condition(let config)? = step.action, config.skipCount > 0 else { continue }
+      let range = (index + 1)..<min(automation.steps.count, index + 1 + config.skipCount)
+      for skipped in range { ids.insert(automation.steps[skipped].id) }
+    }
+    return ids
+  }
+
+  /// `condition(app is …, else skip n) · steps · stop`, after the selection.
+  private func insertRoute(bundleIDs: [String], kinds: [AutomationStepKind]) {
+    isRouteByAppPresented = false
+    let routed = kinds.map { AutomationStep($0.defaultAction) }
+    let block = [AutomationStep(.condition(AutomationConditionConfig(
+      predicates: [.frontmostApp(bundleIDs: bundleIDs, negate: false)],
+      otherwise: .skip(routed.count + 1)
+    )))] + routed + [AutomationStep(.stop)]
+    guard automation.steps.count + block.count <= Automation.maxSteps else { return }
+    let at = selectedIndex.map { $0 + 1 } ?? automation.steps.count
+    automation.steps.insert(contentsOf: block, at: at)
+    selection = .step(block[0].id)
   }
 
   private var selectedIndex: Int? {
@@ -83,7 +128,7 @@ struct AutomationStepListView: View {
   private func add(_ kind: AutomationStepKind) {
     let step = AutomationStep(kind.defaultAction)
     if let index = selectedIndex {
-      automation.steps.insert(step, at: index + 1)
+      automation.insertStep(step, at: index + 1)
     } else {
       automation.steps.append(step)
     }
@@ -94,13 +139,13 @@ struct AutomationStepListView: View {
     guard let index = automation.steps.firstIndex(where: { $0.id == id }) else { return }
     var copy = automation.steps[index]
     copy.id = UUID()
-    automation.steps.insert(copy, at: index + 1)
+    automation.insertStep(copy, at: index + 1)
     selection = .step(copy.id)
   }
 
   private func deleteSelected() {
     guard let index = selectedIndex else { return }
-    automation.steps.remove(at: index)
+    automation.removeStep(at: index)
     if automation.steps.indices.contains(index) {
       selection = .step(automation.steps[index].id)
     } else {
@@ -158,8 +203,25 @@ extension AutomationListRowLayout where Trailing == EmptyView {
 private struct AutomationStepRow: View {
   @Binding var step: AutomationStep
   let issue: AutomationChainIssue?
+  var isInSkipRange = false
 
   var body: some View {
+    HStack(spacing: 6) {
+      if isInSkipRange {
+        // Bracket: this step only runs when the condition above holds.
+        Capsule()
+          .fill(Color.accentColor.opacity(0.6))
+          .frame(width: 3)
+          .padding(.vertical, 2)
+          .accessibilityHidden(true)
+      }
+      content
+    }
+    .accessibilityElement(children: .combine)
+    .accessibilityHint(isInSkipRange ? L10n.Automations.stepInSkipRangeHint : "")
+  }
+
+  private var content: some View {
     AutomationListRowLayout(
       symbol: step.action?.kind.symbol ?? "questionmark.square.dashed",
       title: step.action?.kind.displayName ?? L10n.Automations.unsupported,

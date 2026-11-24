@@ -1775,5 +1775,541 @@ extension L10n {
       defaultValue: "Shortcut",
       comment: "Shortcut picker label"
     )
+
+    // MARK: - Milestone 5: control steps, picker, Finder & menu bar drop
+
+    static let stepCondition = string(
+      "automations.step.condition",
+      defaultValue: "Condition",
+      comment: "Step: continue only when a condition holds"
+    )
+    static let stepStop = string(
+      "automations.step.stop",
+      defaultValue: "Stop",
+      comment: "Step: end the run here"
+    )
+    static let stepRunAutomation = string(
+      "automations.step.run-automation",
+      defaultValue: "Run Automation",
+      comment: "Step: run another automation's steps"
+    )
+    static let stepAsk = string(
+      "automations.step.ask",
+      defaultValue: "Ask",
+      comment: "Step: show a picker and let the user choose what happens"
+    )
+    static let describeCondition = string(
+      "automations.describe.condition",
+      defaultValue: "Continues only when the run matches. Otherwise the run stops or skips the next steps, so “condition · A · stop · B” runs A or B.",
+      comment: "Inspector description of the Condition step"
+    )
+    static let describeStop = string(
+      "automations.describe.stop",
+      defaultValue: "Ends the run here, successfully. In an automation run by another one, returns to it.",
+      comment: "Inspector description of the Stop step"
+    )
+    static let describeRunAutomation = string(
+      "automations.describe.run-automation",
+      defaultValue: "Runs another automation’s steps on the current file, then continues. Its source and triggers are ignored.",
+      comment: "Inspector description of the Run Automation step"
+    )
+    static let describeAsk = string(
+      "automations.describe.ask",
+      defaultValue: "Shows a picker at the pointer. The chosen automation runs on the current file and ends this run; “Continue” goes on with the next step.",
+      comment: "Inspector description of the Ask step"
+    )
+    static func errorAutomationUnavailable(_ name: String) -> String {
+      format(
+        "automations.error.automation-unavailable",
+        defaultValue: "“%@” isn’t available (deleted, turned off or waiting for review).",
+        comment: "Run error; %@ is an automation name",
+        name
+      )
+    }
+    static let errorRecursionLimit = string(
+      "automations.error.recursion-limit",
+      defaultValue: "Automations run each other in a loop or nest too deeply.",
+      comment: "Run error: Run Automation / Ask cycle or depth limit"
+    )
+    static let errorNoChoices = string(
+      "automations.error.no-choices",
+      defaultValue: "None of the choices can run right now.",
+      comment: "Run error: Ask step has no available choices"
+    )
+    static let unknownAutomation = string(
+      "automations.unknown-automation",
+      defaultValue: "Missing automation",
+      comment: "Label for a referenced automation that no longer exists"
+    )
+    static let askContinue = string(
+      "automations.ask.continue",
+      defaultValue: "Continue",
+      comment: "Ask choice: go on with the next step"
+    )
+    static let askStop = string(
+      "automations.ask.stop",
+      defaultValue: "Stop Here",
+      comment: "Ask choice: end the run"
+    )
+    static let waitingForChoice = string(
+      "automations.waiting-for-choice",
+      defaultValue: "Waiting for choice",
+      comment: "Run HUD status while the Ask picker is open"
+    )
+    static let logSkippedByCondition = string(
+      "automations.log.skipped-by-condition",
+      defaultValue: "Skipped by condition",
+      comment: "Activity: step skipped by a condition"
+    )
+    static let logConditionMet = string(
+      "automations.log.condition-met",
+      defaultValue: "Condition met",
+      comment: "Activity: condition held"
+    )
+    static let logConditionNotMet = string(
+      "automations.log.condition-not-met",
+      defaultValue: "Condition not met",
+      comment: "Activity: condition did not hold"
+    )
+    static let logChoiceCancelled = string(
+      "automations.log.choice-cancelled",
+      defaultValue: "Choice cancelled",
+      comment: "Activity: user dismissed the Ask picker"
+    )
+    static let issueAutomation = string(
+      "automations.issue.automation",
+      defaultValue: "Choose an automation",
+      comment: "Chain issue: Run Automation/Ask target missing"
+    )
+    static let issueChoices = string(
+      "automations.issue.choices",
+      defaultValue: "Add at least one choice",
+      comment: "Chain issue: Ask without choices"
+    )
+    static let issueCondition = string(
+      "automations.issue.condition",
+      defaultValue: "Pick a value for each condition",
+      comment: "Chain issue: predicate without values"
+    )
+    static let issueSkipRange = string(
+      "automations.issue.skip-range",
+      defaultValue: "Skips past the last step",
+      comment: "Chain issue: otherwise-skip count beyond the end"
+    )
+    static let issueRecursion = string(
+      "automations.issue.recursion",
+      defaultValue: "Runs itself in a loop or nests more than 3 levels",
+      comment: "Chain issue: cycle or depth"
+    )
+    static let issueTargetCannotRun = string(
+      "automations.issue.target-cannot-run",
+      defaultValue: "The chosen automation can’t run on this input",
+      comment: "Chain issue: target automation has blocking issues for the current kinds"
+    )
+    static let conditionAlways = string(
+      "automations.condition.always",
+      defaultValue: "Always",
+      comment: "Condition sentence with no predicates"
+    )
+    static let conditionAnd = string(
+      "automations.condition.and",
+      defaultValue: " and ",
+      comment: "Separator between predicates (match all); keep spaces"
+    )
+    static let conditionOr = string(
+      "automations.condition.or",
+      defaultValue: " or ",
+      comment: "Separator between predicates or values (match any); keep spaces"
+    )
+    static let conditionElseStop = string(
+      "automations.condition.else-stop",
+      defaultValue: "else stop",
+      comment: "Condition sentence suffix"
+    )
+    static func conditionElseSkip(_ count: Int) -> String {
+      format(
+        "automations.condition.else-skip",
+        defaultValue: "else skip %lld",
+        comment: "Condition sentence suffix; %lld is a step count",
+        count
+      )
+    }
+    static func conditionAppIs(_ names: String) -> String {
+      format(
+        "automations.condition.app-is",
+        defaultValue: "App is %@",
+        comment: "Predicate sentence; %@ is app names",
+        names
+      )
+    }
+    static func conditionAppIsNot(_ names: String) -> String {
+      format(
+        "automations.condition.app-is-not",
+        defaultValue: "App is not %@",
+        comment: "Predicate sentence; %@ is app names",
+        names
+      )
+    }
+    static func conditionCaptureIs(_ modes: String) -> String {
+      format(
+        "automations.condition.capture-is",
+        defaultValue: "Capture is %@",
+        comment: "Predicate sentence; %@ is capture modes",
+        modes
+      )
+    }
+    static func conditionStartedFrom(_ names: String) -> String {
+      format(
+        "automations.condition.started-from",
+        defaultValue: "Started from %@",
+        comment: "Predicate sentence; %@ is trigger names",
+        names
+      )
+    }
+    static func conditionFileIs(_ kinds: String) -> String {
+      format(
+        "automations.condition.file-is",
+        defaultValue: "File is %@",
+        comment: "Predicate sentence; %@ is file kinds",
+        kinds
+      )
+    }
+    static let conditionFileSize = string(
+      "automations.condition.file-size",
+      defaultValue: "File size",
+      comment: "Predicate sentence prefix before > / < and a size"
+    )
+    static let conditionHasText = string(
+      "automations.condition.has-text",
+      defaultValue: "Has recognized text",
+      comment: "Predicate sentence"
+    )
+    static func conditionTextContains(_ text: String) -> String {
+      format(
+        "automations.condition.text-contains",
+        defaultValue: "Text contains “%@”",
+        comment: "Predicate sentence; %@ is the searched text",
+        text
+      )
+    }
+    static let dimensionWidth = string(
+      "automations.dimension.width",
+      defaultValue: "Width",
+      comment: "Pixel size predicate dimension"
+    )
+    static let dimensionHeight = string(
+      "automations.dimension.height",
+      defaultValue: "Height",
+      comment: "Pixel size predicate dimension"
+    )
+    static let dimensionLongest = string(
+      "automations.dimension.longest",
+      defaultValue: "Longest edge",
+      comment: "Pixel size predicate dimension"
+    )
+    static let fileKindImage = string(
+      "automations.file-kind.image",
+      defaultValue: "Image",
+      comment: "File kind"
+    )
+    static let fileKindVideo = string(
+      "automations.file-kind.video",
+      defaultValue: "Video",
+      comment: "File kind"
+    )
+    static let invocationHotkey = string(
+      "automations.invocation.hotkey",
+      defaultValue: "Shortcut",
+      comment: "Name of a way an automation was started"
+    )
+    static let invocationURLScheme = string(
+      "automations.invocation.url-scheme",
+      defaultValue: "URL scheme",
+      comment: "Name of a way an automation was started"
+    )
+    static let invocationCLI = string(
+      "automations.invocation.cli",
+      defaultValue: "Command line",
+      comment: "Name of a way an automation was started"
+    )
+    static let invocationMenuBar = string(
+      "automations.invocation.menu-bar",
+      defaultValue: "Menu bar",
+      comment: "Name of a way an automation was started"
+    )
+    static let invocationQuickAccess = string(
+      "automations.invocation.quick-access",
+      defaultValue: "Quick Access",
+      comment: "Name of a way an automation was started"
+    )
+    static let invocationHistory = string(
+      "automations.invocation.history",
+      defaultValue: "History",
+      comment: "Name of a way an automation was started"
+    )
+    static let invocationShortcuts = string(
+      "automations.invocation.shortcuts",
+      defaultValue: "Shortcuts app",
+      comment: "Name of a way an automation was started"
+    )
+    static let invocationRetry = string(
+      "automations.invocation.retry",
+      defaultValue: "Retry",
+      comment: "Name of a way an automation was started"
+    )
+    static let invocationMenuBarDrop = string(
+      "automations.invocation.menu-bar-drop",
+      defaultValue: "Drop on menu bar icon",
+      comment: "Name of a way an automation was started"
+    )
+    static let predicateApp = string(
+      "automations.predicate.app",
+      defaultValue: "App",
+      comment: "Condition type in the editor"
+    )
+    static let predicateCaptureMode = string(
+      "automations.predicate.capture-mode",
+      defaultValue: "Capture mode",
+      comment: "Condition type in the editor"
+    )
+    static let predicateInvocation = string(
+      "automations.predicate.invocation",
+      defaultValue: "Started from",
+      comment: "Condition type in the editor"
+    )
+    static let predicateFileKind = string(
+      "automations.predicate.file-kind",
+      defaultValue: "File type",
+      comment: "Condition type in the editor"
+    )
+    static let predicatePixelSize = string(
+      "automations.predicate.pixel-size",
+      defaultValue: "Pixel size",
+      comment: "Condition type in the editor"
+    )
+    static let predicateFileSize = string(
+      "automations.predicate.file-size",
+      defaultValue: "File size",
+      comment: "Condition type in the editor"
+    )
+    static let predicateHasText = string(
+      "automations.predicate.has-text",
+      defaultValue: "Recognized text",
+      comment: "Condition type in the editor"
+    )
+    static let conditionHeader = string(
+      "automations.condition.header",
+      defaultValue: "Continue when",
+      comment: "Condition inspector section header"
+    )
+    static let conditionMatchLabel = string(
+      "automations.condition.match",
+      defaultValue: "Match",
+      comment: "Picker: all or any predicate"
+    )
+    static let conditionMatchAll = string(
+      "automations.condition.match-all",
+      defaultValue: "All",
+      comment: "Match every predicate"
+    )
+    static let conditionMatchAny = string(
+      "automations.condition.match-any",
+      defaultValue: "Any",
+      comment: "Match at least one predicate"
+    )
+    static let conditionAdd = string(
+      "automations.condition.add",
+      defaultValue: "Add Condition",
+      comment: "Menu adding a predicate"
+    )
+    static let conditionOtherwiseLabel = string(
+      "automations.condition.otherwise",
+      defaultValue: "Otherwise",
+      comment: "Picker: what happens when the condition fails"
+    )
+    static let conditionOtherwiseStop = string(
+      "automations.condition.otherwise-stop",
+      defaultValue: "Stop the run",
+      comment: "Otherwise option"
+    )
+    static let conditionOtherwiseSkip = string(
+      "automations.condition.otherwise-skip",
+      defaultValue: "Skip next steps",
+      comment: "Otherwise option"
+    )
+    static func conditionSkipCount(_ count: Int) -> String {
+      format(
+        "automations.condition.skip-count",
+        defaultValue: "Skip %lld step(s)",
+        comment: "Stepper label; %lld is a step count",
+        count
+      )
+    }
+    static let conditionTextContainsPlaceholder = string(
+      "automations.condition.text-contains-placeholder",
+      defaultValue: "Contains (optional)",
+      comment: "Text field placeholder"
+    )
+    static let conditionChoose = string(
+      "automations.condition.choose",
+      defaultValue: "Choose…",
+      comment: "Placeholder when no value is selected"
+    )
+    static let conditionAppIsLabel = string(
+      "automations.condition.app-is-label",
+      defaultValue: "is",
+      comment: "Segment: app is"
+    )
+    static let conditionAppIsNotLabel = string(
+      "automations.condition.app-is-not-label",
+      defaultValue: "is not",
+      comment: "Segment: app is not"
+    )
+    static let conditionAddApp = string(
+      "automations.condition.add-app",
+      defaultValue: "Add App",
+      comment: "Menu adding an app to a condition"
+    )
+    static let comparisonGreater = string(
+      "automations.comparison.greater",
+      defaultValue: "more than",
+      comment: "Comparison option"
+    )
+    static let comparisonLess = string(
+      "automations.comparison.less",
+      defaultValue: "less than",
+      comment: "Comparison option"
+    )
+    static let runAutomationTarget = string(
+      "automations.run-automation.target",
+      defaultValue: "Automation",
+      comment: "Picker label"
+    )
+    static let runAutomationDisabledWarning = string(
+      "automations.run-automation.disabled",
+      defaultValue: "This automation is turned off; the step will fail until it’s turned on.",
+      comment: "Warning under the Run Automation picker"
+    )
+    static let askPromptLabel = string(
+      "automations.ask.prompt",
+      defaultValue: "Title",
+      comment: "Ask picker title field"
+    )
+    static let askPromptPlaceholder = string(
+      "automations.ask.prompt-placeholder",
+      defaultValue: "Automation name",
+      comment: "Placeholder: empty title uses the automation's name"
+    )
+    static let askChoicesHeader = string(
+      "automations.ask.choices",
+      defaultValue: "Choices",
+      comment: "Ask inspector section header"
+    )
+    static let askChoicesFooter = string(
+      "automations.ask.choices-footer",
+      defaultValue: "Number keys 1–9 pick a choice, Esc cancels. Turned-off automations are hidden.",
+      comment: "Ask inspector footer"
+    )
+    static let askAddChoice = string(
+      "automations.ask.add-choice",
+      defaultValue: "Add Choice",
+      comment: "Menu adding an Ask choice"
+    )
+    static let pickerSearch = string(
+      "automations.picker.search",
+      defaultValue: "Search",
+      comment: "Picker search field"
+    )
+    static let pickerNoMatches = string(
+      "automations.picker.no-matches",
+      defaultValue: "No matches",
+      comment: "Picker with no search results"
+    )
+    static let pickerHint = string(
+      "automations.picker.hint",
+      defaultValue: "1–9 or ↑↓ ↩ to pick · Esc to cancel",
+      comment: "Picker keyboard hint"
+    )
+    static func pickerNumberHint(_ number: Int) -> String {
+      format(
+        "automations.picker.number-hint",
+        defaultValue: "Press %lld",
+        comment: "VoiceOver hint; %lld is the number key",
+        number
+      )
+    }
+    static let fileTriggerNoSupportedFiles = string(
+      "automations.file-trigger.no-files",
+      defaultValue: "No image, video or GIF to run an automation on.",
+      comment: "Toast: dropped/Finder files unsupported"
+    )
+    static let fileTriggerNoAutomations = string(
+      "automations.file-trigger.no-automations",
+      defaultValue: "No automation fits these files. Turn on “Show in Finder & menu bar drop” for one in Settings → Automations.",
+      comment: "Toast: no eligible automations"
+    )
+    static func fileTriggerTitle(_ count: Int) -> String {
+      format(
+        "automations.file-trigger.title",
+        defaultValue: "Run Automation on %lld Files",
+        comment: "Picker title for several files; %lld is the count",
+        count
+      )
+    }
+    static let showInFinder = string(
+      "automations.show-in.finder",
+      defaultValue: "Finder & menu bar drop",
+      comment: "Toggle: list in Finder service and menu bar icon drops"
+    )
+    static let runSingleDirectlyToggle = string(
+      "automations.advanced.run-single-directly",
+      defaultValue: "Skip the picker when one automation fits",
+      comment: "Advanced toggle"
+    )
+    static let runSingleDirectlyDescription = string(
+      "automations.advanced.run-single-directly-description",
+      defaultValue: "Finder’s “Run Snapzy Automation…” and files dropped on the menu bar icon then run it right away.",
+      comment: "Advanced toggle description"
+    )
+    static let routeByApp = string(
+      "automations.route.title",
+      defaultValue: "Route by App…",
+      comment: "Button/sheet title: insert a per-app condition block"
+    )
+    static let routeAppsHeader = string(
+      "automations.route.apps",
+      defaultValue: "When the app is",
+      comment: "Sheet section header"
+    )
+    static let routeStepsHeader = string(
+      "automations.route.steps",
+      defaultValue: "Run these steps",
+      comment: "Sheet section header"
+    )
+    static let routeFooter = string(
+      "automations.route.footer",
+      defaultValue: "Then stop. Other apps skip them and run the steps below the block.",
+      comment: "Sheet footer"
+    )
+    static let routeInsert = string(
+      "automations.route.insert",
+      defaultValue: "Insert",
+      comment: "Sheet confirm button"
+    )
+    static let stepInSkipRangeHint = string(
+      "automations.step.in-skip-range",
+      defaultValue: "Runs only when the condition above holds",
+      comment: "VoiceOver hint for a step inside a condition's skip range"
+    )
+    static let presetShareMenu = string(
+      "automations.preset.share-menu",
+      defaultValue: "Share Menu",
+      comment: "Built-in automation: capture an area, then pick Quick Copy, Cloud Share or Docs Shot"
+    )
+    static let presetDesignRouter = string(
+      "automations.preset.design-router",
+      defaultValue: "Design Router",
+      comment: "Built-in automation: save Figma/Sketch windows to a design folder, others to the export folder"
+    )
   }
 }

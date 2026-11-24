@@ -40,6 +40,28 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSServices</key>
+	<array>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>Run Snapzy Automation…</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>runAutomationService</string>
+			<key>NSPortName</key>
+			<string>$(PRODUCT_NAME)</string>
+			<key>NSRequiredContext</key>
+			<dict/>
+			<key>NSSendFileTypes</key>
+			<array>
+				<string>public.image</string>
+				<string>public.movie</string>
+				<string>com.compuserve.gif</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Snapzy needs microphone access to record audio with your screen recordings.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

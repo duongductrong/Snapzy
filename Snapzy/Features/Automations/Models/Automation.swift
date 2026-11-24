@@ -134,6 +134,9 @@ enum AutomationTrigger: Equatable {
   case quickAccessAction
   /// Listed in a History item's "Run Automation" menu.
   case historyAction
+  /// Offered by Finder's "Run Snapzy Automation…" service and when files are
+  /// dropped on the menu bar icon (milestone 5).
+  case finderQuickAction
   case unsupported(AutomationJSONValue)
 
   /// Stored kinds without a payload, keyed by their JSON `kind`.
@@ -141,6 +144,7 @@ enum AutomationTrigger: Equatable {
     "menuBar": .menuBar,
     "quickAccessAction": .quickAccessAction,
     "historyAction": .historyAction,
+    "finderQuickAction": .finderQuickAction,
   ]
 
   fileprivate var simpleKind: String? {
@@ -148,6 +152,7 @@ enum AutomationTrigger: Equatable {
     case .menuBar: "menuBar"
     case .quickAccessAction: "quickAccessAction"
     case .historyAction: "historyAction"
+    case .finderQuickAction: "finderQuickAction"
     case .hotkey, .unsupported: nil
     }
   }
@@ -179,7 +184,7 @@ extension AutomationTrigger: Codable {
       var container = encoder.container(keyedBy: CodingKeys.self)
       try container.encode("hotkey", forKey: .kind)
       try container.encode(shortcut, forKey: .shortcut)
-    case .menuBar, .quickAccessAction, .historyAction:
+    case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction:
       var container = encoder.container(keyedBy: CodingKeys.self)
       try container.encode(simpleKind, forKey: .kind)
     case .unsupported(let raw):
@@ -238,6 +243,11 @@ enum AutomationStepAction: Equatable {
   case runShortcut(AutomationRunShortcutConfig)
   case shareSheet(AutomationShareSheetConfig)
   case openInApp(AutomationOpenInAppConfig)
+  // Control (milestone 5)
+  case condition(AutomationConditionConfig)
+  case stop
+  case runAutomation(AutomationRunAutomationConfig)
+  case ask(AutomationAskConfig)
 
   var kind: AutomationStepKind {
     switch self {
@@ -265,6 +275,19 @@ enum AutomationStepAction: Equatable {
     case .runShortcut: .runShortcut
     case .shareSheet: .shareSheet
     case .openInApp: .openInApp
+    case .condition: .condition
+    case .stop: .stop
+    case .runAutomation: .runAutomation
+    case .ask: .ask
+    }
+  }
+
+  /// Automations this step runs (Run Automation target, Ask choices).
+  var referencedAutomationIDs: [UUID] {
+    switch self {
+    case .runAutomation(let config): config.automationID.map { [$0] } ?? []
+    case .ask(let config): config.referencedAutomationIDs
+    default: []
     }
   }
 }
@@ -294,8 +317,17 @@ enum AutomationStepKind: String, Codable, CaseIterable, Identifiable, Sendable {
   case runShortcut
   case shareSheet
   case openInApp
+  case condition
+  case stop
+  case runAutomation
+  case ask
 
   var id: String { rawValue }
+
+  /// Steps the runner handles itself: they steer the run instead of acting on the payload.
+  var isControl: Bool {
+    self == .condition || self == .stop || self == .runAutomation || self == .ask
+  }
 
   /// Kinds that are only read from old data and never offered in the editor.
   var isLegacy: Bool { self == .uploadAndCopyLink }
@@ -327,6 +359,10 @@ enum AutomationStepKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case .runShortcut: .runShortcut(AutomationRunShortcutConfig())
     case .shareSheet: .shareSheet(AutomationShareSheetConfig())
     case .openInApp: .openInApp(AutomationOpenInAppConfig())
+    case .condition: .condition(AutomationConditionConfig(predicates: [.frontmostApp(bundleIDs: [], negate: false)]))
+    case .stop: .stop
+    case .runAutomation: .runAutomation(AutomationRunAutomationConfig())
+    case .ask: .ask(AutomationAskConfig())
     }
   }
 }
@@ -433,6 +469,10 @@ extension AutomationStep: Codable {
     case .runShortcut: .runShortcut(config(AutomationRunShortcutConfig()))
     case .shareSheet: .shareSheet(config(AutomationShareSheetConfig()))
     case .openInApp: .openInApp(config(AutomationOpenInAppConfig()))
+    case .condition: .condition(config(AutomationConditionConfig()))
+    case .stop: .stop
+    case .runAutomation: .runAutomation(config(AutomationRunAutomationConfig()))
+    case .ask: .ask(config(AutomationAskConfig()))
     }
     content = .action(action)
   }
@@ -464,8 +504,11 @@ extension AutomationStep: Codable {
     case .runShortcut(let config): try container.encode(config, forKey: .config)
     case .shareSheet(let config): try container.encode(config, forKey: .config)
     case .openInApp(let config): try container.encode(config, forKey: .config)
+    case .condition(let config): try container.encode(config, forKey: .config)
+    case .runAutomation(let config): try container.encode(config, forKey: .config)
+    case .ask(let config): try container.encode(config, forKey: .config)
     case .copyImage, .showQuickAccess, .openAnnotate, .notify, .stripMetadata,
-         .copyFile, .reveal, .pin:
+         .copyFile, .reveal, .pin, .stop:
       break
     }
     try container.encode(isEnabled, forKey: .isEnabled)
@@ -562,6 +605,12 @@ struct Automation: Identifiable, Equatable {
     set { setTrigger(.historyAction, on: newValue) }
   }
 
+  /// Offered by Finder's "Run Snapzy Automation…" and menu bar icon drops.
+  var showsInFinder: Bool {
+    get { triggers.contains(.finderQuickAction) }
+    set { setTrigger(.finderQuickAction, on: newValue) }
+  }
+
   private mutating func setTrigger(_ trigger: AutomationTrigger, on: Bool) {
     triggers.removeAll { $0 == trigger }
     if on { triggers.append(trigger) }
@@ -637,7 +686,7 @@ struct Automation: Identifiable, Equatable {
         return !keptHotkey
       case .menuBar where needsInput:
         return false
-      case .menuBar, .quickAccessAction, .historyAction:
+      case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction:
         return seenSimple.insert(trigger.simpleKind ?? "").inserted
       case .unsupported:
         return true

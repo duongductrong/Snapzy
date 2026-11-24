@@ -223,6 +223,7 @@ enum AutomationStepRegistry {
     case .runShortcut: RunShortcutStepHandler()
     case .shareSheet: ShareSheetStepHandler()
     case .openInApp: OpenInAppStepHandler()
+    case .condition, .stop, .runAutomation, .ask: ControlStepHandler()
     }
   }
 

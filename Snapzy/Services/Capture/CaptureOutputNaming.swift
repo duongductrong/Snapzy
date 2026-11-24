@@ -15,6 +15,8 @@ nonisolated struct CaptureContext: Equatable {
   let appName: String?
   let windowTitle: String?
   var postCaptureRouting: PostCaptureRouting = .standard
+  /// Bundle id of the captured (or frontmost) app; automation conditions match on it.
+  var bundleID: String? = nil
 
   static let empty = CaptureContext(appName: nil, windowTitle: nil)
 
@@ -40,7 +42,7 @@ nonisolated struct CaptureContext: Equatable {
     let app = NSRunningApplication(processIdentifier: pid)
     let name = app?.localizedName
       ?? app?.bundleIdentifier.flatMap { $0.split(separator: ".").last.map(String.init) }
-    return CaptureContext(appName: name, windowTitle: windowTitle)
+    return CaptureContext(appName: name, windowTitle: windowTitle, bundleID: app?.bundleIdentifier)
   }
 
   /// Creates a CaptureContext from the frontmost application (for fullscreen/area captures).
@@ -52,7 +54,8 @@ nonisolated struct CaptureContext: Equatable {
     if app.bundleIdentifier == ownBundleID { return .empty }
     return CaptureContext(
       appName: app.localizedName,
-      windowTitle: nil
+      windowTitle: nil,
+      bundleID: app.bundleIdentifier
     )
   }
 }
@@ -184,6 +187,7 @@ enum CaptureOutputNaming {
       "{appName}": context.appName ?? "",
       "{app_name}": context.appName ?? "",
       "{window.title}": (context.sanitizedWindowTitle ?? "").replacingOccurrences(of: "/", with: "-"),
+      "{windowTitle}": (context.sanitizedWindowTitle ?? "").replacingOccurrences(of: "/", with: "-"),
     ]
   }
 

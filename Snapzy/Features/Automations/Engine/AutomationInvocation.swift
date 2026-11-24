@@ -10,7 +10,7 @@ import Foundation
 import UniformTypeIdentifiers
 
 /// What started a run. External invocations need `Automation.externalInvocation`.
-enum AutomationInvocation: String, Sendable {
+enum AutomationInvocation: String, CaseIterable, Sendable {
   case hotkey
   case urlScheme
   case cli
@@ -20,6 +20,10 @@ enum AutomationInvocation: String, Sendable {
   case appIntent
   /// "Retry" on a failure notification (internal; re-runs on the run's input files).
   case retry
+  /// Finder ▸ Quick Actions / Services ▸ "Run Snapzy Automation…".
+  case finder
+  /// Files dropped on the menu bar icon.
+  case menuBarDrop
 
   var isExternal: Bool {
     self == .urlScheme || self == .cli || self == .appIntent
@@ -42,7 +46,7 @@ enum AutomationRef: Equatable, Sendable {
 }
 
 /// The kind of a file an automation runs on. Steps declare which kinds they accept.
-enum AutomationFileKind: String, CaseIterable, Sendable {
+enum AutomationFileKind: String, CaseIterable, Codable, Sendable {
   case image
   case video
   case gif
@@ -170,6 +174,8 @@ enum AutomationTriggerSlot: Sendable {
   case history
   /// URL scheme, CLI and Shortcuts.
   case external
+  /// Finder Services entry and files dropped on the menu bar icon.
+  case finder
 }
 
 @MainActor

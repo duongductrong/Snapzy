@@ -267,4 +267,8 @@ enum PreferencesKeys {
   static let automationsAllowCodeSteps = "automations.allowCodeSteps"
   /// Name → Keychain account index for automation secrets (values live in the Keychain).
   static let automationSecrets = "automations.secrets"
+  /// Finder service / menu bar drop: skip the picker when only one automation fits (off by default).
+  static let automationsRunSingleFileTriggerDirectly = "automations.runSingleFileTriggerDirectly"
+  /// Last app version that refreshed the Services menu (Finder "Run Snapzy Automation…").
+  static let automationsServicesRegisteredVersion = "automations.servicesRegisteredVersion"
 }

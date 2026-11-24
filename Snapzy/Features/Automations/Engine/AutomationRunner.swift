@@ -48,7 +48,8 @@ final class AutomationRunner {
     let startedAt: Date
     /// `nil` never expires (recordings run until the user stops them).
     let expiresAt: Date?
-    let appName: String?
+    /// Frontmost app when triggered; refined by the capture (`noteCaptureContext`).
+    var app: AutomationAppSnapshot
     let onFinish: FinishHandler?
   }
 
@@ -64,16 +65,24 @@ final class AutomationRunner {
   private var pendingRuns: [UUID: PendingRun] = [:]
   private var runningTasks: [UUID: Task<StepLoopResult, Never>] = [:]
   private let now: () -> Date
-  private let frontmostAppName: () -> String?
+  private let frontmostApp: () -> AutomationAppSnapshot
 
+  /// `frontmostApp` wins over `frontmostAppName` (kept for tests that only care about the name).
   init(
     environment: AutomationRunEnvironment,
     now: @escaping () -> Date = Date.init,
-    frontmostAppName: @escaping () -> String? = { NSWorkspace.shared.frontmostApplication?.localizedName }
+    frontmostAppName: (() -> String?)? = nil,
+    frontmostApp: (() -> AutomationAppSnapshot)? = nil
   ) {
     self.environment = environment
     self.now = now
-    self.frontmostAppName = frontmostAppName
+    if let frontmostApp {
+      self.frontmostApp = frontmostApp
+    } else if let frontmostAppName {
+      self.frontmostApp = { AutomationAppSnapshot(name: frontmostAppName()) }
+    } else {
+      self.frontmostApp = { AutomationAppSnapshot(CaptureContext.fromFrontmostApp()) }
+    }
   }
 
   // MARK: - Capture-sourced runs
@@ -96,7 +105,8 @@ final class AutomationRunner {
       invocation: invocation,
       startedAt: startedAt,
       expiresAt: lifetime.map { startedAt.addingTimeInterval($0) },
-      appName: frontmostAppName(),
+      // Snapshot now: the capture overlay takes the frontmost status away.
+      app: frontmostApp(),
       onFinish: onFinish
     )
     logStart(automation, runID: runID, invocation: invocation, source: "capture")
@@ -108,6 +118,14 @@ final class AutomationRunner {
       }
     }
     return .automation(runID: runID)
+  }
+
+  /// What the capture knows about its source (window under the selection, its
+  /// app). Wins over the trigger-time snapshot for conditions and variables.
+  func noteCaptureContext(_ context: CaptureContext) {
+    guard case .automation(let runID) = context.postCaptureRouting, var pending = pendingRuns[runID] else { return }
+    pending.app = pending.app.merged(with: AutomationAppSnapshot(context))
+    pendingRuns[runID] = pending
   }
 
   /// The capture behind `routing` was cancelled or failed before saving a file.
@@ -154,7 +172,7 @@ final class AutomationRunner {
       source: .capture,
       runID: runID,
       invocation: pending.invocation,
-      appName: pending.appName
+      app: pending.app
     )
     pending.onFinish?(result.map { .finished($0.report) } ?? .cancelled)
   }
@@ -171,7 +189,7 @@ final class AutomationRunner {
   /// Runs the steps on freshly captured files.
   @discardableResult
   func run(_ automation: Automation, files: [URL], runID: UUID = UUID()) async -> Result? {
-    await execute(automation, files: files, source: .capture, runID: runID, invocation: .hotkey, appName: frontmostAppName())
+    await execute(automation, files: files, source: .capture, runID: runID, invocation: .hotkey, app: frontmostApp())
   }
 
   /// Runs the steps on files handed in by a trigger. No capture, no canvas
@@ -190,7 +208,8 @@ final class AutomationRunner {
       source: .input(input),
       runID: runID,
       invocation: invocation,
-      appName: frontmostAppName()
+      // Handed-in files have no capture app; the name still feeds `{appName}`.
+      app: AutomationAppSnapshot(name: frontmostApp().name)
     )
   }
 
@@ -200,7 +219,7 @@ final class AutomationRunner {
     source: RunSource,
     runID: UUID,
     invocation: AutomationInvocation,
-    appName: String?
+    app: AutomationAppSnapshot
   ) async -> Result? {
     let automation = snapshot.migrated()
     let existing = files.filter { FileManager.default.fileExists(atPath: $0.path) }
@@ -216,8 +235,13 @@ final class AutomationRunner {
       automationName: automation.displayName,
       invocation: invocation,
       startedAt: startedAt,
-      appName: appName,
-      windowTitle: nil,
+      appName: app.name,
+      windowTitle: app.windowTitle,
+      bundleID: app.bundleID,
+      captureMode: {
+        if case .capture = source { return automation.captureSpec?.mode }
+        return nil
+      }(),
       workingDirectory: AutomationRunContext.workingDirectory(for: runID)
     )
     let inputFiles = existing.map { AutomationFile(url: $0, kind: AutomationFileKind.of($0) ?? .image) }
@@ -245,7 +269,13 @@ final class AutomationRunner {
     environment.runDidUpdate(.started(runID: runID, name: automation.displayName))
     let initialState = state
     let task = Task { @MainActor [environment = self.environment, now = self.now] () -> StepLoopResult in
-      await Self.runSteps(of: automation, state: initialState, environment: environment, now: now)
+      await Self.runSteps(
+        automation.steps,
+        state: initialState,
+        chain: [automation.id],
+        environment: environment,
+        now: now
+      )
     }
     runningTasks[runID] = task
     let finished = await withTaskCancellationHandler {
@@ -268,8 +298,10 @@ final class AutomationRunner {
     }
     cleanUpWorkingDirectory(state)
 
-    let outcome = Self.outcome(steps: steps, cancelled: finished.cancelled)
-    let (message, isError) = outcomeMessage(for: state, steps: steps, cancelled: finished.cancelled)
+    // Nested runs count by their own steps: a Run Automation record only stands for itself without children.
+    let leaves = steps.flatMap(\.leaves)
+    let outcome = Self.outcome(steps: leaves, cancelled: finished.cancelled)
+    let (message, isError) = outcomeMessage(for: state, steps: leaves, cancelled: finished.cancelled)
     if !finished.cancelled, state.wantsNotification || isError {
       await environment.notify(
         title: automation.displayName,
@@ -313,6 +345,7 @@ final class AutomationRunner {
         "files": "\(existing.count)",
         "outcome": outcome.rawValue,
         "duration_ms": "\(durationMs)",
+        "app": state.context.bundleID ?? "",
         "imageCopied": state.didCopyImage ? "true" : "false",
         "linkCopied": state.didCopyLink ? "true" : "false",
         "uploadFailed": state.uploadFailure == nil ? "false" : "true",
@@ -325,24 +358,53 @@ final class AutomationRunner {
     var state: AutomationRunState
     var steps: [AutomationRunRecord.StepRecord]
     var cancelled: Bool
+    /// A failing step with policy Stop ended this level.
+    var aborted = false
   }
 
+  /// Where the loop goes after a control step.
+  private enum ControlFlow {
+    case next
+    /// Skip the next `n` steps of the list.
+    case skip(Int)
+    /// End this level (a nested run returns to its parent).
+    case stop
+    case cancel
+  }
+
+  private typealias StepRecord = AutomationRunRecord.StepRecord
+
   /// The step loop. Runs in its own task so `cancel(runID:)` can stop it.
+  /// `chain` holds the automations being run, outermost first (cycle and depth guard).
   private static func runSteps(
-    of automation: Automation,
+    _ steps: [AutomationStep],
     state initial: AutomationRunState,
+    chain: [UUID],
     environment: AutomationRunEnvironment,
     now: () -> Date
   ) async -> StepLoopResult {
     var state = initial
-    var records: [AutomationRunRecord.StepRecord] = []
+    var records: [StepRecord] = []
     var cancelled = false
+    var aborted = false
     let runID = state.runID
+    /// Steps at an index up to this one were skipped by a condition.
+    var skipThrough = -1
 
-    for step in automation.steps where step.isEnabled {
+    for (index, step) in steps.enumerated() where step.isEnabled {
       if Task.isCancelled {
         cancelled = true
         break
+      }
+      if index <= skipThrough {
+        records.append(StepRecord(
+          kind: stepKindLabel(step),
+          durationMs: 0,
+          status: .skipped,
+          error: nil,
+          detail: L10n.Automations.logSkippedByCondition
+        ))
+        continue
       }
       guard let action = step.action else {
         let kind = stepKindLabel(step)
@@ -353,6 +415,43 @@ final class AutomationRunner {
           context: ["runID": runID.uuidString, "kind": kind]
         )
         records.append(.init(kind: kind, durationMs: 0, status: .skipped, error: nil))
+        continue
+      }
+
+      if action.kind.isControl {
+        environment.runDidUpdate(.step(runID: runID, title: action.kind.displayName))
+        let startedAt = now()
+        var flow = ControlFlow.next
+        var record: StepRecord
+        do {
+          let result = try await runControl(action, state: &state, chain: chain, environment: environment, now: now)
+          flow = result.flow
+          record = result.record
+        } catch {
+          let message = AutomationSecretStore.mask(error.localizedDescription, values: state.secretValues)
+          record = StepRecord(kind: action.kind.rawValue, durationMs: 0, status: .failed, error: message)
+        }
+        let duration = milliseconds(since: startedAt, now: now)
+        record = StepRecord(
+          kind: record.kind,
+          durationMs: duration,
+          status: record.status,
+          error: record.error,
+          detail: record.detail,
+          children: record.children
+        )
+        logStep(action, runID: runID, durationMs: duration, error: record.error)
+        records.append(record)
+        if case .cancel = flow {
+          cancelled = true
+          break
+        }
+        if record.status == .failed, step.onFailure == .stop {
+          aborted = true
+          break
+        }
+        if case .stop = flow { break }
+        if case .skip(let count) = flow { skipThrough = index + count }
         continue
       }
 
@@ -402,10 +501,151 @@ final class AutomationRunner {
             : .failed(message)
           await applyUploadFallback(&state, environment: environment)
         }
-        if step.onFailure == .stop { break }
+        if step.onFailure == .stop {
+          aborted = true
+          break
+        }
       }
     }
-    return StepLoopResult(state: state, steps: records, cancelled: cancelled)
+    return StepLoopResult(state: state, steps: records, cancelled: cancelled, aborted: aborted)
+  }
+
+  /// Runs a control step. A nested run's failure comes back as a `.failed`
+  /// record (with the nested steps as children), not as a thrown error.
+  private static func runControl(
+    _ action: AutomationStepAction,
+    state: inout AutomationRunState,
+    chain: [UUID],
+    environment: AutomationRunEnvironment,
+    now: () -> Date
+  ) async throws -> (record: StepRecord, flow: ControlFlow) {
+    let kind = action.kind.rawValue
+    switch action {
+    case .condition(let config):
+      if AutomationConditionEvaluator.evaluate(config, state: state) {
+        return (StepRecord(kind: kind, durationMs: 0, status: .succeeded, error: nil, detail: L10n.Automations.logConditionMet), .next)
+      }
+      let detail = L10n.Automations.logConditionNotMet
+      switch config.otherwise {
+      case .stop:
+        return (StepRecord(kind: kind, durationMs: 0, status: .succeeded, error: nil, detail: detail), .stop)
+      case .skip(let count):
+        return (StepRecord(kind: kind, durationMs: 0, status: .succeeded, error: nil, detail: detail), .skip(count))
+      }
+
+    case .stop:
+      return (StepRecord(kind: kind, durationMs: 0, status: .succeeded, error: nil), .stop)
+
+    case .runAutomation(let config):
+      guard let targetID = config.automationID else {
+        throw AutomationStepError.automationUnavailable(L10n.Automations.unknownAutomation)
+      }
+      return try await runNested(targetID, kind: kind, state: &state, chain: chain, environment: environment, now: now, then: .next)
+
+    case .ask(let config):
+      var choices: [AutomationPickerChoice] = []
+      for choice in config.choices {
+        switch choice {
+        case .automation(let id):
+          // Unavailable targets are left out instead of failing the whole picker.
+          guard let target = environment.automation(id: id), target.isEnabled, !target.needsReview,
+                !target.hasUnsupportedSource, !chain.contains(id) else { continue }
+          choices.append(AutomationPickerChoice(
+            value: .automation(id),
+            title: target.displayName,
+            symbol: target.symbol ?? target.sourceSymbol
+          ))
+        case .continueRun:
+          choices.append(AutomationPickerChoice(value: .continueRun, title: L10n.Automations.askContinue, symbol: "arrow.down.circle"))
+        case .stopRun:
+          choices.append(AutomationPickerChoice(value: .stopRun, title: L10n.Automations.askStop, symbol: "stop.circle"))
+        }
+      }
+      guard !choices.isEmpty else { throw AutomationStepError.noChoices }
+      environment.runDidUpdate(.step(runID: state.runID, title: L10n.Automations.waitingForChoice))
+      let title = config.prompt.trimmingCharacters(in: .whitespaces).isEmpty
+        ? state.context.automationName
+        : config.prompt
+      let thumbnail = state.payload.files.first { $0.kind == .image }?.url
+      guard let picked = await environment.pick(title: title, thumbnail: thumbnail, choices: choices) else {
+        // Never lose a capture: a dismissed picker leaves a Quick Access card for it.
+        if state.context.captureMode != nil, state.quickAccessItemIDs.isEmpty, !state.didCopyImage,
+           let original = state.inputFiles.first,
+           let itemID = await environment.showQuickAccess(
+             original,
+             kind: AutomationFileKind.of(original) ?? .image,
+             sessionData: state.sessionData[original]
+           )
+        {
+          state.quickAccessItemIDs[original] = itemID
+        }
+        return (StepRecord(kind: kind, durationMs: 0, status: .skipped, error: nil, detail: L10n.Automations.logChoiceCancelled), .cancel)
+      }
+      switch picked.value {
+      case .continueRun:
+        return (StepRecord(kind: kind, durationMs: 0, status: .succeeded, error: nil, detail: picked.title), .next)
+      case .stopRun:
+        return (StepRecord(kind: kind, durationMs: 0, status: .succeeded, error: nil, detail: picked.title), .stop)
+      case .automation(let id):
+        // The choice is the outcome: the parent ends after it.
+        return try await runNested(id, kind: kind, state: &state, chain: chain, environment: environment, now: now, then: .stop)
+      }
+
+    default:
+      return (StepRecord(kind: kind, durationMs: 0, status: .skipped, error: nil), .next)
+    }
+  }
+
+  /// Runs `targetID`'s steps (not its source) on the current payload.
+  private static func runNested(
+    _ targetID: UUID,
+    kind: String,
+    state: inout AutomationRunState,
+    chain: [UUID],
+    environment: AutomationRunEnvironment,
+    now: () -> Date,
+    then flow: ControlFlow
+  ) async throws -> (record: StepRecord, flow: ControlFlow) {
+    guard let target = environment.automation(id: targetID) else {
+      throw AutomationStepError.automationUnavailable(L10n.Automations.unknownAutomation)
+    }
+    guard target.isEnabled, !target.needsReview, !target.hasUnsupportedSource else {
+      throw AutomationStepError.automationUnavailable(target.displayName)
+    }
+    guard !chain.contains(targetID), chain.count <= AutomationControlLimits.maxDepth else {
+      throw AutomationStepError.recursionLimit
+    }
+    // The launcher checked trust when the run started; the target may have changed since
+    // (a capture can wait in selection), so check code steps again.
+    if target.containsCodeSteps {
+      guard environment.allowsCodeSteps else { throw AutomationStepError.codeStepsDisabled }
+      let invocation = state.context.invocation
+      if invocation == .urlScheme || invocation == .appIntent, !state.automation.allowExternalCode {
+        throw AutomationStepError.codeStepsDisabled
+      }
+    }
+    DiagnosticLogger.shared.log(
+      .info,
+      .action,
+      "Automation nested run started",
+      context: ["runID": state.runID.uuidString, "target": targetID.uuidString, "depth": "\(chain.count)"]
+    )
+    let nested = await runSteps(
+      target.migrated().steps,
+      state: state,
+      chain: chain + [targetID],
+      environment: environment,
+      now: now
+    )
+    state = nested.state
+    if nested.cancelled {
+      return (StepRecord(kind: kind, durationMs: 0, status: .skipped, error: nil, detail: target.displayName, children: nested.steps), .cancel)
+    }
+    if nested.aborted {
+      let error = nested.steps.flatMap(\.leaves).first { $0.status == .failed }?.error
+      return (StepRecord(kind: kind, durationMs: 0, status: .failed, error: error, detail: target.displayName, children: nested.steps), flow)
+    }
+    return (StepRecord(kind: kind, durationMs: 0, status: .succeeded, error: nil, detail: target.displayName, children: nested.steps), flow)
   }
 
   /// A failed upload must still leave something to paste and a way to retry.
