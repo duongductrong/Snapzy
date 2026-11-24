@@ -1105,6 +1105,9 @@ final class RecordingCoordinator: ObservableObject {
         AutomationRunner.shared.abandon(routing: routing)
         return
       }
+      // Before GIF conversion / Studio flatten (seconds): a folder watch on the
+      // export folder must never pick up the half-finished file or its GIF.
+      AutomationFileOriginTracker.shared.markWritten([url, url.deletingPathExtension().appendingPathExtension("gif")])
       do {
         // Play sound
         SoundManager.play("Glass")

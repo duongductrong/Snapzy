@@ -96,6 +96,13 @@ enum SnapzyConfigurationAutomationsCodec {
       writer.value("history", automation.showsInHistory)
       writer.value("finder", automation.showsInFinder)
       writer.value("capture_toolbar", automation.showsInCaptureToolbar)
+      // Event triggers (milestone 7)
+      writer.value("capture_event", captureEventToken(automation.captureEvent))
+      writer.value("clipboard_event", automation.runsOnClipboardChange)
+      let watchPath = automation.folderWatch.flatMap { config in
+        config.folder.flatMap { AutomationFolderAccessStore.shared.path(for: $0) } ?? config.folderPath
+      }
+      writer.value("watch_folder", watchPath.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "")
       writer.value("external_invocation", automation.externalInvocation)
 
       for (stepIndex, step) in automation.steps.flatMap(\.migrated).enumerated() {
@@ -103,6 +110,26 @@ enum SnapzyConfigurationAutomationsCodec {
         writer.section(section)
         SnapzyConfigurationAutomationStepCodec.write(step, to: &writer, section: section)
       }
+    }
+  }
+
+  static func captureEventToken(_ config: AutomationCaptureEventConfig?) -> String {
+    switch config?.kinds {
+    case [.screenshot]?: "screenshot"
+    case [.recording]?: "recording"
+    case [.screenshot, .recording]?: "both"
+    default: "off"
+    }
+  }
+
+  /// `nil` for an unknown token; empty kinds for `off`.
+  static func captureEventConfig(_ token: String) -> AutomationCaptureEventConfig? {
+    switch token.lowercased() {
+    case "off", "": AutomationCaptureEventConfig(kinds: [])
+    case "screenshot": AutomationCaptureEventConfig(kinds: [.screenshot])
+    case "recording": AutomationCaptureEventConfig(kinds: [.recording])
+    case "both": AutomationCaptureEventConfig(kinds: [.screenshot, .recording])
+    default: nil
     }
   }
 
@@ -251,6 +278,33 @@ enum SnapzyConfigurationAutomationsCodec {
       }
       if let finder = fields["finder"]?.boolValue {
         automation.showsInFinder = finder
+      }
+      if let token = fields["capture_event"]?.stringValue {
+        if let config = captureEventConfig(token) {
+          automation.captureEvent = config.kinds.isEmpty ? nil : config
+        } else {
+          warnings.append("\(path).capture_event must be one of off, screenshot, recording, both; left unchanged")
+        }
+      }
+      if let clipboard = fields["clipboard_event"]?.boolValue {
+        automation.runsOnClipboardChange = clipboard
+      }
+      if let folder = fields["watch_folder"]?.stringValue {
+        let trimmed = folder.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+          automation.folderWatch = nil
+        } else {
+          let expanded = (trimmed as NSString).expandingTildeInPath
+          var isDirectory: ObjCBool = false
+          if FileManager.default.fileExists(atPath: expanded, isDirectory: &isDirectory), isDirectory.boolValue {
+            let ref = AutomationFolderRef.bookmark(folderStore.register(URL(fileURLWithPath: expanded, isDirectory: true)))
+            automation.folderWatch = AutomationFolderWatchConfig(folder: ref, folderPath: expanded)
+          } else {
+            // Kept as a hint; the trigger stays inactive until the folder is chosen again.
+            automation.folderWatch = AutomationFolderWatchConfig(folder: nil, folderPath: expanded)
+            warnings.append("\(path).watch_folder \"\(trimmed)\" not found; choose it again in Settings → Automations")
+          }
+        }
       }
       // Built-in presets, and the default after-capture automations (milestone 6).
       automation.presetID = fields["preset"]?.stringValue.flatMap {

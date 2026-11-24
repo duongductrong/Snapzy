@@ -137,6 +137,8 @@ final class AutomationLauncher {
       if invocation == .urlScheme || invocation == .appIntent, !automation.allowExternalCode {
         return .externalCodeNotAllowed
       }
+      // A download or another app's copy must not feed a script by itself.
+      if invocation.handsInForeignContent { return .eventCodeNotAllowed }
     }
     if automation.hasUnsupportedSource { return .unsupportedSource }
     // Never start a capture (or touch a file) for a chain that cannot run.

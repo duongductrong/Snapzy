@@ -3016,6 +3016,123 @@ extension L10n {
         version
       )
     }
+    // MARK: Event triggers (milestone 7)
+    static let eventsHeader = string(
+      "automations.events.header",
+      defaultValue: "Run Automatically",
+      comment: "Editor section: triggers that run by themselves"
+    )
+    static let eventCaptureSaved = string(
+      "automations.events.capture-saved",
+      defaultValue: "When a Snapzy capture is saved",
+      comment: "Toggle: run after every standard Snapzy capture"
+    )
+    static let eventCaptureKinds = string(
+      "automations.events.capture-kinds",
+      defaultValue: "Captures",
+      comment: "Picker label: which captures fire the trigger"
+    )
+    static let eventCaptureScreenshots = string(
+      "automations.events.capture-screenshots",
+      defaultValue: "Screenshots",
+      comment: "Segment: screenshots only"
+    )
+    static let eventCaptureRecordings = string(
+      "automations.events.capture-recordings",
+      defaultValue: "Recordings",
+      comment: "Segment: recordings only"
+    )
+    static let eventCaptureBoth = string(
+      "automations.events.capture-both",
+      defaultValue: "Both",
+      comment: "Segment: screenshots and recordings"
+    )
+    static let eventClipboard = string(
+      "automations.events.clipboard",
+      defaultValue: "When an image is copied",
+      comment: "Toggle: run when another app copies an image"
+    )
+    static let eventClipboardDescription = string(
+      "automations.events.clipboard-description",
+      defaultValue: "Runs on images other apps copy. Snapzy’s own copies and password managers are ignored.",
+      comment: "Caption under the clipboard event toggle"
+    )
+    static let eventFolder = string(
+      "automations.events.folder",
+      defaultValue: "When a file is added to a folder",
+      comment: "Toggle: run when a file is added to a watched folder"
+    )
+    static let eventFolderChange = string(
+      "automations.events.folder-change",
+      defaultValue: "Change…",
+      comment: "Button: pick another watched folder"
+    )
+    static let eventFolderNone = string(
+      "automations.events.folder-none",
+      defaultValue: "No folder chosen",
+      comment: "No watched folder chosen yet"
+    )
+    static let eventFolderMissing = string(
+      "automations.events.folder-missing",
+      defaultValue: "Folder not found. Choose it again.",
+      comment: "Watched folder no longer exists"
+    )
+    static let eventsFooter = string(
+      "automations.events.footer",
+      defaultValue: "Runs in the background on the new file. Files Snapzy saves itself are skipped, and an automation that fires too often is paused until you edit it. Script and Shortcut steps never run from clipboard or folder events.",
+      comment: "Footer of the event triggers section"
+    )
+    static let eventsPausedGlobally = string(
+      "automations.events.paused-globally",
+      defaultValue: "Event triggers are paused in Settings → Automations → Advanced.",
+      comment: "Editor note: all event triggers are paused in Advanced"
+    )
+    static let invocationCaptureSaved = string(
+      "automations.invocation.capture-saved",
+      defaultValue: "Capture saved",
+      comment: "Name of a way an automation was started"
+    )
+    static let invocationClipboardChange = string(
+      "automations.invocation.clipboard-change",
+      defaultValue: "Image copied",
+      comment: "Name of a way an automation was started"
+    )
+    static let invocationFolderWatch = string(
+      "automations.invocation.folder-watch",
+      defaultValue: "File added to folder",
+      comment: "Name of a way an automation was started"
+    )
+    static func canvasTriggerFolder(_ value: String) -> String {
+      format(
+        "automations.canvas.trigger-folder",
+        defaultValue: "Folder: %@",
+        comment: "Canvas trigger node summary; %@ is the watched folder name",
+        value
+      )
+    }
+    static let rejectionEventCode = string(
+      "automations.rejection.event-code",
+      defaultValue: "Script and Shortcut steps don’t run from clipboard or folder events.",
+      comment: "Launch refused: clipboard / folder event reached a script step"
+    )
+    static func eventTriggersBurstPaused(_ value: String) -> String {
+      format(
+        "automations.events.burst-paused",
+        defaultValue: "“%@” ran too often and its event triggers were paused. Edit it to turn them back on.",
+        comment: "Toast: an automation's event triggers were paused; %@ is its name",
+        value
+      )
+    }
+    static let pauseEventsToggle = string(
+      "automations.advanced.pause-events",
+      defaultValue: "Pause event triggers",
+      comment: "Advanced toggle"
+    )
+    static let pauseEventsDescription = string(
+      "automations.advanced.pause-events-description",
+      defaultValue: "Stops automations that run by themselves when a capture is saved, an image is copied or a file is added to a folder.",
+      comment: "Caption under the pause event triggers toggle"
+    )
   }
 
   nonisolated enum CaptureToolbar {

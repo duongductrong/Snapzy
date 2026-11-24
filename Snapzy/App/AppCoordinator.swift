@@ -40,6 +40,8 @@ final class AppCoordinator {
     _ = AutomationStore.shared
     // Finder ▸ Quick Actions / Services ▸ "Run Snapzy Automation…".
     AutomationServicesProvider.shared.install()
+    // Event triggers (milestone 7): watchers start only for automations that use them.
+    AutomationEventMonitor.shared.start()
 
     let defaults = UserDefaults.standard
     if defaults.object(forKey: PreferencesKeys.diagnosticsRetentionDays) == nil {

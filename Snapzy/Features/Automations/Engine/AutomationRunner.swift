@@ -164,6 +164,7 @@ final class AutomationRunner {
   }
 
   func complete(runID: UUID, capturedURLs: [URL]) async {
+    AutomationFileOriginTracker.shared.markWritten(capturedURLs)
     guard let pending = pendingRuns.removeValue(forKey: runID) else {
       // The registration expired. Never drop the capture: route it the standard way.
       DiagnosticLogger.shared.log(

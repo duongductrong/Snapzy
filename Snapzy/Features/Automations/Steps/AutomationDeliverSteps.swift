@@ -146,6 +146,8 @@ struct SaveToFolderStepHandler: AutomationStepHandler {
         fileExtension: file.pathExtension,
         conflict: conflict
       )
+      // Marked first: a folder watch on this folder must never run on it (loop).
+      AutomationFileOriginTracker.shared.markWritten([destination])
       try Self.copy(file, to: destination, overwrite: conflict == .overwrite)
       lastSaved = destination
     }

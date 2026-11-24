@@ -85,4 +85,35 @@ final class GoogleDriveTests: XCTestCase {
     )
     XCTAssertTrue(config.isValid)
   }
+
+  // MARK: - Token refresh errors
+
+  func testTokenRefreshFailure_rejectedGrant_asksToReconnect() {
+    for statusCode in [400, 401] {
+      let error = GoogleDriveCloudProvider.tokenRefreshFailure(
+        CloudError.uploadFailed(statusCode: statusCode, message: "Token refresh failed: invalid_grant")
+      )
+      guard case CloudError.googleDriveAuthExpired = error else {
+        return XCTFail("HTTP \(statusCode): expected googleDriveAuthExpired, got \(error)")
+      }
+    }
+  }
+
+  func testTokenRefreshFailure_serverOrNetworkError_passesThrough() {
+    let serverError = GoogleDriveCloudProvider.tokenRefreshFailure(
+      CloudError.uploadFailed(statusCode: 503, message: "unavailable")
+    )
+    guard case CloudError.uploadFailed(503, _) = serverError else {
+      return XCTFail("Expected the 503 to pass through, got \(serverError)")
+    }
+
+    let offline = GoogleDriveCloudProvider.tokenRefreshFailure(URLError(.notConnectedToInternet))
+    XCTAssertEqual((offline as? URLError)?.code, .notConnectedToInternet)
+  }
+
+  func testGoogleDriveAuthExpired_messageMentionsReconnect() {
+    let message = CloudError.googleDriveAuthExpired.errorDescription ?? ""
+    XCTAssertTrue(message.contains("Google Drive"))
+    XCTAssertFalse(message.contains("Secret Key"))
+  }
 }

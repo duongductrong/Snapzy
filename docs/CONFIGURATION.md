@@ -165,6 +165,13 @@ kind = "notify"
   `input` (runs on a file handed in by Quick Access, History, CLI or
   Shortcuts; `save_to_export` and shortcuts do not apply and are not exported).
 - `capture_toolbar`: show the automation as a button in the capture toolbar (M6; needs an image-capable chain).
+- Event triggers (M7, [AUTOMATIONS.md](AUTOMATIONS.md#event-triggers-milestone-7)):
+  `capture_event = "off" | "screenshot" | "recording" | "both"` (run after a
+  standard Snapzy capture), `clipboard_event = true|false` (run when another app
+  copies an image), `watch_folder = "~/Downloads"` (run on new files in that
+  folder; `""` = none; a folder that doesn't exist on this Mac stays inactive
+  with a warning). Omitted keys keep the value stored in `data`. Recipes never
+  carry these; only your own config file does.
 - `menu_bar`, `quick_access`, `history`: list the automation in the menu bar
   Automations submenu (capture and clipboard sources; ignored for `input`), the
   Quick Access "Run Automation" menu, and the History "Run Automation" menu.

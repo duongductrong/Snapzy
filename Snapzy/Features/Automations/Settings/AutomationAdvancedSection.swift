@@ -13,6 +13,7 @@ import SwiftUI
 struct AutomationAdvancedSection: View {
   @AppStorage(PreferencesKeys.automationsAllowCodeSteps) private var allowsCodeSteps = false
   @AppStorage(PreferencesKeys.automationsRunSingleFileTriggerDirectly) private var runSingleDirectly = false
+  @AppStorage(PreferencesKeys.automationsEventTriggersPaused) private var eventsPaused = false
 
   var body: some View {
     Section {
@@ -36,6 +37,19 @@ struct AutomationAdvancedSection: View {
         }
       }
       .toggleStyle(.switch)
+      Toggle(isOn: $eventsPaused) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(L10n.Automations.pauseEventsToggle)
+          Text(L10n.Automations.pauseEventsDescription)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+      }
+      .toggleStyle(.switch)
+      .onChange(of: eventsPaused) { _ in
+        AutomationEventMonitor.shared.reconcile()
+      }
     } header: {
       Text(L10n.Automations.advancedHeader)
     }

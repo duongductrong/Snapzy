@@ -95,6 +95,9 @@ enum AutomationRecipeCodec {
     copy.needsReview = false
     // Layout and unconnected steps stay on this Mac.
     copy.canvas = nil
+    // A shared recipe never runs by itself on the other Mac: its owner turns
+    // event triggers on after looking at it.
+    copy.triggers.removeAll(where: \.isEvent)
     copy.steps = copy.steps.map { step in
       guard case .saveToFolder(var config)? = step.action,
             case .bookmark = config.folder else { return step }
@@ -140,6 +143,8 @@ enum AutomationRecipeCodec {
       copy.allowExternalCode = false
       // Layout and unconnected steps never come in from another Mac.
       copy.canvas = nil
+      // Event triggers never come in: a recipe must not start running by itself.
+      copy.triggers.removeAll(where: \.isEvent)
       copy.steps = copy.steps.map { step in
         var step = step
         step.id = UUID()

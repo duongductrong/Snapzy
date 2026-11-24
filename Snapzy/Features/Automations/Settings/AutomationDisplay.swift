@@ -371,6 +371,7 @@ extension AutomationLaunchRejection {
     case .needsReview: L10n.Automations.rejectionNeedsReview
     case .codeStepsDisabled: L10n.Automations.rejectionCodeStepsDisabled
     case .externalCodeNotAllowed: L10n.Automations.rejectionExternalCode
+    case .eventCodeNotAllowed: L10n.Automations.rejectionEventCode
     }
   }
 }

@@ -5481,6 +5481,11 @@ nonisolated enum L10n {
       defaultValue: "Invalid cloud credentials. Please verify your Access Key and Secret Key.",
       comment: "Error shown when cloud credentials are invalid"
     )
+    static let googleDriveAuthExpired = string(
+      "cloud-operation.google-drive-auth-expired",
+      defaultValue: "Google Drive sign-in expired or was revoked. Reconnect Google Drive in Preferences -> Cloud.",
+      comment: "Error shown when Google rejects the saved Google Drive sign-in and the user must reconnect"
+    )
     static func uploadFailed(_ code: Int, message: String) -> String {
       format(
         "cloud-operation.upload-failed",

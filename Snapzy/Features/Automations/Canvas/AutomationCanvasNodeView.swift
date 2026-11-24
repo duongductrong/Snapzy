@@ -90,6 +90,12 @@ extension AutomationCanvasNodeInfo {
     if automation.showsInHistory { parts.append(L10n.Automations.canvasTriggerHistory) }
     if automation.showsInFinder { parts.append(L10n.Automations.canvasTriggerFinder) }
     if automation.showsInCaptureToolbar { parts.append(L10n.Automations.canvasTriggerCaptureToolbar) }
+    if automation.captureEvent != nil { parts.append(L10n.Automations.invocationCaptureSaved) }
+    if automation.runsOnClipboardChange { parts.append(L10n.Automations.invocationClipboardChange) }
+    if let folder = automation.folderWatch {
+      let name = folder.folderPath.map { ($0 as NSString).lastPathComponent } ?? L10n.Automations.invocationFolderWatch
+      parts.append(L10n.Automations.canvasTriggerFolder(name))
+    }
     if automation.externalInvocation { parts.append(L10n.Automations.canvasTriggerExternal) }
     return parts
   }

@@ -110,6 +110,8 @@ protocol CloudProvider {
 nonisolated enum CloudError: LocalizedError {
   case notConfigured
   case invalidCredentials
+  /// Google rejected the stored refresh token (revoked, expired, or missing); the user must reconnect.
+  case googleDriveAuthExpired
   case uploadFailed(statusCode: Int, message: String)
   case networkError(Error)
   case fileNotFound(URL)
@@ -125,6 +127,8 @@ nonisolated enum CloudError: LocalizedError {
       return L10n.CloudOperation.notConfigured
     case .invalidCredentials:
       return L10n.CloudOperation.invalidCredentials
+    case .googleDriveAuthExpired:
+      return L10n.CloudOperation.googleDriveAuthExpired
     case .uploadFailed(let code, let message):
       return L10n.CloudOperation.uploadFailed(code, message: message)
     case .networkError(let error):

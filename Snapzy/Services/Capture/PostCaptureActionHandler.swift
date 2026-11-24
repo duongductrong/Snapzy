@@ -60,6 +60,8 @@ final class PostCaptureActionHandler {
     pinToScreen: Bool = false,
     routing: PostCaptureRouting = .standard
   ) async -> QuickAccessItem? {
+    // A folder watch on the export folder must not fire on Snapzy's own capture.
+    AutomationFileOriginTracker.shared.markWritten([url])
     if case .automation(let runID) = routing {
       await AutomationRunner.shared.complete(runID: runID, capturedURLs: [url])
       return nil
@@ -71,7 +73,9 @@ final class PostCaptureActionHandler {
 
     if let automation = defaultAutomation?(.screenshot) {
       // The run adds the History entry itself.
-      return await runDefaultAutomation(automation, type: .screenshot, urls: [url], pinToScreen: pinToScreen)
+      let item = await runDefaultAutomation(automation, type: .screenshot, urls: [url], pinToScreen: pinToScreen)
+      AutomationEventMonitor.shared.captureSaved(type: .screenshot, urls: [url])
+      return item
     }
 
     let quickAccessItem = await executeActions(
@@ -82,6 +86,7 @@ final class PostCaptureActionHandler {
 
     // Add to capture history
     await addScreenshotToHistory(url: url)
+    AutomationEventMonitor.shared.captureSaved(type: .screenshot, urls: [url])
 
     return quickAccessItem
   }
@@ -89,6 +94,7 @@ final class PostCaptureActionHandler {
   /// Execute post-capture actions for a batch of screenshots, such as
   /// fullscreen capture across multiple displays.
   func handleScreenshotCaptures(urls: [URL], routing: PostCaptureRouting = .standard) async {
+    AutomationFileOriginTracker.shared.markWritten(urls)
     if case .automation(let runID) = routing {
       await AutomationRunner.shared.complete(runID: runID, capturedURLs: urls)
       return
@@ -116,6 +122,7 @@ final class PostCaptureActionHandler {
 
     if let automation = defaultAutomation?(.screenshot) {
       await runDefaultAutomation(automation, type: .screenshot, urls: validURLs)
+      AutomationEventMonitor.shared.captureSaved(type: .screenshot, urls: validURLs)
       return
     }
 
@@ -169,6 +176,7 @@ final class PostCaptureActionHandler {
     for url in validURLs {
       await addScreenshotToHistory(url: url)
     }
+    AutomationEventMonitor.shared.captureSaved(type: .screenshot, urls: validURLs)
   }
 
   /// Bake the default Annotate canvas preset into a fresh screenshot, as every
@@ -228,14 +236,17 @@ final class PostCaptureActionHandler {
   /// Execute all enabled post-capture actions for a video recording
   /// - Parameter skipQuickAccess: When true, skip adding to QuickAccess (e.g. GIF flow already added it)
   func handleVideoCapture(url: URL, skipQuickAccess: Bool = false) async {
+    AutomationFileOriginTracker.shared.markWritten([url])
     if let automation = defaultAutomation?(.recording) {
       await runDefaultAutomation(automation, type: .recording, urls: [url], skipQuickAccess: skipQuickAccess)
+      AutomationEventMonitor.shared.captureSaved(type: .recording, urls: [url])
       return
     }
     await executeActions(for: .recording, url: url, skipQuickAccess: skipQuickAccess)
 
     // Add to capture history
     await addVideoToHistory(url: url)
+    AutomationEventMonitor.shared.captureSaved(type: .recording, urls: [url])
   }
 
   /// Add a video or GIF to capture history

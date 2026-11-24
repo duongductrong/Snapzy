@@ -36,6 +36,7 @@ enum ClipboardHelper {
     let pasteboard = NSPasteboard.general
     pasteboard.clearContents()
     pasteboard.setString(text, forType: .string)
+    SnapzyPasteboardWrites.record(pasteboard)
     return pasteboard.changeCount
   }
 
@@ -93,6 +94,7 @@ enum ClipboardHelper {
     let pasteboard = NSPasteboard.general
     pasteboard.clearContents()
     let didWrite = pasteboard.writeObjects(urls.map { $0 as NSURL })
+    SnapzyPasteboardWrites.record(pasteboard)
     if didWrite {
       PasteboardReferenceTracker.record(urls: urls, changeCount: pasteboard.changeCount)
     } else {
@@ -135,6 +137,7 @@ enum ClipboardHelper {
     pasteboard.clearContents()
     let didWrite = pasteboard.writeObjects([url as NSURL])
     addFileURLFallbackRepresentations(to: pasteboard, fileURL: url)
+    SnapzyPasteboardWrites.record(pasteboard)
     if didWrite {
       PasteboardReferenceTracker.record(urls: [url], changeCount: pasteboard.changeCount)
     }
@@ -295,6 +298,7 @@ enum ClipboardHelper {
       let pasteboard = NSPasteboard.general
       pasteboard.clearContents()
       pasteboard.writeObjects([image])
+      SnapzyPasteboardWrites.record(pasteboard)
       return
     }
 
@@ -329,6 +333,7 @@ enum ClipboardHelper {
       let pasteboard = NSPasteboard.general
       pasteboard.clearContents()
       pasteboard.writeObjects([image])
+      SnapzyPasteboardWrites.record(pasteboard)
       return
     }
 
@@ -357,6 +362,7 @@ enum ClipboardHelper {
     encodedType: NSPasteboard.PasteboardType?,
     content: ClipboardImageContentOption? = nil
   ) {
+    defer { SnapzyPasteboardWrites.record(pasteboard) }
     if (content ?? ClipboardImageContentOption.current()) == .imageOnly,
        writeImageOnlyItem(
          to: pasteboard,
@@ -459,6 +465,7 @@ enum ClipboardHelper {
       didSetData = item.setData(tiffData, forType: .tiff) && didSetData
     }
     let didWrite = pasteboard.writeObjects([item])
+    SnapzyPasteboardWrites.record(pasteboard)
 
     DiagnosticLogger.shared.log(
       didWrite && didSetData ? .info : .warning,
@@ -551,5 +558,27 @@ enum ClipboardHelper {
       lastWrite = nil
       lock.unlock()
     }
+  }
+}
+
+/// The general pasteboard's change count after Snapzy's last write, so the
+/// "image copied" automation trigger never fires on Snapzy's own copies.
+nonisolated enum SnapzyPasteboardWrites {
+  private static let lock = NSLock()
+  private static var lastChangeCount: Int?
+
+  static func record(_ pasteboard: NSPasteboard) {
+    guard pasteboard.name == .general else { return }
+    let count = pasteboard.changeCount
+    lock.lock()
+    lastChangeCount = count
+    lock.unlock()
+  }
+
+  /// True when the pasteboard still holds what Snapzy wrote last.
+  static func isOwned(changeCount: Int) -> Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return lastChangeCount == changeCount
   }
 }

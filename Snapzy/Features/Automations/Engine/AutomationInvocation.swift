@@ -28,9 +28,26 @@ enum AutomationInvocation: String, CaseIterable, Sendable {
   case afterCapture
   /// A capture toolbar button (milestone 6, #498).
   case captureToolbar
+  // Event triggers (milestone 7)
+  /// A standard Snapzy capture was saved.
+  case captureSaved
+  /// Another app copied an image.
+  case clipboardChange
+  /// A file was added to a watched folder.
+  case folderWatch
 
   var isExternal: Bool {
     self == .urlScheme || self == .cli || self == .appIntent
+  }
+
+  /// Started by an event trigger, with nobody at a Snapzy control.
+  var isEvent: Bool {
+    self == .captureSaved || self == .clipboardChange || self == .folderWatch
+  }
+
+  /// The files come from other apps (a download, a copy), not from Snapzy or the user.
+  var handsInForeignContent: Bool {
+    self == .clipboardChange || self == .folderWatch
   }
 }
 
@@ -50,7 +67,7 @@ enum AutomationRef: Equatable, Sendable {
 }
 
 /// The kind of a file an automation runs on. Steps declare which kinds they accept.
-enum AutomationFileKind: String, CaseIterable, Codable, Sendable {
+nonisolated enum AutomationFileKind: String, CaseIterable, Codable, Sendable {
   case image
   case video
   case gif
@@ -103,6 +120,8 @@ enum AutomationLaunchRejection: Error, Equatable, Sendable {
   case codeStepsDisabled
   /// URL scheme / Shortcuts may not run script steps without the second opt-in.
   case externalCodeNotAllowed
+  /// Clipboard / folder events never reach script or Shortcut steps (milestone 7).
+  case eventCodeNotAllowed
 
   /// Stable identifier for logs and the CLI.
   var code: String {
@@ -124,6 +143,7 @@ enum AutomationLaunchRejection: Error, Equatable, Sendable {
     case .needsReview: "needs_review"
     case .codeStepsDisabled: "code_steps_disabled"
     case .externalCodeNotAllowed: "external_code_not_allowed"
+    case .eventCodeNotAllowed: "event_code_not_allowed"
     }
   }
 }

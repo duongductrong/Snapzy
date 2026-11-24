@@ -1137,6 +1137,77 @@
         }
       }
     },
+    "cloud-operation.google-drive-auth-expired": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Google-Drive-Anmeldung ist abgelaufen oder wurde widerrufen. Verbinden Sie Google Drive unter Einstellungen -> Cloud erneut."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google Drive sign-in expired or was revoked. Reconnect Google Drive in Preferences -> Cloud."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El inicio de sesión de Google Drive caducó o se revocó. Vuelva a conectar Google Drive en Preferencias -> Nube."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La connexion à Google Drive a expiré ou a été révoquée. Reconnectez Google Drive dans Préférences -> Cloud."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההתחברות ל־Google Drive פגה או בוטלה. חבר מחדש את Google Drive בהעדפות -> ענן."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google Drive のサインインが期限切れか、取り消されました。環境設定 -> クラウドで Google Drive を再接続してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google Drive 로그인이 만료되었거나 취소되었습니다. 환경설정 -> 클라우드에서 Google Drive를 다시 연결하세요."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вход в Google Drive истёк или был отозван. Повторно подключите Google Drive в Настройки -> Облако."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phiên đăng nhập Google Drive đã hết hạn hoặc bị thu hồi. Hãy kết nối lại Google Drive trong Tùy chọn -> Cloud."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google Drive 登录已过期或已被撤销。请在偏好设置 -> 云端中重新连接 Google Drive。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google Drive 登入已過期或已被撤銷。請在偏好設定 -> 雲端中重新連接 Google Drive。"
+          }
+        }
+      }
+    },
     "cloud-operation.invalid-credentials": {
       "extractionState": "stale",
       "localizations": {

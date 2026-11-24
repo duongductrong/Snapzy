@@ -277,4 +277,6 @@ enum PreferencesKeys {
   static let automationsServicesRegisteredVersion = "automations.servicesRegisteredVersion"
   /// Which editor Edit / New opens: `list` (sheet) or `canvas` (node window).
   static let automationsEditorStyle = "automations.editorStyle"
+  /// Milestone 7: stop every event trigger (capture saved, image copied, folder watch). Off by default.
+  static let automationsEventTriggersPaused = "automations.eventTriggersPaused"
 }

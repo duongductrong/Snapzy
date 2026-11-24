@@ -73,6 +73,8 @@ struct AutomationTriggersInspector: View {
         caption(automation.runsWithoutInput ? L10n.Automations.showInDescription : L10n.Automations.showInInputDescription)
       }
 
+      AutomationEventTriggersSection(automation: $automation)
+
       AutomationExternalSection(automation: $automation, isURLSchemeEnabled: urlSchemeEnabled)
   }
 

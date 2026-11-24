@@ -172,6 +172,10 @@ enum CLIAutomationBridge {
     case .externalCodeNotAllowed:
       return CLIError(.notAuthorized, "Automation \(ref) runs a script and cannot be started from outside Snapzy",
                       hint: "Allow other apps to run its script steps in the automation's editor")
+    case .eventCodeNotAllowed:
+      // Only event triggers get this; the CLI never does. Mapped for completeness.
+      return CLIError(.notAuthorized, "Automation \(ref) runs a script and cannot be started by a clipboard or folder event",
+                      hint: "Start it from the menu bar, a shortcut or the command line")
     }
   }
 }

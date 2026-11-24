@@ -139,7 +139,32 @@ enum AutomationTrigger: Equatable {
   case finderQuickAction
   /// A button in the unified capture toolbar (milestone 6, #498).
   case captureToolbar
+  // Event triggers (milestone 7): start a run by themselves.
+  /// A standard Snapzy capture finished its default after-capture automation.
+  case captureSaved(AutomationCaptureEventConfig)
+  /// Another app put an image on the clipboard.
+  case clipboardChange
+  /// A new image / video / GIF appeared in a folder.
+  case folderWatch(AutomationFolderWatchConfig)
   case unsupported(AutomationJSONValue)
+
+  /// Fires by itself (no user at a Snapzy control).
+  var isEvent: Bool {
+    switch self {
+    case .captureSaved, .clipboardChange, .folderWatch: true
+    default: false
+    }
+  }
+
+  /// One of each event kind per automation, keyed by JSON `kind`.
+  fileprivate var eventKind: String? {
+    switch self {
+    case .captureSaved: "captureSaved"
+    case .clipboardChange: "clipboardChange"
+    case .folderWatch: "folderWatch"
+    default: nil
+    }
+  }
 
   /// Stored kinds without a payload, keyed by their JSON `kind`.
   fileprivate static let simpleKinds: [String: AutomationTrigger] = [
@@ -148,6 +173,7 @@ enum AutomationTrigger: Equatable {
     "historyAction": .historyAction,
     "finderQuickAction": .finderQuickAction,
     "captureToolbar": .captureToolbar,
+    "clipboardChange": .clipboardChange,
   ]
 
   fileprivate var simpleKind: String? {
@@ -157,14 +183,15 @@ enum AutomationTrigger: Equatable {
     case .historyAction: "historyAction"
     case .finderQuickAction: "finderQuickAction"
     case .captureToolbar: "captureToolbar"
-    case .hotkey, .unsupported: nil
+    case .clipboardChange: "clipboardChange"
+    case .hotkey, .captureSaved, .folderWatch, .unsupported: nil
     }
   }
 }
 
 extension AutomationTrigger: Codable {
   private enum CodingKeys: String, CodingKey {
-    case kind, shortcut
+    case kind, shortcut, config
   }
 
   init(from decoder: Decoder) throws {
@@ -175,6 +202,10 @@ extension AutomationTrigger: Codable {
        let shortcut = try? container.decode(ShortcutConfig.self, forKey: .shortcut)
     {
       self = .hotkey(shortcut)
+    } else if kind == "captureSaved" {
+      self = .captureSaved(container.value(.config, default: AutomationCaptureEventConfig()))
+    } else if kind == "folderWatch" {
+      self = .folderWatch(container.value(.config, default: AutomationFolderWatchConfig()))
     } else if let kind, let simple = Self.simpleKinds[kind] {
       self = simple
     } else {
@@ -188,9 +219,17 @@ extension AutomationTrigger: Codable {
       var container = encoder.container(keyedBy: CodingKeys.self)
       try container.encode("hotkey", forKey: .kind)
       try container.encode(shortcut, forKey: .shortcut)
-    case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction, .captureToolbar:
+    case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction, .captureToolbar, .clipboardChange:
       var container = encoder.container(keyedBy: CodingKeys.self)
       try container.encode(simpleKind, forKey: .kind)
+    case .captureSaved(let config):
+      var container = encoder.container(keyedBy: CodingKeys.self)
+      try container.encode("captureSaved", forKey: .kind)
+      try container.encode(config, forKey: .config)
+    case .folderWatch(let config):
+      var container = encoder.container(keyedBy: CodingKeys.self)
+      try container.encode("folderWatch", forKey: .kind)
+      try container.encode(config, forKey: .config)
     case .unsupported(let raw):
       try raw.encode(to: encoder)
     }
@@ -638,6 +677,52 @@ struct Automation: Identifiable, Equatable {
     set { setTrigger(.captureToolbar, on: newValue) }
   }
 
+  // MARK: Event triggers (milestone 7)
+
+  /// "When a Snapzy capture is saved". Setting `nil` removes it.
+  var captureEvent: AutomationCaptureEventConfig? {
+    get {
+      for trigger in triggers {
+        if case .captureSaved(let config) = trigger { return config }
+      }
+      return nil
+    }
+    set { replaceEvent("captureSaved", with: newValue.map(AutomationTrigger.captureSaved)) }
+  }
+
+  /// "When an image is copied".
+  var runsOnClipboardChange: Bool {
+    get { triggers.contains(.clipboardChange) }
+    set { setTrigger(.clipboardChange, on: newValue) }
+  }
+
+  /// "When a file is added to a folder". Setting `nil` removes it.
+  var folderWatch: AutomationFolderWatchConfig? {
+    get {
+      for trigger in triggers {
+        if case .folderWatch(let config) = trigger { return config }
+      }
+      return nil
+    }
+    set { replaceEvent("folderWatch", with: newValue.map(AutomationTrigger.folderWatch)) }
+  }
+
+  var hasEventTriggers: Bool {
+    triggers.contains(where: \.isEvent)
+  }
+
+  private mutating func replaceEvent(_ kind: String, with trigger: AutomationTrigger?) {
+    if let index = triggers.firstIndex(where: { $0.eventKind == kind }) {
+      if let trigger {
+        triggers[index] = trigger
+      } else {
+        triggers.remove(at: index)
+      }
+    } else if let trigger {
+      triggers.append(trigger)
+    }
+  }
+
   private mutating func setTrigger(_ trigger: AutomationTrigger, on: Bool) {
     triggers.removeAll { $0 == trigger }
     if on { triggers.append(trigger) }
@@ -729,8 +814,14 @@ struct Automation: Identifiable, Equatable {
         return !keptHotkey
       case .menuBar where needsInput:
         return false
-      case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction, .captureToolbar:
+      case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction, .captureToolbar, .clipboardChange:
         return seenSimple.insert(trigger.simpleKind ?? "").inserted
+      case .captureSaved(let config):
+        // Nothing to fire on: drop rather than keep a trigger that never runs.
+        guard !config.kinds.isEmpty else { return false }
+        return seenSimple.insert(trigger.eventKind ?? "").inserted
+      case .folderWatch:
+        return seenSimple.insert(trigger.eventKind ?? "").inserted
       case .unsupported:
         return true
       }

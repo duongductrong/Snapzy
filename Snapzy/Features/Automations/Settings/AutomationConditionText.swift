@@ -114,12 +114,16 @@ extension AutomationInvocation {
     case .menuBarDrop: L10n.Automations.invocationMenuBarDrop
     case .afterCapture: L10n.Automations.invocationAfterCapture
     case .captureToolbar: L10n.Automations.invocationCaptureToolbar
+    case .captureSaved: L10n.Automations.invocationCaptureSaved
+    case .clipboardChange: L10n.Automations.invocationClipboardChange
+    case .folderWatch: L10n.Automations.invocationFolderWatch
     }
   }
 
   /// Invocations a condition can match, in menu order.
   static let conditionChoices: [AutomationInvocation] = [
     .hotkey, .menuBar, .quickAccess, .history, .finder, .menuBarDrop, .captureToolbar, .afterCapture,
+    .captureSaved, .clipboardChange, .folderWatch,
     .urlScheme, .cli, .appIntent,
   ]
 }
