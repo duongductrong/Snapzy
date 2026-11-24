@@ -18,6 +18,10 @@ import SwiftUI
 /// Selection state and key handling, kept free of AppKit so it can be tested.
 @MainActor
 final class AutomationPickerModel: ObservableObject {
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   /// Rows beyond this get a search field; number keys cover the first nine.
   static let searchThreshold = 9
 

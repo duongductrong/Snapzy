@@ -12,6 +12,10 @@ import Foundation
 
 @MainActor
 final class AutomationFolderAccessStore {
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   static let shared = AutomationFolderAccessStore()
 
   private struct Entry: Codable {

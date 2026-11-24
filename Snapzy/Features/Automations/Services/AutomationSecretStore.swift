@@ -32,6 +32,10 @@ enum AutomationSecretError: LocalizedError, Equatable {
 
 @MainActor
 final class AutomationSecretStore: ObservableObject {
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   static let shared = AutomationSecretStore(
     defaults: .standard,
     keychain: KeychainPasswordStore(service: "com.trongduong.snapzy.automations")
