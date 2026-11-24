@@ -42,6 +42,9 @@ final class AppCoordinator {
     AutomationServicesProvider.shared.install()
     // Event triggers (milestone 7): watchers start only for automations that use them.
     AutomationEventMonitor.shared.start()
+    #if DEBUG
+      AutomationRunHUDController.shared.runDemoIfRequested()
+    #endif
 
     let defaults = UserDefaults.standard
     if defaults.object(forKey: PreferencesKeys.diagnosticsRetentionDays) == nil {

@@ -438,6 +438,10 @@ nonisolated final class AutomationFolderWatcherTests: XCTestCase, @unchecked Sen
 
 @MainActor
 private final class FakePasteboard: AutomationPasteboardReading {
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   var changeCount = 0
   var types: [NSPasteboard.PasteboardType]?
   var files: [URL] = []
