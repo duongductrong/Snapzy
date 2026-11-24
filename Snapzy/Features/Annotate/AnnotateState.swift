@@ -3866,6 +3866,26 @@ final class AnnotateState: ObservableObject {
     DiagnosticLogger.shared.log(.info, .annotate, "Crop applied", context: [
       "rect": cropRect.map { "\(Int($0.width))x\(Int($0.height))" } ?? "nil"
     ])
+    let previousCropRect = cropInteractionContext?.cropRect
+    if previousCropRect != cropRect {
+      let preCropSnapshot = ImageTransformSnapshot(
+        sourceImage: sourceImage,
+        cutoutImage: cutoutImage,
+        isCutoutApplied: isCutoutApplied,
+        embeddedImageAssets: embeddedImageAssets,
+        embeddedImageSourceData: embeddedImageSourceData,
+        embeddedImageSnapshotCacheData: embeddedImageSnapshotCacheData,
+        annotations: annotations,
+        cropRect: previousCropRect,
+        originalCropRect: nil,
+        cropAspectRatio: cropAspectRatio,
+        isCropPortraitOrientation: isCropPortraitOrientation,
+        didCutoutAutoApplyCrop: cropInteractionContext?.didCutoutAutoApplyCrop ?? didCutoutAutoApplyCrop,
+        cutoutAutoAppliedCropRect: cropInteractionContext?.cutoutAutoAppliedCropRect ?? cutoutAutoAppliedCropRect,
+        cropBaselineFootprints: cropBaselineFootprints
+      )
+      pushImageTransformUndo(preCropSnapshot)
+    }
     if didCutoutAutoApplyCrop,
        let currentCropRect = cropRect,
        let autoCropRect = cutoutAutoAppliedCropRect,

@@ -120,6 +120,10 @@ struct ZoomSettingsContent: View {
     .onChange(of: localStateSnapshot) { _ in
       syncLocalState()
     }
+    // Undo/redo changes the duration outside this view; keep the slider in sync.
+    .onChange(of: state.zoomTransitionDuration) { newValue in
+      localTransitionDuration = newValue
+    }
     .onDisappear { endContinuousEdit() }
     .accessibilityIdentifier("video-editor.zoom-settings")
   }
@@ -960,7 +964,7 @@ struct ZoomSettingsContent: View {
   }
 
   private func applyTransitionDuration() {
-    state.zoomTransitionDuration = localTransitionDuration
+    state.setZoomTransitionDuration(localTransitionDuration)
   }
 
   private func zoomDisplayValue(for level: CGFloat) -> String {
