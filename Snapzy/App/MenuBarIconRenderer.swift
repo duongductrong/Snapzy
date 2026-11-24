@@ -95,14 +95,14 @@ final class MenuBarIconRenderer {
 
     let drawSize: NSSize
     if let alphaBounds = Self.alphaBoundingBox(of: cgImage), !alphaBounds.isEmpty {
-      // Scale so the larger visible dimension fills the target occupancy.
-      let sourceOccupancy = max(
-        alphaBounds.width / imageSize.width,
-        alphaBounds.height / imageSize.height
+      // Scale from source pixel coordinates to the 18pt canvas so the larger visible
+      // dimension fills the target occupancy while preserving aspect ratio.
+      let fitScale = min(
+        canvasSize.width * targetVisibleOccupancy / alphaBounds.width,
+        canvasSize.height * targetVisibleOccupancy / alphaBounds.height
       )
-      guard sourceOccupancy > 0 else { return nil }
-      let scale = targetVisibleOccupancy / sourceOccupancy
-      drawSize = NSSize(width: imageSize.width * scale, height: imageSize.height * scale)
+      guard fitScale.isFinite, fitScale > 0 else { return nil }
+      drawSize = NSSize(width: imageSize.width * fitScale, height: imageSize.height * fitScale)
     } else {
       // Fully opaque (or undetectable bounds): fit the longest side to the target.
       let fit = min(
