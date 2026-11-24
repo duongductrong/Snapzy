@@ -66,8 +66,7 @@ private actor CloudUsageWorker {
     repeat {
       var queryString = "list-type=2&prefix=snapzy/&max-keys=1000"
       if let token = continuationToken {
-        let encodedToken =
-          token.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? token
+        let encodedToken = AWSV4Signer.uriEncode(token)
         queryString += "&continuation-token=\(encodedToken)"
       }
 

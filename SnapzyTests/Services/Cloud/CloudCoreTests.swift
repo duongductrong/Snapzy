@@ -638,4 +638,82 @@ final class CloudCoreTests: XCTestCase {
 
     XCTAssertEqual(mockSession.requests.map(\.httpMethod), ["GET"])
   }
+
+  /// Regression: AWSV4Signer must preserve non-standard ports (e.g. MinIO :9000) in both
+  /// the Host signing header and presigned URLs.
+  func testAWSV4Signer_preservesCustomPortInHostHeaderAndPresignedURL() throws {
+    let endpointURL = URL(string: "http://localhost:9000/my-bucket/snapzy/shot.png")!
+    var request = URLRequest(url: endpointURL)
+    request.httpMethod = "PUT"
+
+    let signed = try AWSV4Signer.sign(
+      request: request,
+      accessKey: "AKIAIOSFODNN7EXAMPLE",
+      secretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      region: "us-east-1",
+      payloadHash: "UNSIGNED-PAYLOAD"
+    )
+    XCTAssertEqual(signed.value(forHTTPHeaderField: "Host"), "localhost:9000")
+
+    let presigned = try AWSV4Signer.presignURL(
+      url: endpointURL,
+      accessKey: "AKIAIOSFODNN7EXAMPLE",
+      secretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      region: "us-east-1"
+    )
+    XCTAssertEqual(presigned.port, 9000)
+    XCTAssertTrue(presigned.absoluteString.hasPrefix("http://localhost:9000/my-bucket/snapzy/shot.png?"))
+  }
+
+  /// Regression: trailing slashes in customDomain or endpoint must not produce double slashes.
+  func testS3CloudProvider_trimsTrailingSlashInCustomDomainAndEndpoint() async {
+    let mockSession = MockURLSession { _ in
+      MockURLSession.makeResponse(statusCode: 200)
+    }
+    let configWithCustomDomain = CloudConfiguration(
+      providerType: .awsS3,
+      bucket: "my-bucket",
+      region: "us-east-1",
+      endpoint: "https://s3.us-east-1.amazonaws.com/",
+      customDomain: "https://cdn.example.com/",
+      expireTime: .permanent
+    )
+    let providerWithCustomDomain = S3CloudProvider(
+      config: configWithCustomDomain,
+      accessKey: "k",
+      secretKey: "s",
+      session: mockSession
+    )
+    XCTAssertEqual(
+      providerWithCustomDomain.generatePublicURL(for: "snapzy/shot.png").absoluteString,
+      "https://cdn.example.com/snapzy/shot.png"
+    )
+
+    let configWithoutCustomDomain = CloudConfiguration(
+      providerType: .awsS3,
+      bucket: "my-bucket",
+      region: "us-east-1",
+      endpoint: "https://s3.us-east-1.amazonaws.com/",
+      customDomain: nil,
+      expireTime: .permanent
+    )
+    let providerWithoutCustomDomain = S3CloudProvider(
+      config: configWithoutCustomDomain,
+      accessKey: "k",
+      secretKey: "s",
+      session: mockSession
+    )
+    XCTAssertEqual(
+      providerWithoutCustomDomain.generatePublicURL(for: "snapzy/shot.png").absoluteString,
+      "https://s3.us-east-1.amazonaws.com/my-bucket/snapzy/shot.png"
+    )
+  }
+
+  /// Regression: S3 continuation tokens contain `+`, `=`, `/` which must be RFC 3986 percent-encoded.
+  func testAWSV4Signer_uriEncodeEncodesContinuationTokenDelimiters() {
+    XCTAssertEqual(
+      AWSV4Signer.uriEncode("1/K7MDENG+bPxRfiCY=="),
+      "1%2FK7MDENG%2BbPxRfiCY%3D%3D"
+    )
+  }
 }

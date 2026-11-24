@@ -133,9 +133,11 @@ final class S3CloudProvider: CloudProvider {
   // MARK: - Public URL
 
   func generatePublicURL(for key: String) -> URL {
-    if let domain = customDomain, !domain.isEmpty {
-      let scheme = domain.hasPrefix("http") ? "" : "https://"
-      return URL(string: "\(scheme)\(domain)/\(key)")!
+    if let domain = customDomain?.trimmingCharacters(in: .whitespacesAndNewlines), !domain.isEmpty {
+      let trimmedDomain = domain.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+      let scheme = trimmedDomain.hasPrefix("http://") || trimmedDomain.hasPrefix("https://") ? "" : "https://"
+      let trimmedKey = key.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+      return URL(string: "\(scheme)\(trimmedDomain)/\(trimmedKey)")!
     }
     // Default: presigned URL or path-style
     return buildObjectURL(key: key)
@@ -381,7 +383,9 @@ final class S3CloudProvider: CloudProvider {
 
   private func buildObjectURL(key: String) -> URL {
     // Path-style: https://s3.region.amazonaws.com/bucket/key
-    URL(string: "\(endpoint.absoluteString)/\(bucket)/\(key)")!
+    let baseEndpoint = endpoint.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    let trimmedKey = key.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    return URL(string: "\(baseEndpoint)/\(bucket)/\(trimmedKey)")!
   }
 
   /// Keys stay under `objectPrefix` so lifecycle expiry and usage stats apply to both styles.
