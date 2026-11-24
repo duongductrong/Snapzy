@@ -4,6 +4,19 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.12] - 2026-11-24
+
+### Bug Fixes
+- avoid back-deployed isolated deinit crash in MenuBarIconRenderer (60e22922)
+- Record undo snapshots for Video Editor background/transition edits and Annotate crop/mockup (#810) (6a88437d)
+- center off-center custom menu bar icons and isolate icon tests (1aa36e53)
+- scale transparent custom PNG icons into 18pt canvas (#808) (5ae5830e)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @williamcachamwri
+
 ## [2.3.0-beta.11] - 2026-11-23
 
 ### Features
