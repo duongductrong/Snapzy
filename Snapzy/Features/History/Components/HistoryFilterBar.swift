@@ -35,6 +35,36 @@ struct HistoryFilterBar: View {
       Spacer()
     }
   }
+  static func unselectedPillFillColor(
+    backgroundStyle: HistoryBackgroundStyle,
+    colorScheme: ColorScheme
+  ) -> Color {
+    if backgroundStyle == .solid {
+      return colorScheme == .dark
+        ? Color.white.opacity(0.07)
+        : Color.black.opacity(0.06)
+    }
+
+    return colorScheme == .dark
+      ? Color.white.opacity(0.08)
+      : Color.black.opacity(0.05)
+  }
+
+  static func pillBorderColor(isSelected: Bool, colorScheme: ColorScheme) -> Color {
+    if isSelected {
+      return Color.white.opacity(0.15)
+    }
+
+    return colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.08)
+  }
+
+  static func countBadgeBackgroundColor(isSelected: Bool, colorScheme: ColorScheme) -> Color {
+    if isSelected {
+      return Color.white.opacity(0.22)
+    }
+
+    return colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
+  }
 }
 
 private struct FilterPill: View {
@@ -59,7 +89,7 @@ private struct FilterPill: View {
             .font(.system(size: 10, weight: .bold))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(pillCountBackground.opacity(isSelected ? 0.18 : 1))
+            .background(HistoryFilterBar.countBadgeBackgroundColor(isSelected: isSelected, colorScheme: colorScheme))
             .clipShape(Capsule())
         }
       }
@@ -70,7 +100,7 @@ private struct FilterPill: View {
       .clipShape(Capsule())
       .overlay(
         Capsule()
-          .stroke(borderColor, lineWidth: 1)
+          .stroke(HistoryFilterBar.pillBorderColor(isSelected: isSelected, colorScheme: colorScheme), lineWidth: 1)
       )
     }
     .buttonStyle(.plain)
@@ -90,26 +120,11 @@ private struct FilterPill: View {
       )
     }
 
-    if backgroundStyle == .solid {
-      return colorScheme == .dark
-        ? AnyShapeStyle(Color.white.opacity(0.07))
-        : AnyShapeStyle(Color.white.opacity(0.76))
-    }
-
-    return colorScheme == .dark
-      ? AnyShapeStyle(Color.white.opacity(0.08))
-      : AnyShapeStyle(Color.black.opacity(0.05))
-  }
-
-  private var borderColor: Color {
-    if isSelected {
-      return Color.white.opacity(0.15)
-    }
-
-    return colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.64)
-  }
-
-  private var pillCountBackground: Color {
-    colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.84)
+    return AnyShapeStyle(
+      HistoryFilterBar.unselectedPillFillColor(
+        backgroundStyle: backgroundStyle,
+        colorScheme: colorScheme
+      )
+    )
   }
 }

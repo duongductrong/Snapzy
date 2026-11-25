@@ -211,6 +211,9 @@ struct ZoomSettingsPopover: View {
     }
   }
 
+  static let toggleButtonBackgroundFill = Color.primary.opacity(0.08)
+  static let toggleButtonBorderColor = Color.primary.opacity(0.10)
+
   private var actionsSection: some View {
     HStack(spacing: 8) {
       // Enable/Disable toggle
@@ -226,7 +229,14 @@ struct ZoomSettingsPopover: View {
         .font(.system(size: 10))
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Color.white.opacity(0.1))
+        .background(
+          Radius.controlRect(forHeight: 20)
+            .fill(Self.toggleButtonBackgroundFill)
+            .overlay(
+              Radius.controlRect(forHeight: 20)
+                .strokeBorder(Self.toggleButtonBorderColor, lineWidth: 0.5)
+            )
+        )
         .clipShape(Radius.controlRect(forHeight: 20))
       }
       .buttonStyle(.plain)

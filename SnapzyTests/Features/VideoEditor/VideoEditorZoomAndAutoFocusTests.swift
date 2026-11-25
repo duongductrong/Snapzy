@@ -5,8 +5,10 @@
 //  Unit tests for video editor zoom math and Smart Camera autofocus paths.
 //
 
+import AppKit
 import CoreGraphics
 @testable import Snapzy
+import SwiftUI
 import XCTest
 
 final class VideoEditorZoomAndAutoFocusTests: XCTestCase {
@@ -253,5 +255,34 @@ final class VideoEditorZoomAndAutoFocusTests: XCTestCase {
     line: UInt = #line
   ) {
     XCTAssertEqual(actual, expected, accuracy: accuracy, file: file, line: line)
+  }
+
+  /// Regression: ZoomSettingsPopover Enable/Disable button must adapt to Light and Dark Mode
+  /// rather than hardcoding white-on-white `Color.white.opacity(0.1)`.
+  func testZoomSettingsPopover_toggleButtonBackgroundAdaptsToLightAndDarkAppearance() throws {
+    let lightAppearance = try XCTUnwrap(NSAppearance(named: .aqua))
+    var lightColor: NSColor?
+    lightAppearance.performAsCurrentDrawingAppearance {
+      lightColor = NSColor(ZoomSettingsPopover.toggleButtonBackgroundFill).usingColorSpace(.sRGB)
+    }
+    let resolvedLight = try XCTUnwrap(lightColor)
+    XCTAssertLessThan(
+      resolvedLight.brightnessComponent,
+      0.2,
+      "Light Mode button fill must use dark primary ink tint, not white-on-white"
+    )
+    XCTAssertGreaterThan(resolvedLight.alphaComponent, 0.05)
+
+    let darkAppearance = try XCTUnwrap(NSAppearance(named: .darkAqua))
+    var darkColor: NSColor?
+    darkAppearance.performAsCurrentDrawingAppearance {
+      darkColor = NSColor(ZoomSettingsPopover.toggleButtonBackgroundFill).usingColorSpace(.sRGB)
+    }
+    let resolvedDark = try XCTUnwrap(darkColor)
+    XCTAssertGreaterThan(
+      resolvedDark.brightnessComponent,
+      0.8,
+      "Dark Mode button fill must use light primary ink tint"
+    )
   }
 }

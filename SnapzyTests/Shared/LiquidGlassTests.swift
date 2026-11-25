@@ -6,14 +6,12 @@
 //
 
 import AppKit
+@testable import Snapzy
 import SwiftUI
 import XCTest
 
-@testable import Snapzy
-
 @MainActor
 final class LiquidGlassTests: XCTestCase {
-
   // MARK: - Helpers
 
   /// Resolves a dynamic SwiftUI `Color` against a specific appearance.
@@ -29,11 +27,10 @@ final class LiquidGlassTests: XCTestCase {
   // MARK: - Capabilities
 
   func testCapabilities_nativeGlassTracksHostOSAndForceFlag() {
-    let expected: Bool
-    if #available(macOS 26.0, *) {
-      expected = !LiquidGlassCapabilities.forcesLegacyGlass
+    let expected: Bool = if #available(macOS 26.0, *) {
+      !LiquidGlassCapabilities.forcesLegacyGlass
     } else {
-      expected = false
+      false
     }
     XCTAssertEqual(LiquidGlassCapabilities.hasNativeLiquidGlass, expected)
   }
@@ -54,11 +51,10 @@ final class LiquidGlassTests: XCTestCase {
   }
 
   func testCapabilities_systemSupportedProperty() {
-    let expected: Bool
-    if #available(macOS 26.0, *) {
-      expected = true
+    let expected = if #available(macOS 26.0, *) {
+      true
     } else {
-      expected = false
+      false
     }
     XCTAssertEqual(LiquidGlassCapabilities.isSystemSupported, expected)
   }
@@ -165,8 +161,8 @@ final class LiquidGlassTests: XCTestCase {
   // MARK: - Appearance Adaptation
 
   func testTokens_isDarkClassifiesBothAppearances() throws {
-    XCTAssertTrue(LiquidGlassTokens.isDark(try XCTUnwrap(NSAppearance(named: .darkAqua))))
-    XCTAssertFalse(LiquidGlassTokens.isDark(try XCTUnwrap(NSAppearance(named: .aqua))))
+    XCTAssertTrue(try LiquidGlassTokens.isDark(XCTUnwrap(NSAppearance(named: .darkAqua))))
+    XCTAssertFalse(try LiquidGlassTokens.isDark(XCTUnwrap(NSAppearance(named: .aqua))))
   }
 
   /// Regression: ink was hardcoded white, making glass buttons invisible in the Light theme
@@ -409,5 +405,60 @@ final class LiquidGlassTests: XCTestCase {
 
     XCTAssertTrue(cancelCalled)
     XCTAssertTrue(confirmCalled)
+  }
+
+  /// Regression: KeyCapPlaceholderView rendered on a pure white Light Mode card under the legacy
+  /// Liquid Glass fallback must produce visible non-white capsule pixels (border + surface tint)
+  /// rather than blending invisibly into `#FFFFFF`.
+  func testKeyCapPlaceholderView_rendersVisibleCapsuleOnWhiteLightModeSurface() throws {
+    let originalRuntime = LiquidGlassCapabilities.runtimeLegacyOverride
+    defer { LiquidGlassCapabilities.runtimeLegacyOverride = originalRuntime }
+    LiquidGlassCapabilities.runtimeLegacyOverride = true
+
+    // Render an empty-label placeholder so any non-white pixels must come from the capsule surface/border.
+    let view = KeyCapPlaceholderView(title: "", symbol: "", minWidth: 104)
+      .padding(10)
+      .background(Color.white)
+      .environment(\.colorScheme, .light)
+
+    let renderer = ImageRenderer(content: view)
+    renderer.scale = 1
+    let cgImage = try XCTUnwrap(renderer.cgImage, "ImageRenderer should produce a CGImage for KeyCapPlaceholderView")
+
+    let width = cgImage.width
+    let height = cgImage.height
+    XCTAssertGreaterThan(width, 20)
+    XCTAssertGreaterThan(height, 20)
+
+    var pixels = [UInt8](repeating: 0, count: width * height * 4)
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    let context = try XCTUnwrap(
+      CGContext(
+        data: &pixels,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: width * 4,
+        space: colorSpace,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+      )
+    )
+    context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+    var nonWhitePixelCount = 0
+    for offset in stride(from: 0, to: pixels.count, by: 4) {
+      let r = pixels[offset]
+      let g = pixels[offset + 1]
+      let b = pixels[offset + 2]
+      if r < 252 || g < 252 || b < 252 {
+        nonWhitePixelCount += 1
+      }
+    }
+
+    XCTAssertGreaterThan(
+      nonWhitePixelCount,
+      100,
+      "Expected visible non-white capsule fill/border pixels on a #FFFFFF Light Mode surface"
+    )
   }
 }

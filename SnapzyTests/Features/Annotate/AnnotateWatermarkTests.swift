@@ -9,6 +9,7 @@
 //  AnnotateCoreTests and is not duplicated here.
 //
 
+import AppKit
 import CoreGraphics
 import SwiftUI
 import XCTest
@@ -129,5 +130,17 @@ final class AnnotateWatermarkTests: XCTestCase {
     let properties = state.annotationCreationProperties(for: .watermark)
     XCTAssertEqual(properties.opacity, 0.5, accuracy: 0.0001)
     XCTAssertEqual(properties.rotationDegrees, -10, accuracy: 0.0001)
+  }
+
+  /// Regression: inline watermark rotation slider displays `"-45deg"` (6 characters) and
+  /// must have enough width so the readout never truncates to `"-45d..."`.
+  func testInlineSliderValueReadoutFitsNegativeTwoDigitRotation() {
+    let font = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
+    let measuredWidth = ("-45deg" as NSString).size(withAttributes: [.font: font]).width
+    XCTAssertGreaterThanOrEqual(
+      InlineAreaSliderControl.valueReadoutMinWidth,
+      ceil(measuredWidth),
+      "Inline slider value readout width must fit \"-45deg\" without truncation"
+    )
   }
 }
