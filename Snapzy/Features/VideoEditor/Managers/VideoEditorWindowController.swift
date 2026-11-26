@@ -6,10 +6,55 @@
 //
 
 import AppKit
+import AVFoundation
 import Combine
+import CoreMedia
 import Darwin
 import SwiftUI
 import UniformTypeIdentifiers
+
+/// Observable `.snapzy` project metadata shared between `VideoEditorWindowController`
+/// and `VideoEditorToolbarView` so saving or renaming a project updates the titlebar live.
+@MainActor
+final class VideoEditorProjectContext: ObservableObject {
+  nonisolated deinit {}
+
+  @Published var packageURL: URL?
+  @Published var isSavingProject: Bool = false
+  @Published private(set) var showsJustSavedBadge: Bool = false
+  var onRenameProject: ((String) throws -> Void)?
+
+  private var resetBadgeTask: Task<Void, Never>?
+
+  var hasProjectPackage: Bool {
+    packageURL != nil
+  }
+
+  var packageDisplayName: String? {
+    packageURL?.lastPathComponent
+  }
+
+  var packageStemName: String? {
+    packageURL?.deletingPathExtension().lastPathComponent
+  }
+
+  func markJustSaved() {
+    resetBadgeTask?.cancel()
+    showsJustSavedBadge = true
+    resetBadgeTask = Task { @MainActor [weak self] in
+      try? await Task.sleep(nanoseconds: 1_600_000_000)
+      guard !Task.isCancelled else { return }
+      self?.showsJustSavedBadge = false
+    }
+  }
+
+  func revealInFinder() {
+    guard let packageURL else { return }
+    let access = SandboxFileAccessManager.shared.beginAccessingURL(packageURL)
+    defer { access.stop() }
+    NSWorkspace.shared.activateFileViewerSelecting([packageURL])
+  }
+}
 
 /// The file ownership boundary used by the Video Editor Save action.
 ///
@@ -31,12 +76,26 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private let fileAccessManager = SandboxFileAccessManager.shared
   private let tempCaptureManager = TempCaptureManager.shared
   private let quickAccessItemID: UUID?
+  let projectContext = VideoEditorProjectContext()
+  private(set) var projectPackageURL: URL?
+  private(set) var didPresentRestoreFailureAlert: Bool = false
+  private var projectPackageAccess: SandboxFileAccessManager.ScopedAccess?
   private var sourceFileAccess: SandboxFileAccessManager.ScopedAccess?
   private var originalFileAccess: SandboxFileAccessManager.ScopedAccess?
   private var sourceURL: URL?
+  private var ownedTempDropDirectoryURL: URL?
   private var state: VideoEditorState?
+  var editorState: VideoEditorState? {
+    state
+  }
+
   private var sessionData: VideoEditorSessionData?
+  private var initialPlayheadSeconds: Double?
   private var documentEditedCancellable: AnyCancellable?
+  private var autoRecoveryCancellable: AnyCancellable?
+  private var autoRecoveryTask: Task<Void, Never>?
+  private var activeExportTask: Task<Void, Never>?
+  private var activeProjectSaveTask: Task<Void, Never>?
   private var isEmptyState: Bool = false
 
   /// Callback when video is loaded in empty state - (workingURL, originalURL)
@@ -89,7 +148,18 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       originalFileAccess = fileAccessManager.beginAccessingURL(originalURL)
     }
     sourceURL = url
+    let parentDir = url.deletingLastPathComponent()
+    if parentDir.lastPathComponent.hasPrefix("VideoEditor_"),
+       parentDir.path.hasPrefix(FileManager.default.temporaryDirectory.path) {
+      ownedTempDropDirectoryURL = parentDir
+    }
     self.sessionData = sessionData
+    if let enclosing = SnapzyProjectPackage.enclosingProjectPackageURL(for: originalURL ?? url)
+      ?? SnapzyProjectPackage.enclosingProjectPackageURL(for: url) {
+      projectPackageURL = enclosing
+      projectContext.packageURL = enclosing
+      projectPackageAccess = fileAccessManager.beginAccessingURL(enclosing)
+    }
     state = VideoEditorState(
       url: url,
       originalURL: originalURL,
@@ -99,6 +169,30 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     super.init(window: Self.createWindow())
     window?.delegate = self
+    setupContent()
+  }
+
+  /// Initialize directly from a rehydrated `.snapzy` project package.
+  init(project: SnapzyProjectPackage.LoadedProject) {
+    quickAccessItemID = nil
+    projectPackageURL = project.packageURL
+    projectContext.packageURL = project.packageURL
+    projectPackageAccess = fileAccessManager.beginAccessingURL(project.packageURL)
+    sourceFileAccess = fileAccessManager.beginAccessingURL(project.sessionData.sourceSnapshotURL)
+    sourceURL = project.sessionData.sourceSnapshotURL
+    sessionData = project.sessionData
+    initialPlayheadSeconds = project.playheadSeconds > 0 ? project.playheadSeconds : nil
+    state = VideoEditorState(
+      url: project.sessionData.sourceSnapshotURL,
+      originalURL: project.packageURL,
+      sessionData: project.sessionData
+    )
+    isEmptyState = false
+
+    super.init(window: Self.createWindow())
+    window?.delegate = self
+    window?.representedURL = project.packageURL
+    window?.title = project.packageURL.lastPathComponent
     setupContent()
   }
 
@@ -116,8 +210,12 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   deinit {
+    projectPackageAccess?.stop()
     sourceFileAccess?.stop()
     originalFileAccess?.stop()
+    if let tempDir = ownedTempDropDirectoryURL {
+      try? FileManager.default.removeItem(at: tempDir)
+    }
   }
 
   @available(*, unavailable)
@@ -146,13 +244,24 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       return
     }
 
+    projectContext.onRenameProject = { [weak self] newName in
+      try self?.renameProjectPackage(to: newName)
+    }
+
     let mainView = VideoEditorMainView(
       state: state,
+      projectContext: projectContext,
+      initialPlayheadSeconds: initialPlayheadSeconds,
       primaryActionTitle: primaryActionTitle,
       onSave: { [weak self] in self?.showSaveConfirmation() },
-      onCancel: { [weak self] in self?.handleCancel() }
+      onCancel: { [weak self] in self?.handleCancel() },
+      onSaveProject: { [weak self] in self?.saveProject() },
+      onSaveProjectAs: { [weak self] in self?.saveProjectAs() },
+      onOpenProjectOrVideo: { [weak self] in self?.openProjectOrVideo() },
+      onMetadataLoaded: { [weak self] in self?.handleMetadataLoaded() }
     )
     bindDocumentEditedState(to: state)
+    bindAutoRecovery(to: state)
     (window as? VideoEditorWindow)?.onTogglePlayback = { [weak state] in
       guard state?.isExporting != true else { return }
       state?.togglePlayback()
@@ -169,12 +278,32 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   private func setupEmptyContent() {
     bindDocumentEditedState(to: nil)
+    bindAutoRecovery(to: nil)
     (window as? VideoEditorWindow)?.onTogglePlayback = nil
     (window as? VideoEditorWindow)?.onAIPromptShortcut = nil
     let emptyView = VideoEditorEmptyStateView { [weak self] url, originalURL in
       self?.onVideoLoaded?(url, originalURL)
     }
     window?.contentView = NSHostingView(rootView: emptyView)
+  }
+
+  private func bindAutoRecovery(to state: VideoEditorState?) {
+    autoRecoveryCancellable = nil
+    autoRecoveryTask?.cancel()
+    autoRecoveryTask = nil
+    guard let state else { return }
+
+    autoRecoveryCancellable = state.objectWillChange
+      .debounce(for: .milliseconds(1200), scheduler: RunLoop.main)
+      .sink { [weak self] _ in
+        guard let self,
+              let liveState = self.state,
+              projectPackageURL == nil,
+              !liveState.isExporting,
+              liveState.hasUnsavedChanges
+        else { return }
+        scheduleOffMainAutoRecovery()
+      }
   }
 
   private func bindDocumentEditedState(to state: VideoEditorState?) {
@@ -189,6 +318,30 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       .sink { [weak self] hasUnsavedChanges in
         self?.window?.isDocumentEdited = hasUnsavedChanges
       }
+  }
+
+  /// Surfaces a visible warning alert when a `.snapzy` project's timeline fails validation
+  /// against its media, and locks in-place Save so the original package is never clobbered.
+  func handleMetadataLoaded() {
+    guard let state,
+          state.sessionRestoreFailed,
+          projectPackageURL != nil,
+          !didPresentRestoreFailureAlert
+    else {
+      return
+    }
+    didPresentRestoreFailureAlert = true
+    guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+          let window
+    else {
+      return
+    }
+    let alert = NSAlert()
+    alert.alertStyle = .warning
+    alert.messageText = L10n.VideoEditor.projectRestoreFailedTitle
+    alert.informativeText = L10n.VideoEditor.projectRestoreFailedMessage
+    alert.addButton(withTitle: L10n.Common.ok)
+    alert.beginSheetModal(for: window)
   }
 
   func showWindow() {
@@ -226,42 +379,94 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     isTempCaptureSource ? L10n.VideoEditor.save : L10n.VideoEditor.convert
   }
 
+  var canOverwriteProjectInPlace: Bool {
+    guard let state, projectPackageURL != nil else { return false }
+    return !state.sessionRestoreFailed
+  }
+
   // MARK: - NSWindowDelegate
 
+  static var shouldBypassUnsavedCloseAlert: Bool {
+    let env = ProcessInfo.processInfo.environment
+    if env["SNAPZY_SKIP_UNSAVED_CLOSE_ALERT"] == "1" {
+      return true
+    }
+    if env["XCTestConfigurationFilePath"] != nil, env["SNAPZY_FORCE_UNSAVED_CLOSE_ALERT"] != "1" {
+      return true
+    }
+    return false
+  }
+
+  private func flushActiveTextEditing() {
+    window?.makeFirstResponder(nil)
+  }
+
   func windowShouldClose(_ sender: NSWindow) -> Bool {
-    // Empty state can always close
     guard let state else { return true }
 
-    // An AI run keeps what it changed so far; the unsaved-changes question covers it.
-    state.agentIfLoaded?.stop()
+    flushActiveTextEditing()
 
     guard state.hasUnsavedChanges else {
+      state.agentIfLoaded?.stop()
       state.pause()
       return true
     }
 
+    if Self.shouldBypassUnsavedCloseAlert {
+      scheduleOffMainAutoRecovery()
+      state.agentIfLoaded?.stop()
+      state.pause()
+      return true
+    }
+
+    // Do not stop `agentIfLoaded` or pause before the user confirms Save / Don't Save so
+    // choosing Cancel leaves an active AI run and playback undisturbed.
     showUnsavedChangesAlert(for: sender)
     return false
   }
 
   func windowWillClose(_: Notification) {
+    activeExportTask?.cancel()
+    activeExportTask = nil
+    activeProjectSaveTask?.cancel()
+    activeProjectSaveTask = nil
+    autoRecoveryCancellable = nil
+    autoRecoveryTask?.cancel()
+    autoRecoveryTask = nil
     state?.agentIfLoaded?.stop()
     state?.cancelPendingPerformanceWork()
+    if let tempDir = ownedTempDropDirectoryURL {
+      ownedTempDropDirectoryURL = nil
+      try? FileManager.default.removeItem(at: tempDir)
+    }
     window?.alphaValue = 0
+    if let contentView = window?.contentView {
+      window?.contentView = nil
+      // Release `NSHostingView` on a plain C RunLoop turn outside any active Swift
+      // Concurrency `Task` frame so `NSHostingView.deinit` never triggers the macOS 15
+      // `swift_task_deinitOnExecutorMainActorBackDeploy` / `StopLookupScope` malloc abort.
+      CFRunLoopPerformBlock(CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue) {
+        withExtendedLifetime(contentView) {}
+      }
+      CFRunLoopWakeUp(CFRunLoopGetMain())
+    }
     if let itemId = quickAccessItemID {
       QuickAccessManager.shared.setWindowOpen(id: itemId, isOpen: false)
     }
   }
 
-  // MARK: - Unsaved Changes Alert
+  // MARK: - Unsaved Changes Alert (.snapzy Zero Data Loss Protection)
 
   private func showUnsavedChangesAlert(for window: NSWindow) {
     let alert = NSAlert()
-    alert.messageText = L10n.VideoEditor.unsavedChangesTitle
-    alert.informativeText = L10n.VideoEditor.unsavedChangesMessage
+    alert.messageText = L10n.VideoEditor.projectUnsavedCloseTitle
+    alert.informativeText = L10n.VideoEditor.projectUnsavedCloseMessage
     alert.alertStyle = .warning
 
-    alert.addButton(withTitle: L10n.VideoEditor.save)
+    let saveTitle = canOverwriteProjectInPlace
+      ? L10n.VideoEditor.projectMenuSave
+      : L10n.VideoEditor.projectMenuSaveEllipsis
+    alert.addButton(withTitle: saveTitle)
     alert.addButton(withTitle: L10n.VideoEditor.dontSave)
     alert.addButton(withTitle: L10n.Common.cancel)
 
@@ -270,9 +475,16 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
       switch response {
       case .alertFirstButtonReturn:
-        showSaveConfirmation()
+        state?.agentIfLoaded?.stop()
+        state?.pause()
+        saveProject { [weak self] didSave in
+          if didSave {
+            self?.forceClose()
+          }
+        }
 
       case .alertSecondButtonReturn:
+        scheduleOffMainAutoRecovery()
         forceClose()
 
       default:
@@ -281,10 +493,327 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     }
   }
 
+  // MARK: - .snapzy Project Actions (⌘S / ⇧⌘S / ⌘O)
+
+  func saveProject(completion: ((Bool) -> Void)? = nil) {
+    guard let state else {
+      completion?(false)
+      return
+    }
+    flushActiveTextEditing()
+    state.pause()
+
+    // Never overwrite the original `.snapzy` package in place if session restore failed!
+    if state.sessionRestoreFailed {
+      presentSaveProjectPanel(completion: completion)
+      return
+    }
+
+    if let existingPackageURL = projectPackageURL
+      ?? SnapzyProjectPackage.enclosingProjectPackageURL(for: state.originalURL)
+      ?? SnapzyProjectPackage.enclosingProjectPackageURL(for: state.editingSourceURL) {
+      projectPackageURL = existingPackageURL
+      projectContext.packageURL = existingPackageURL
+      performSaveProjectPackage(to: existingPackageURL, completion: completion)
+    } else {
+      presentSaveProjectPanel(completion: completion)
+    }
+  }
+
+  func saveProjectAs(completion: ((Bool) -> Void)? = nil) {
+    guard state != nil else {
+      completion?(false)
+      return
+    }
+    flushActiveTextEditing()
+    state?.pause()
+    presentSaveProjectPanel(completion: completion)
+  }
+
+  func openProjectOrVideo() {
+    VideoEditorManager.shared.promptOpenVideoOrProject(from: isEmptyState ? window : nil)
+  }
+
+  private func presentSaveProjectPanel(completion: ((Bool) -> Void)? = nil) {
+    guard let state, let window else {
+      completion?(false)
+      return
+    }
+
+    let savePanel = NSSavePanel()
+    savePanel.title = L10n.VideoEditor.projectSavePanelTitle
+    savePanel.message = L10n.VideoEditor.projectSavePanelMessage
+    savePanel.nameFieldLabel = L10n.VideoEditor.fileNameLabel
+    let baseReferenceURL = projectPackageURL ?? state.originalURL
+    if state.sessionRestoreFailed, projectPackageURL != nil {
+      let stem = baseReferenceURL.deletingPathExtension().lastPathComponent
+      savePanel.nameFieldStringValue = "\(stem)-copy.\(SnapzyProjectPackage.fileExtension)"
+    } else {
+      savePanel.nameFieldStringValue = SnapzyProjectPackage.suggestedProjectFilename(for: baseReferenceURL)
+    }
+    savePanel.allowedContentTypes = [SnapzyProjectPackage.projectUTType]
+    savePanel.canCreateDirectories = true
+    savePanel.isExtensionHidden = false
+
+    savePanel.beginSheetModal(for: window) { [weak self] response in
+      guard let self else {
+        completion?(false)
+        return
+      }
+      guard response == .OK, let rawURL = savePanel.url else {
+        completion?(false)
+        return
+      }
+      let targetURL = SnapzyProjectPackage.normalizedPackageURL(rawURL)
+      performSaveProjectPackage(to: targetURL, completion: completion)
+    }
+  }
+
+  /// Off-main-thread project save used by interactive UI actions.
+  func performSaveProjectPackage(
+    to destinationURL: URL,
+    completion: ((Bool) -> Void)? = nil
+  ) {
+    guard let state, !projectContext.isSavingProject else {
+      completion?(false)
+      return
+    }
+
+    let previousPackageURL = projectPackageURL
+    let preSaveOriginalURL = state.originalURL
+    let preSaveSourceURL = sourceURL
+    let existingSourceSnapshotURL = sessionData?.sourceSnapshotURL
+    projectContext.isSavingProject = true
+
+    activeProjectSaveTask?.cancel()
+    activeProjectSaveTask = Task { @MainActor [weak self] in
+      guard let self else {
+        completion?(false)
+        return
+      }
+      defer {
+        projectContext.isSavingProject = false
+        activeProjectSaveTask = nil
+      }
+
+      do {
+        let loaded = try await SnapzyProjectPackage.saveAsync(
+          state: state,
+          existingSourceSnapshotURL: existingSourceSnapshotURL,
+          existingPackageURL: previousPackageURL,
+          to: destinationURL
+        )
+        applySavedProjectState(
+          loaded,
+          state: state,
+          previousPackageURL: previousPackageURL,
+          preSaveOriginalURL: preSaveOriginalURL,
+          preSaveSourceURL: preSaveSourceURL
+        )
+        completion?(true)
+      } catch {
+        DiagnosticLogger.shared.logError(.editor, error, "Failed to save .snapzy project")
+        showSaveProjectError(error)
+        completion?(false)
+      }
+    }
+  }
+
+  /// Synchronous project save helper for deterministic XCTests; still enforces the restore-failed
+  /// in-place overwrite lock (`SnapzyProjectPackageError.restoreFailedSaveBlocked`).
+  @discardableResult
+  func performSaveProjectPackageSync(to destinationURL: URL) throws -> SnapzyProjectPackage.LoadedProject {
+    guard let state else {
+      throw SnapzyProjectPackageError.invalidPackageURL(destinationURL)
+    }
+    let previousPackageURL = projectPackageURL
+    let preSaveOriginalURL = state.originalURL
+    let preSaveSourceURL = sourceURL
+    let loaded = try SnapzyProjectPackage.save(
+      state: state,
+      existingSourceSnapshotURL: sessionData?.sourceSnapshotURL,
+      existingPackageURL: previousPackageURL,
+      to: destinationURL
+    )
+    applySavedProjectState(
+      loaded,
+      state: state,
+      previousPackageURL: previousPackageURL,
+      preSaveOriginalURL: preSaveOriginalURL,
+      preSaveSourceURL: preSaveSourceURL
+    )
+    return loaded
+  }
+
+  private func applySavedProjectState(
+    _ loaded: SnapzyProjectPackage.LoadedProject,
+    state: VideoEditorState,
+    previousPackageURL: URL?,
+    preSaveOriginalURL: URL,
+    preSaveSourceURL: URL?
+  ) {
+    projectPackageAccess?.stop()
+    projectPackageAccess = fileAccessManager.beginAccessingURL(loaded.packageURL)
+    sourceFileAccess?.stop()
+    sourceFileAccess = fileAccessManager.beginAccessingURL(loaded.sessionData.sourceSnapshotURL)
+    projectPackageURL = loaded.packageURL
+    projectContext.packageURL = loaded.packageURL
+    projectContext.markJustSaved()
+    sourceURL = loaded.sessionData.sourceSnapshotURL
+    sessionData = loaded.sessionData
+    state.rebindProjectMediaURLs(from: loaded.sessionData, newPackageURL: loaded.packageURL)
+    window?.representedURL = loaded.packageURL
+    window?.title = loaded.packageURL.lastPathComponent
+
+    VideoEditorManager.shared.registerProjectAssociation(
+      controller: self,
+      packageURL: loaded.packageURL,
+      previousPackageURL: previousPackageURL
+    )
+
+    if previousPackageURL == nil {
+      if !SnapzyProjectPackage.isInsideProjectPackage(preSaveOriginalURL) {
+        VideoEditorSessionStore.shared.deleteSession(for: preSaveOriginalURL)
+        VideoEditorManager.shared.clearSessionData(for: preSaveOriginalURL)
+      }
+      if let preSaveSourceURL,
+         preSaveSourceURL.standardizedFileURL != preSaveOriginalURL.standardizedFileURL,
+         !SnapzyProjectPackage.isInsideProjectPackage(preSaveSourceURL) {
+        VideoEditorSessionStore.shared.deleteSession(for: preSaveSourceURL)
+        VideoEditorManager.shared.clearSessionData(for: preSaveSourceURL)
+      }
+    }
+
+    state.markAsSaved()
+    DiagnosticLogger.shared.log(
+      .info,
+      .editor,
+      "Saved .snapzy project package",
+      context: ["project": loaded.packageURL.lastPathComponent]
+    )
+  }
+
+  private func renameProjectPackage(to rawName: String) throws {
+    guard let oldPackageURL = projectPackageURL else { return }
+    let sanitized = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !sanitized.isEmpty,
+          sanitized != ".",
+          sanitized != "..",
+          !sanitized.contains("/"),
+          !sanitized.contains("\\")
+    else {
+      throw NSError(
+        domain: "VideoEditor",
+        code: 1,
+        userInfo: [NSLocalizedDescriptionKey: "Invalid project filename"]
+      )
+    }
+
+    let parentDir = oldPackageURL.deletingLastPathComponent()
+    let oldAccess = fileAccessManager.beginAccessingURL(oldPackageURL)
+    let dirAccess = fileAccessManager.beginAccessingURL(parentDir)
+    defer {
+      oldAccess.stop()
+      dirAccess.stop()
+    }
+
+    let newPackageURL = SnapzyProjectPackage.normalizedPackageURL(
+      dirAccess.url.appendingPathComponent(sanitized)
+    )
+    guard newPackageURL != oldPackageURL.standardizedFileURL else { return }
+    guard !FileManager.default.fileExists(atPath: newPackageURL.path) else {
+      throw NSError(
+        domain: "VideoEditor",
+        code: 2,
+        userInfo: [NSLocalizedDescriptionKey: "A project with this name already exists"]
+      )
+    }
+
+    try FileManager.default.moveItem(at: oldAccess.url, to: newPackageURL)
+    let reloaded = try SnapzyProjectPackage.load(from: newPackageURL)
+
+    projectPackageAccess?.stop()
+    projectPackageAccess = fileAccessManager.beginAccessingURL(reloaded.packageURL)
+    sourceFileAccess?.stop()
+    sourceFileAccess = fileAccessManager.beginAccessingURL(reloaded.sessionData.sourceSnapshotURL)
+
+    projectPackageURL = reloaded.packageURL
+    projectContext.packageURL = reloaded.packageURL
+    sourceURL = reloaded.sessionData.sourceSnapshotURL
+    sessionData = reloaded.sessionData
+    state?.rebindProjectMediaURLs(from: reloaded.sessionData, newPackageURL: reloaded.packageURL)
+    window?.representedURL = reloaded.packageURL
+    window?.title = reloaded.packageURL.lastPathComponent
+
+    VideoEditorManager.shared.registerProjectAssociation(
+      controller: self,
+      packageURL: reloaded.packageURL,
+      previousPackageURL: oldPackageURL
+    )
+  }
+
+  private func showSaveProjectError(_ error: Error) {
+    guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+          let window
+    else { return }
+    let alert = NSAlert()
+    alert.messageText = L10n.VideoEditor.projectSaveFailedTitle
+    alert.informativeText = error.localizedDescription
+    alert.alertStyle = .critical
+    alert.addButton(withTitle: L10n.Common.ok)
+    alert.beginSheetModal(for: window)
+  }
+
+  /// Schedules auto-recovery draft persistence off `@MainActor` so large source videos are never
+  /// copied synchronously on the main thread.
+  private func scheduleOffMainAutoRecovery() {
+    guard projectPackageURL == nil,
+          let state,
+          state.isGIF || !state.clips.isEmpty,
+          !SnapzyProjectPackage.isInsideProjectPackage(state.originalURL)
+    else {
+      return
+    }
+    let existingSourceURL = sessionData?.sourceSnapshotURL ?? state.editingSourceURL
+    let targetOriginalURL = state.originalURL
+    let itemID = quickAccessItemID
+    let snapshot = VideoEditorSessionData.snapshot(
+      from: state,
+      sourceSnapshotURL: existingSourceURL
+    )
+
+    autoRecoveryTask?.cancel()
+    autoRecoveryTask = Task { @MainActor [weak self] in
+      let persisted = await VideoEditorSessionStore.shared.persistDraftOffMain(
+        snapshot: snapshot,
+        existingSourceSnapshotURL: self?.sessionData?.sourceSnapshotURL,
+        for: targetOriginalURL
+      )
+      guard !Task.isCancelled, let persisted else { return }
+      self?.sessionData = persisted
+      if let itemID {
+        VideoEditorManager.shared.saveSessionData(persisted, for: itemID)
+      } else {
+        VideoEditorManager.shared.saveSessionData(persisted, for: targetOriginalURL)
+      }
+    }
+  }
+
   // MARK: - Save Confirmation
 
   private func showSaveConfirmation() {
     guard let window, let state else { return }
+
+    // When editing a `.snapzy` project package, `Convert` always exports a rendered
+    // standalone video/GIF copy rather than overwriting internal `Media/primary.*`.
+    if projectPackageURL != nil {
+      if state.isGIF {
+        performGIFSaveAsCopy()
+      } else {
+        performSaveAsCopy()
+      }
+      return
+    }
 
     // A temporary capture stays under Quick Access ownership. Save commits
     // the edit to that same file; Quick Access Save handles promotion later.
@@ -584,7 +1113,12 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     savePanel.title = L10n.VideoEditor.saveVideoCopyTitle
     savePanel.message = L10n.VideoEditor.chooseWhereToSaveEditedVideo
     savePanel.nameFieldLabel = L10n.VideoEditor.fileNameLabel
-    savePanel.nameFieldStringValue = VideoEditorExporter.generateCopyFilename(from: state.sourceURL)
+    if let projectStem = projectContext.packageStemName, !projectStem.isEmpty {
+      let ext = state.sourceURL.pathExtension.isEmpty ? "mp4" : state.sourceURL.pathExtension
+      savePanel.nameFieldStringValue = "\(projectStem).\(ext)"
+    } else {
+      savePanel.nameFieldStringValue = VideoEditorExporter.generateCopyFilename(from: state.sourceURL)
+    }
     savePanel.allowedContentTypes = [.movie, .mpeg4Movie, .quickTimeMovie]
     savePanel.canCreateDirectories = true
 
@@ -603,7 +1137,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     state.exportProgress = 0
     state.exportStatusMessage = progressOperation.initialStatusMessage
 
-    Task {
+    activeExportTask?.cancel()
+    activeExportTask = Task { [weak self] in
+      defer { self?.activeExportTask = nil }
       do {
         try await VideoEditorExporter.exportTrimmed(state: state, to: outputURL) { [weak self] progress in
           Task { @MainActor in
@@ -614,15 +1150,20 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
             ) ?? progressOperation.initialStatusMessage
           }
         }
+        guard let self, !Task.isCancelled else { return }
         state.isExporting = false
         state.cloudURL = nil
         state.cloudKey = nil
-        state.markAsSaved()
+        scheduleOffMainAutoRecovery()
+        if projectPackageURL == nil {
+          state.markAsSaved()
+        }
 
         // Show exported file in Finder
         NSWorkspace.shared.activateFileViewerSelecting([outputURL])
-        self.offerPostExportUpload(for: outputURL) {}
+        offerPostExportUpload(for: outputURL) {}
       } catch {
+        guard let self, !Task.isCancelled else { return }
         DiagnosticLogger.shared.logError(.export, error, "Video save as copy failed")
         state.isExporting = false
         showExportError(error)
@@ -853,9 +1394,15 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   private func handleCancel() {
     guard let window else { return }
+    flushActiveTextEditing()
 
     if let state, state.hasUnsavedChanges {
-      showUnsavedChangesAlert(for: window)
+      if Self.shouldBypassUnsavedCloseAlert {
+        scheduleOffMainAutoRecovery()
+        forceClose()
+      } else {
+        showUnsavedChangesAlert(for: window)
+      }
     } else {
       forceClose()
     }

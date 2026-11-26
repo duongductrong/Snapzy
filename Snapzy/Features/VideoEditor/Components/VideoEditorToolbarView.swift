@@ -5,6 +5,7 @@
 //  Top toolbar for video editor with undo/redo, filename, and save actions
 //
 
+import AppKit
 import SwiftUI
 
 private enum VideoEditorToolbarSection: Hashable {
@@ -47,17 +48,31 @@ struct VideoEditorToolbarView: View {
   var aiChrome: VideoEditorAgentController.Chrome
   /// The toggle belongs to the sidebar; the dock has its own orb over the player.
   var aiLayout: VideoEditorAILayout
+  private static let emptyProjectContext = VideoEditorProjectContext()
+
+  @ObservedObject private var projectContext: VideoEditorProjectContext
+  var onSaveProject: (() -> Void)?
+  var onSaveProjectAs: (() -> Void)?
+  var onOpenProjectOrVideo: (() -> Void)?
 
   init(
     state: VideoEditorState,
     isAuthoringLocked: Bool = false,
     aiChrome: VideoEditorAgentController.Chrome = .init(),
-    aiLayout: VideoEditorAILayout = .defaultValue
+    aiLayout: VideoEditorAILayout = .defaultValue,
+    projectContext: VideoEditorProjectContext? = nil,
+    onSaveProject: (() -> Void)? = nil,
+    onSaveProjectAs: (() -> Void)? = nil,
+    onOpenProjectOrVideo: (() -> Void)? = nil
   ) {
     self.state = state
     self.isAuthoringLocked = isAuthoringLocked
     self.aiChrome = aiChrome
     self.aiLayout = aiLayout
+    self.projectContext = projectContext ?? Self.emptyProjectContext
+    self.onSaveProject = onSaveProject
+    self.onSaveProjectAs = onSaveProjectAs
+    self.onOpenProjectOrVideo = onOpenProjectOrVideo
     agent = state.agent
   }
 
@@ -67,6 +82,10 @@ struct VideoEditorToolbarView: View {
   @State private var renameError: String?
   @State private var leftSectionWidth: CGFloat = 0
   @State private var rightSectionWidth: CGFloat = 0
+  @State private var isProjectMenuOpen = false
+  @State private var isSaveHovering = false
+  @State private var isOpenHovering = false
+  @State private var projectMenuButtonView = WeakToolbarNSViewBox()
   @FocusState private var isFilenameFieldFocused: Bool
 
   var body: some View {
@@ -133,7 +152,11 @@ struct VideoEditorToolbarView: View {
   private var fileActionsGroup: some View {
     HStack(spacing: 4) {
       ToolbarButton(icon: "folder", isSelected: false) {
-        state.openInFinder()
+        if projectContext.hasProjectPackage {
+          projectContext.revealInFinder()
+        } else {
+          state.openInFinder()
+        }
       }
       .help(L10n.Common.openInFinder)
 
@@ -190,11 +213,17 @@ struct VideoEditorToolbarView: View {
           }
           .onExitCommand(perform: cancelRename)
       } else {
-        Text(state.filename)
+        if projectContext.hasProjectPackage {
+          Image(systemName: "shippingbox.fill")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(.accentColor)
+        }
+
+        Text(displayedTitle)
           .font(.system(size: 13, weight: .medium))
           .lineLimit(1)
           .truncationMode(.middle)
-          .frame(maxWidth: 320)
+          .frame(maxWidth: 300)
 
         ToolbarButton(
           icon: "pencil",
@@ -228,14 +257,168 @@ struct VideoEditorToolbarView: View {
 
   // MARK: - Right Section
 
-  // The AI assistant toggle. The section is measured so the filename stays centered.
-  // Hidden while the panel is open: the panel's own close button takes its place on this line.
+  /// Compact `.snapzy` project controls + AI assistant toggle.
+  /// Both `.snapzy` pills share the exact `ControlMetrics.toolbarButton` (28pt) height and
+  /// `Radius.controlRect` chrome so they align 1:1 with the toolbar icon buttons.
   private var rightSection: some View {
     HStack(spacing: WindowSpacingConfiguration.default.toolbarItemSpacing) {
+      if !state.isGIF, onSaveProject != nil || onOpenProjectOrVideo != nil {
+        projectControlsGroup
+          .disabled(isAuthoringLocked || state.isExporting || projectContext.isSavingProject)
+      }
+
       if aiLayout == .sidebar, !state.isGIF, !aiChrome.isPromptPresented, agent.isAvailable || aiChrome.isRunning {
         aiPanelToggleButton
       }
     }
+  }
+
+  private var projectControlsGroup: some View {
+    HStack(spacing: 4) {
+      if let onSaveProject {
+        let isInPlaceLocked = state.sessionRestoreFailed && projectContext.hasProjectPackage
+        let saveAction: () -> Void = {
+          if isInPlaceLocked, let onSaveProjectAs {
+            onSaveProjectAs()
+          } else {
+            onSaveProject()
+          }
+        }
+        Button(action: saveAction) {
+          HStack(spacing: 5) {
+            Image(
+              systemName: isInPlaceLocked
+                ? "exclamationmark.triangle.fill"
+                : (projectContext.showsJustSavedBadge ? "checkmark.circle.fill" : "square.and.arrow.down")
+            )
+            .font(.system(size: 11, weight: .semibold))
+            .frame(width: 13, height: 13)
+            .foregroundStyle(
+              isInPlaceLocked
+                ? Color.orange
+                : (projectContext.showsJustSavedBadge ? Color.green : Color.primary)
+            )
+
+            Text(
+              projectContext.showsJustSavedBadge
+                ? L10n.VideoEditor.projectToolbarSaved
+                : L10n.VideoEditor.projectToolbarSave
+            )
+            .font(.system(size: 11.5, weight: .medium))
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+
+            if state.hasUnsavedChanges, !projectContext.showsJustSavedBadge {
+              Circle()
+                .fill(Color.accentColor)
+                .frame(width: 6, height: 6)
+            }
+          }
+          .padding(.horizontal, 10)
+          .frame(height: ControlMetrics.toolbarButton)
+          .contentShape(Rectangle())
+          .liquidGlassChrome(
+            shape: Radius.controlRect(forHeight: ControlMetrics.toolbarButton),
+            isVisible: true,
+            isActive: (projectContext.hasProjectPackage && !state.hasUnsavedChanges) || isSaveHovering
+          )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+          withAnimation(LiquidGlassTokens.hoverSpring) { isSaveHovering = hovering }
+        }
+        .help(
+          isInPlaceLocked
+            ? L10n.VideoEditor.projectRestoreFailedMessage
+            : "\(L10n.VideoEditor.projectMenuSave) (⌘S)"
+        )
+      }
+
+      Button {
+        presentProjectMenu()
+      } label: {
+        HStack(spacing: 5) {
+          Image(systemName: "shippingbox")
+            .font(.system(size: 11, weight: .semibold))
+            .frame(width: 13, height: 13)
+
+          Text(L10n.VideoEditor.projectToolbarOpen)
+            .font(.system(size: 11.5, weight: .medium))
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+
+          Image(systemName: "chevron.down")
+            .font(.system(size: 8, weight: .bold))
+            .opacity(0.62)
+        }
+        .padding(.horizontal, 10)
+        .frame(height: ControlMetrics.toolbarButton)
+        .contentShape(Rectangle())
+        .liquidGlassChrome(
+          shape: Radius.controlRect(forHeight: ControlMetrics.toolbarButton),
+          isVisible: true,
+          isActive: isProjectMenuOpen || isOpenHovering
+        )
+      }
+      .buttonStyle(.plain)
+      .onHover { hovering in
+        withAnimation(LiquidGlassTokens.hoverSpring) { isOpenHovering = hovering }
+      }
+      .background(ToolbarMenuAnchorRepresentable(box: $projectMenuButtonView))
+      .help("\(L10n.VideoEditor.projectMenuOpenOrVideo) (⌘O)")
+    }
+  }
+
+  private func presentProjectMenu() {
+    guard let view = projectMenuButtonView.view else { return }
+    let menu = NSMenu()
+    menu.autoenablesItems = false
+
+    if let onOpenProjectOrVideo {
+      let openItem = ClosureMenuItem(
+        title: L10n.VideoEditor.projectMenuOpenOrVideo,
+        keyEquivalent: "o"
+      ) {
+        onOpenProjectOrVideo()
+      }
+      openItem.keyEquivalentModifierMask = [.command]
+      openItem.image = NSImage(systemSymbolName: "folder.badge.plus", accessibilityDescription: nil)
+      menu.addItem(openItem)
+    }
+
+    if onOpenProjectOrVideo != nil, onSaveProject != nil || onSaveProjectAs != nil {
+      menu.addItem(.separator())
+    }
+
+    let isInPlaceLocked = state.sessionRestoreFailed && projectContext.hasProjectPackage
+    if let onSaveProject, !isInPlaceLocked {
+      let saveItem = ClosureMenuItem(
+        title: L10n.VideoEditor.projectMenuSave,
+        keyEquivalent: "s"
+      ) {
+        onSaveProject()
+      }
+      saveItem.keyEquivalentModifierMask = [.command]
+      saveItem.image = NSImage(systemSymbolName: "square.and.arrow.down", accessibilityDescription: nil)
+      menu.addItem(saveItem)
+    }
+
+    if let onSaveProjectAs {
+      let saveAsItem = ClosureMenuItem(
+        title: L10n.VideoEditor.projectMenuSaveAs,
+        keyEquivalent: "s"
+      ) {
+        onSaveProjectAs()
+      }
+      saveAsItem.keyEquivalentModifierMask = [.command, .shift]
+      saveAsItem.image = NSImage(systemSymbolName: "plus.square.on.square", accessibilityDescription: nil)
+      menu.addItem(saveAsItem)
+    }
+
+    isProjectMenuOpen = true
+    let origin = NSPoint(x: 0, y: view.isFlipped ? view.bounds.height + 4 : -4)
+    menu.popUp(positioning: nil, at: origin, in: view)
+    isProjectMenuOpen = false
   }
 
   private var aiPanelToggleButton: some View {
@@ -273,7 +456,14 @@ struct VideoEditorToolbarView: View {
       WindowSpacingConfiguration.default.trafficLightsGap
   }
 
+  private var displayedTitle: String {
+    projectContext.packageDisplayName ?? state.filename
+  }
+
   private var filenameWithoutExtension: String {
+    if let stem = projectContext.packageStemName, !stem.isEmpty {
+      return stem
+    }
     let filename = state.filename
     if let dotIndex = filename.lastIndex(of: ".") {
       return String(filename[..<dotIndex])
@@ -295,11 +485,43 @@ struct VideoEditorToolbarView: View {
 
   private func commitRename() {
     do {
-      try state.renameFile(to: editingFilename)
+      if projectContext.hasProjectPackage, let onRenameProject = projectContext.onRenameProject {
+        try onRenameProject(editingFilename)
+      } else {
+        try state.renameFile(to: editingFilename)
+      }
       state.isRenamingFile = false
       renameError = nil
     } catch {
       renameError = error.localizedDescription
+    }
+  }
+}
+
+private struct WeakToolbarNSViewBox {
+  weak var view: NSView?
+}
+
+private struct ToolbarMenuAnchorRepresentable: NSViewRepresentable {
+  @Binding var box: WeakToolbarNSViewBox
+
+  func makeNSView(context _: Context) -> NSView {
+    let view = NSView()
+    DispatchQueue.main.async {
+      if box.view !== view {
+        box.view = view
+      }
+    }
+    return view
+  }
+
+  func updateNSView(_ nsView: NSView, context _: Context) {
+    if box.view !== nsView {
+      DispatchQueue.main.async {
+        if box.view !== nsView {
+          box.view = nsView
+        }
+      }
     }
   }
 }

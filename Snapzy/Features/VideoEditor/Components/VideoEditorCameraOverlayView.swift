@@ -89,7 +89,9 @@ struct VideoEditorCameraOverlayView: View {
         state.setCameraSettings(settings, recordUndo: false)
       }
       .onEnded { _ in
-        if let start = dragStart { state.commitCameraSettings(from: start) }
+        if let start = dragStart {
+          state.commitCameraSettings(from: start)
+        }
         dragStart = nil
         dragStartCenter = nil
       }
@@ -98,7 +100,11 @@ struct VideoEditorCameraOverlayView: View {
   private func setHandCursor(_ inside: Bool) {
     guard inside != isHandCursorPushed else { return }
     isHandCursorPushed = inside
-    if inside { NSCursor.openHand.push() } else { NSCursor.pop() }
+    if inside {
+      NSCursor.openHand.push()
+    } else {
+      NSCursor.pop()
+    }
   }
 
   private func syncCamera(at sequenceTime: TimeInterval) {
@@ -116,11 +122,11 @@ private struct VideoEditorCameraPlayerLayerView: NSViewRepresentable {
   let cornerRadius: CGFloat
   let isMirrored: Bool
 
-  func makeNSView(context: Context) -> VideoEditorCameraPlayerHostView {
+  func makeNSView(context _: Context) -> VideoEditorCameraPlayerHostView {
     VideoEditorCameraPlayerHostView(player: player)
   }
 
-  func updateNSView(_ view: VideoEditorCameraPlayerHostView, context: Context) {
+  func updateNSView(_ view: VideoEditorCameraPlayerHostView, context _: Context) {
     view.update(player: player, cornerRadius: cornerRadius, isMirrored: isMirrored)
   }
 }
@@ -130,6 +136,8 @@ private struct VideoEditorCameraPlayerLayerView: NSViewRepresentable {
 /// mirror it around the left edge and shift the camera by its width; flipping a
 /// centered sublayer mirrors the picture in place.
 private final class VideoEditorCameraPlayerHostView: NSView {
+  nonisolated deinit {}
+
   private let playerLayer = AVPlayerLayer()
   private var isMirrored = false
 
@@ -144,10 +152,14 @@ private final class VideoEditorCameraPlayerHostView: NSView {
   }
 
   @available(*, unavailable)
-  required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+  required init?(coder _: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
 
   func update(player: AVPlayer, cornerRadius: CGFloat, isMirrored: Bool) {
-    if playerLayer.player !== player { playerLayer.player = player }
+    if playerLayer.player !== player {
+      playerLayer.player = player
+    }
     self.isMirrored = isMirrored
     CATransaction.begin()
     CATransaction.setDisableActions(true)

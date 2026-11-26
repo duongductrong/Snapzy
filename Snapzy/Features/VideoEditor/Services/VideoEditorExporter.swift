@@ -278,7 +278,7 @@ enum VideoEditorExporter {
     }.filter { $0.startTime + $0.duration > 0 && $0.startTime < outputSeconds }
 
     let adjustedAutoFocusPaths = Dictionary(
-      uniqueKeysWithValues: adjustedZooms
+      adjustedZooms
         .filter(\.isAutoMode)
         .map { segment -> (UUID, [AutoFocusCameraSample]) in
           // Trim-relative source path → playable sequence (clip-aware) → output.
@@ -299,7 +299,8 @@ enum VideoEditorExporter {
           // authored output range. Keep the compositor from interpolating outside it.
           path = path.filter { $0.time >= segment.startTime && $0.time <= segment.endTime }
           return (segment.id, path)
-        }
+        },
+      uniquingKeysWith: { first, _ in first }
     )
 
     print("🔍 [ZoomExport] Adjusted zooms count: \(adjustedZooms.count)")

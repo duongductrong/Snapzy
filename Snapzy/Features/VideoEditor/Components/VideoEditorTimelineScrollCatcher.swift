@@ -33,6 +33,8 @@ struct TimelineScrollCatcher: NSViewRepresentable {
 
 @MainActor
 final class TimelineScrollEventCatcherView: NSView {
+  nonisolated deinit {}
+
   weak var viewport: VideoEditorTimelineViewport?
 
   private var monitor: Any?
@@ -76,8 +78,8 @@ final class TimelineScrollEventCatcherView: NSView {
 
   // MARK: - Event Handling
 
-  // Internal so the event-routing contract can be exercised without dispatching
-  // synthetic events through NSApp in headless test runs.
+  /// Internal so the event-routing contract can be exercised without dispatching
+  /// synthetic events through NSApp in headless test runs.
   func handleScroll(_ event: NSEvent) -> Bool {
     guard viewport != nil, event.window === window else { return false }
 

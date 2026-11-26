@@ -61,7 +61,7 @@ struct VideoEditorExportSnapshot {
     placements = TimelineSequence.layout(clips)
     playbackPlacements = TimelineSequence.playableLayout(clips)
     sequenceMap = TimelineSequenceMap(clips: clips, speedSegments: speedSegments)
-    clipAssets = Dictionary(uniqueKeysWithValues: clips.map { ($0.id, state.clipAsset(for: $0)) })
+    clipAssets = Dictionary(clips.map { ($0.id, state.clipAsset(for: $0)) }, uniquingKeysWith: { first, _ in first })
   }
 
   var sequenceDuration: TimeInterval { sequenceMap.sequenceDuration }

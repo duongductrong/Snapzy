@@ -16,9 +16,13 @@ final class VideoEditorManager {
 
   private var windowControllers: [UUID: VideoEditorWindowController] = [:]
   private var urlWindowControllers: [URL: VideoEditorWindowController] = [:]
+  private var projectWindowControllers: [URL: VideoEditorWindowController] = [:]
+  private var openingProjectKeys: Set<URL> = []
   private var emptyWindowController: VideoEditorWindowController?
   private var observers: [UUID: NSObjectProtocol] = [:]
   private var urlObservers: [URL: NSObjectProtocol] = [:]
+  private var projectObservers: [URL: NSObjectProtocol] = [:]
+  private var emptyWindowObserver: NSObjectProtocol?
   private var sessionCache: [UUID: VideoEditorSessionData] = [:]
   private var urlSessionCache: [URL: VideoEditorSessionData] = [:]
 
@@ -28,7 +32,10 @@ final class VideoEditorManager {
 
   /// Check if any video editor windows are open
   var hasOpenWindows: Bool {
-    !windowControllers.isEmpty || !urlWindowControllers.isEmpty || emptyWindowController != nil
+    !windowControllers.isEmpty
+      || !urlWindowControllers.isEmpty
+      || !projectWindowControllers.isEmpty
+      || emptyWindowController != nil
   }
 
   /// Switch to regular app mode (visible in Dock + Cmd+Tab)
@@ -97,8 +104,181 @@ final class VideoEditorManager {
     QuickAccessManager.shared.setWindowOpen(id: item.id, isOpen: true)
   }
 
+  /// Open a self-contained `.snapzy` project package asynchronously off the main thread.
+  func openProject(at packageURL: URL) {
+    let projectKey = SnapzyProjectPackage.normalizedPackageURL(packageURL)
+
+    if let existing = projectWindowControllers[projectKey] {
+      DiagnosticLogger.shared.log(
+        .debug,
+        .editor,
+        "Video editor project reused",
+        context: ["project": projectKey.lastPathComponent]
+      )
+      existing.showWindow()
+      return
+    }
+
+    guard !openingProjectKeys.contains(projectKey) else { return }
+    openingProjectKeys.insert(projectKey)
+
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      defer { openingProjectKeys.remove(projectKey) }
+
+      do {
+        let loadedProject = try await SnapzyProjectPackage.loadAsync(from: projectKey)
+        presentLoadedProject(loadedProject, key: projectKey)
+      } catch {
+        DiagnosticLogger.shared.logError(
+          .editor,
+          error,
+          "Failed to open .snapzy project package",
+          context: ["project": projectKey.lastPathComponent]
+        )
+        presentOpenProjectError(error)
+      }
+    }
+  }
+
+  /// Synchronous project open helper for deterministic unit tests.
+  @discardableResult
+  func openProjectSync(at packageURL: URL) -> VideoEditorWindowController? {
+    let projectKey = SnapzyProjectPackage.normalizedPackageURL(packageURL)
+    if let existing = projectWindowControllers[projectKey] {
+      existing.showWindow()
+      return existing
+    }
+    do {
+      let loaded = try SnapzyProjectPackage.load(from: projectKey)
+      return presentLoadedProject(loaded, key: projectKey)
+    } catch {
+      DiagnosticLogger.shared.logError(
+        .editor,
+        error,
+        "Failed to open .snapzy project package",
+        context: ["project": projectKey.lastPathComponent]
+      )
+      presentOpenProjectError(error)
+      return nil
+    }
+  }
+
+  @discardableResult
+  private func presentLoadedProject(
+    _ loadedProject: SnapzyProjectPackage.LoadedProject,
+    key projectKey: URL
+  ) -> VideoEditorWindowController {
+    if let existing = projectWindowControllers[projectKey] {
+      existing.showWindow()
+      return existing
+    }
+    becomeRegularApp()
+    DiagnosticLogger.shared.log(
+      .info,
+      .editor,
+      "Opening .snapzy video project",
+      context: ["project": projectKey.lastPathComponent]
+    )
+    let controller = VideoEditorWindowController(project: loadedProject)
+    registerProjectAssociation(controller: controller, packageURL: projectKey)
+    controller.showWindow()
+    return controller
+  }
+
+  /// Associate an already-open `VideoEditorWindowController` with a newly saved or renamed `.snapzy` package.
+  func registerProjectAssociation(
+    controller: VideoEditorWindowController,
+    packageURL: URL,
+    previousPackageURL: URL? = nil
+  ) {
+    let key = SnapzyProjectPackage.normalizedPackageURL(packageURL)
+    if let previousPackageURL {
+      let prevKey = SnapzyProjectPackage.normalizedPackageURL(previousPackageURL)
+      if prevKey != key {
+        cleanupProjectWindow(for: prevKey)
+      }
+    }
+    guard projectWindowControllers[key] !== controller else { return }
+
+    cleanupProjectWindow(for: key)
+    projectWindowControllers[key] = controller
+
+    if let window = controller.window {
+      let observer = NotificationCenter.default.addObserver(
+        forName: NSWindow.willCloseNotification,
+        object: window,
+        queue: .main
+      ) { [weak self] _ in
+        MainActor.assumeIsolated {
+          self?.cleanupProjectWindow(for: key)
+          self?.becomeAccessoryAppIfNeeded()
+        }
+      }
+      projectObservers[key] = observer
+    }
+  }
+
+  /// Present a native Open panel allowing `.snapzy` projects alongside video and GIF files (`⌘O`).
+  func promptOpenVideoOrProject(from parentWindow: NSWindow? = nil) {
+    let panel = NSOpenPanel()
+    panel.title = L10n.VideoEditor.projectOpenPanelTitle
+    panel.allowsMultipleSelection = false
+    panel.canChooseDirectories = false
+    panel.canChooseFiles = true
+    panel.treatsFilePackagesAsDirectories = false
+    panel.allowedContentTypes = [
+      SnapzyProjectPackage.projectUTType,
+      .movie,
+      .video,
+      .quickTimeMovie,
+      .mpeg4Movie,
+      .gif,
+    ]
+
+    let handleSelection: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+      guard let self, response == .OK, let selectedURL = panel.url else { return }
+      if let emptyWindow = emptyWindowController?.window, emptyWindow === parentWindow {
+        emptyWindowController = nil
+        emptyWindow.close()
+      }
+      if SnapzyProjectPackage.isProjectURL(selectedURL) {
+        openProject(at: selectedURL)
+      } else {
+        openEditor(for: selectedURL)
+      }
+    }
+
+    if let parentWindow {
+      panel.beginSheetModal(for: parentWindow, completionHandler: handleSelection)
+    } else {
+      panel.begin(completionHandler: handleSelection)
+    }
+  }
+
+  private func presentOpenProjectError(_ error: Error) {
+    guard AppLaunchPolicy().shouldStartInteractiveApplication,
+          ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
+    else { return }
+    NSApp.activate(ignoringOtherApps: true)
+    let alert = NSAlert()
+    alert.alertStyle = .critical
+    alert.messageText = L10n.VideoEditor.projectOpenFailedTitle
+    alert.informativeText = error.localizedDescription
+    alert.addButton(withTitle: L10n.Common.ok)
+    alert.runModal()
+  }
+
   /// Open video editor for a video URL directly
   func openEditor(for url: URL, originalURL: URL? = nil) {
+    if let originalURL, SnapzyProjectPackage.isProjectURL(originalURL) {
+      openProject(at: originalURL)
+      return
+    }
+    if SnapzyProjectPackage.isProjectURL(url) {
+      openProject(at: url)
+      return
+    }
     // Validate it's a video file
     guard isVideoFile(url) else { return }
 
@@ -178,13 +358,21 @@ final class VideoEditorManager {
     }
     emptyWindowController = controller
 
+    if let previousObserver = emptyWindowObserver {
+      NotificationCenter.default.removeObserver(previousObserver)
+      emptyWindowObserver = nil
+    }
     if let window = controller.window {
-      NotificationCenter.default.addObserver(
+      emptyWindowObserver = NotificationCenter.default.addObserver(
         forName: NSWindow.willCloseNotification,
         object: window,
         queue: .main
       ) { [weak self] _ in
         MainActor.assumeIsolated {
+          if let obs = self?.emptyWindowObserver {
+            NotificationCenter.default.removeObserver(obs)
+            self?.emptyWindowObserver = nil
+          }
           self?.emptyWindowController = nil
           self?.becomeAccessoryAppIfNeeded()
         }
@@ -203,12 +391,18 @@ final class VideoEditorManager {
     return type.conforms(to: .movie) || type.conforms(to: .video) || type.conforms(to: .gif)
   }
 
-  /// Handle video loaded in empty editor
+  /// Handle video or `.snapzy` project loaded in empty editor
   private func handleVideoLoaded(url: URL, originalURL: URL?, from controller: VideoEditorWindowController) {
     // Close empty window and open proper editor
     emptyWindowController = nil
     controller.window?.close()
-    openEditor(for: url, originalURL: originalURL)
+    if let originalURL, SnapzyProjectPackage.isProjectURL(originalURL) {
+      openProject(at: originalURL)
+    } else if SnapzyProjectPackage.isProjectURL(url) {
+      openProject(at: url)
+    } else {
+      openEditor(for: url, originalURL: originalURL)
+    }
   }
 
   private func cleanupURLWindow(for url: URL) {
@@ -217,6 +411,14 @@ final class VideoEditorManager {
       urlObservers.removeValue(forKey: url)
     }
     urlWindowControllers.removeValue(forKey: url)
+  }
+
+  private func cleanupProjectWindow(for packageURL: URL) {
+    if let observer = projectObservers[packageURL] {
+      NotificationCenter.default.removeObserver(observer)
+      projectObservers.removeValue(forKey: packageURL)
+    }
+    projectWindowControllers.removeValue(forKey: packageURL)
   }
 
   // MARK: - Session Cache
@@ -258,6 +460,11 @@ final class VideoEditorManager {
     }
     urlObservers.removeAll()
 
+    for (_, observer) in projectObservers {
+      NotificationCenter.default.removeObserver(observer)
+    }
+    projectObservers.removeAll()
+
     // Close all windows
     for controller in windowControllers.values {
       controller.window?.close()
@@ -268,6 +475,11 @@ final class VideoEditorManager {
       controller.window?.close()
     }
     urlWindowControllers.removeAll()
+
+    for controller in projectWindowControllers.values {
+      controller.window?.close()
+    }
+    projectWindowControllers.removeAll()
 
     emptyWindowController?.window?.close()
     emptyWindowController = nil

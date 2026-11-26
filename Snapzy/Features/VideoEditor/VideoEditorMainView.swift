@@ -28,21 +28,39 @@ struct VideoEditorMainView: View {
   /// Fully slid out: rendered at zero opacity so the off-window glass costs nothing.
   @State private var parksAIPanel = true
   @State private var aiPanelGeneration = 0
+  var projectContext: VideoEditorProjectContext?
+  var initialPlayheadSeconds: Double?
   var primaryActionTitle: String = "Convert"
   var onSave: (() -> Void)?
   var onCancel: (() -> Void)?
+  var onSaveProject: (() -> Void)?
+  var onSaveProjectAs: (() -> Void)?
+  var onOpenProjectOrVideo: (() -> Void)?
+  var onMetadataLoaded: (() -> Void)?
 
   init(
     state: VideoEditorState,
+    projectContext: VideoEditorProjectContext? = nil,
+    initialPlayheadSeconds: Double? = nil,
     primaryActionTitle: String = "Convert",
     onSave: (() -> Void)? = nil,
-    onCancel: (() -> Void)? = nil
+    onCancel: (() -> Void)? = nil,
+    onSaveProject: (() -> Void)? = nil,
+    onSaveProjectAs: (() -> Void)? = nil,
+    onOpenProjectOrVideo: (() -> Void)? = nil,
+    onMetadataLoaded: (() -> Void)? = nil
   ) {
     self.state = state
     agent = state.agent
+    self.projectContext = projectContext
+    self.initialPlayheadSeconds = initialPlayheadSeconds
     self.primaryActionTitle = primaryActionTitle
     self.onSave = onSave
     self.onCancel = onCancel
+    self.onSaveProject = onSaveProject
+    self.onSaveProjectAs = onSaveProjectAs
+    self.onOpenProjectOrVideo = onOpenProjectOrVideo
+    self.onMetadataLoaded = onMetadataLoaded
   }
 
   private var isAuthoringLocked: Bool { aiChrome.isRunning }
@@ -85,7 +103,11 @@ struct VideoEditorMainView: View {
           state: state,
           isAuthoringLocked: isAuthoringLocked,
           aiChrome: aiChrome,
-          aiLayout: aiLayout
+          aiLayout: aiLayout,
+          projectContext: projectContext,
+          onSaveProject: onSaveProject,
+          onSaveProjectAs: onSaveProjectAs,
+          onOpenProjectOrVideo: onOpenProjectOrVideo
         )
 
         Divider()
@@ -144,6 +166,30 @@ struct VideoEditorMainView: View {
     .onChange(of: isAIPanelVisible) { _ in syncAIPanel(animated: true) }
     // Keyboard shortcuts
     .background {
+      if let onSaveProject {
+        Button("", action: onSaveProject)
+          .keyboardShortcut("s", modifiers: [.command])
+          .opacity(0)
+          .frame(width: 0, height: 0)
+          .disabled(isAuthoringLocked || state.isExporting)
+      }
+
+      if let onSaveProjectAs {
+        Button("", action: onSaveProjectAs)
+          .keyboardShortcut("s", modifiers: [.command, .shift])
+          .opacity(0)
+          .frame(width: 0, height: 0)
+          .disabled(isAuthoringLocked || state.isExporting)
+      }
+
+      if let onOpenProjectOrVideo {
+        Button("", action: onOpenProjectOrVideo)
+          .keyboardShortcut("o", modifiers: [.command])
+          .opacity(0)
+          .frame(width: 0, height: 0)
+          .disabled(isAuthoringLocked || state.isExporting)
+      }
+
       // Cloud upload shortcut (⌘U)
       Button("") {
         NotificationCenter.default.post(name: .videoEditorCloudUpload, object: nil)
@@ -195,6 +241,11 @@ struct VideoEditorMainView: View {
     .ignoresSafeArea(.all, edges: .top)
     .task {
       await state.loadMetadata()
+      if let initialPlayheadSeconds, initialPlayheadSeconds > 0, !state.sessionRestoreFailed {
+        let clamped = min(initialPlayheadSeconds, max(0, CMTimeGetSeconds(state.timelineDuration)))
+        state.seek(to: CMTime(seconds: clamped, preferredTimescale: 600))
+      }
+      onMetadataLoaded?()
       await state.extractFrames()
     }
   }
