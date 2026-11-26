@@ -4,6 +4,21 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.13] - 2026-11-26
+
+### Features
+- Added Universal Automations and custom HTTP uploader (#813) (1f8348af)
+
+### Bug Fixes
+- Improved Light Mode contrast and inline slider layout across UI components (#809) (193d9422)
+- normalize S3 endpoint trailing slashes across all cloud requests (8eff1e8a)
+- preserve custom S3 ports in SigV4, trim trailing URL slashes, and encode continuation tokens (#811) (1e43e64e)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @williamcachamwri
+
 ## [2.3.0-beta.12] - 2026-11-24
 
 ### Bug Fixes
