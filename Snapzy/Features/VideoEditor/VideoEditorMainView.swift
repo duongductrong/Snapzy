@@ -46,6 +46,7 @@ struct VideoEditorMainView: View {
   }
 
   private var isAuthoringLocked: Bool { aiChrome.isRunning }
+
   private var isAIPanelVisible: Bool {
     aiLayout == .sidebar && aiChrome.isPromptPresented && (agent.isAvailable || aiChrome.isRunning)
   }
@@ -55,6 +56,7 @@ struct VideoEditorMainView: View {
   }
 
   private var aiPanelAnimation: Animation { .spring(response: 0.32, dampingFraction: 0.9) }
+
   /// How long the slide takes to settle, after which a closed panel is parked.
   private static let aiPanelSettleDelay: TimeInterval = 0.4
   /// Keeps the panel's shadow from peeking in at the window edge while slid out.
@@ -158,6 +160,7 @@ struct VideoEditorMainView: View {
         editingShortcuts
           .disabled(isAuthoringLocked)
           .disabled(!aiChrome.allowsPlainKeyShortcuts)
+          .disabled(state.isEditingTextOverlayField)
       }
     }
     .disabled(state.isExporting)
@@ -262,25 +265,47 @@ struct VideoEditorMainView: View {
     .frame(width: 0, height: 0)
     .disabled(!state.canSplitAtPlayhead)
 
-    // Delete selected zoom / speed / clip (Delete key) — priority:
-    // zoom selection → speed selection → clip.
+    // Delete selected captions / text overlays / audio clips / zoom / speed / video clip
+    // (supports multi-select via ⌘A + Delete/Backspace or Forward Delete in 1 atomic Undo).
+    let hasDeletableTrackSelection =
+      state.selectedCaptionId != nil ||
+      !state.selectedCaptionIds.isEmpty ||
+      state.selectedTextOverlayId != nil ||
+      !state.selectedTextOverlayIds.isEmpty ||
+      state.selectedAudioClipId != nil ||
+      !state.selectedAudioClipIds.isEmpty ||
+      state.selectedZoomId != nil ||
+      state.selectedSpeedId != nil ||
+      state.canDeleteSelectedClip
+
     Button("") {
-      if let id = state.selectedZoomId {
-        state.removeZoom(id: id)
-      } else if let id = state.selectedSpeedId {
-        state.removeSpeed(id: id)
-      } else {
-        state.deleteSelectedClip()
-      }
+      _ = state.deleteSelectedTrackItems()
     }
     .keyboardShortcut(.delete, modifiers: [])
     .opacity(0)
     .frame(width: 0, height: 0)
-    .disabled(
-      state.selectedZoomId == nil &&
-        state.selectedSpeedId == nil &&
-        !state.canDeleteSelectedClip
-    )
+    .disabled(!hasDeletableTrackSelection)
+
+    Button("") {
+      _ = state.deleteSelectedTrackItems()
+    }
+    .keyboardShortcut(.deleteForward, modifiers: [])
+    .opacity(0)
+    .frame(width: 0, height: 0)
+    .disabled(!hasDeletableTrackSelection)
+
+    // Duplicate selected video or audio clip (⌘D)
+    Button("") {
+      state.duplicateSelectedTimelineItem()
+    }
+    .keyboardShortcut("d", modifiers: [.command])
+    .opacity(0)
+    .frame(width: 0, height: 0)
+    .disabled(!state.canDuplicateSelected)
+
+    // Note: Space, J/K/L shuttle, ,/. frame stepping, and T / M / N / [ / ] plain-key
+    // shortcuts are routed by VideoEditorWindow.sendEvent behind `isActivelyEditingTextInput`
+    // and IME marked-text checks so typing in caption or rename fields never triggers them.
 
     // Set trim start at playhead (I key)
     Button("") {

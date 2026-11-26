@@ -34,6 +34,11 @@ nonisolated struct VideoEditorSessionData: Equatable {
   var cameraSettings: VideoEditorCameraSettings?
   var captions: VideoEditorCaptions?
   var motionBlurSettings: VideoEditorMotionBlurSettings?
+  /// Independent audio timeline clips, ruler bookmarks, and text overlays (optional for legacy manifests).
+  var audioClips: [AudioTimelineClip]?
+  var mutedAudioLanes: Set<Int>?
+  var timelineBookmarks: [TimeInterval]?
+  var textOverlays: [VideoEditorTextOverlay]?
 
   init(
     sourceSnapshotURL: URL,
@@ -52,7 +57,11 @@ nonisolated struct VideoEditorSessionData: Equatable {
     cursorSettings: VideoEditorCursorSettings? = nil,
     cameraSettings: VideoEditorCameraSettings? = nil,
     captions: VideoEditorCaptions? = nil,
-    motionBlurSettings: VideoEditorMotionBlurSettings? = nil
+    motionBlurSettings: VideoEditorMotionBlurSettings? = nil,
+    audioClips: [AudioTimelineClip]? = nil,
+    mutedAudioLanes: Set<Int>? = nil,
+    timelineBookmarks: [TimeInterval]? = nil,
+    textOverlays: [VideoEditorTextOverlay]? = nil
   ) {
     self.sourceSnapshotURL = sourceSnapshotURL
     self.recordingMetadata = recordingMetadata
@@ -71,12 +80,18 @@ nonisolated struct VideoEditorSessionData: Equatable {
     self.cameraSettings = cameraSettings
     self.captions = captions
     self.motionBlurSettings = motionBlurSettings
+    self.audioClips = audioClips
+    self.mutedAudioLanes = mutedAudioLanes
+    self.timelineBookmarks = timelineBookmarks
+    self.textOverlays = textOverlays
   }
 }
 
 /// JSON-safe edit fields. SwiftUI `Color` and the background enum are converted
 /// using the same durable representation as Annotate sessions.
 nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
+  static let maxDecodedItems: Int = 2_000
+
   var clips: [TimelineClip]
   var zoomSegments: [ZoomSegment]
   var speedSegments: [SpeedSegment]
@@ -94,6 +109,156 @@ nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
   var cameraSettings: VideoEditorCameraSettings?
   var captions: VideoEditorCaptions?
   var motionBlurSettings: VideoEditorMotionBlurSettings?
+  var audioClips: [AudioTimelineClip]?
+  var mutedAudioLanes: Set<Int>?
+  var timelineBookmarks: [TimeInterval]?
+  var textOverlays: [VideoEditorTextOverlay]?
+
+  private enum CodingKeys: String, CodingKey {
+    case clips, zoomSegments, speedSegments, backgroundStyle
+    case backgroundPadding, backgroundShadowIntensity, backgroundCornerRadius
+    case backgroundAlignment, backgroundAspectRatio, exportSettings, isMuted
+    case cursorSettings, cameraSettings, captions, motionBlurSettings
+    case audioClips, mutedAudioLanes, timelineBookmarks, textOverlays
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    let rawClips = try c.decode([TimelineClip].self, forKey: .clips)
+    clips = Self.deduplicateClips(Array(rawClips.prefix(Self.maxDecodedItems)))
+    let rawZooms = try c.decode([ZoomSegment].self, forKey: .zoomSegments)
+    zoomSegments = Self.deduplicateZooms(Array(rawZooms.prefix(Self.maxDecodedItems)))
+    let rawSpeeds = try c.decode([SpeedSegment].self, forKey: .speedSegments)
+    speedSegments = Self.deduplicateSpeeds(Array(rawSpeeds.prefix(Self.maxDecodedItems)))
+    backgroundStyle = try c.decode(CodableBackgroundStyle.self, forKey: .backgroundStyle)
+    let rawPad = (try? c.decode(CGFloat.self, forKey: .backgroundPadding)) ?? 0
+    backgroundPadding = rawPad.isFinite ? min(500, max(0, rawPad)) : 0
+    let rawShadow = (try? c.decode(CGFloat.self, forKey: .backgroundShadowIntensity)) ?? 0
+    backgroundShadowIntensity = rawShadow.isFinite ? min(1, max(0, rawShadow)) : 0
+    let rawRadius = (try? c.decode(CGFloat.self, forKey: .backgroundCornerRadius)) ?? 0
+    backgroundCornerRadius = rawRadius.isFinite ? min(500, max(0, rawRadius)) : 0
+    backgroundAlignment = try c.decode(String.self, forKey: .backgroundAlignment)
+    backgroundAspectRatio = try c.decode(String.self, forKey: .backgroundAspectRatio)
+    exportSettings = try c.decode(ExportSettings.self, forKey: .exportSettings)
+    isMuted = try c.decode(Bool.self, forKey: .isMuted)
+    cursorSettings = try c.decodeIfPresent(VideoEditorCursorSettings.self, forKey: .cursorSettings)
+    cameraSettings = try c.decodeIfPresent(VideoEditorCameraSettings.self, forKey: .cameraSettings)
+    captions = try c.decodeIfPresent(VideoEditorCaptions.self, forKey: .captions)
+    motionBlurSettings = try c.decodeIfPresent(VideoEditorMotionBlurSettings.self, forKey: .motionBlurSettings)
+    if let rawAudio = try c.decodeIfPresent([AudioTimelineClip].self, forKey: .audioClips) {
+      audioClips = Self.deduplicateAudioClips(Array(rawAudio.prefix(Self.maxDecodedItems)))
+    } else {
+      audioClips = nil
+    }
+    if let rawLanes = try c.decodeIfPresent(Set<Int>.self, forKey: .mutedAudioLanes) {
+      mutedAudioLanes = Set(rawLanes.filter { $0 >= 0 && $0 < AudioTimelineClip.maxTrackCount })
+    } else {
+      mutedAudioLanes = nil
+    }
+    if let rawBookmarks = try c.decodeIfPresent([TimeInterval].self, forKey: .timelineBookmarks) {
+      timelineBookmarks = Array(
+        rawBookmarks
+          .filter { $0.isFinite && $0 >= 0 && $0 <= 864_000 }
+          .prefix(Self.maxDecodedItems)
+      )
+    } else {
+      timelineBookmarks = nil
+    }
+    if let rawOverlays = try c.decodeIfPresent([VideoEditorTextOverlay].self, forKey: .textOverlays) {
+      textOverlays = Self.deduplicateTextOverlays(Array(rawOverlays.prefix(Self.maxDecodedItems)))
+    } else {
+      textOverlays = nil
+    }
+  }
+
+  private static func deduplicateClips(_ items: [TimelineClip]) -> [TimelineClip] {
+    var seen: Set<UUID> = []
+    return items.map { item in
+      guard !seen.contains(item.id) else {
+        let freshId = UUID()
+        seen.insert(freshId)
+        return TimelineClip(
+          id: freshId,
+          source: item.source,
+          sourceDuration: item.sourceDuration,
+          sourceStart: item.sourceStart,
+          sourceEnd: item.sourceEnd,
+          slotStart: item.slotStart,
+          slotEnd: item.slotEnd,
+          leadingGap: item.leadingGap,
+          isAudioDetached: item.isAudioDetached,
+          leadingTransition: item.leadingTransition
+        )
+      }
+      seen.insert(item.id)
+      return item
+    }
+  }
+
+  private static func deduplicateAudioClips(_ items: [AudioTimelineClip]) -> [AudioTimelineClip] {
+    var seen: Set<UUID> = []
+    return items.map { item in
+      guard !seen.contains(item.id) else {
+        let freshId = UUID()
+        seen.insert(freshId)
+        return AudioTimelineClip(
+          id: freshId,
+          source: item.source,
+          name: item.name,
+          timelineStart: item.timelineStart,
+          sourceDuration: item.sourceDuration,
+          sourceStart: item.sourceStart,
+          sourceEnd: item.sourceEnd,
+          volume: item.volume,
+          isMuted: item.isMuted,
+          fadeIn: item.fadeIn,
+          fadeOut: item.fadeOut,
+          trackIndex: item.trackIndex
+        )
+      }
+      seen.insert(item.id)
+      return item
+    }
+  }
+
+  private static func deduplicateZooms(_ items: [ZoomSegment]) -> [ZoomSegment] {
+    var seen: Set<UUID> = []
+    return items.filter { seen.insert($0.id).inserted }
+  }
+
+  private static func deduplicateSpeeds(_ items: [SpeedSegment]) -> [SpeedSegment] {
+    var seen: Set<UUID> = []
+    return items.filter { seen.insert($0.id).inserted }
+  }
+
+  private static func deduplicateTextOverlays(_ items: [VideoEditorTextOverlay]) -> [VideoEditorTextOverlay] {
+    var seen: Set<UUID> = []
+    return items.map { item in
+      guard !seen.contains(item.id) else {
+        let freshId = UUID()
+        seen.insert(freshId)
+        return VideoEditorTextOverlay(
+          id: freshId,
+          text: item.text,
+          startTime: item.startTime,
+          duration: item.duration,
+          normalizedX: item.normalizedX,
+          normalizedY: item.normalizedY,
+          fontSize: item.fontSize,
+          textColorHex: item.textColorHex,
+          backgroundColorHex: item.backgroundColorHex,
+          hasBackground: item.hasBackground,
+          isBold: item.isBold,
+          isEnabled: item.isEnabled,
+          animation: item.animation,
+          style: item.style,
+          trackIndex: item.trackIndex
+        )
+      }
+      seen.insert(item.id)
+      return item
+    }
+  }
 
   init(sessionData: VideoEditorSessionData) {
     clips = sessionData.clips
@@ -112,6 +277,10 @@ nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
     cameraSettings = sessionData.cameraSettings
     captions = sessionData.captions
     motionBlurSettings = sessionData.motionBlurSettings
+    audioClips = sessionData.audioClips
+    mutedAudioLanes = sessionData.mutedAudioLanes
+    timelineBookmarks = sessionData.timelineBookmarks
+    textOverlays = sessionData.textOverlays
   }
 
   func sessionData(
@@ -135,7 +304,11 @@ nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
       cursorSettings: cursorSettings,
       cameraSettings: cameraSettings,
       captions: captions,
-      motionBlurSettings: motionBlurSettings
+      motionBlurSettings: motionBlurSettings,
+      audioClips: audioClips,
+      mutedAudioLanes: mutedAudioLanes,
+      timelineBookmarks: timelineBookmarks,
+      textOverlays: textOverlays
     )
   }
 }
@@ -211,8 +384,12 @@ extension VideoEditorSessionData {
       isMuted: state.isMuted,
       cursorSettings: state.hasEditableCursor ? state.cursorSettings : nil,
       cameraSettings: state.hasEditableCamera ? state.cameraSettings : nil,
-      captions: state.captions.isEmpty ? nil : state.captions,
-      motionBlurSettings: state.motionBlurSettings
+      captions: (state.captions.isEmpty && state.captions.settings == .default) ? nil : state.captions,
+      motionBlurSettings: state.motionBlurSettings,
+      audioClips: (!state.clips.isEmpty || !state.audioClips.isEmpty) ? state.audioClips : nil,
+      mutedAudioLanes: state.mutedAudioLanes.isEmpty ? nil : state.mutedAudioLanes,
+      timelineBookmarks: state.timelineBookmarks.isEmpty ? nil : state.timelineBookmarks,
+      textOverlays: state.textOverlays.isEmpty ? nil : state.textOverlays
     )
   }
 }

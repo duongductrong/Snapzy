@@ -145,6 +145,135 @@ final class VideoEditorWindowInputTests: XCTestCase {
     XCTAssertFalse(state.isPlaying, "Typing a space must not toggle playback")
   }
 
+  func testTransportKeysJKLCommaPeriodBypassAVPlayerViewAndYieldToTextField() throws {
+    let playerView = AVPlayerView()
+    playerView.player = AVPlayer()
+    playerView.controlsStyle = .none
+    var received: [VideoEditorWindow.TransportKey] = []
+
+    let window = VideoEditorWindow(
+      contentRect: NSRect(x: 0, y: 0, width: 800, height: 450)
+    )
+    window.contentView = playerView
+    window.onTransportKey = { key in
+      received.append(key)
+      return true
+    }
+    window.makeKeyAndOrderFront(nil)
+    defer { window.close() }
+    XCTAssertTrue(window.makeFirstResponder(playerView))
+
+    let cases: [(String, UInt16, VideoEditorWindow.TransportKey)] = [
+      ("j", 38, .shuttleReverse),
+      ("k", 40, .shuttlePause),
+      ("l", 37, .shuttleForward),
+      (",", 43, .stepBackward),
+      (".", 47, .stepForward),
+    ]
+    for (char, code, _) in cases {
+      let ev = try XCTUnwrap(NSEvent.keyEvent(
+        with: .keyDown,
+        location: .zero,
+        modifierFlags: [],
+        timestamp: 0,
+        windowNumber: window.windowNumber,
+        context: nil,
+        characters: char,
+        charactersIgnoringModifiers: char,
+        isARepeat: false,
+        keyCode: code
+      ))
+      window.sendEvent(ev)
+    }
+    XCTAssertEqual(received, cases.map(\.2), "J/K/L/,/. must reach editor transport ahead of AVPlayerView")
+
+    // When an NSTextField is first responder, J/K/L/,/. must remain text input.
+    received.removeAll()
+    let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+    window.contentView = textField
+    XCTAssertTrue(window.makeFirstResponder(textField))
+    for (char, code, _) in cases {
+      let ev = try XCTUnwrap(NSEvent.keyEvent(
+        with: .keyDown,
+        location: .zero,
+        modifierFlags: [],
+        timestamp: 0,
+        windowNumber: window.windowNumber,
+        context: nil,
+        characters: char,
+        charactersIgnoringModifiers: char,
+        isARepeat: false,
+        keyCode: code
+      ))
+      window.sendEvent(ev)
+    }
+    XCTAssertTrue(received.isEmpty, "Typing J/K/L/,/. inside a text field must never trigger transport shortcuts")
+  }
+
+  func testPlainKeyEditorShortcutsTMNBracketsYieldToTextField() throws {
+    let playerView = AVPlayerView()
+    playerView.player = AVPlayer()
+    playerView.controlsStyle = .none
+    var received: [VideoEditorWindow.TransportKey] = []
+
+    let window = VideoEditorWindow(
+      contentRect: NSRect(x: 0, y: 0, width: 800, height: 450)
+    )
+    window.contentView = playerView
+    window.onTransportKey = { key in
+      received.append(key)
+      return true
+    }
+    window.makeKeyAndOrderFront(nil)
+    defer { window.close() }
+    XCTAssertTrue(window.makeFirstResponder(playerView))
+
+    let cases: [(String, UInt16, VideoEditorWindow.TransportKey)] = [
+      ("t", 17, .addTextOverlay),
+      ("m", 46, .toggleBookmark),
+      ("n", 45, .toggleSnapping),
+      ("[", 33, .trimStartToPlayhead),
+      ("]", 30, .trimEndToPlayhead),
+    ]
+    for (char, code, _) in cases {
+      let ev = try XCTUnwrap(NSEvent.keyEvent(
+        with: .keyDown,
+        location: .zero,
+        modifierFlags: [],
+        timestamp: 0,
+        windowNumber: window.windowNumber,
+        context: nil,
+        characters: char,
+        charactersIgnoringModifiers: char,
+        isARepeat: false,
+        keyCode: code
+      ))
+      window.sendEvent(ev)
+    }
+    XCTAssertEqual(received, cases.map(\.2), "T / M / N / [ / ] must route when player view is focused")
+
+    received.removeAll()
+    let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+    window.contentView = textField
+    XCTAssertTrue(window.makeFirstResponder(textField))
+    for (char, code, _) in cases {
+      let ev = try XCTUnwrap(NSEvent.keyEvent(
+        with: .keyDown,
+        location: .zero,
+        modifierFlags: [],
+        timestamp: 0,
+        windowNumber: window.windowNumber,
+        context: nil,
+        characters: char,
+        charactersIgnoringModifiers: char,
+        isARepeat: false,
+        keyCode: code
+      ))
+      window.sendEvent(ev)
+    }
+    XCTAssertTrue(received.isEmpty, "Typing T / M / N / [ / ] in a text field must never trigger shortcuts")
+  }
+
   private func firstTextField(in view: NSView) -> NSTextField? {
     if let textField = view as? NSTextField {
       return textField

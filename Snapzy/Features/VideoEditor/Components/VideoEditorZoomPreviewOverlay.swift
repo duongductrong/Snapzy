@@ -6,6 +6,7 @@
 //
 
 import AVFoundation
+import Combine
 import SwiftUI
 
 /// Wrapper view that applies zoom transforms and background to the video player
@@ -19,6 +20,8 @@ struct ZoomableVideoPlayerSection: View {
   @State private var currentZoomLevel: CGFloat = 1.0
   @State private var currentZoomCenter: CGPoint = .init(x: 0.5, y: 0.5)
   @State private var currentShutterPlan: VideoEditorMotionBlurEngine.ShutterPlan = .inactive
+  @State private var isInVideoGap: Bool = false
+  @State private var activeTransition: VideoEditorState.TransitionPreviewState? = nil
 
   init(state: VideoEditorState) {
     _state = ObservedObject(wrappedValue: state)
@@ -70,12 +73,36 @@ struct ZoomableVideoPlayerSection: View {
           state: state,
           videoRect: displayedVideoRect.offsetBy(dx: scaledPadding, dy: scaledPadding)
         )
+
+        // Timeline Text / Title overlays (canvas-space, draggable, WYSIWYG with export).
+        if !state.textOverlays.isEmpty {
+          VideoEditorTextOverlayHost(state: state, canvasSize: compositeSize)
+        }
       }
       .frame(width: compositeSize.width, height: compositeSize.height)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignmentValue)
     }
     .onReceive(playbackState.$currentTime) { time in
-      updateZoomState(at: CMTimeGetSeconds(time))
+      let seconds = CMTimeGetSeconds(time)
+      updateZoomState(at: seconds)
+      let gap = state.isInVideoGap(at: seconds)
+      if isInVideoGap != gap {
+        isInVideoGap = gap
+      }
+      let nextTransition = state.activeTransitionPreview(at: seconds)
+      if activeTransition != nextTransition {
+        activeTransition = nextTransition
+      }
+    }
+    .onChange(of: state.clips) { _ in
+      let gap = state.isPlayheadInVideoGap
+      if isInVideoGap != gap {
+        isInVideoGap = gap
+      }
+      let nextTransition = state.activeTransitionPreview(at: CMTimeGetSeconds(playbackState.currentTime))
+      if activeTransition != nextTransition {
+        activeTransition = nextTransition
+      }
     }
     .onReceive(playbackState.$isPlaying) { playing in
       if !playing, currentShutterPlan != .inactive {
@@ -160,6 +187,35 @@ struct ZoomableVideoPlayerSection: View {
         .offset(zoomOffset(in: displayedVideoRect.size))
         .clipped()
 
+      // Black frame when playhead runs through an audio-only tail or clip gap.
+      if isInVideoGap {
+        Color.black
+          .frame(width: displayedVideoRect.width, height: displayedVideoRect.height)
+          .allowsHitTesting(false)
+      }
+
+      // Live transition preview (Dip to Black / Crossfade cue) across clip seams.
+      if let transition = activeTransition {
+        if transition.style == .dipToBlack, transition.dipAlpha > 0.001 {
+          Color.black
+            .opacity(transition.dipAlpha)
+            .frame(width: displayedVideoRect.width, height: displayedVideoRect.height)
+            .allowsHitTesting(false)
+        } else if transition.style == .crossfade,
+                  let blendImage = transitionCrossfadeImage(for: transition) {
+          let dissolveOpacity = transition.progress < 0.5
+            ? transition.progress * 0.5
+            : max(0, (1.0 - transition.progress) * 1.1)
+          Image(nsImage: blendImage)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(width: displayedVideoRect.width, height: displayedVideoRect.height)
+            .clipped()
+            .opacity(dissolveOpacity)
+            .allowsHitTesting(false)
+        }
+      }
+
       // Full-Retina Metal shutter-angle overlay: mounted ONLY when camera motion blur is active
       // (so sessions with motion blur off pay zero AVPlayerItemVideoOutput frame-conversion cost).
       // Unmounting automatically triggers `dismantleNSView` to detach the video output.
@@ -200,6 +256,10 @@ struct ZoomableVideoPlayerSection: View {
               y: shadowY
             )
         }
+      }
+      .overlay(alignment: .topLeading) {
+        VideoEditorShuttleIndicator(playbackState: playbackState)
+          .allowsHitTesting(false)
       }
       .overlay(alignment: .topTrailing) {
         zoomIndicator
@@ -373,6 +433,66 @@ struct ZoomableVideoPlayerSection: View {
     if currentZoomLevel != cameraState.zoomLevel { currentZoomLevel = cameraState.zoomLevel }
     if currentZoomCenter != cameraState.center { currentZoomCenter = cameraState.center }
     if currentShutterPlan != shutterPlan { currentShutterPlan = shutterPlan }
+  }
+
+  /// Reuse already-cached clip strip thumbnails for lightweight live crossfade preview
+  /// (zero extra decoder or memory overhead; export renders true frame-accurate dual-track crossfade).
+  private func transitionCrossfadeImage(for transition: VideoEditorState.TransitionPreviewState) -> NSImage? {
+    guard let clip = state.clips.first(where: { $0.id == transition.outgoingClipId }),
+          clip.sourceDuration > 0
+    else { return nil }
+    let images: [NSImage] = switch clip.source {
+    case .primary:
+      state.frameThumbnails
+    case .file(let url):
+      state.clipThumbnailCache.strip(for: url)
+    }
+    guard !images.isEmpty else { return nil }
+    let progress = max(0, min(1, transition.outgoingSourceEnd / clip.sourceDuration))
+    let idx = max(0, min(images.count - 1, Int(progress * Double(images.count - 1))))
+    return images[idx]
+  }
+}
+
+/// Liquid Glass shuttle HUD pill shown in the top-left of the video preview whenever
+/// the user shuttles with J/K/L (`-4×`, `-2×`, `-1×`, `2×`, `4×`). Observes `playbackState`
+/// locally so rate updates never re-render the parent preview.
+private struct VideoEditorShuttleIndicator: View {
+  let playbackState: VideoEditorPlaybackState
+  @State private var shuttleRate: Float = 0
+
+  var body: some View {
+    Group {
+      if shuttleRate < -0.05 || shuttleRate > 1.05 {
+        HStack(spacing: 4) {
+          Image(systemName: shuttleRate < 0 ? "backward.fill" : "forward.fill")
+            .font(.system(size: 10, weight: .semibold))
+          Text(formattedRate)
+            .font(.system(size: 11, weight: .semibold))
+            .monospacedDigit()
+        }
+        .foregroundStyle(LiquidGlassTokens.inkOverlay)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .liquidGlassChrome(
+          shape: Capsule(style: .continuous),
+          isVisible: true,
+          emphasis: .overlay
+        )
+        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+        .padding(8)
+        .accessibilityLabel(L10n.VideoEditor.shuttleSpeedAccessibility(formattedRate))
+        .accessibilityIdentifier("video-editor.shuttle-indicator")
+      }
+    }
+    .onReceive(playbackState.$shuttleRate.removeDuplicates()) { rate in
+      shuttleRate = rate
+    }
+  }
+
+  private var formattedRate: String {
+    let rounded = Int(shuttleRate.rounded())
+    return "\(rounded)×"
   }
 }
 

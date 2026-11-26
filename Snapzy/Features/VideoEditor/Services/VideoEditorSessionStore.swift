@@ -20,6 +20,8 @@ final class VideoEditorSessionStore {
   enum StoreError: LocalizedError {
     case sourceUnavailable(URL)
     case packageUnavailable
+    case manifestTooLarge(Int)
+    case sessionQuarantined
 
     var errorDescription: String? {
       switch self {
@@ -27,9 +29,22 @@ final class VideoEditorSessionStore {
         "The original video source could not be preserved for continued editing: \(url.lastPathComponent)"
       case .packageUnavailable:
         "The editable video session could not be stored."
+      case .manifestTooLarge:
+        "The editable video session exceeded the maximum allowed manifest size."
+      case .sessionQuarantined:
+        "An existing video session could not be read and was quarantined to preserve its original recording."
       }
     }
   }
+
+  private enum ManifestReadResult {
+    case valid(PersistedVideoEditorSession)
+    case missing
+    case unreadable
+  }
+
+  nonisolated static let maxManifestBytes: Int = 33_554_432
+  private nonisolated static let quarantineFolderName = "Quarantined"
 
   private nonisolated let rootDirectory: URL
 
@@ -49,8 +64,21 @@ final class VideoEditorSessionStore {
     let directory = sessionDirectory(pathHash: pathHash)
     let manifestURL = directory.appendingPathComponent("manifest.json")
 
-    guard let manifest = Self.readManifest(at: manifestURL),
-          manifest.schemaVersion == PersistedVideoEditorSession.currentSchemaVersion,
+    let manifest: PersistedVideoEditorSession
+    switch Self.inspectManifest(at: manifestURL) {
+    case .valid(let decoded):
+      manifest = decoded
+    case .missing:
+      if Self.directoryContainsSourceSnapshot(directory) {
+        quarantineDirectory(directory, pathHash: pathHash)
+      }
+      return nil
+    case .unreadable:
+      quarantineDirectory(directory, pathHash: pathHash)
+      return nil
+    }
+
+    guard manifest.schemaVersion == PersistedVideoEditorSession.currentSchemaVersion,
           manifest.sourceFilePath == normalizedPath,
           manifest.sourceFilePathHash == pathHash,
           let currentSignature = fileSignature(for: sourceURL),
@@ -68,6 +96,16 @@ final class VideoEditorSessionStore {
     }
 
     return manifest.sessionData(sourceSnapshotURL: sourceSnapshotURL)
+  }
+
+  nonisolated func quarantinedDirectory(for sourceURL: URL) -> URL? {
+    let pathHash = Self.pathHash(for: Self.normalizedPath(for: sourceURL))
+    let candidate = quarantineRootDirectory.appendingPathComponent(pathHash, isDirectory: true)
+    return FileManager.default.fileExists(atPath: candidate.path) ? candidate : nil
+  }
+
+  nonisolated func hasQuarantinedSession(for sourceURL: URL) -> Bool {
+    quarantinedDirectory(for: sourceURL) != nil
   }
 
   // MARK: - Source Snapshot
@@ -91,6 +129,9 @@ final class VideoEditorSessionStore {
 
     let normalizedTargetPath = Self.normalizedPath(for: targetURL)
     let pathHash = Self.pathHash(for: normalizedTargetPath)
+    if quarantineIfUnreadableOrAlreadyQuarantined(pathHash: pathHash) {
+      throw StoreError.sessionQuarantined
+    }
     let pendingDirectory = rootDirectory.appendingPathComponent(
       ".\(pathHash).\(UUID().uuidString)",
       isDirectory: true
@@ -198,11 +239,18 @@ final class VideoEditorSessionStore {
     let newPath = Self.normalizedPath(for: newURL)
     let newHash = Self.pathHash(for: newPath)
     let newDirectory = sessionDirectory(pathHash: newHash)
+    if oldDirectory.standardizedFileURL != newDirectory.standardizedFileURL,
+       quarantineIfUnreadableOrAlreadyQuarantined(pathHash: newHash) {
+      return false
+    }
     guard let signature = fileSignature(for: newURL),
           var manifest = Self.readManifest(
             at: oldDirectory.appendingPathComponent("manifest.json")
           )
     else {
+      if case .unreadable = Self.inspectManifest(at: oldDirectory.appendingPathComponent("manifest.json")) {
+        quarantineDirectory(oldDirectory, pathHash: oldHash)
+      }
       return false
     }
 
@@ -256,9 +304,24 @@ final class VideoEditorSessionStore {
 
     let activePaths = Set(paths.map(Self.normalizedPath(forPath:)))
     for directory in contents {
+      let name = directory.lastPathComponent
+      if name == Self.quarantineFolderName || name.hasPrefix(".") {
+        continue
+      }
       let manifestURL = directory.appendingPathComponent("manifest.json")
-      guard let manifest = Self.readManifest(at: manifestURL) else {
-        try? FileManager.default.removeItem(at: directory)
+      let manifest: PersistedVideoEditorSession
+      switch Self.inspectManifest(at: manifestURL) {
+      case .valid(let decoded):
+        manifest = decoded
+      case .unreadable:
+        quarantineDirectory(directory, pathHash: name)
+        continue
+      case .missing:
+        if Self.directoryContainsSourceSnapshot(directory) {
+          quarantineDirectory(directory, pathHash: name)
+        } else {
+          try? FileManager.default.removeItem(at: directory)
+        }
         continue
       }
 
@@ -300,8 +363,78 @@ final class VideoEditorSessionStore {
 
   // MARK: - Private Persistence
 
+  private nonisolated var quarantineRootDirectory: URL {
+    rootDirectory.appendingPathComponent(Self.quarantineFolderName, isDirectory: true)
+  }
+
   private nonisolated func sessionDirectory(pathHash: String) -> URL {
     rootDirectory.appendingPathComponent(pathHash, isDirectory: true)
+  }
+
+  private nonisolated static func directoryContainsSourceSnapshot(_ directory: URL) -> Bool {
+    guard let items = try? FileManager.default.contentsOfDirectory(
+      at: directory,
+      includingPropertiesForKeys: nil
+    ) else {
+      return false
+    }
+    return items.contains { url in
+      let name = url.lastPathComponent
+      return name == "source" || name.hasPrefix("source.")
+    }
+  }
+
+  private nonisolated func quarantineDirectory(_ directory: URL, pathHash: String) {
+    guard FileManager.default.fileExists(atPath: directory.path) else { return }
+    do {
+      try FileManager.default.createDirectory(
+        at: quarantineRootDirectory,
+        withIntermediateDirectories: true
+      )
+      let primaryTarget = quarantineRootDirectory.appendingPathComponent(pathHash, isDirectory: true)
+      let destination: URL = if FileManager.default.fileExists(atPath: primaryTarget.path) {
+        quarantineRootDirectory.appendingPathComponent(
+          "\(pathHash)-\(UUID().uuidString)",
+          isDirectory: true
+        )
+      } else {
+        primaryTarget
+      }
+      try FileManager.default.moveItem(at: directory, to: destination)
+      DiagnosticLogger.shared.log(
+        .warning,
+        .editor,
+        "Video Editor session quarantined because manifest was unreadable or oversized",
+        context: ["directory": pathHash, "quarantine": destination.lastPathComponent]
+      )
+    } catch {
+      DiagnosticLogger.shared.logError(.editor, error, "Failed to quarantine unreadable Video Editor session")
+    }
+  }
+
+  /// Returns `true` when `pathHash` already has a quarantined session or its live directory
+  /// contains an unreadable/oversized manifest (quarantining it immediately instead of overwriting).
+  private nonisolated func quarantineIfUnreadableOrAlreadyQuarantined(pathHash: String) -> Bool {
+    let quarantined = quarantineRootDirectory.appendingPathComponent(pathHash, isDirectory: true)
+    if FileManager.default.fileExists(atPath: quarantined.path) {
+      return true
+    }
+    let directory = sessionDirectory(pathHash: pathHash)
+    guard FileManager.default.fileExists(atPath: directory.path) else { return false }
+    let manifestURL = directory.appendingPathComponent("manifest.json")
+    switch Self.inspectManifest(at: manifestURL) {
+    case .valid:
+      return false
+    case .unreadable:
+      quarantineDirectory(directory, pathHash: pathHash)
+      return true
+    case .missing:
+      if Self.directoryContainsSourceSnapshot(directory) {
+        quarantineDirectory(directory, pathHash: pathHash)
+        return true
+      }
+      return false
+    }
   }
 
   private nonisolated func makeManifest(
@@ -336,6 +469,9 @@ final class VideoEditorSessionStore {
 
     do {
       try FileManager.default.createDirectory(at: rootDirectory, withIntermediateDirectories: true)
+      if quarantineIfUnreadableOrAlreadyQuarantined(pathHash: manifest.sourceFilePathHash) {
+        throw StoreError.sessionQuarantined
+      }
 
       if let preparedSourceDirectory {
         guard preparedSourceDirectory.deletingLastPathComponent().standardizedFileURL
@@ -460,15 +596,41 @@ final class VideoEditorSessionStore {
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
     encoder.outputFormatting = [.sortedKeys]
-    try encoder.encode(manifest).write(to: url, options: .atomic)
+    let data = try encoder.encode(manifest)
+    guard data.count <= maxManifestBytes else {
+      throw StoreError.manifestTooLarge(data.count)
+    }
+    try data.write(to: url, options: .atomic)
   }
 
   private nonisolated static func readManifest(
     at url: URL
   ) -> PersistedVideoEditorSession? {
-    guard let data = try? Data(contentsOf: url) else { return nil }
+    if case .valid(let manifest) = inspectManifest(at: url) {
+      return manifest
+    }
+    return nil
+  }
+
+  private nonisolated static func inspectManifest(
+    at url: URL
+  ) -> ManifestReadResult {
+    guard (try? FileManager.default.attributesOfItem(atPath: url.path)) != nil else {
+      return .missing
+    }
+    guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+          values.isRegularFile == true,
+          let fileSize = values.fileSize,
+          fileSize > 0,
+          fileSize <= maxManifestBytes,
+          let data = try? Data(contentsOf: url, options: [.mappedIfSafe]),
+          data.count <= maxManifestBytes
+    else { return .unreadable }
     let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .iso8601
-    return try? decoder.decode(PersistedVideoEditorSession.self, from: data)
+    guard let decoded = try? decoder.decode(PersistedVideoEditorSession.self, from: data) else {
+      return .unreadable
+    }
+    return .valid(decoded)
   }
 }

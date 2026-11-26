@@ -10,8 +10,8 @@ import Combine
 import CoreGraphics
 import CoreVideo
 import Foundation
-import SwiftUI
 @testable import Snapzy
+import SwiftUI
 import XCTest
 
 @MainActor
@@ -274,8 +274,7 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     let startDeadline = Date().addingTimeInterval(2)
     while state.currentTime.seconds < 25.1,
           state.isPlaying,
-          Date() < startDeadline
-    {
+          Date() < startDeadline {
       recordPlayerTime()
       try await Task.sleep(nanoseconds: 2_000_000)
     }
@@ -356,8 +355,7 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     let deadline = Date().addingTimeInterval(2)
     while state.playbackState.currentTime.seconds < 2.55,
           state.isPlaying,
-          Date() < deadline
-    {
+          Date() < deadline {
       try await Task.sleep(nanoseconds: 10_000_000)
     }
 
@@ -454,9 +452,9 @@ final class VideoEditorSessionStoreTests: XCTestCase {
 
       let seekDeadline = Date().addingTimeInterval(8)
       let expectedOutputTime = state.sequenceMap.toOutput(seekTime)
-      while (!(state.player.currentItem?.asset is AVComposition)
-             || abs(state.player.currentTime().seconds - expectedOutputTime) > 0.05),
-            Date() < seekDeadline {
+      while !(state.player.currentItem?.asset is AVComposition)
+        || abs(state.player.currentTime().seconds - expectedOutputTime) > 0.05,
+        Date() < seekDeadline {
         try await Task.sleep(nanoseconds: 5_000_000)
       }
       XCTAssertTrue(state.player.currentItem?.asset is AVComposition)
@@ -507,7 +505,7 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     let firstItem = state.player.currentItem
     state.updateSpeed(id: speedID, rate: 8)
     let rebuildDeadline = Date().addingTimeInterval(5)
-    while (state.player.currentItem === firstItem || state.player.rate == 0),
+    while state.player.currentItem === firstItem || state.player.rate == 0,
           Date() < rebuildDeadline {
       try await Task.sleep(nanoseconds: 5_000_000)
     }
@@ -518,7 +516,7 @@ final class VideoEditorSessionStoreTests: XCTestCase {
 
     state.removeSpeed(id: speedID)
     let sourceDeadline = Date().addingTimeInterval(5)
-    while (state.player.currentItem?.asset is AVComposition || state.player.rate == 0),
+    while state.player.currentItem?.asset is AVComposition || state.player.rate == 0,
           Date() < sourceDeadline {
       try await Task.sleep(nanoseconds: 5_000_000)
     }
@@ -660,7 +658,7 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     await state.loadMetadata()
 
     let clip = try XCTUnwrap(state.clips.first)
-    let trimStart = 0.5337  // Off the 600-tick grid, like a dragged trim handle.
+    let trimStart = 0.5337 // Off the 600-tick grid, like a dragged trim handle.
     state.updateClip(id: clip.id, sourceStart: trimStart)
     state.play()
 
@@ -1118,7 +1116,9 @@ final class VideoEditorSessionStoreTests: XCTestCase {
       // No actor suspension between the flag and prepareSnapshot's capture.
       return try await VideoEditorExporter.prepareSnapshot(for: state)
     }
-    while !preparationStarted { await Task.yield() }
+    while !preparationStarted {
+      await Task.yield()
+    }
 
     state.updateZoom(id: originalZoom.id, zoomLevel: 4, followSpeed: 0.1)
     state.moveClip(id: capturedClips[0].id, toIndex: 1)
@@ -1153,7 +1153,7 @@ final class VideoEditorSessionStoreTests: XCTestCase {
       TimelineClip(source: .primary, sourceDuration: 12, sourceStart: 6, sourceEnd: 12),
     ]
     let session = VideoEditorSessionData(sourceSnapshotURL: videoURL, recordingMetadata: metadata,
-                                       clips: clips, zoomSegments: [zoom])
+                                         clips: clips, zoomSegments: [zoom])
     let state = VideoEditorState(url: videoURL, sessionData: session)
     await state.loadMetadata()
     let expectedSource = VideoEditorAutoFocusEngine.buildPath(from: metadata, segment: zoom)
@@ -1164,7 +1164,7 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     XCTAssertEqual(state.autoFocusPath(for: zoom), expectedSource)
     func assertFreshCamera(file: StaticString = #filePath, line: UInt = #line) async throws {
       let freshPath = VideoEditorAutoFocusEngine.timelinePath(expectedSource,
-                                                            placements: TimelineSequence.layout(state.clips))
+                                                              placements: TimelineSequence.layout(state.clips))
       let times = [2.0, 4.0, 7.0, 10.0]
       let expected = times.map { time in
         VideoEditorAutoFocusEngine.resolvedCameraState(
@@ -1595,6 +1595,325 @@ final class VideoEditorSessionStoreTests: XCTestCase {
       JSONSerialization.jsonObject(with: reencoded) as? [String: Any]
     )
     XCTAssertNil(reencodedDict["smartKeyframes"])
+  }
+
+  func testMoveClipOnTimeline_createsGapSeeksIntoGapReextendsAndUndoes() async throws {
+    let videoURL = try await makeVideoFile(named: "move-clip-gap.mov", duration: 6)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    let (_, secondId) = try XCTUnwrap(state.splitClip(atTimeline: 2.0))
+    state.updateClip(id: secondId, sourceEnd: 4.0)
+    XCTAssertEqual(CMTimeGetSeconds(state.trimmedDuration), 4.0, accuracy: 0.05)
+
+    // Move second clip rightwards into open space (activeStart = 5.0, creating a 3.0s gap).
+    state.moveClipOnTimeline(id: secondId, toActiveStart: 5.0)
+    let movedPlacement = try XCTUnwrap(state.placements.first(where: { $0.clip.id == secondId }))
+    XCTAssertEqual(movedPlacement.activeStart, 5.0, accuracy: 0.01)
+    XCTAssertEqual(movedPlacement.activeEnd, 7.0, accuracy: 0.01)
+    XCTAssertTrue(state.hasVideoGaps)
+
+    // Seeking into the black gap lands inside the gap instead of snapping away.
+    state.seek(to: CMTime(seconds: 3.5, preferredTimescale: 600))
+    XCTAssertEqual(CMTimeGetSeconds(state.playbackState.currentTime), 3.5, accuracy: 0.02)
+    XCTAssertTrue(state.isPlayheadInVideoGap)
+
+    // Non-destructive re-extension on the right edge restores frames past the compacted slot.
+    state.updateClip(id: secondId, sourceEnd: 5.5)
+    let extendedRight = try XCTUnwrap(state.placements.first(where: { $0.clip.id == secondId }))
+    XCTAssertEqual(extendedRight.clip.sourceEnd, 5.5, accuracy: 0.01)
+    XCTAssertEqual(extendedRight.activeStart, 5.0, accuracy: 0.01)
+    XCTAssertEqual(CMTimeGetSeconds(state.trimmedDuration), 5.5, accuracy: 0.05)
+
+    // Non-destructive re-extension on the left edge consumes leadingGap while keeping right edge pinned.
+    let pinnedRight = extendedRight.activeEnd
+    state.updateClip(id: secondId, sourceStart: 1.0)
+    let extendedLeft = try XCTUnwrap(state.placements.first(where: { $0.clip.id == secondId }))
+    XCTAssertEqual(extendedLeft.clip.sourceStart, 1.0, accuracy: 0.01)
+    XCTAssertEqual(extendedLeft.activeEnd, pinnedRight, accuracy: 0.01)
+    XCTAssertEqual(extendedLeft.activeStart, 4.0, accuracy: 0.01)
+
+    // Undo restores prior state cleanly.
+    state.undo()
+    state.undo()
+    state.undo()
+    let restored = try XCTUnwrap(state.placements.first(where: { $0.clip.id == secondId }))
+    XCTAssertEqual(restored.activeStart, 2.0, accuracy: 0.01)
+    XCTAssertFalse(state.hasVideoGaps)
+  }
+
+  func testExportWithVideoGap_rendersBlackGapFramesAndPreservesDuration() async throws {
+    let videoURL = try await makeVideoFile(named: "export-video-gap.mov", duration: 3)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    let (_, secondId) = try XCTUnwrap(state.splitClip(atTimeline: 1.0))
+    state.moveClipOnTimeline(id: secondId, toActiveStart: 2.0)
+
+    let outputURL = sourceDirectory.appendingPathComponent("export-video-gap-out.mov")
+    try await VideoEditorExporter.exportTrimmed(state: state, to: outputURL) { _ in }
+
+    let exportedAsset = AVURLAsset(url: outputURL)
+    let exportedDuration = try await exportedAsset.load(.duration)
+    // Clip 1 (1s) + Black gap (1s) + Clip 2 (2s) = 4s total.
+    XCTAssertEqual(CMTimeGetSeconds(exportedDuration), 4.0, accuracy: 0.25)
+  }
+
+  func testFreshVideoLoad_startsWithNoUnsavedChanges() async throws {
+    let videoURL = try await makeVideoFile(named: "fresh-clean-baseline.mov", duration: 3)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    XCTAssertFalse(state.hasUnsavedChanges, "Freshly opened video must not start marked as unsaved")
+  }
+
+  func testSessionPersistence_roundTripsAudioClipsAndTimelineBookmarks() async throws {
+    let videoURL = try await makeVideoFile(named: "session-audio-bookmarks.mov", duration: 5)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    let clip = AudioTimelineClip(
+      source: .primary,
+      name: "Voiceover",
+      timelineStart: 1.0,
+      sourceDuration: 5.0,
+      sourceStart: 0.5,
+      sourceEnd: 4.0,
+      volume: 1.25,
+      isMuted: false,
+      fadeIn: 0.4,
+      fadeOut: 0.8
+    )
+    state.audioClips = [clip]
+    state.seek(to: CMTime(seconds: 2.5, preferredTimescale: 600))
+    state.toggleBookmarkAtPlayhead()
+
+    let snapshot = VideoEditorSessionData.snapshot(from: state, sourceSnapshotURL: videoURL)
+    let encoded = try JSONEncoder().encode(PersistedVideoEditorEditState(sessionData: snapshot))
+    let decoded = try JSONDecoder().decode(PersistedVideoEditorEditState.self, from: encoded)
+    let restoredData = decoded.sessionData(sourceSnapshotURL: videoURL, recordingMetadata: nil)
+
+    let restored = VideoEditorState(url: videoURL, sessionData: restoredData)
+    await restored.loadMetadata()
+
+    XCTAssertEqual(restored.audioClips, [clip])
+    XCTAssertEqual(restored.timelineBookmarks.count, 1)
+    XCTAssertEqual(try XCTUnwrap(restored.timelineBookmarks.first), 2.5, accuracy: 0.02)
+  }
+
+  func testExportSnapshot_withVideoGap_projectsZoomOntoGapPreservedTimestamp() async throws {
+    let videoURL = try await makeVideoFile(named: "export-zoom-gap-align.mov", duration: 6)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    let (_, clip2Id) = try XCTUnwrap(state.splitClip(atTimeline: 2.0))
+    state.moveClipOnTimeline(id: clip2Id, toActiveStart: 5.0) // Gap 2..5, Clip 2 at 5..9
+    let zoomId = try XCTUnwrap(state.addZoom(at: 6.0))
+    let zoom = try XCTUnwrap(state.zoomSegments.first(where: { $0.id == zoomId }))
+
+    let exportSnapshot = VideoEditorExportSnapshot(state: state)
+    let projected = exportSnapshot.projectToPlaybackSequence(
+      timelineRange: zoom.startTime ... zoom.endTime
+    )
+    XCTAssertEqual(projected.count, 1)
+    XCTAssertEqual(projected[0].lowerBound, max(5.0, zoom.startTime), accuracy: 0.02)
+    XCTAssertEqual(projected[0].upperBound, min(9.0, zoom.endTime), accuracy: 0.02)
+  }
+
+  func testSelectionExclusivityAndRemoveTrailingClip_staysOnActiveVideoFrame() async throws {
+    let videoURL = try await makeVideoFile(named: "selection-exclusivity-delete.mov", duration: 6)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    let (firstId, secondId) = try XCTUnwrap(state.splitClip(atTimeline: 2.0))
+    let audioClip = AudioTimelineClip(
+      source: .primary,
+      name: "Track",
+      timelineStart: 0,
+      sourceDuration: 6,
+      sourceStart: 0,
+      sourceEnd: 6
+    )
+    state.audioClips = [audioClip]
+
+    state.selectAudioClip(id: audioClip.id)
+    XCTAssertNil(state.selectedClipId)
+    XCTAssertEqual(state.selectedAudioClipId, audioClip.id)
+
+    state.selectClip(id: secondId)
+    XCTAssertEqual(state.selectedClipId, secondId)
+    XCTAssertNil(state.selectedAudioClipId)
+
+    // Re-select audio and delete via unified action: video clips remain untouched,
+    // and one Cmd+Z restores BOTH the deleted audio clip AND unmuted export audioMode.
+    state.selectAudioClip(id: audioClip.id)
+    state.deleteSelectedTimelineItem()
+    XCTAssertTrue(state.audioClips.isEmpty)
+    XCTAssertEqual(state.clips.count, 2)
+    XCTAssertEqual(state.exportSettings.audioMode, .mute)
+
+    state.undo()
+    XCTAssertEqual(state.audioClips.count, 1)
+    XCTAssertEqual(state.exportSettings.audioMode, .keep)
+
+    // Delete trailing video clip: playhead lands inside active Clip 1 (never black gap).
+    state.removeClip(id: secondId)
+    XCTAssertEqual(state.selectedClipId, firstId)
+    XCTAssertNil(state.selectedAudioClipId)
+    XCTAssertFalse(state.isPlayheadInVideoGap)
+  }
+
+  func testCleanup_quarantinesOversizedManifestWithoutDeletingSourceSnapshotOrAllowingSilentReplacement() async throws {
+    XCTAssertGreaterThanOrEqual(
+      VideoEditorSessionStore.maxManifestBytes,
+      33_554_432,
+      "Manifest cap must exceed the 16 MiB RecordingMetadata cap with comfortable headroom"
+    )
+
+    let targetURL = try writeFile(named: "long-recording.mov", contents: "already rendered output")
+    let masterContents = Data("precious-unrendered-master-bytes".utf8)
+    let masterURL = sourceDirectory.appendingPathComponent("long-master.mov")
+    try masterContents.write(to: masterURL, options: .atomic)
+
+    let initialSession = makeSessionData(sourceSnapshotURL: masterURL)
+    XCTAssertTrue(store.persist(initialSession, for: targetURL))
+
+    let liveDir = sessionDirectory(for: targetURL)
+    let manifestURL = liveDir.appendingPathComponent("manifest.json")
+    XCTAssertTrue(FileManager.default.fileExists(atPath: liveDir.appendingPathComponent("source.mov").path))
+
+    // Simulate an oversized manifest (> maxManifestBytes) sitting inside the session directory.
+    let oversizedBytes = Data(repeating: 0x20, count: VideoEditorSessionStore.maxManifestBytes + 4_096)
+    try oversizedBytes.write(to: manifestURL, options: .atomic)
+
+    // 1. Cleanup (even with an empty keep-set, run multiple times) MUST quarantine rather than delete.
+    store.cleanup(keepingMediaFilePaths: [])
+    store.cleanup(keepingMediaFilePaths: [targetURL.path])
+
+    let quarantinedDir = try XCTUnwrap(
+      store.quarantinedDirectory(for: targetURL),
+      "Oversized manifest session directory must be quarantined instead of deleted"
+    )
+    XCTAssertTrue(store.hasQuarantinedSession(for: targetURL))
+    let preservedSnapshotURL = quarantinedDir.appendingPathComponent("source.mov")
+    XCTAssertEqual(
+      try Data(contentsOf: preservedSnapshotURL),
+      masterContents,
+      "Quarantined session must keep the unrendered source snapshot byte-for-byte intact"
+    )
+    XCTAssertTrue(FileManager.default.fileExists(atPath: quarantinedDir.appendingPathComponent("manifest.json").path))
+
+    // 2. Subsequent load returns nil AND subsequent persist / prepareSourceSnapshot refuses to silently replace it.
+    XCTAssertNil(store.load(for: targetURL))
+    let replacementMaster = try writeFile(named: "replacement.mov", contents: "baked output")
+    let replacementSession = makeSessionData(sourceSnapshotURL: replacementMaster)
+    XCTAssertFalse(
+      store.persist(replacementSession, for: targetURL),
+      "Persist must refuse to silently replace a quarantined session"
+    )
+    do {
+      _ = try await store.prepareSourceSnapshot(from: targetURL, for: targetURL)
+      XCTFail("Expected prepareSourceSnapshot to throw sessionQuarantined instead of replacing session")
+    } catch let error as VideoEditorSessionStore.StoreError {
+      if case .sessionQuarantined = error {
+        // Expected
+      } else {
+        XCTFail("Unexpected StoreError: \(error)")
+      }
+    }
+    XCTAssertEqual(
+      try Data(contentsOf: preservedSnapshotURL),
+      masterContents,
+      "Original unrendered snapshot must remain untouched after rejected replacement attempts"
+    )
+  }
+
+  func testPersistAndLoad_preservesPerWordCaptionTimingAndDropsOnlyMalformedSegments() throws {
+    let targetURL = try writeFile(named: "captions-words.mov", contents: "rendered")
+    let masterURL = try writeFile(named: "captions-words-master.mov", contents: "master")
+
+    let words: [VideoEditorTranscriptWord] = [
+      VideoEditorTranscriptWord(start: 0.20, duration: 0.18, text: "Ship"),
+      VideoEditorTranscriptWord(start: 0.95, duration: 0.45, text: "clean"),
+      VideoEditorTranscriptWord(start: 1.55, duration: 0.35, text: "motion"),
+    ]
+    var settings = VideoEditorCaptionSettings.default
+    settings.isEnabled = true
+    settings.wordMode = .activeHighlight
+    let segment = CaptionSegment(
+      sourceRange: 0.20 ... 2.00,
+      text: "Ship clean motion",
+      words: words
+    )
+    var sessionData = makeSessionData(sourceSnapshotURL: masterURL)
+    sessionData.captions = VideoEditorCaptions(segments: [segment], settings: settings)
+
+    XCTAssertEqual(sessionData.captions?.segments.first?.words, words)
+    XCTAssertTrue(store.persist(sessionData, for: targetURL))
+
+    let loaded = try XCTUnwrap(store.load(for: targetURL))
+    let restoredSegment = try XCTUnwrap(loaded.captions?.segments.first)
+    XCTAssertEqual(
+      restoredSegment.words,
+      words,
+      "Per-word transcript timings must survive VideoEditorSessionStore persist + load round-trip"
+    )
+
+    // Verify word-mode motion uses exact restored word timestamps (at 0.55s word 0 is still active,
+    // whereas even-spacing fallback across 0.20...2.00 would already be on word 0->1 boundary at 0.80s;
+    // at 1.00s exact word 1 ("clean" starting at 0.95s) is active).
+    let activeAtOneSec = VideoEditorCaptionMotion.activeWordTiming(
+      atSource: 1.00,
+      in: restoredSegment,
+      wordsInLayout: ["Ship", "clean", "motion"],
+      settings: settings
+    )
+    XCTAssertEqual(activeAtOneSec?.index, 1)
+
+    // Verify one malformed segment in raw JSON (e.g. ClosedRange with lower > upper) is dropped
+    // individually without wiping valid segments or their per-word timings.
+    let id1 = UUID()
+    let idBad = UUID()
+    let id2 = UUID()
+    let rawJSON = """
+    {
+      "segments": [
+        {
+          "id": "\(id1.uuidString)",
+          "sourceRange": [0.5, 1.8],
+          "text": "First valid cue",
+          "words": [
+            { "start": 0.5, "duration": 0.3, "text": "First" },
+            { "start": 0.9, "duration": 0.4, "text": "valid" },
+            { "start": 1.4, "duration": 0.3, "text": "cue" }
+          ]
+        },
+        {
+          "id": "\(idBad.uuidString)",
+          "sourceRange": [5.0, 2.0],
+          "text": "Inverted ClosedRange must be dropped alone"
+        },
+        {
+          "notACaption": true
+        },
+        {
+          "id": "\(id2.uuidString)",
+          "sourceRange": [2.2, 3.6],
+          "text": "Second valid cue",
+          "words": [
+            { "start": 2.2, "duration": 0.5, "text": "Second" }
+          ]
+        }
+      ]
+    }
+    """
+    let decodedCaptions = try JSONDecoder().decode(
+      VideoEditorCaptions.self,
+      from: Data(rawJSON.utf8)
+    )
+    XCTAssertEqual(decodedCaptions.segments.map(\.id), [id1, id2])
+    XCTAssertEqual(decodedCaptions.segments[0].words?.count, 3)
+    XCTAssertEqual(decodedCaptions.segments[1].words?.first?.text, "Second")
   }
 
   private func writeFile(at url: URL, contents: String) throws {

@@ -31,7 +31,7 @@ struct TimelineZoomControls: View {
 
   var body: some View {
     HStack(spacing: 2) {
-      controlButton(systemName: "minus") {
+      controlButton(systemName: "minus", label: L10n.VideoEditorTimeline.zoomOut) {
         viewport.zoomOut(anchorTime: anchorTime())
       }
       .disabled(!viewport.canZoomOut)
@@ -50,9 +50,10 @@ struct TimelineZoomControls: View {
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
+      .accessibilityLabel(L10n.VideoEditorTimeline.fit)
       .help(L10n.VideoEditorTimeline.fit)
 
-      controlButton(systemName: "plus") {
+      controlButton(systemName: "plus", label: L10n.VideoEditorTimeline.zoomIn) {
         viewport.zoomIn(anchorTime: anchorTime())
       }
       .disabled(!viewport.canZoomIn)
@@ -67,7 +68,11 @@ struct TimelineZoomControls: View {
     )
   }
 
-  private func controlButton(systemName: String, action: @escaping () -> Void) -> some View {
+  private func controlButton(
+    systemName: String,
+    label: String,
+    action: @escaping () -> Void
+  ) -> some View {
     Button(action: action) {
       Image(systemName: systemName)
         .font(.system(size: badgeIconSize, weight: .medium))
@@ -76,5 +81,6 @@ struct TimelineZoomControls: View {
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(label)
   }
 }

@@ -36,7 +36,6 @@ enum VideoEditorExporter {
     return snapshot
   }
 
-
   /// Export trimmed video to specified URL (with zoom effects if present)
   static func exportTrimmed(
     state: VideoEditorState,
@@ -59,40 +58,75 @@ enum VideoEditorExporter {
     defer { outputAccess.stop() }
     let scopedOutputURL = outputAccess.url.appendingPathComponent(outputURL.lastPathComponent)
 
+    // Guard against destroying an active source/clip file when outputURL matches a source media path:
+    // render to a sibling temporary file first, then atomically replace ONLY after export succeeds.
+    var protectedSourcePaths: Set<String> = [
+      state.sourceURL.standardizedFileURL.path,
+      state.primaryAudioSourceURL.standardizedFileURL.path,
+    ]
+    for clip in state.clips {
+      if let clipURL = clip.url {
+        protectedSourcePaths.insert(clipURL.standardizedFileURL.path)
+      }
+    }
+    for audio in state.addedAudioClips {
+      if let audioURL = audio.fileURL {
+        protectedSourcePaths.insert(audioURL.standardizedFileURL.path)
+      }
+    }
+    let needsTempStaging = protectedSourcePaths.contains(scopedOutputURL.standardizedFileURL.path)
+    let renderURL: URL = if needsTempStaging {
+      scopedOutputURL.deletingLastPathComponent().appendingPathComponent(
+        ".\(scopedOutputURL.deletingPathExtension().lastPathComponent).export-tmp-\(UUID().uuidString).\(scopedOutputURL.pathExtension)"
+      )
+    } else {
+      scopedOutputURL
+    }
+    defer {
+      if needsTempStaging {
+        try? FileManager.default.removeItem(at: renderURL)
+      }
+    }
+
     let hasCameraEffects = state.zoomSegments.contains { $0.isEnabled }
     let hasBackground = state.backgroundStyle != .none && state.backgroundPadding > 0
-    let hasCustomAudio = state.exportSettings.audioMode == .custom
+    let hasCustomAudio = state.exportSettings.requiresAudioMix
+      || state.usesIndependentAudioPlayback
+      || !state.addedAudioClips.isEmpty
     let hasSpeed = state.hasSpeedSegments
     // Anything beyond a single untouched primary clip needs the composition path.
     let hasSequenceEdits = state.hasSequenceEdits
-    // Studio layers (cursor, camera, captions) only render through the compositor.
-    let hasStudioLayers = state.studioRecipe.hasActiveLayers || !state.clickSoundTimes.isEmpty
+    // Studio layers (cursor, camera, captions) and text overlays only render through the compositor.
+    let hasStudioLayers = state.studioRecipe.hasActiveLayers
+      || !state.clickSoundTimes.isEmpty
+      || state.hasTextOverlays
+      || state.hasActiveTransitions
 
     // If visual effects, custom audio, speed scaling, or a multi-clip sequence are in
     // play, use composition-based export. Speed scaling requires the composition path
     // even with no other effects (and even when muted — audio is simply dropped while
     // the video is still time-scaled).
     if hasCameraEffects || hasBackground || hasCustomAudio || hasSpeed || hasSequenceEdits || hasStudioLayers {
-      try await exportWithZooms(state: state, to: scopedOutputURL, progress: progress)
+      try await exportWithZooms(state: state, to: renderURL, progress: progress)
       try await normalizeExportAudioForCompatibilityIfNeeded(
-        at: scopedOutputURL,
+        at: renderURL,
         fileExtension: state.fileExtension
       )
-      return
+    } else if state.exportSettings.audioMode == .mute {
+      // If muted via export settings, export without audio
+      try await exportVideoOnly(state: state, to: renderURL, progress: progress)
+    } else {
+      // Standard export without zooms
+      try await exportStandard(state: state, to: renderURL, progress: progress)
+      try await normalizeExportAudioForCompatibilityIfNeeded(
+        at: renderURL,
+        fileExtension: state.fileExtension
+      )
     }
 
-    // If muted via export settings, export without audio
-    if state.exportSettings.audioMode == .mute {
-      try await exportVideoOnly(state: state, to: scopedOutputURL, progress: progress)
-      return
+    if needsTempStaging {
+      _ = try FileManager.default.replaceItemAt(scopedOutputURL, withItemAt: renderURL)
     }
-
-    // Standard export without zooms
-    try await exportStandard(state: state, to: scopedOutputURL, progress: progress)
-    try await normalizeExportAudioForCompatibilityIfNeeded(
-      at: scopedOutputURL,
-      fileExtension: state.fileExtension
-    )
   }
 
   /// Standard export without zoom effects
@@ -127,6 +161,7 @@ enum VideoEditorExporter {
       for: state.asset,
       settings: state.exportSettings,
       roles: state.audioTrackRoles,
+      audioTimeRange: timeRange,
       logPrefix: "[Export]"
     ) {
       exportSession.audioMix = audioMix
@@ -187,7 +222,11 @@ enum VideoEditorExporter {
       }
     }
 
-    await exportSession.export()
+    await withTaskCancellationHandler {
+      await exportSession.export()
+    } onCancel: {
+      exportSession.cancelExport()
+    }
     progressTask.cancel()
 
     print("📹 [Export] Export status: \(exportSession.status.rawValue)")
@@ -278,7 +317,7 @@ enum VideoEditorExporter {
     }.filter { $0.startTime + $0.duration > 0 && $0.startTime < outputSeconds }
 
     let adjustedAutoFocusPaths = Dictionary(
-      uniqueKeysWithValues: adjustedZooms
+      adjustedZooms
         .filter(\.isAutoMode)
         .map { segment -> (UUID, [AutoFocusCameraSample]) in
           // Trim-relative source path → playable sequence (clip-aware) → output.
@@ -299,7 +338,8 @@ enum VideoEditorExporter {
           // authored output range. Keep the compositor from interpolating outside it.
           path = path.filter { $0.time >= segment.startTime && $0.time <= segment.endTime }
           return (segment.id, path)
-        }
+        },
+      uniquingKeysWith: { first, _ in first }
     )
 
     print("🔍 [ZoomExport] Adjusted zooms count: \(adjustedZooms.count)")
@@ -332,68 +372,330 @@ enum VideoEditorExporter {
     }
     print("🔍 [ZoomExport] Composition video track ID: \(compositionVideoTrack.trackID)")
 
-    do {
-      // One pass over the sequence: each clip contributes its own source window from its
-      // own asset, in timeline order.
-      var cursor = CMTime.zero
-      for clip in clips {
-        let clipDuration = CMTime(seconds: clip.duration, preferredTimescale: 600)
-        let sourceRange = CMTimeRange(
-          start: CMTime(seconds: clip.sourceStart, preferredTimescale: 600),
-          duration: clipDuration
-        )
+    let transform = try await sourceVideoTrack.load(.preferredTransform)
+    compositionVideoTrack.preferredTransform = transform
+    print("🔍 [ZoomExport] Applied video transform: \(transform)")
 
-        let track: AVAssetTrack? = if clip.isPrimary {
-          sourceVideoTrack
-        } else {
-          try await state.clipAsset(for: clip).loadTracks(withMediaType: .video).first
-        }
-        guard let track else {
-          // A clip with no video track still has to hold its slot, or everything after
-          // it would slide earlier than the timeline says.
-          compositionVideoTrack.insertEmptyTimeRange(
-            CMTimeRange(start: cursor, duration: clipDuration)
-          )
-          cursor = CMTimeAdd(cursor, clipDuration)
-          continue
-        }
+    let preserveVideoGaps = state.hasVideoGaps
+    let usesDualTrackCrossfade = state.placements.indices.dropFirst().contains { idx in
+      let prev = state.placements[idx - 1]
+      let curr = state.placements[idx]
+      guard abs(curr.activeStart - prev.activeEnd) <= TimelineClipTransition.abuttingGapTolerance,
+            let transition = curr.clip.leadingTransition,
+            transition.style == .crossfade,
+            transition.isActive
+      else { return false }
+      return TimelineClipTransition.effectiveDuration(
+        requested: transition.duration,
+        outgoingClipDuration: prev.clip.duration,
+        incomingClipDuration: curr.clip.duration
+      ) > 0.01
+    }
 
-        try compositionVideoTrack.insertTimeRange(sourceRange, of: track, at: cursor)
-        cursor = CMTimeAdd(cursor, clipDuration)
+    var secondaryVideoTrack: AVMutableCompositionTrack?
+    if usesDualTrackCrossfade {
+      guard let trackB = composition.addMutableTrack(
+        withMediaType: .video,
+        preferredTrackID: kCMPersistentTrackID_Invalid
+      ) else {
+        throw ExportError.exportFailed
       }
-      print("🔍 [ZoomExport] Inserted \(clips.count) clip(s); composition duration \(CMTimeGetSeconds(cursor))s")
+      trackB.preferredTransform = transform
+      secondaryVideoTrack = trackB
+    }
+
+    var exportTransitions: [VideoEditorExportTransition] = []
+
+    do {
+      // Compute clip composition spans first so transitions and dual-track crossfade
+      // handles align seamlessly without altering total sequence duration.
+      struct ClipSpan {
+        let placement: TimelineSequence.Placement
+        let startSeconds: TimeInterval
+        let endSeconds: TimeInterval
+        let track: AVMutableCompositionTrack
+      }
+
+      var spans: [ClipSpan] = []
+      var cursorSeconds: TimeInterval = 0
+      var prevActiveEnd: TimeInterval = 0
+      for (idx, placement) in state.placements.enumerated() {
+        if preserveVideoGaps {
+          let gapSeconds = max(0, placement.activeStart - prevActiveEnd)
+          cursorSeconds += gapSeconds
+          prevActiveEnd = placement.activeEnd
+        }
+        let targetTrack: AVMutableCompositionTrack = if let trackB = secondaryVideoTrack, idx % 2 == 1 {
+          trackB
+        } else {
+          compositionVideoTrack
+        }
+        let endSeconds = cursorSeconds + placement.clip.duration
+        spans.append(
+          ClipSpan(
+            placement: placement,
+            startSeconds: cursorSeconds,
+            endSeconds: endSeconds,
+            track: targetTrack
+          )
+        )
+        cursorSeconds = endSeconds
+      }
+
+      if !usesDualTrackCrossfade {
+        // Classic single-track insertion path (unchanged for non-crossfade exports).
+        var cursor = CMTime.zero
+        var prevEnd: TimeInterval = 0
+        for (idx, placement) in state.placements.enumerated() {
+          let clip = placement.clip
+          if preserveVideoGaps {
+            let gapSeconds = max(0, placement.activeStart - prevEnd)
+            if gapSeconds > 0.001 {
+              let gapDuration = CMTime(seconds: gapSeconds, preferredTimescale: 600)
+              compositionVideoTrack.insertEmptyTimeRange(
+                CMTimeRange(start: cursor, duration: gapDuration)
+              )
+              cursor = CMTimeAdd(cursor, gapDuration)
+            }
+            prevEnd = placement.activeEnd
+          }
+
+          let clipDuration = CMTime(seconds: clip.duration, preferredTimescale: 600)
+          let sourceRange = CMTimeRange(
+            start: CMTime(seconds: clip.sourceStart, preferredTimescale: 600),
+            duration: clipDuration
+          )
+
+          let track: AVAssetTrack? = if clip.isPrimary {
+            sourceVideoTrack
+          } else {
+            try await state.clipAsset(for: clip).loadTracks(withMediaType: .video).first
+          }
+          guard let track else {
+            compositionVideoTrack.insertEmptyTimeRange(
+              CMTimeRange(start: cursor, duration: clipDuration)
+            )
+            cursor = CMTimeAdd(cursor, clipDuration)
+            continue
+          }
+
+          try compositionVideoTrack.insertTimeRange(sourceRange, of: track, at: cursor)
+          cursor = CMTimeAdd(cursor, clipDuration)
+
+          if idx > 0 {
+            let prevSpan = spans[idx - 1]
+            let currSpan = spans[idx]
+            if abs(currSpan.placement.activeStart - prevSpan.placement.activeEnd) <= TimelineClipTransition.abuttingGapTolerance,
+               let transition = clip.leadingTransition,
+               transition.style == .dipToBlack,
+               transition.isActive {
+              let eff = TimelineClipTransition.effectiveDuration(
+                requested: transition.duration,
+                outgoingClipDuration: prevSpan.placement.clip.duration,
+                incomingClipDuration: clip.duration
+              )
+              if eff > 0.01 {
+                let half = eff / 2.0
+                let cutSeq = currSpan.startSeconds
+                exportTransitions.append(
+                  VideoEditorExportTransition(
+                    style: .dipToBlack,
+                    startTime: sequenceMap.toOutput(max(0, cutSeq - half)),
+                    cutTime: sequenceMap.toOutput(cutSeq),
+                    endTime: sequenceMap.toOutput(cutSeq + half),
+                    outgoingTrackID: compositionVideoTrack.trackID,
+                    incomingTrackID: compositionVideoTrack.trackID
+                  )
+                )
+              }
+            }
+          }
+        }
+        print("🔍 [ZoomExport] Inserted \(clips.count) clip(s); composition duration \(CMTimeGetSeconds(cursor))s")
+      } else {
+        // Dual-track A/B insertion for true GPU-blended Crossfade transitions without changing total duration.
+        for (idx, span) in spans.enumerated() {
+          let clip = span.placement.clip
+          var leadInHandle: TimeInterval = 0
+          var leadOutHandle: TimeInterval = 0
+
+          var desiredLeadIn: TimeInterval = 0
+          var desiredLeadOut: TimeInterval = 0
+
+          if idx > 0 {
+            let prev = spans[idx - 1]
+            if abs(span.placement.activeStart - prev.placement.activeEnd) <= TimelineClipTransition.abuttingGapTolerance,
+               let transition = clip.leadingTransition,
+               transition.isActive {
+              let eff = TimelineClipTransition.effectiveDuration(
+                requested: transition.duration,
+                outgoingClipDuration: prev.placement.clip.duration,
+                incomingClipDuration: clip.duration
+              )
+              if eff > 0.01 {
+                let half = eff / 2.0
+                if transition.style == .crossfade {
+                  desiredLeadIn = min(half, span.startSeconds)
+                  leadInHandle = min(desiredLeadIn, clip.sourceStart)
+                }
+                let cutSeq = span.startSeconds
+                exportTransitions.append(
+                  VideoEditorExportTransition(
+                    style: transition.style,
+                    startTime: sequenceMap.toOutput(max(0, cutSeq - half)),
+                    cutTime: sequenceMap.toOutput(cutSeq),
+                    endTime: sequenceMap.toOutput(cutSeq + half),
+                    outgoingTrackID: prev.track.trackID,
+                    incomingTrackID: span.track.trackID
+                  )
+                )
+              }
+            }
+          }
+
+          if idx + 1 < spans.count {
+            let next = spans[idx + 1]
+            if abs(next.placement.activeStart - span.placement.activeEnd) <= TimelineClipTransition.abuttingGapTolerance,
+               let nextTransition = next.placement.clip.leadingTransition,
+               nextTransition.style == .crossfade,
+               nextTransition.isActive {
+              let eff = TimelineClipTransition.effectiveDuration(
+                requested: nextTransition.duration,
+                outgoingClipDuration: clip.duration,
+                incomingClipDuration: next.placement.clip.duration
+              )
+              if eff > 0.01 {
+                desiredLeadOut = eff / 2.0
+                leadOutHandle = min(desiredLeadOut, max(0, clip.sourceDuration - clip.sourceEnd))
+              }
+            }
+          }
+
+          let insertSourceStart = max(0, clip.sourceStart - leadInHandle)
+          let insertSourceEnd = min(clip.sourceDuration, clip.sourceEnd + leadOutHandle)
+          let insertDurationSeconds = max(0.01, insertSourceEnd - insertSourceStart)
+          let insertAtSeconds = max(0, span.startSeconds - leadInHandle)
+
+          let track: AVAssetTrack? = if clip.isPrimary {
+            sourceVideoTrack
+          } else {
+            try await state.clipAsset(for: clip).loadTracks(withMediaType: .video).first
+          }
+          guard let track else { continue }
+
+          // 1. Freeze-frame lead-in handle BEFORE the main clip when untrimmed incoming clip
+          // lacks extra source frames before `sourceStart` (inserted first so main clip stays anchored).
+          let missingLeadIn = desiredLeadIn - leadInHandle
+          if missingLeadIn > 0.01 {
+            let freezeStart = max(0, span.startSeconds - desiredLeadIn)
+            let sampleDur = min(1.0 / 30.0, insertDurationSeconds)
+            let sampleRange = CMTimeRange(
+              start: CMTime(seconds: insertSourceStart, preferredTimescale: 600),
+              duration: CMTime(seconds: sampleDur, preferredTimescale: 600)
+            )
+            let targetAt = CMTime(seconds: freezeStart, preferredTimescale: 600)
+            try span.track.insertTimeRange(sampleRange, of: track, at: targetAt)
+            span.track.scaleTimeRange(
+              CMTimeRange(start: targetAt, duration: sampleRange.duration),
+              toDuration: CMTime(seconds: missingLeadIn, preferredTimescale: 600)
+            )
+          }
+
+          // 2. Main clip range (plus any genuine source handles)
+          let sourceRange = CMTimeRange(
+            start: CMTime(seconds: insertSourceStart, preferredTimescale: 600),
+            duration: CMTime(seconds: insertDurationSeconds, preferredTimescale: 600)
+          )
+          try span.track.insertTimeRange(
+            sourceRange,
+            of: track,
+            at: CMTime(seconds: insertAtSeconds, preferredTimescale: 600)
+          )
+
+          // 3. Freeze-frame lead-out handle AFTER the main clip when untrimmed outgoing clip
+          // lacks extra source frames past `sourceEnd`.
+          let missingLeadOut = desiredLeadOut - leadOutHandle
+          if missingLeadOut > 0.01 {
+            let tailInsertAt = CMTime(seconds: insertAtSeconds + insertDurationSeconds, preferredTimescale: 600)
+            let sampleDur = min(1.0 / 30.0, insertDurationSeconds)
+            let sampleStart = max(0, insertSourceEnd - sampleDur)
+            let sampleRange = CMTimeRange(
+              start: CMTime(seconds: sampleStart, preferredTimescale: 600),
+              duration: CMTime(seconds: sampleDur, preferredTimescale: 600)
+            )
+            try span.track.insertTimeRange(sampleRange, of: track, at: tailInsertAt)
+            span.track.scaleTimeRange(
+              CMTimeRange(start: tailInsertAt, duration: sampleRange.duration),
+              toDuration: CMTime(seconds: missingLeadOut, preferredTimescale: 600)
+            )
+          }
+        }
+        print("🔍 [ZoomExport] Inserted \(clips.count) dual-track clip(s) with \(exportTransitions.count) transition(s)")
+      }
     } catch {
       print("❌ [ZoomExport] ERROR inserting video time range: \(error)")
       DiagnosticLogger.shared.logError(.export, error, "Failed to insert video time range")
       throw error
     }
 
-    // Copy video track transform
-    let transform = try await sourceVideoTrack.load(.preferredTransform)
-    compositionVideoTrack.preferredTransform = transform
-    print("🔍 [ZoomExport] Applied video transform: \(transform)")
-
-    // Apply per-segment speed scaling to the video track (reverse order so earlier ranges
-    // are not shifted by later scaling). Composition time is already trim-relative, so the
-    // map's span coordinates map directly.
+    // Apply per-segment speed scaling to the video track(s) (reverse order so earlier ranges
+    // are not shifted by later scaling).
     if let speedMap {
       applySpeedScaling(to: compositionVideoTrack, map: speedMap, logPrefix: "[ZoomExport] video")
+      if let secondaryVideoTrack {
+        applySpeedScaling(to: secondaryVideoTrack, map: speedMap, logPrefix: "[ZoomExport] videoB")
+      }
     }
 
-    // Add audio track based on export settings (scaled + pitch-preserved when speed active).
-    let audioMix = try await addAudioTracks(
+    // Compute projected independent audio pieces & final extended duration first so embedded
+    // and imported audio global fade-outs share the exact same end timestamp.
+    let projectedAudioPieces = projectAudioClips(for: state)
+    let maxAudioEnd = projectedAudioPieces.map { piece -> TimeInterval in
+      let end = piece.playableStart + piece.duration
+      if let speedMap {
+        return end > speedMap.sequenceDuration
+          ? speedMap.outputDuration + (end - speedMap.sequenceDuration)
+          : speedMap.toOutput(end)
+      }
+      return end
+    }.max() ?? 0
+    let extendedDuration = CMTime(
+      seconds: max(CMTimeGetSeconds(composition.duration), maxAudioEnd),
+      preferredTimescale: 600
+    )
+
+    // Add embedded video clip audio tracks (skips primary audio when edited independently,
+    // and skips any clip whose audio was detached onto an independent lane).
+    let needsEmbeddedAudio = (!state.usesIndependentAudioPlayback && !state.audioTrackRoles.isEmpty)
+      || state.clips.contains(where: { !$0.isPrimary && !$0.isAudioDetached })
+    let baseAudioMix: AVMutableAudioMix? = if needsEmbeddedAudio {
+      try await addAudioTracks(
+        to: composition,
+        from: state.asset,
+        state: state,
+        settings: state.exportSettings,
+        roles: state.audioTrackRoles,
+        speedMap: speedMap,
+        fadeTotalDuration: extendedDuration,
+        logPrefix: "[ZoomExport]"
+      )
+    } else {
+      nil
+    }
+    let audioMix = try await addImportedAudioClips(
       to: composition,
-      from: state.asset,
       state: state,
-      settings: state.exportSettings,
-      roles: state.audioTrackRoles,
-      speedMap: speedMap,
-      logPrefix: "[ZoomExport]"
+      projectedPieces: projectedAudioPieces,
+      baseMix: baseAudioMix,
+      maxDuration: extendedDuration,
+      speedMap: speedMap
     )
     let cameraTrackID = try await addCameraTrack(to: composition, state: state, clips: clips, speedMap: speedMap)
     let clickLaneURL = try addClickSoundLane(to: composition, state: state)
     defer {
-      if let clickLaneURL { try? FileManager.default.removeItem(at: clickLaneURL) }
+      if let clickLaneURL {
+        try? FileManager.default.removeItem(at: clickLaneURL)
+      }
     }
 
     // Verify composition duration
@@ -418,6 +720,39 @@ enum VideoEditorExporter {
       print("🔍 [ZoomExport] Using original dimensions: \(baseRenderSize)")
     }
 
+    // Project timeline Text / Title overlays onto output time (preserving overlays placed
+    // over black-screen gaps or audio tails when gaps are preserved).
+    let finalOutputSeconds = max(CMTimeGetSeconds(composition.duration), CMTimeGetSeconds(extendedDuration))
+    let mapTailAwareOutputTime: (TimeInterval) -> TimeInterval = { seqTime in
+      if seqTime > sequenceMap.sequenceDuration {
+        return sequenceMap.outputDuration + (seqTime - sequenceMap.sequenceDuration)
+      }
+      return sequenceMap.toOutput(seqTime)
+    }
+    let adjustedTextOverlays: [VideoEditorTextOverlay] = state.textOverlays.compactMap { overlay in
+      if preserveVideoGaps {
+        let outStart = mapTailAwareOutputTime(overlay.startTime)
+        let outEnd = mapTailAwareOutputTime(overlay.endTime)
+        guard outEnd > 0.001, outStart < finalOutputSeconds else { return nil }
+        var copy = overlay
+        copy.startTime = max(0, outStart)
+        copy.duration = max(VideoEditorTextOverlay.minDuration, min(finalOutputSeconds, outEnd) - copy.startTime)
+        return copy
+      } else {
+        let pieces = state.projectToPlaybackSequence(
+          timelineRange: overlay.startTime ... overlay.endTime
+        )
+        guard let firstPiece = pieces.first, let lastPiece = pieces.last else { return nil }
+        let outStart = sequenceMap.toOutput(firstPiece.lowerBound)
+        let outEnd = sequenceMap.toOutput(lastPiece.upperBound)
+        guard outEnd - outStart >= 0.05 else { return nil }
+        var copy = overlay
+        copy.startTime = max(0, outStart)
+        copy.duration = max(VideoEditorTextOverlay.minDuration, outEnd - copy.startTime)
+        return copy
+      }
+    }
+
     // Create zoom compositor with correct render size from the start
     print("🔍 [ZoomExport] Creating ZoomCompositor with renderSize: \(baseRenderSize)")
     let zoomCompositor = ZoomCompositor(
@@ -430,7 +765,9 @@ enum VideoEditorExporter {
       backgroundPadding: state.backgroundPadding,
       cornerRadius: state.backgroundCornerRadius,
       studioRecipe: state.studioRecipe,
-      motionBlur: state.motionBlurSettings
+      motionBlur: state.motionBlurSettings,
+      textOverlays: adjustedTextOverlays,
+      exportTransitions: exportTransitions
     )
 
     // Use actual composition duration to prevent frame boundary issues
@@ -460,6 +797,7 @@ enum VideoEditorExporter {
         for: composition,
         timeRange: compositionTimeRange,
         screenTrackID: compositionVideoTrack.trackID,
+        secondaryVideoTrackID: secondaryVideoTrack?.trackID,
         auxiliaryTrackIDs: cameraTrackID.map { [.camera: $0] } ?? [:]
       )
       // RenderSize is already set correctly in ZoomCompositor, just use paddedRenderSize for background
@@ -489,6 +827,7 @@ enum VideoEditorExporter {
     try? FileManager.default.removeItem(at: outputURL)
     exportSession.outputURL = outputURL
     exportSession.outputFileType = outputFileType(for: state.fileExtension)
+    exportSession.timeRange = compositionTimeRange
     exportSession.videoComposition = videoComposition
     if let audioMix {
       exportSession.audioMix = audioMix
@@ -506,7 +845,11 @@ enum VideoEditorExporter {
     }
 
     print("🔍 [ZoomExport] Starting export...")
-    await exportSession.export()
+    await withTaskCancellationHandler {
+      await exportSession.export()
+    } onCancel: {
+      exportSession.cancelExport()
+    }
     progressTask.cancel()
 
     print("🔍 [ZoomExport] Export finished with status: \(exportSession.status.rawValue)")
@@ -638,7 +981,11 @@ enum VideoEditorExporter {
       }
     }
 
-    await exportSession.export()
+    await withTaskCancellationHandler {
+      await exportSession.export()
+    } onCancel: {
+      exportSession.cancelExport()
+    }
     progressTask.cancel()
 
     guard exportSession.status == .completed else {
@@ -760,6 +1107,7 @@ enum VideoEditorExporter {
     settings: ExportSettings,
     roles: [VideoEditorAudioTrackRole],
     speedMap: TimelineSequenceMap?,
+    fadeTotalDuration: CMTime? = nil,
     logPrefix: String
   ) async throws -> AVMutableAudioMix? {
     guard settings.shouldIncludeAudio else {
@@ -767,18 +1115,22 @@ enum VideoEditorExporter {
       return nil
     }
 
-    let sourceAudioTracks = try await asset.loadTracks(withMediaType: .audio)
-    guard !sourceAudioTracks.isEmpty else {
-      print("\(logPrefix) No audio tracks in source")
+    let sourceAudioTracks: [AVAssetTrack] = state.usesIndependentAudioPlayback
+      ? []
+      : (try await asset.loadTracks(withMediaType: .audio))
+    let attachedInsertedPlacements = state.placements.filter {
+      !$0.clip.isPrimary && !$0.clip.isAudioDetached
+    }
+    guard !sourceAudioTracks.isEmpty || !attachedInsertedPlacements.isEmpty else {
+      print("\(logPrefix) No audio tracks in source or attached inserted clips")
       return nil
     }
 
-    let clips = state.clips
-    var compositionAudioTracks: [AVMutableCompositionTrack] = []
+    let preserveVideoGaps = state.hasVideoGaps
+    var primaryCompositionTracks: [AVMutableCompositionTrack] = []
 
-    // One composition track per source audio track (mic / system / …). Each walks the
-    // whole sequence so inserted clips stay interleaved rather than appended.
-    for (trackIndex, sourceAudioTrack) in sourceAudioTracks.enumerated() {
+    // 1. Primary recording embedded audio lanes (one per mic/system role when not detached/independent).
+    for sourceAudioTrack in sourceAudioTracks {
       guard let compositionAudioTrack = composition.addMutableTrack(
         withMediaType: .audio,
         preferredTrackID: kCMPersistentTrackID_Invalid
@@ -788,36 +1140,115 @@ enum VideoEditorExporter {
       }
 
       var cursor = CMTime.zero
-      for clip in clips {
+      var prevActiveEnd: TimeInterval = 0
+      var insertedAnySample = false
+      for placement in state.placements {
+        let clip = placement.clip
+        if preserveVideoGaps {
+          let gapSeconds = max(0, placement.activeStart - prevActiveEnd)
+          if gapSeconds > 0.001 {
+            let gapDuration = CMTime(seconds: gapSeconds, preferredTimescale: 600)
+            compositionAudioTrack.insertEmptyTimeRange(
+              CMTimeRange(start: cursor, duration: gapDuration)
+            )
+            cursor = CMTimeAdd(cursor, gapDuration)
+          }
+          prevActiveEnd = placement.activeEnd
+        }
+
         let clipDuration = CMTime(seconds: clip.duration, preferredTimescale: 600)
         let sourceRange = CMTimeRange(
           start: CMTime(seconds: clip.sourceStart, preferredTimescale: 600),
           duration: clipDuration
         )
 
-        if clip.isPrimary {
+        if clip.isPrimary, !clip.isAudioDetached, !state.usesIndependentAudioPlayback {
           try compositionAudioTrack.insertTimeRange(sourceRange, of: sourceAudioTrack, at: cursor)
-        } else if trackIndex == 0,
-                  let clipAudio = try await state.clipAsset(for: clip)
-                  .loadTracks(withMediaType: .audio).first {
-          // Inserted clips carry a single audio track; it rides the first lane.
-          try compositionAudioTrack.insertTimeRange(sourceRange, of: clipAudio, at: cursor)
+          insertedAnySample = true
         } else {
-          // Silence keeps this lane aligned with the others.
           compositionAudioTrack.insertEmptyTimeRange(
             CMTimeRange(start: cursor, duration: clipDuration)
           )
         }
-
         cursor = CMTimeAdd(cursor, clipDuration)
       }
 
-      compositionAudioTracks.append(compositionAudioTrack)
+      if insertedAnySample {
+        primaryCompositionTracks.append(compositionAudioTrack)
+      } else {
+        composition.removeTrack(compositionAudioTrack)
+      }
     }
 
-    // Time-scale audio with the same spans as video so A/V stays in sync. Spans are in
-    // base coordinates, matching the composition layout (merged clips sit after the
-    // scaled primary span so they are unaffected).
+    // 2. Non-detached inserted `.file` clips use their own backing asset (`state.clipAsset(for: clip)`)
+    // on dedicated composition track(s) so custom primary mic/system muting never silences inserted clips.
+    var insertedCompositionTracks: [AVMutableCompositionTrack] = []
+    if !attachedInsertedPlacements.isEmpty {
+      var clipTracksById: [UUID: [AVAssetTrack]] = [:]
+      var maxInsertedLanes = 0
+      for placement in attachedInsertedPlacements {
+        let tracks = try await state.clipAsset(for: placement.clip).loadTracks(withMediaType: .audio)
+        clipTracksById[placement.clip.id] = tracks
+        maxInsertedLanes = max(maxInsertedLanes, tracks.count)
+      }
+
+      for laneIdx in 0 ..< maxInsertedLanes {
+        guard let compositionAudioTrack = composition.addMutableTrack(
+          withMediaType: .audio,
+          preferredTrackID: kCMPersistentTrackID_Invalid
+        ) else {
+          throw ExportError.exportFailed
+        }
+
+        var cursor = CMTime.zero
+        var prevActiveEnd: TimeInterval = 0
+        var insertedAnySample = false
+        for placement in state.placements {
+          let clip = placement.clip
+          if preserveVideoGaps {
+            let gapSeconds = max(0, placement.activeStart - prevActiveEnd)
+            if gapSeconds > 0.001 {
+              let gapDuration = CMTime(seconds: gapSeconds, preferredTimescale: 600)
+              compositionAudioTrack.insertEmptyTimeRange(
+                CMTimeRange(start: cursor, duration: gapDuration)
+              )
+              cursor = CMTimeAdd(cursor, gapDuration)
+            }
+            prevActiveEnd = placement.activeEnd
+          }
+
+          let clipDuration = CMTime(seconds: clip.duration, preferredTimescale: 600)
+          let sourceRange = CMTimeRange(
+            start: CMTime(seconds: clip.sourceStart, preferredTimescale: 600),
+            duration: clipDuration
+          )
+
+          if !clip.isPrimary,
+             !clip.isAudioDetached,
+             let tracks = clipTracksById[clip.id],
+             tracks.indices.contains(laneIdx) {
+            try compositionAudioTrack.insertTimeRange(sourceRange, of: tracks[laneIdx], at: cursor)
+            insertedAnySample = true
+          } else {
+            compositionAudioTrack.insertEmptyTimeRange(
+              CMTimeRange(start: cursor, duration: clipDuration)
+            )
+          }
+          cursor = CMTimeAdd(cursor, clipDuration)
+        }
+
+        if insertedAnySample {
+          insertedCompositionTracks.append(compositionAudioTrack)
+        } else {
+          composition.removeTrack(compositionAudioTrack)
+        }
+      }
+    }
+
+    let compositionAudioTracks = primaryCompositionTracks + insertedCompositionTracks
+    guard !compositionAudioTracks.isEmpty else { return nil }
+
+    // Time-scale audio with the same spans as video so A/V stays in sync.
     if let speedMap {
       for track in compositionAudioTracks {
         applySpeedScaling(to: track, map: speedMap, logPrefix: "\(logPrefix) audio")
@@ -825,12 +1256,47 @@ enum VideoEditorExporter {
     }
 
     print("\(logPrefix) Added \(compositionAudioTracks.count) audio track(s)")
-    let baseMix = makeAudioMix(
-      for: compositionAudioTracks,
-      settings: settings,
-      roles: roles,
-      logPrefix: logPrefix
-    )
+    let effectiveFadeDuration = fadeTotalDuration ?? composition.duration
+    let compositionRange = CMTimeRange(start: .zero, duration: effectiveFadeDuration)
+    let primaryMix = primaryCompositionTracks.isEmpty
+      ? nil
+      : makeAudioMix(
+        for: primaryCompositionTracks,
+        settings: settings,
+        roles: roles,
+        audioTimeRange: compositionRange,
+        logPrefix: logPrefix
+      )
+    var mergedParams = (primaryMix?.inputParameters as? [AVMutableAudioMixInputParameters]) ?? []
+
+    if !insertedCompositionTracks.isEmpty, settings.hasAudioFades || abs(settings.audioVolume - 1.0) > 0.001 {
+      var insertedSettings = ExportSettings()
+      insertedSettings.audioMode = abs(settings.audioVolume - 1.0) > 0.001 ? .custom : .keep
+      insertedSettings.audioVolume = settings.audioVolume
+      insertedSettings.setAudioFadeIn(settings.clampedAudioFadeIn)
+      insertedSettings.setAudioFadeOut(settings.clampedAudioFadeOut)
+      let insertedRoles = Array(repeating: VideoEditorAudioTrackRole.systemAudio, count: insertedCompositionTracks.count)
+      if let insertedMix = makeAudioMix(
+        for: insertedCompositionTracks,
+        settings: insertedSettings,
+        roles: insertedRoles,
+        audioTimeRange: compositionRange,
+        logPrefix: "\(logPrefix) insertedClipAudio"
+      ), let extraParams = insertedMix.inputParameters as? [AVMutableAudioMixInputParameters] {
+        mergedParams.append(contentsOf: extraParams)
+      }
+    }
+
+    let baseMix: AVMutableAudioMix? = if mergedParams.isEmpty {
+      nil
+    } else {
+      {
+        let mix = AVMutableAudioMix()
+        mix.inputParameters = mergedParams
+        return mix
+      }()
+    }
+
     // Preserve pitch on scaled audio (independent of volume/custom mode).
     return applyPitchPreservation(
       to: baseMix,
@@ -840,12 +1306,308 @@ enum VideoEditorExporter {
     )
   }
 
+  private struct ProjectedAudioPiece {
+    let clip: AudioTimelineClip
+    let playableStart: TimeInterval
+    let sourceStart: TimeInterval
+    let duration: TimeInterval
+    let fadeIn: TimeInterval
+    let fadeOut: TimeInterval
+  }
+
+  /// Project independent/detached audio clips from the structural timeline onto the
+  /// compact playable sequence (matching video, zooms, and text overlays) so head-trimmed
+  /// clips never shift audio out of sync or add an unintended black tail.
+  private static func projectAudioClips(for state: VideoEditorExportSnapshot) -> [ProjectedAudioPiece] {
+    guard !state.addedAudioClips.isEmpty else { return [] }
+    let preserveVideoGaps = state.hasVideoGaps
+    let lastStructuralActiveEnd = state.placements.map(\.activeEnd).max() ?? 0
+    let playableEnd = state.playbackPlacements.last?.end ?? 0
+
+    var pieces: [ProjectedAudioPiece] = []
+    for clip in state.addedAudioClips where clip.duration >= AudioTimelineClip.minDuration {
+      if preserveVideoGaps {
+        pieces.append(
+          ProjectedAudioPiece(
+            clip: clip,
+            playableStart: clip.timelineStart,
+            sourceStart: clip.sourceStart,
+            duration: clip.duration,
+            fadeIn: clip.fadeIn,
+            fadeOut: clip.fadeOut
+          )
+        )
+        continue
+      }
+
+      var clipPieces: [ProjectedAudioPiece] = []
+      for placement in state.placements {
+        let overlapStart = max(clip.timelineStart, placement.activeStart)
+        let overlapEnd = min(clip.timelineEnd, placement.activeEnd)
+        let overlapDuration = overlapEnd - overlapStart
+        guard overlapDuration >= 0.05,
+              let playable = state.playbackPlacements.first(where: { $0.clip.id == placement.clip.id })
+        else { continue }
+
+        let offsetInClip = overlapStart - clip.timelineStart
+        let offsetInActivePlacement = overlapStart - placement.activeStart
+        let piecePlayableStart = playable.start + offsetInActivePlacement
+        let pieceSourceStart = min(clip.sourceEnd, clip.sourceStart + offsetInClip)
+        let pieceDuration = min(overlapDuration, max(0, clip.sourceEnd - pieceSourceStart))
+        guard pieceDuration >= 0.05 else { continue }
+
+        let isFirstPiece = abs(overlapStart - clip.timelineStart) < 0.02
+        let isLastPiece = abs(overlapEnd - clip.timelineEnd) < 0.02
+        if let last = clipPieces.last,
+           abs((last.playableStart + last.duration) - piecePlayableStart) < 0.02,
+           abs((last.sourceStart + last.duration) - pieceSourceStart) < 0.02 {
+          let mergedDuration = last.duration + pieceDuration
+          clipPieces[clipPieces.count - 1] = ProjectedAudioPiece(
+            clip: clip,
+            playableStart: last.playableStart,
+            sourceStart: last.sourceStart,
+            duration: mergedDuration,
+            fadeIn: last.fadeIn,
+            fadeOut: isLastPiece ? min(clip.fadeOut, mergedDuration) : 0
+          )
+        } else {
+          clipPieces.append(
+            ProjectedAudioPiece(
+              clip: clip,
+              playableStart: piecePlayableStart,
+              sourceStart: pieceSourceStart,
+              duration: pieceDuration,
+              fadeIn: isFirstPiece ? min(clip.fadeIn, pieceDuration) : 0,
+              fadeOut: isLastPiece ? min(clip.fadeOut, pieceDuration) : 0
+            )
+          )
+        }
+      }
+
+      // Preserve any intentional external-audio tail overhanging past the final active video frame.
+      if !clip.isPrimary, clip.timelineEnd > lastStructuralActiveEnd + 0.02 {
+        let tailStructuralStart = max(clip.timelineStart, lastStructuralActiveEnd)
+        let tailDuration = clip.timelineEnd - tailStructuralStart
+        if tailDuration >= 0.05 {
+          let offsetInClip = tailStructuralStart - clip.timelineStart
+          let tailPlayableStart = playableEnd + max(0, tailStructuralStart - lastStructuralActiveEnd)
+          let tailSourceStart = min(clip.sourceEnd, clip.sourceStart + offsetInClip)
+          let clampedTailDur = min(tailDuration, max(0, clip.sourceEnd - tailSourceStart))
+          if clampedTailDur >= 0.05 {
+            if let last = clipPieces.last,
+               abs((last.playableStart + last.duration) - tailPlayableStart) < 0.02,
+               abs((last.sourceStart + last.duration) - tailSourceStart) < 0.02 {
+              clipPieces[clipPieces.count - 1] = ProjectedAudioPiece(
+                clip: clip,
+                playableStart: last.playableStart,
+                sourceStart: last.sourceStart,
+                duration: last.duration + clampedTailDur,
+                fadeIn: last.fadeIn,
+                fadeOut: min(clip.fadeOut, last.duration + clampedTailDur)
+              )
+            } else {
+              clipPieces.append(
+                ProjectedAudioPiece(
+                  clip: clip,
+                  playableStart: tailPlayableStart,
+                  sourceStart: tailSourceStart,
+                  duration: clampedTailDur,
+                  fadeIn: clipPieces.isEmpty ? min(clip.fadeIn, clampedTailDur) : 0,
+                  fadeOut: min(clip.fadeOut, clampedTailDur)
+                )
+              )
+            }
+          }
+        }
+      }
+
+      pieces.append(contentsOf: clipPieces)
+    }
+    return pieces
+  }
+
+  /// Insert independent and imported audio pieces into the export composition with
+  /// per-clip volume/fades AND global `exportSettings.audioFadeIn / audioFadeOut`.
+  private static func addImportedAudioClips(
+    to composition: AVMutableComposition,
+    state: VideoEditorExportSnapshot,
+    projectedPieces: [ProjectedAudioPiece],
+    baseMix: AVMutableAudioMix?,
+    maxDuration: CMTime,
+    speedMap: TimelineSequenceMap? = nil
+  ) async throws -> AVMutableAudioMix? {
+    guard state.exportSettings.audioMode != .mute, !projectedPieces.isEmpty else {
+      return baseMix
+    }
+    let maxSeconds = CMTimeGetSeconds(maxDuration)
+    guard maxSeconds > 0.01 else { return baseMix }
+    let preScaleMaxSeconds: TimeInterval = if let speedMap {
+      max(speedMap.sequenceDuration, speedMap.sequenceDuration + max(0, maxSeconds - speedMap.outputDuration))
+    } else {
+      maxSeconds
+    }
+
+    let globalFades: (fadeIn: TimeInterval, fadeOut: TimeInterval) = if state.exportSettings.hasAudioFades {
+      VideoEditorAudioMixFactory.resolvedFadeDurations(
+        fadeIn: state.exportSettings.clampedAudioFadeIn,
+        fadeOut: state.exportSettings.clampedAudioFadeOut,
+        totalDuration: maxSeconds
+      )
+    } else {
+      (0, 0)
+    }
+
+    var inputParams = (baseMix?.inputParameters as? [AVMutableAudioMixInputParameters]) ?? []
+    let timescale: CMTimeScale = 600
+
+    for piece in projectedPieces {
+      let clip = piece.clip
+      let clipURL: URL = clip.isPrimary ? state.primaryAudioSourceURL : (clip.fileURL ?? state.primaryAudioSourceURL)
+      guard piece.playableStart < preScaleMaxSeconds,
+            piece.duration >= 0.05
+      else { continue }
+
+      let clippedDuration = min(piece.duration, preScaleMaxSeconds - piece.playableStart)
+      guard clippedDuration >= 0.05 else { continue }
+
+      let audioAsset = AVURLAsset(url: clipURL)
+      let loadedTracks = try await audioAsset.loadTracks(withMediaType: .audio)
+      guard !loadedTracks.isEmpty else { continue }
+      let tracksToMix: [AVAssetTrack] = clip.isPrimary ? loadedTracks : [loadedTracks[0]]
+
+      for (trackIdx, sourceTrack) in tracksToMix.enumerated() {
+        guard let compTrack = composition.addMutableTrack(
+          withMediaType: .audio,
+          preferredTrackID: kCMPersistentTrackID_Invalid
+        ) else { continue }
+
+        let srcRange = CMTimeRange(
+          start: CMTime(seconds: piece.sourceStart, preferredTimescale: timescale),
+          duration: CMTime(seconds: clippedDuration, preferredTimescale: timescale)
+        )
+        let insertAt = CMTime(seconds: piece.playableStart, preferredTimescale: timescale)
+        if piece.playableStart > 0.001 {
+          compTrack.insertEmptyTimeRange(CMTimeRange(start: .zero, duration: insertAt))
+        }
+        try compTrack.insertTimeRange(srcRange, of: sourceTrack, at: insertAt)
+
+        if let speedMap {
+          applySpeedScaling(to: compTrack, map: speedMap, logPrefix: "[ZoomExport] addedAudio")
+        }
+
+        let mapOut: (TimeInterval) -> TimeInterval = { seqTime in
+          guard let speedMap else { return seqTime }
+          if seqTime > speedMap.sequenceDuration {
+            return speedMap.outputDuration + (seqTime - speedMap.sequenceDuration)
+          }
+          return speedMap.toOutput(seqTime)
+        }
+        let outStart = mapOut(piece.playableStart)
+        let outEnd = max(outStart + 0.05, mapOut(piece.playableStart + clippedDuration))
+        let outDuration = outEnd - outStart
+
+        let params = AVMutableAudioMixInputParameters(track: compTrack)
+        if speedMap != nil {
+          let formatDescriptions = try await sourceTrack.load(.formatDescriptions)
+          let sampleRate = formatDescriptions.first
+            .flatMap { CMAudioFormatDescriptionGetStreamBasicDescription($0)?.pointee.mSampleRate } ?? 48_000
+          params.audioTimePitchAlgorithm = (sampleRate > 0 && sampleRate < 16_000) ? .timeDomain : .spectral
+        }
+        let roleGain: Float = if clip.isPrimary, state.audioTrackRoles.indices.contains(trackIdx) {
+          state.exportSettings.effectiveVolume(for: state.audioTrackRoles[trackIdx])
+        } else {
+          1.0
+        }
+        let targetVolume = clip.volume * roleGain
+
+        let clipFades = VideoEditorAudioMixFactory.resolvedFadeDurations(
+          fadeIn: piece.fadeIn,
+          fadeOut: piece.fadeOut,
+          totalDuration: outDuration
+        )
+
+        // Build unified piecewise-linear volume envelope combining per-clip fades AND
+        // global master `exportSettings.audioFadeIn / audioFadeOut` across `[outStart, outEnd]`.
+        var breakpoints: [TimeInterval] = [outStart, outEnd]
+        if clipFades.fadeIn > 0.001 {
+          breakpoints.append(outStart + clipFades.fadeIn)
+        }
+        if clipFades.fadeOut > 0.001 {
+          breakpoints.append(outEnd - clipFades.fadeOut)
+        }
+        if globalFades.fadeIn > 0.001, globalFades.fadeIn > outStart, globalFades.fadeIn < outEnd {
+          breakpoints.append(globalFades.fadeIn)
+        }
+        let globalFadeOutStart = maxSeconds - globalFades.fadeOut
+        if globalFades.fadeOut > 0.001, globalFadeOutStart > outStart, globalFadeOutStart < outEnd {
+          breakpoints.append(globalFadeOutStart)
+        }
+        breakpoints.sort()
+
+        var uniquePoints: [TimeInterval] = []
+        for pt in breakpoints {
+          let clampedPt = min(max(pt, outStart), outEnd)
+          if let prev = uniquePoints.last, abs(clampedPt - prev) < 0.002 {
+            continue
+          }
+          uniquePoints.append(clampedPt)
+        }
+
+        let gainAt: (TimeInterval) -> Float = { t in
+          guard targetVolume > 0 else { return 0 }
+          var env = 1.0
+          if clipFades.fadeIn > 0.001, t < outStart + clipFades.fadeIn {
+            env *= min(1.0, max(0.0, (t - outStart) / clipFades.fadeIn))
+          }
+          if clipFades.fadeOut > 0.001, t > outEnd - clipFades.fadeOut {
+            env *= min(1.0, max(0.0, (outEnd - t) / clipFades.fadeOut))
+          }
+          if globalFades.fadeIn > 0.001, t < globalFades.fadeIn {
+            env *= min(1.0, max(0.0, t / globalFades.fadeIn))
+          }
+          if globalFades.fadeOut > 0.001, t > globalFadeOutStart {
+            env *= min(1.0, max(0.0, (maxSeconds - t) / globalFades.fadeOut))
+          }
+          return targetVolume * Float(env)
+        }
+
+        let outInsertAt = CMTime(seconds: outStart, preferredTimescale: timescale)
+        if uniquePoints.count >= 2,
+           clipFades.fadeIn > 0.001 || clipFades.fadeOut > 0.001 || globalFades.fadeIn > 0.001 || globalFades
+           .fadeOut > 0.001 {
+          for idx in 0 ..< (uniquePoints.count - 1) {
+            let segStart = uniquePoints[idx]
+            let segEnd = uniquePoints[idx + 1]
+            let segDur = segEnd - segStart
+            guard segDur >= 0.002 else { continue }
+            params.setVolumeRamp(
+              fromStartVolume: gainAt(segStart),
+              toEndVolume: gainAt(segEnd),
+              timeRange: CMTimeRange(
+                start: CMTime(seconds: segStart, preferredTimescale: timescale),
+                duration: CMTime(seconds: segDur, preferredTimescale: timescale)
+              )
+            )
+          }
+        } else {
+          params.setVolume(targetVolume, at: outInsertAt)
+        }
+        inputParams.append(params)
+      }
+    }
+
+    guard !inputParams.isEmpty else { return baseMix }
+    let mix = baseMix ?? AVMutableAudioMix()
+    mix.inputParameters = inputParams
+    return mix
+  }
+
   /// Studio camera: the sidecar laid out clip by clip like the screen track (same
   /// source windows, empty over inserted files), then speed-scaled the same way.
   private static func addCameraTrack(
     to composition: AVMutableComposition,
     state: VideoEditorExportSnapshot,
-    clips: [TimelineClip],
+    clips _: [TimelineClip],
     speedMap: TimelineSequenceMap?
   ) async throws -> CMPersistentTrackID? {
     guard let url = state.cameraSourceURL else { return nil }
@@ -854,15 +1616,30 @@ enum VideoEditorExporter {
           let track = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
     else { return nil }
     let cameraDuration = try await asset.load(.duration)
+    let preserveVideoGaps = state.hasVideoGaps
     var cursor = CMTime.zero
-    for clip in clips {
+    var prevActiveEnd: TimeInterval = 0
+    for placement in state.placements {
+      let clip = placement.clip
+      if preserveVideoGaps {
+        let gapSeconds = max(0, placement.activeStart - prevActiveEnd)
+        if gapSeconds > 0.001 {
+          let gapDuration = CMTime(seconds: gapSeconds, preferredTimescale: 600)
+          track.insertEmptyTimeRange(CMTimeRange(start: cursor, duration: gapDuration))
+          cursor = CMTimeAdd(cursor, gapDuration)
+        }
+        prevActiveEnd = placement.activeEnd
+      }
       let clipDuration = CMTime(seconds: clip.duration, preferredTimescale: 600)
       let start = CMTime(seconds: clip.sourceStart, preferredTimescale: 600)
       let available = CMTimeMinimum(clipDuration, CMTimeMaximum(.zero, CMTimeSubtract(cameraDuration, start)))
       if clip.isPrimary, available > .zero {
         try track.insertTimeRange(CMTimeRange(start: start, duration: available), of: source, at: cursor)
         if available < clipDuration {
-          track.insertEmptyTimeRange(CMTimeRange(start: CMTimeAdd(cursor, available), duration: CMTimeSubtract(clipDuration, available)))
+          track.insertEmptyTimeRange(CMTimeRange(
+            start: CMTimeAdd(cursor, available),
+            duration: CMTimeSubtract(clipDuration, available)
+          ))
         }
       } else {
         track.insertEmptyTimeRange(CMTimeRange(start: cursor, duration: clipDuration))
@@ -955,13 +1732,14 @@ enum VideoEditorExporter {
     for asset: AVAsset,
     settings: ExportSettings,
     roles: [VideoEditorAudioTrackRole],
+    audioTimeRange: CMTimeRange? = nil,
     logPrefix: String
   ) async throws -> AVMutableAudioMix? {
-    guard settings.audioMode == .custom else { return nil }
+    guard settings.requiresAudioMix else { return nil }
 
     let audioTracks = try await asset.loadTracks(withMediaType: .audio)
     guard !audioTracks.isEmpty else {
-      print("\(logPrefix) Custom volume requested, but source has no audio tracks")
+      print("\(logPrefix) Audio mix requested, but source has no audio tracks")
       return nil
     }
 
@@ -969,6 +1747,7 @@ enum VideoEditorExporter {
       for: audioTracks,
       settings: settings,
       roles: roles,
+      audioTimeRange: audioTimeRange,
       logPrefix: logPrefix
     )
   }
@@ -977,9 +1756,10 @@ enum VideoEditorExporter {
     for audioTracks: [AVAssetTrack],
     settings: ExportSettings,
     roles: [VideoEditorAudioTrackRole],
+    audioTimeRange: CMTimeRange? = nil,
     logPrefix: String
   ) -> AVMutableAudioMix? {
-    guard settings.audioMode == .custom else { return nil }
+    guard settings.requiresAudioMix else { return nil }
 
     let resolvedRoles: [VideoEditorAudioTrackRole] = if roles.count == audioTracks.count {
       roles
@@ -989,7 +1769,8 @@ enum VideoEditorExporter {
     let mix = VideoEditorAudioMixFactory.makeAudioMix(
       for: audioTracks,
       settings: settings,
-      roles: resolvedRoles
+      roles: resolvedRoles,
+      audioTimeRange: audioTimeRange
     )
     for (_, role) in zip(audioTracks, resolvedRoles) {
       let volume = settings.effectiveVolume(for: role)

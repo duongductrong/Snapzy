@@ -498,4 +498,46 @@ final class VideoEditorTimelineSequenceTests: XCTestCase {
     // Output: 3.5 s at 1x + 1.25 s at 2x + 4 s at 1x = 8.75 s.
     XCTAssertEqual(m.outputDuration, 8.75, accuracy: eps)
   }
+
+  // MARK: - Timeline Clip Leading Gaps
+
+  func testLayout_advancesCursorByLeadingGapAndLeavesGapInactive() {
+    let first = TimelineClip(source: .primary, sourceDuration: 20, sourceStart: 0, sourceEnd: 6, leadingGap: 2)
+    let second = TimelineClip(source: .primary, sourceDuration: 20, sourceStart: 6, sourceEnd: 12, leadingGap: 4)
+    let placements = TimelineSequence.layout([first, second])
+
+    XCTAssertEqual(placements.count, 2)
+    XCTAssertEqual(placements[0].start, 2, accuracy: eps)
+    XCTAssertEqual(placements[0].activeStart, 2, accuracy: eps)
+    XCTAssertEqual(placements[0].activeEnd, 8, accuracy: eps)
+    XCTAssertEqual(placements[1].start, 12, accuracy: eps)
+    XCTAssertEqual(placements[1].activeStart, 12, accuracy: eps)
+    XCTAssertEqual(placements[1].activeEnd, 18, accuracy: eps)
+    XCTAssertEqual(TimelineSequence.duration([first, second]), 18, accuracy: eps)
+    XCTAssertEqual(TimelineSequence.playableDuration([first, second]), 12, accuracy: eps)
+
+    XCTAssertNil(TimelineSequence.activePlacement(at: 1.0, in: placements))
+    XCTAssertEqual(TimelineSequence.activePlacement(at: 5.0, in: placements)?.clip.id, first.id)
+    XCTAssertNil(TimelineSequence.activePlacement(at: 10.0, in: placements))
+    XCTAssertEqual(TimelineSequence.activePlacement(at: 15.0, in: placements)?.clip.id, second.id)
+  }
+
+  func testTimelineClip_decodesLegacyJSONWithoutLeadingGap() throws {
+    let id = UUID()
+    let legacyJSON = """
+    {
+      "id": "\(id.uuidString)",
+      "source": { "primary": {} },
+      "sourceDuration": 15.0,
+      "sourceStart": 2.0,
+      "sourceEnd": 10.0,
+      "slotStart": 0.0,
+      "slotEnd": 15.0
+    }
+    """
+    let decoded = try JSONDecoder().decode(TimelineClip.self, from: Data(legacyJSON.utf8))
+    XCTAssertEqual(decoded.id, id)
+    XCTAssertEqual(decoded.leadingGap, 0, accuracy: eps)
+    XCTAssertEqual(decoded.duration, 8.0, accuracy: eps)
+  }
 }

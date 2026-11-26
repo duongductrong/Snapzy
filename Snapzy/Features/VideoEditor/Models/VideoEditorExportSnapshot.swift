@@ -14,6 +14,10 @@ struct VideoEditorExportSnapshot {
   let trimEnd: CMTime
   let trimmedDuration: CMTime
   let clips: [TimelineClip]
+  let addedAudioClips: [AudioTimelineClip]
+  let textOverlays: [VideoEditorTextOverlay]
+  let usesIndependentAudioPlayback: Bool
+  let primaryAudioSourceURL: URL
   let zoomSegments: [ZoomSegment]
   let speedSegments: [SpeedSegment]
   let recordingMetadata: RecordingMetadata?
@@ -48,6 +52,15 @@ struct VideoEditorExportSnapshot {
     trimEnd = state.trimEnd
     trimmedDuration = state.trimmedDuration
     clips = state.clips
+    usesIndependentAudioPlayback = state.usesIndependentAudioPlayback
+    primaryAudioSourceURL = VideoEditorState.editorAssetURL(for: state.sourceURL, metadata: state.recordingMetadata)
+    let mutedLanes = state.mutedAudioLanes
+    addedAudioClips = usesIndependentAudioPlayback
+      ? state.audioClips.filter { !$0.isMuted && !mutedLanes.contains($0.trackIndex) }
+      : state.audioClips.filter { !$0.isPrimary && !$0.isMuted && !mutedLanes.contains($0.trackIndex) }
+    textOverlays = state.textOverlays.filter {
+      $0.isEnabled && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
     zoomSegments = state.zoomSegments
     speedSegments = state.speedSegments
     recordingMetadata = state.recordingMetadata
@@ -58,16 +71,69 @@ struct VideoEditorExportSnapshot {
     backgroundStyle = state.backgroundStyle
     backgroundPadding = state.backgroundPadding
     backgroundCornerRadius = state.backgroundCornerRadius
-    placements = TimelineSequence.layout(clips)
-    playbackPlacements = TimelineSequence.playableLayout(clips)
-    sequenceMap = TimelineSequenceMap(clips: clips, speedSegments: speedSegments)
-    clipAssets = Dictionary(uniqueKeysWithValues: clips.map { ($0.id, state.clipAsset(for: $0)) })
+    let laid = TimelineSequence.layout(clips)
+    placements = laid
+    let preserveGaps = clips.contains { $0.leadingGap > 0.01 }
+    if preserveGaps {
+      let gapAware = laid.map { placement in
+        TimelineSequence.Placement(
+          clip: placement.clip,
+          index: placement.index,
+          start: placement.activeStart,
+          end: placement.activeEnd,
+          sourceAxisStart: placement.clip.sourceStart,
+          sourceAxisEnd: placement.clip.sourceEnd
+        )
+      }
+      let gapDuration = gapAware.last?.end ?? 0
+      playbackPlacements = gapAware
+      sequenceMap = TimelineSequenceMap(
+        timelinePlacements: laid,
+        playablePlacements: gapAware,
+        sequenceDuration: gapDuration,
+        speedSegments: speedSegments
+      )
+    } else {
+      playbackPlacements = TimelineSequence.playableLayout(clips)
+      sequenceMap = TimelineSequenceMap(clips: clips, speedSegments: speedSegments)
+    }
+    clipAssets = Dictionary(
+      clips.map { ($0.id, state.clipAsset(for: $0)) },
+      uniquingKeysWith: { first, _ in first }
+    )
   }
 
-  var sequenceDuration: TimeInterval { sequenceMap.sequenceDuration }
-  var hasSpeedSegments: Bool { speedSegments.contains { $0.isEnabled && $0.rate != 1 } }
-  var hasInsertedClips: Bool { clips.contains { !$0.isPrimary } }
-  var hasSequenceEdits: Bool { clips.count > 1 || hasInsertedClips }
+  var sequenceDuration: TimeInterval {
+    sequenceMap.sequenceDuration
+  }
+
+  var hasSpeedSegments: Bool {
+    speedSegments.contains { $0.isEnabled && $0.rate != 1 }
+  }
+
+  var hasInsertedClips: Bool {
+    clips.contains { !$0.isPrimary }
+  }
+
+  var hasVideoGaps: Bool {
+    clips.contains { $0.leadingGap > 0.01 }
+  }
+
+  var hasTextOverlays: Bool {
+    !textOverlays.isEmpty
+  }
+
+  var hasActiveTransitions: Bool {
+    clips.dropFirst().contains { $0.leadingTransition?.isActive == true }
+  }
+
+  var hasDetachedAudioClips: Bool {
+    clips.contains(where: \.isAudioDetached)
+  }
+
+  var hasSequenceEdits: Bool {
+    clips.count > 1 || hasInsertedClips || hasVideoGaps || hasActiveTransitions || hasDetachedAudioClips
+  }
 
   func clipAsset(for clip: TimelineClip) -> AVAsset {
     // All assets are captured before any await; never ask the changing editor again.

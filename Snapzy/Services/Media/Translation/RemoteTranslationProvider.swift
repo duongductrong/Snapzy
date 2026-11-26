@@ -10,9 +10,9 @@ import Foundation
 
 /// Sends one prompt to a remote engine and returns its text reply.
 struct TranslationPromptCompleter {
-  let complete: (String) async throws -> String
+  let complete: @MainActor (String) async throws -> String
 
-  init(_ complete: @escaping (String) async throws -> String) {
+  init(_ complete: @escaping @MainActor (String) async throws -> String) {
     self.complete = complete
   }
 

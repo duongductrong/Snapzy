@@ -65,6 +65,7 @@ struct VideoEditorRailButton: View {
       withAnimation(LiquidGlassTokens.hoverSpring) { isHovering = hovering }
     }
     .animation(LiquidGlassTokens.hoverSpring, value: isSelected)
+    .accessibilityLabel(tooltip)
     .help(tooltip)
   }
 
@@ -72,6 +73,7 @@ struct VideoEditorRailButton: View {
     switch panel {
     case .background: return "paintpalette"
     case .zoom: return "plus.magnifyingglass"
+    case .text: return "textformat"
     case .cursor: return "cursorarrow.rays"
     case .camera: return "person.crop.square"
     case .captions: return "captions.bubble"
@@ -82,6 +84,7 @@ struct VideoEditorRailButton: View {
     switch panel {
     case .background: return L10n.Common.background
     case .zoom: return L10n.VideoEditor.zoomSettings
+    case .text: return L10n.VideoEditor.textAndTitlesHint
     case .cursor: return L10n.VideoEditor.cursorSection
     case .camera: return L10n.VideoEditor.cameraSection
     case .captions: return L10n.VideoEditor.captionsSection

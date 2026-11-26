@@ -6,6 +6,7 @@
 //
 
 import AVFoundation
+import Combine
 import SwiftUI
 
 /// Timeline view with time ruler, the clip sequence strip, playhead, and zoom/speed tracks
@@ -31,6 +32,12 @@ struct VideoTimelineView: View {
 
   private var totalHeight: CGFloat {
     var height = TimelineRulerView.height + spacing + frameStripHeight
+    if showsTextTrack {
+      height += spacing + TextTimelineLaneLayout.totalHeight(forLaneCount: state.textLaneCount)
+    }
+    if showsAudioTrack {
+      height += spacing + VideoEditorAudioTimelineTrack.totalHeight(forLaneCount: state.audioLaneCount)
+    }
     if state.isZoomTrackVisible { height += spacing + segmentTrackHeight }
     if state.isSpeedTrackVisible, !state.isGIF { height += spacing + segmentTrackHeight }
     if state.showsCameraTrack { height += spacing + segmentTrackHeight }
@@ -40,11 +47,28 @@ struct VideoTimelineView: View {
 
   var body: some View {
     let _ = observation.revision
+    let _ = bookmarkRevision
     return GeometryReader { geometry in
       let viewportWidth = geometry.size.width
 
       timelineContent
         .frame(width: viewport.contentWidth, alignment: .leading)
+        .overlay(alignment: .topLeading) {
+          TimelineSkimmerOverlay(
+            skimmerX: skimmerContentX,
+            duration: state.timelineDuration,
+            timelineWidth: viewport.contentWidth,
+            totalHeight: totalHeight
+          )
+        }
+        .overlay(alignment: .topLeading) {
+          VideoEditorTimelineSnapGuideView(
+            snapGuide: state.timelineSnapGuide,
+            duration: state.timelineDuration,
+            timelineWidth: viewport.contentWidth,
+            totalHeight: totalHeight
+          )
+        }
         .overlay(alignment: .topLeading) {
           TimelinePlayheadView(
             playbackState: playbackState,
@@ -70,6 +94,12 @@ struct VideoTimelineView: View {
         .onChange(of: state.clips) { _ in
           syncViewportDuration()
         }
+        .onReceive(state.$audioClips.receive(on: DispatchQueue.main)) { _ in
+          syncViewportDuration()
+        }
+        .onReceive(state.$timelineBookmarks) { _ in
+          bookmarkRevision &+= 1
+        }
         .onReceive(playbackState.$currentTime) { time in
           followPlayheadIfNeeded(viewport.x(for: CMTimeGetSeconds(time)))
         }
@@ -83,10 +113,51 @@ struct VideoTimelineView: View {
     let contentWidth = viewport.contentWidth
 
     return VStack(spacing: spacing) {
-      // Time ruler — measuring-tape ticks and labels along the container's top edge
-      TimelineRulerView(duration: state.timelineDuration, timelineWidth: contentWidth, visibleRange: renderRange)
-        .contentShape(Rectangle())
-        .gesture(scrubGesture(timelineWidth: contentWidth))
+      // Time ruler — measuring-tape ticks, labels, skimmer hover, and bookmark markers
+      ZStack(alignment: .topLeading) {
+        TimelineRulerView(duration: state.timelineDuration, timelineWidth: contentWidth, visibleRange: renderRange)
+          .contentShape(Rectangle())
+          .onContinuousHover { phase in
+            switch phase {
+            case .active(let location):
+              skimmerContentX = max(0, min(contentWidth, location.x))
+            case .ended:
+              skimmerContentX = nil
+            }
+          }
+          .gesture(scrubGesture(timelineWidth: contentWidth))
+
+        ForEach(state.timelineBookmarks, id: \.self) { markerTime in
+          let axisSeconds = max(0.0001, CMTimeGetSeconds(state.timelineDuration))
+          let markerX = CGFloat(min(1, max(0, markerTime / axisSeconds))) * contentWidth
+          Image(systemName: "bookmark.fill")
+            .font(.system(size: 9, weight: .bold))
+            .foregroundColor(.orange)
+            .shadow(color: .black.opacity(0.45), radius: 1.5, y: 0.5)
+            .offset(x: markerX - 4, y: 2)
+            .onTapGesture {
+              state.seek(to: CMTime(seconds: markerTime, preferredTimescale: 600))
+            }
+            .contextMenu {
+              Button(role: .destructive) {
+                state.removeBookmark(at: markerTime)
+              } label: {
+                Label(L10n.VideoEditor.removeBookmark, systemImage: "trash")
+              }
+            }
+            .help(L10n.VideoEditor.jumpToBookmarkHint)
+        }
+      }
+
+      // Text / Title overlay track — sits directly above video like a pro NLE layer.
+      if showsTextTrack {
+        VideoEditorTextTimelineTrack(
+          state: state,
+          timelineWidth: contentWidth,
+          visibleRange: renderRange
+        )
+        .equatable()
+      }
 
       // Clip sequence: one block per clip, selectable, draggable, trimmable.
       //
@@ -108,10 +179,23 @@ struct VideoTimelineView: View {
           thumbnailCache: state.clipThumbnailCache,
           timelineWidth: contentWidth,
           trackHeight: frameStripHeight,
-          visibleRange: renderRange
+          visibleRange: renderRange,
+          stickyLeadingX: viewport.scrollOffset
         )
         .equatable()
         .frame(height: frameStripHeight)
+      }
+
+      // Multi-Track Audio waveform lanes — shown for videos.
+      if showsAudioTrack {
+        VideoEditorAudioTimelineTrack(
+          state: state,
+          waveformCache: state.audioWaveformCache,
+          timelineWidth: contentWidth,
+          visibleRange: renderRange,
+          stickyLeadingX: viewport.scrollOffset
+        )
+        .equatable()
       }
 
       // Zoom timeline track
@@ -131,9 +215,18 @@ struct VideoTimelineView: View {
 
       // Captions track — shown once the video has captions.
       if showsCaptionTrack {
-        VideoEditorCaptionTimelineTrack(state: state, timelineWidth: contentWidth, visibleRange: renderRange).equatable()
+        VideoEditorCaptionTimelineTrack(state: state, timelineWidth: contentWidth, visibleRange: renderRange)
+          .equatable()
       }
     }
+  }
+
+  private var showsTextTrack: Bool {
+    !state.isGIF && !state.textOverlays.isEmpty
+  }
+
+  private var showsAudioTrack: Bool {
+    !state.isGIF
   }
 
   private var showsCaptionTrack: Bool {
@@ -195,6 +288,8 @@ struct VideoTimelineView: View {
 
   @State private var pinchBaselineZoom: CGFloat?
   @State private var pinchAnchorTime: TimeInterval?
+  @State private var bookmarkRevision: UInt64 = 0
+  @State private var skimmerContentX: CGFloat?
 
   private func anchorViewportX(for time: TimeInterval) -> CGFloat {
     let x = viewport.x(for: time) - viewport.scrollOffset
@@ -220,6 +315,52 @@ struct VideoTimelineView: View {
       .onEnded { _ in
         state.endScrubbing()
       }
+  }
+}
+
+/// Final Cut Pro style hover skimmer line + floating timecode pill on the ruler.
+private struct TimelineSkimmerOverlay: View {
+  let skimmerX: CGFloat?
+  let duration: CMTime
+  let timelineWidth: CGFloat
+  let totalHeight: CGFloat
+
+  var body: some View {
+    if let x = skimmerX, timelineWidth > 0 {
+      let durationSeconds = max(0, CMTimeGetSeconds(duration))
+      let hoveredSeconds = max(0, min(durationSeconds, Double(x / timelineWidth) * durationSeconds))
+      ZStack(alignment: .topLeading) {
+        Rectangle()
+          .fill(Color.primary.opacity(0.32))
+          .frame(width: 1, height: totalHeight)
+          .offset(x: x)
+
+        Text(Self.formatTimecode(hoveredSeconds))
+          .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+          .lineLimit(1)
+          .foregroundColor(.white)
+          .padding(.horizontal, 6)
+          .padding(.vertical, 2)
+          .background(
+            Capsule(style: .continuous)
+              .fill(Color.black.opacity(0.78))
+          )
+          .overlay(
+            Capsule(style: .continuous)
+              .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
+          )
+          .offset(x: min(max(4, x - 24), max(4, timelineWidth - 56)), y: 2)
+      }
+      .allowsHitTesting(false)
+    }
+  }
+
+  private static func formatTimecode(_ seconds: TimeInterval) -> String {
+    let tenths = Int((max(0, seconds) * 10).rounded())
+    let mins = tenths / 600
+    let secs = (tenths % 600) / 10
+    let dec = tenths % 10
+    return String(format: "%02d:%02d.%d", mins, secs, dec)
   }
 }
 

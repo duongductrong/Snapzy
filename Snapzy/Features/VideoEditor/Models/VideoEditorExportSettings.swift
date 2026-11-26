@@ -10,6 +10,7 @@ import Foundation
 
 nonisolated enum VideoEditorExportLayout {
   private static let minimumEvenDimension = 2
+  private static let maximumEvenDimension = 16_384
 
   static func evenSize(_ size: CGSize) -> CGSize {
     CGSize(
@@ -74,9 +75,11 @@ nonisolated enum VideoEditorExportLayout {
   }
 
   private static func evenDimension(for value: CGFloat) -> Int {
-    let rounded = max(Int(value.rounded()), minimumEvenDimension)
+    guard value.isFinite else { return minimumEvenDimension }
+    let clamped = min(max(value, CGFloat(minimumEvenDimension)), CGFloat(maximumEvenDimension))
+    let rounded = max(Int(clamped.rounded()), minimumEvenDimension)
     let evenValue = rounded - (rounded % 2)
-    return max(evenValue, minimumEvenDimension)
+    return min(max(evenValue, minimumEvenDimension), maximumEvenDimension)
   }
 
   private static func gcd(_ a: Int, _ b: Int) -> Int {
@@ -237,12 +240,32 @@ nonisolated enum VideoEditorAudioTrackRole: Equatable, Identifiable {
 }
 
 enum VideoEditorAudioMixFactory {
+  /// Resolve non-overlapping fade-in and fade-out durations within `totalDuration`.
+  /// When `fadeIn + fadeOut > totalDuration`, both scale proportionally so volume ramps never collide.
+  static func resolvedFadeDurations(
+    fadeIn: TimeInterval,
+    fadeOut: TimeInterval,
+    totalDuration: TimeInterval
+  ) -> (fadeIn: TimeInterval, fadeOut: TimeInterval) {
+    guard totalDuration.isFinite, totalDuration > 0.01 else { return (0, 0) }
+    let safeIn = ExportSettings.clampedAudioFade(fadeIn)
+    let safeOut = ExportSettings.clampedAudioFade(fadeOut)
+    let sum = safeIn + safeOut
+    guard sum > 0.001 else { return (0, 0) }
+    if sum <= totalDuration {
+      return (safeIn, safeOut)
+    }
+    let scale = totalDuration / sum
+    return (safeIn * scale, safeOut * scale)
+  }
+
   static func makeAudioMix(
     for audioTracks: [AVAssetTrack],
     settings: ExportSettings,
-    roles: [VideoEditorAudioTrackRole] = []
+    roles: [VideoEditorAudioTrackRole] = [],
+    audioTimeRange: CMTimeRange? = nil
   ) -> AVMutableAudioMix? {
-    guard settings.audioMode == .custom else { return nil }
+    guard settings.requiresAudioMix else { return nil }
     guard !audioTracks.isEmpty else { return nil }
 
     let resolvedRoles: [VideoEditorAudioTrackRole] = if roles.count == audioTracks.count {
@@ -250,10 +273,53 @@ enum VideoEditorAudioMixFactory {
     } else {
       VideoEditorAudioTrackRole.roles(forAudioTrackCount: audioTracks.count)
     }
+
+    let fadeRange: CMTimeRange? = if let audioTimeRange,
+                                     audioTimeRange.start.isValid,
+                                     audioTimeRange.duration.isValid,
+                                     CMTimeGetSeconds(audioTimeRange.duration) > 0.01 {
+      audioTimeRange
+    } else {
+      nil
+    }
+
+    let fades: (fadeIn: TimeInterval, fadeOut: TimeInterval) = if let fadeRange, settings.hasAudioFades {
+      resolvedFadeDurations(
+        fadeIn: settings.clampedAudioFadeIn,
+        fadeOut: settings.clampedAudioFadeOut,
+        totalDuration: CMTimeGetSeconds(fadeRange.duration)
+      )
+    } else {
+      (0, 0)
+    }
+
     let mix = AVMutableAudioMix()
     mix.inputParameters = zip(audioTracks, resolvedRoles).map { audioTrack, role in
       let params = AVMutableAudioMixInputParameters(track: audioTrack)
-      params.setVolume(settings.effectiveVolume(for: role), at: .zero)
+      let targetVolume = settings.effectiveVolume(for: role)
+      params.setVolume(targetVolume, at: fadeRange?.start ?? .zero)
+
+      if let fadeRange, targetVolume > 0 {
+        let timescale: CMTimeScale = 600
+        if fades.fadeIn > 0.001 {
+          let fadeInDuration = CMTime(seconds: fades.fadeIn, preferredTimescale: timescale)
+          params.setVolumeRamp(
+            fromStartVolume: 0,
+            toEndVolume: targetVolume,
+            timeRange: CMTimeRange(start: fadeRange.start, duration: fadeInDuration)
+          )
+        }
+        if fades.fadeOut > 0.001 {
+          let fadeOutDuration = CMTime(seconds: fades.fadeOut, preferredTimescale: timescale)
+          let rangeEnd = CMTimeRangeGetEnd(fadeRange)
+          let fadeOutStart = CMTimeSubtract(rangeEnd, fadeOutDuration)
+          params.setVolumeRamp(
+            fromStartVolume: targetVolume,
+            toEndVolume: 0,
+            timeRange: CMTimeRange(start: fadeOutStart, duration: fadeOutDuration)
+          )
+        }
+      }
       return params
     }
     return mix
@@ -371,8 +437,16 @@ nonisolated enum ExportDimensionPreset: String, CaseIterable, Identifiable, Coda
 // MARK: - Export Settings Container
 
 nonisolated struct ExportSettings: Equatable, Codable {
+  static let minimumCustomDimension: Int = 16
+  static let maximumCustomDimension: Int = 16_384
   static let minimumAudioVolume: Float = 0
   static let maximumAudioVolume: Float = 2
+  static let maximumAudioFadeDuration: TimeInterval = 5.0
+
+  static func clampedCustomDimension(_ value: Int, fallback: Int) -> Int {
+    guard value > 0 else { return fallback }
+    return min(max(value, minimumCustomDimension), maximumCustomDimension)
+  }
 
   var quality: ExportQuality = .high
   var dimensionPreset: ExportDimensionPreset = .original
@@ -383,6 +457,40 @@ nonisolated struct ExportSettings: Equatable, Codable {
   var audioVolume: Float = 1.0 // Mixed/fallback track, 0.0 to 2.0 (0% to 200%)
   var systemAudioVolume: Float = 1.0 // First Snapzy recording audio track
   var microphoneAudioVolume: Float = 1.0 // Second Snapzy recording audio track
+  var audioFadeIn: TimeInterval = 0
+  var audioFadeOut: TimeInterval = 0
+
+  init() {}
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    let defaults = Self()
+    quality = (try? c.decodeIfPresent(String.self, forKey: .quality))
+      .flatMap(ExportQuality.init(rawValue:)) ?? defaults.quality
+    dimensionPreset = (try? c.decodeIfPresent(String.self, forKey: .dimensionPreset))
+      .flatMap(ExportDimensionPreset.init(rawValue:)) ?? defaults.dimensionPreset
+    customWidth = Self.clampedCustomDimension(
+      (try? c.decodeIfPresent(Int.self, forKey: .customWidth)) ?? defaults.customWidth,
+      fallback: defaults.customWidth
+    )
+    customHeight = Self.clampedCustomDimension(
+      (try? c.decodeIfPresent(Int.self, forKey: .customHeight)) ?? defaults.customHeight,
+      fallback: defaults.customHeight
+    )
+    aspectRatioLocked = (try? c.decodeIfPresent(Bool.self, forKey: .aspectRatioLocked)) ?? defaults.aspectRatioLocked
+    audioMode = (try? c.decodeIfPresent(String.self, forKey: .audioMode))
+      .flatMap(AudioExportMode.init(rawValue:)) ?? defaults.audioMode
+    audioVolume = Self
+      .clampedAudioVolume((try? c.decodeIfPresent(Float.self, forKey: .audioVolume)) ?? defaults.audioVolume)
+    systemAudioVolume = Self.clampedAudioVolume(
+      (try? c.decodeIfPresent(Float.self, forKey: .systemAudioVolume)) ?? defaults.systemAudioVolume
+    )
+    microphoneAudioVolume = Self.clampedAudioVolume(
+      (try? c.decodeIfPresent(Float.self, forKey: .microphoneAudioVolume)) ?? defaults.microphoneAudioVolume
+    )
+    audioFadeIn = Self.clampedAudioFade((try? c.decodeIfPresent(TimeInterval.self, forKey: .audioFadeIn)) ?? 0)
+    audioFadeOut = Self.clampedAudioFade((try? c.decodeIfPresent(TimeInterval.self, forKey: .audioFadeOut)) ?? 0)
+  }
 
   /// Compute actual export dimensions for VIDEO CONTENT ONLY
   /// Note: Background padding is applied separately during rendering
@@ -491,7 +599,39 @@ nonisolated struct ExportSettings: Equatable, Codable {
     }
   }
 
+  var clampedAudioFadeIn: TimeInterval {
+    Self.clampedAudioFade(audioFadeIn)
+  }
+
+  var clampedAudioFadeOut: TimeInterval {
+    Self.clampedAudioFade(audioFadeOut)
+  }
+
+  /// True when audio is active and at least one fade duration is non-zero.
+  var hasAudioFades: Bool {
+    audioMode != .mute && (clampedAudioFadeIn > 0.001 || clampedAudioFadeOut > 0.001)
+  }
+
+  /// True when preview/export needs an `AVMutableAudioMix` (custom volumes or fades).
+  var requiresAudioMix: Bool {
+    audioMode == .custom || hasAudioFades
+  }
+
+  mutating func setAudioFadeIn(_ duration: TimeInterval) {
+    audioFadeIn = Self.clampedAudioFade(duration)
+  }
+
+  mutating func setAudioFadeOut(_ duration: TimeInterval) {
+    audioFadeOut = Self.clampedAudioFade(duration)
+  }
+
   private static func clampedAudioVolume(_ volume: Float) -> Float {
-    min(max(volume, minimumAudioVolume), maximumAudioVolume)
+    guard volume.isFinite else { return 1.0 }
+    return min(max(volume, minimumAudioVolume), maximumAudioVolume)
+  }
+
+  static func clampedAudioFade(_ duration: TimeInterval) -> TimeInterval {
+    guard duration.isFinite else { return 0 }
+    return min(max(duration, 0), maximumAudioFadeDuration)
   }
 }
