@@ -160,6 +160,8 @@ final class VideoEditorAgentMockProvider: AgentProvider {
           arguments: json(["start": times[0], "end": times[1], "rate": rate ?? fallback]),
           time: times[0]
         ))
+      } else if has("close gap", "close all gap", "dong khoang trong") {
+        calls.append(Call(name: "close_gaps", arguments: json(["clip": "all"])))
       } else if has("split", "tach"), let at = times.first {
         calls.append(Call(name: "split", arguments: json(["time": at]), time: at))
       } else if has("background", "gradient", "nen", "padding") {

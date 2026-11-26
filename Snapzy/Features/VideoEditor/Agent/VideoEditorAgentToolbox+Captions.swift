@@ -49,7 +49,25 @@ extension VideoEditorAgentToolbox {
       let range = VideoEditorCaptionSettings.fontSizeRange
       captions.settings.fontSize = min(max(CGFloat(size), range.lowerBound), range.upperBound)
     }
-    if let bold = args.bold { captions.settings.isBold = bold }
+    if let fontRaw = args.font {
+      captions.settings.customFontId = try VideoEditorAgentStudioTools.resolveFontId(fontRaw)
+    }
+    if let weight = args.fontWeight {
+      let clampedWeight = min(max(weight, 400), 900)
+      captions.settings.fontWeight = clampedWeight
+      captions.settings.isBold = clampedWeight >= 700
+    }
+    if let bold = args.bold {
+      captions.settings.isBold = bold
+      if bold, captions.settings.fontWeight < 700 {
+        captions.settings.fontWeight = 700
+      } else if !bold, captions.settings.fontWeight >= 700 {
+        captions.settings.fontWeight = 500
+      }
+    }
+    if let italic = args.italic {
+      captions.settings.isItalic = italic
+    }
     if let raw = args.textColor {
       // Opaque, like the Captions panel's color well.
       captions.settings.textColor = try VideoEditorAgentStudioTools.color(raw, name: "text_color", alpha: 1)
@@ -152,16 +170,19 @@ extension VideoEditorAgentToolbox {
 
   func removeCaptions(_ args: VideoEditorAgentCaptionIDsArguments, state: VideoEditorState) throws -> AgentToolResult {
     guard !state.captions.isEmpty else { throw VideoEditorAgentToolError.unavailable("There are no captions to remove.") }
+    let cleaned = args.ids
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+    guard !cleaned.isEmpty else { throw invalid("ids is empty. Give caption ids like [\"t3\"], or [\"all\"].") }
     var captions = state.captions
-    if args.ids.contains(where: { $0.lowercased() == "all" }) {
+    if cleaned.contains(where: { $0.lowercased() == "all" }) {
       let count = captions.segments.count
       captions.segments = []
       state.setCaptions(captions)
       return .success(["removed": count])
     }
-    guard !args.ids.isEmpty else { throw invalid("ids is empty. Give caption ids like [\"t3\"], or [\"all\"].") }
     var removed: [String] = []
-    for reference in args.ids {
+    for reference in cleaned {
       guard let id = lookup(.caption, reference), captions.segments.contains(where: { $0.id == id }) else {
         throw VideoEditorAgentToolError.notFound("caption '\(reference)'. Call get_captions for caption ids")
       }

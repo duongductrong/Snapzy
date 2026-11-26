@@ -18,6 +18,7 @@ nonisolated enum VideoEditorAgentToolName: String, CaseIterable {
   case split
   case moveClip = "move_clip"
   case deleteClip = "delete_clip"
+  case closeGaps = "close_gaps"
   case addZoom = "add_zoom"
   case updateZoom = "update_zoom"
   case removeZoom = "remove_zoom"
@@ -186,6 +187,13 @@ nonisolated enum VideoEditorAgentToolCatalog {
       .deleteClip,
       "Delete a whole clip; the rest slides left. Effects stay where they are.",
       object([("clip", string("Clip id, like c2."))], required: ["clip"])
+    ),
+    spec(
+      .closeGaps,
+      "Close trimmed dead-space gaps before a clip or across every clip on the timeline.",
+      object([
+        ("clip", string("Target clip id like \"c2\" to close the gap before it, or \"all\" to close all gaps.")),
+      ], required: ["clip"])
     ),
     spec(
       .addZoom,
@@ -385,7 +393,10 @@ nonisolated enum VideoEditorAgentToolCatalog {
         ("show_on_video", bool("Show captions on the video.")),
         ("position", string("Where captions sit.", enum: ["bottom", "top"])),
         ("text_size", number("Text height as a fraction of the video height, \(fmt(VideoEditorCaptionSettings.fontSizeRange.lowerBound))–\(fmt(VideoEditorCaptionSettings.fontSizeRange.upperBound)).")),
+        ("font", string("Installed local font family or \"system\" (never triggers network downloads; see get_timeline available_fonts).")),
+        ("font_weight", integer("Font weight 400–900 (400 regular, 600 semibold, 700 bold, 800 extrabold, 900 black).")),
         ("bold", bool("Bold text.")),
+        ("italic", bool("Italic slant.")),
         ("text_color", string("Text color: a color name or #RRGGBB.")),
         ("background_opacity", number("Opacity of the dark box behind the text, 0–1 (0 = no box).")),
         ("hide_when_fast", bool("Hide captions while a part plays faster than 2x.")),

@@ -207,7 +207,8 @@ final class VideoEditorAgentToolbox {
       studio: isStudioRecording(state),
       cursor: studioCursorScene(state),
       camera: studioCameraScene(state),
-      captions: captionsScene(state)
+      captions: captionsScene(state),
+      availableFonts: availableFontsList()
     )
   }
 
@@ -306,6 +307,8 @@ final class VideoEditorAgentToolbox {
       return try moveClip(decode(MoveArguments.self, arguments), state: state)
     case .deleteClip:
       return try deleteClip(decode(ClipArguments.self, arguments), state: state)
+    case .closeGaps:
+      return try closeGaps(decode(VideoEditorAgentCloseGapsArguments.self, arguments), state: state)
     case .addZoom:
       return try addZoom(decode(AddZoomArguments.self, arguments), state: state)
     case .updateZoom:
@@ -511,7 +514,8 @@ final class VideoEditorAgentToolbox {
     guard args.position >= 1, args.position <= state.clips.count else {
       throw VideoEditorAgentToolError.invalidArguments("position must be 1–\(state.clips.count).")
     }
-    state.moveClip(id: placement.clip.id, toIndex: args.position - 1)
+    let zeroBased = VideoEditorAgentStudioTools.clampedZeroBasedIndex(args.position, maxCount: state.clips.count)
+    state.moveClip(id: placement.clip.id, toIndex: zeroBased)
     return .success(["clip": args.clip, "position": args.position])
   }
 
@@ -522,6 +526,27 @@ final class VideoEditorAgentToolbox {
     }
     state.removeClip(id: placement.clip.id)
     return .success(["new_duration": Self.round(duration(state))])
+  }
+
+  private func closeGaps(_ args: VideoEditorAgentCloseGapsArguments, state: VideoEditorState) throws -> AgentToolResult {
+    let raw = (args.clip ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !raw.isEmpty else {
+      throw VideoEditorAgentToolError.invalidArguments(
+        "clip is required (give a clip id like \"c2\", or \"all\")."
+      )
+    }
+    let beforeDuration = duration(state)
+    if raw.lowercased() == "all" {
+      state.closeAllGaps()
+    } else {
+      let placement = try clipPlacement(raw, state)
+      state.closeGap(beforeClipIndex: placement.index)
+    }
+    let afterDuration = duration(state)
+    return .success([
+      "closed_seconds": Self.round(max(0, beforeDuration - afterDuration)),
+      "new_duration": Self.round(afterDuration),
+    ])
   }
 
   // MARK: - Zoom
@@ -634,12 +659,15 @@ final class VideoEditorAgentToolbox {
   }
 
   private func removeZooms(_ args: IDsArguments, state: VideoEditorState) throws -> AgentToolResult {
+    let cleaned = args.ids
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+    guard !cleaned.isEmpty else { throw VideoEditorAgentToolError.invalidArguments("ids is empty.") }
     let ids: [UUID]
-    if args.ids.contains(where: { $0.lowercased() == "all" }) {
+    if cleaned.contains(where: { $0.lowercased() == "all" }) {
       ids = state.zoomSegments.map(\.id)
     } else {
-      guard !args.ids.isEmpty else { throw VideoEditorAgentToolError.invalidArguments("ids is empty.") }
-      ids = try args.ids.map { try zoomID($0, state) }
+      ids = try cleaned.map { try zoomID($0, state) }
     }
     let removed = ids.map { reference(.zoom, for: $0) }
     for id in ids { state.removeZoom(id: id) }
@@ -749,12 +777,15 @@ final class VideoEditorAgentToolbox {
   }
 
   private func removeSpeeds(_ args: IDsArguments, state: VideoEditorState) throws -> AgentToolResult {
+    let cleaned = args.ids
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+    guard !cleaned.isEmpty else { throw VideoEditorAgentToolError.invalidArguments("ids is empty.") }
     let ids: [UUID]
-    if args.ids.contains(where: { $0.lowercased() == "all" }) {
+    if cleaned.contains(where: { $0.lowercased() == "all" }) {
       ids = state.speedSegments.map(\.id)
     } else {
-      guard !args.ids.isEmpty else { throw VideoEditorAgentToolError.invalidArguments("ids is empty.") }
-      ids = try args.ids.map { try speedID($0, state) }
+      ids = try cleaned.map { try speedID($0, state) }
     }
     let removed = ids.map { reference(.speed, for: $0) }
     for id in ids { state.removeSpeed(id: id) }

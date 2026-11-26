@@ -2917,6 +2917,64 @@ final class VideoEditorState: ObservableObject {
     return result.removed
   }
 
+  /// Close the trimmed dead-space gap immediately preceding `clipIndex` (single-step Undo).
+  func closeGap(beforeClipIndex clipIndex: Int) {
+    guard !isGIF, clips.indices.contains(clipIndex) else { return }
+    var updated = clips
+    let clip = updated[clipIndex]
+    updated[clipIndex] = TimelineClip(
+      id: clip.id,
+      source: clip.source,
+      sourceDuration: clip.sourceDuration,
+      sourceStart: clip.sourceStart,
+      sourceEnd: clip.sourceEnd,
+      slotStart: clip.sourceStart,
+      slotEnd: clip.slotEnd
+    )
+    if clipIndex > 0 {
+      let prev = updated[clipIndex - 1]
+      updated[clipIndex - 1] = TimelineClip(
+        id: prev.id,
+        source: prev.source,
+        sourceDuration: prev.sourceDuration,
+        sourceStart: prev.sourceStart,
+        sourceEnd: prev.sourceEnd,
+        slotStart: prev.slotStart,
+        slotEnd: prev.sourceEnd
+      )
+    }
+    guard updated != clips else { return }
+    let old = clips
+    clips = updated
+    recordAction(.replaceClips(old: old, new: updated))
+    let clamped = min(CMTimeGetSeconds(currentTime), CMTimeGetSeconds(timelineDuration))
+    seek(to: CMTime(seconds: max(0, clamped), preferredTimescale: 600))
+    updateClipActionAvailability()
+  }
+
+  /// Collapse all trimmed dead-space slot gaps across every clip on the timeline (single-step Undo).
+  func closeAllGaps() {
+    guard !isGIF, !clips.isEmpty else { return }
+    let updated = clips.map { clip in
+      TimelineClip(
+        id: clip.id,
+        source: clip.source,
+        sourceDuration: clip.sourceDuration,
+        sourceStart: clip.sourceStart,
+        sourceEnd: clip.sourceEnd,
+        slotStart: clip.sourceStart,
+        slotEnd: clip.sourceEnd
+      )
+    }
+    guard updated != clips else { return }
+    let old = clips
+    clips = updated
+    recordAction(.replaceClips(old: old, new: updated))
+    let clamped = min(CMTimeGetSeconds(currentTime), CMTimeGetSeconds(timelineDuration))
+    seek(to: CMTime(seconds: max(0, clamped), preferredTimescale: 600))
+    updateClipActionAvailability()
+  }
+
   // MARK: Delete (ripple)
 
   /// Remove a clip; everything after it slides left to close the gap.

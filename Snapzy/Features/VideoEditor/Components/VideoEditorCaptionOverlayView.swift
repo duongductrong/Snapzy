@@ -13,6 +13,7 @@ import SwiftUI
 struct VideoEditorCaptionOverlayView: View {
   @ObservedObject var state: VideoEditorState
   @ObservedObject private var playbackState: VideoEditorPlaybackState
+  @ObservedObject private var fontManager = VideoEditorFontManager.shared
   /// Where the video sits inside the canvas host, top-left coordinates.
   let videoRect: CGRect
   @Environment(\.displayScale) private var displayScale
@@ -25,6 +26,7 @@ struct VideoEditorCaptionOverlayView: View {
   }
 
   var body: some View {
+    let _ = fontManager.revision
     let time = CMTimeGetSeconds(playbackState.currentTime)
     if let segment = state.captionSegment(atSequence: time),
        let entry = cache.entry(
@@ -38,6 +40,9 @@ struct VideoEditorCaptionOverlayView: View {
         .resizable()
         .frame(width: frame.width, height: frame.height)
         .position(x: frame.midX, y: frame.midY)
+        .onChange(of: fontManager.revision) { _ in
+          cache = VideoEditorCaptionImageCache(capacity: 4)
+        }
     }
   }
 }
