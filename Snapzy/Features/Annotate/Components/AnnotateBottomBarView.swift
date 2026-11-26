@@ -636,28 +636,16 @@ struct AnnotateBottomBarView: View {
         let fileAccess = SandboxFileAccessManager.shared.beginAccessingURL(uploadURL)
         defer { fileAccess.stop() }
 
-        // Always upload with a fresh key (new URL avoids CDN cache issues)
-        let result = try await cloudManager.upload(fileURL: uploadURL)
-
-        // Delete the old cloud file in background (no garbage)
-        if let oldKey = oldCloudKey {
-          Task.detached(priority: .utility) {
-            do {
-              try await CloudManager.shared.deleteByKey(key: oldKey)
-            } catch {
-              DiagnosticLogger.shared.logError(.cloud, error, "Annotate old cloud object cleanup failed")
-            }
-          }
-        }
+        // Fresh key per upload (new URL avoids CDN cache issues); the old object is
+        // deleted in the background. One upload path (milestone 6).
+        let result = try await CloudShareService.shared.upload(fileURL: uploadURL, replacingKey: oldCloudKey)
 
         // Store cloud URL and key on state
         state.cloudURL = result.publicURL
         state.cloudKey = result.key
 
         // Auto-copy cloud link
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(result.publicURL.absoluteString, forType: .string)
+        ClipboardHelper.copyText(result.publicURL.absoluteString)
 
         // Ensure minimum visual duration (~600ms total)
         let elapsed = Date().timeIntervalSince(uploadStartTime)

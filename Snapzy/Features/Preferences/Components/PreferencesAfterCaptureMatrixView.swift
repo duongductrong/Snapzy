@@ -2,13 +2,17 @@
 //  AfterCaptureMatrixView.swift
 //  Snapzy
 //
-//  Grid component for configuring post-capture actions
+//  Grid component for configuring post-capture actions.
+//  Milestone 6: the cells edit the default after-capture automations. A
+//  capture type with a custom pipeline keeps only its Save cell here; its
+//  steps are edited in the automation editor (`AfterCaptureCustomizeRow`).
 //
 
 import SwiftUI
 
 struct AfterCaptureMatrixView: View {
   @ObservedObject private var manager = PreferencesManager.shared
+  @ObservedObject private var automations = AutomationStore.shared
 
   var body: some View {
     VStack(spacing: 0) {
@@ -64,13 +68,15 @@ struct AfterCaptureMatrixView: View {
 
   @ViewBuilder
   private func toggleColumn(captureType: CaptureType, action: AfterCaptureAction, type: CaptureType) -> some View {
-    let isDisabled = action == .openAnnotate && type == .recording
+    let isCustom = action != .save && automations.defaultAutomation(for: type).isCustomizedSystemDefault
+    let isDisabled = (action == .openAnnotate && type == .recording) || isCustom
     Toggle("", isOn: binding(for: action, type: type))
       .labelsHidden()
       .accessibilityLabel(L10n.AfterCapture.accessibilityLabel(action.displayName, captureKind: captureType.displayName))
       .frame(width: 70)
       .disabled(isDisabled)
       .opacity(isDisabled ? 0.3 : 1)
+      .help(isCustom ? L10n.Automations.systemDefaultCustomSummary(type.displayName) : "")
   }
 
   private func iconName(for action: AfterCaptureAction) -> String {

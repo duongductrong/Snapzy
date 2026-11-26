@@ -161,7 +161,7 @@ final class GoogleDriveCloudProvider: CloudProvider {
 
     logger.info("Refreshing Google Drive access token")
     guard !refreshToken.isEmpty else {
-      throw CloudError.invalidCredentials
+      throw CloudError.googleDriveAuthExpired
     }
 
     do {
@@ -181,8 +181,18 @@ final class GoogleDriveCloudProvider: CloudProvider {
       return tokens.accessToken
     } catch {
       logger.error("Failed to refresh access token: \(error.localizedDescription)")
-      throw CloudError.invalidCredentials
+      throw Self.tokenRefreshFailure(error)
     }
+  }
+
+  /// Google answers 400 (`invalid_grant`, `invalid_client`) or 401 when the saved sign-in is no
+  /// longer usable; only a reconnect fixes that. Anything else (offline, 5xx) is passed through
+  /// so the user is not told to reconnect when the network is the problem.
+  static func tokenRefreshFailure(_ error: Error) -> Error {
+    if case CloudError.uploadFailed(let statusCode, _) = error, statusCode == 400 || statusCode == 401 {
+      return CloudError.googleDriveAuthExpired
+    }
+    return error
   }
 
   // MARK: - Folder Management

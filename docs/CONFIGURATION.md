@@ -50,10 +50,11 @@ The TOML file covers portable app preferences:
 - Updates: automatic check/download and the Sparkle update channel (`stable` or `beta`).
 - Capture settings: naming templates, screenshot format (`[capture.screenshot] format`: `"png"`, `"jpeg"`, `"webp"`, `"heic"`, or `"avif"`; importing `"avif"` on a macOS without an AVIF encoder keeps the value but warns, and captures save as PNG there), clipboard content for copied images (`[capture.screenshot] clipboard_content`: `"image_and_file"` (default) or `"image_only"`, which drops the file reference for Citrix/RDP/terminal paste targets), cursor/app inclusion, freeze area, Delayed Capture countdown (`[capture.screenshot] delayed_capture_seconds`: `3`, `5`, or `10`, default `3`; shared by delayed area and delayed fullscreen), show selection area overlay, magnifier preferences (`[capture.screenshot] reverse_magnifier_zoom_direction`, `show_magnifier_by_default`, `show_magnifier_color_panel`, `magnifier_size`: `"small"`, `"medium"`, or `"large"`, default `"medium"`), window shadow in Application Capture (`[capture.screenshot] include_window_shadow`, default `true`), scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR provider selection (`[capture.ocr] selected_model`: `"builtin"` or `"custom:<uuid>"`), and custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), object cutout auto-crop.
 - After-capture actions for screenshot and recording: `save`, `quick_access`, `copy_file`, and `open_annotate` under `[capture.after.screenshot]` / `[capture.after.recording]`. Cloud upload is not part of this matrix — it is manual-only from Quick Access, Annotate, Video Editor, and History surfaces.
+- Capture toolbar (#498): `[capture.toolbar]` `show_for_area`, `double_click`, `buttons`, `hidden` (see [Capture toolbar configuration](#capture-toolbar-configuration)).
 - Recording settings: format, quality, FPS, audio, microphone device id, cursor, click highlights, keystroke overlay, live annotation shortcuts, video editor zoom transition duration.
 - Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, pinned image zoom mode (`pin_zoom_mode`: `fixedViewport` by default or `windowFollowsImage`), swipe left/right actions, hide card when window open, animation style, open in Finder after saving (`[quick_access] open_in_finder_after_save`, default `true`), action order, enabled actions, card slots, hover-activated card action shortcuts.
 - History: retention, maximum count, floating panel layout and filter.
-- Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, share link style (`[cloud] share_link_style`: `"descriptive"` or `"short"`, default `"descriptive"`, S3 and R2 only), and upload window position.
+- Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, share link style (`[cloud] share_link_style`: `"descriptive"` or `"short"`, default `"descriptive"`, S3 and R2 only), upload window position, and with `provider = "custom_http"` the active custom uploader (`[cloud] custom_uploader = "<uuid>"`). Custom uploader definitions are not in the file: they stay in Settings → Cloud on each Mac (a synced file cannot point uploads at a new server).
 - Annotate preferences.
 - Global, overlay, Annotate tool, Annotate action, and Video Editor action shortcuts.
 
@@ -97,6 +98,8 @@ are also accepted as aliases.
 `{appName}` resolves to the captured application's name (or frontmost app name
 for fullscreen/area captures). It resolves to an empty string when the context
 is not available.
+`{windowTitle}` (alias `{window.title}`) is the captured window's title, up to
+80 characters with `/` replaced by `-`; empty for area and fullscreen captures.
 
 ## OCR provider configuration
 
@@ -119,6 +122,103 @@ provider is ignored and the selection is canonicalized to `builtin`.
 agent CLI (`claude_model`, `codex_model`, `opencode_model`; empty = the CLI's
 default). CLI paths, sending permissions and learned endpoint capabilities are
 per-Mac and never exported.
+
+## Automations configuration
+
+Automations ([AUTOMATIONS.md](AUTOMATIONS.md)) export as one keyed table each,
+`[automations.<uuid>]`, because the parser has no arrays of tables. `order`
+keeps the list order. Steps are keyed sub-tables `[automations.<uuid>.steps.<nn>]`
+in run order.
+
+```toml
+[automations.8f0c2a6e-5a1d-4b6c-9a3e-2f1b0c9d8e7a]
+order = 0
+name = "Cloud Share"
+preset = "cloud-share"
+enabled = true
+capture = "area"
+save_to_export = false
+shortcut_key = "4"
+shortcut_modifiers = ["control", "shift"]
+menu_bar = false
+quick_access = true
+history = true
+external_invocation = false
+
+[automations.8f0c2a6e-5a1d-4b6c-9a3e-2f1b0c9d8e7a.steps.01]
+kind = "copy_image"
+
+[automations.8f0c2a6e-5a1d-4b6c-9a3e-2f1b0c9d8e7a.steps.02]
+kind = "upload"
+
+[automations.8f0c2a6e-5a1d-4b6c-9a3e-2f1b0c9d8e7a.steps.03]
+kind = "copy_link"
+style = "markdown"   # url | markdown | html | bbcode | custom (+ template = "…")
+
+[automations.8f0c2a6e-5a1d-4b6c-9a3e-2f1b0c9d8e7a.steps.04]
+kind = "notify"
+```
+
+- `capture`: `area`, `fullscreen`, `active_window`, `application_window`,
+  `scrolling`, `recording_area`, `recording_window` (with
+  `recording_output = "video" | "gif"`), `clipboard` (the clipboard image), or
+  `input` (runs on a file handed in by Quick Access, History, CLI or
+  Shortcuts; `save_to_export` and shortcuts do not apply and are not exported).
+- `capture_toolbar`: show the automation as a button in the capture toolbar (M6; needs an image-capable chain).
+- Event triggers (M7, [AUTOMATIONS.md](AUTOMATIONS.md#event-triggers-milestone-7)):
+  `capture_event = "off" | "screenshot" | "recording" | "both"` (run after a
+  standard Snapzy capture), `clipboard_event = true|false` (run when another app
+  copies an image), `watch_folder = "~/Downloads"` (run on new files in that
+  folder; `""` = none; a folder that doesn't exist on this Mac stays inactive
+  with a warning). Omitted keys keep the value stored in `data`. Recipes never
+  carry these; only your own config file does.
+- `menu_bar`, `quick_access`, `history`: list the automation in the menu bar
+  Automations submenu (capture and clipboard sources; ignored for `input`), the
+  Quick Access "Run Automation" menu, and the History "Run Automation" menu.
+  Omitted keys keep the value stored in `data`.
+- `external_invocation`: allow the URL scheme, `snapzy automation run` and
+  Shortcuts to start it (default `false`). `true` in an imported file is
+  honored and logged.
+- Step tables: `kind` plus that kind's keys (snake_case), optional
+  `enabled = false` and `on_failure = "continue"`. The full key list is in
+  [AUTOMATIONS.md § Configuration](AUTOMATIONS.md#configuration-toml). Unknown
+  keys warn. `save_to_folder.folder` is a path (`~` allowed) or `"export"`; the
+  folder bookmark is created on import, and a missing folder is a warning (the
+  step then shows "Needs setup").
+- Integration steps (`webhook`, `run_script`, `run_shortcut`, `share_sheet`,
+  `open_in_app`, `upload.destination`) are listed in
+  [AUTOMATIONS.md § Configuration](AUTOMATIONS.md#configuration-toml). Secret
+  values are never exported, only `{secret:NAME}` references. An imported
+  automation whose webhook, custom-uploader, script or Shortcut steps differ
+  from the one already on this Mac is marked "needs review" and won't run until
+  it is opened and saved in Settings → Automations. Script and Shortcut steps
+  stay off until "Allow script & Shortcut steps" is turned on in Settings; no
+  file key can turn it on, and the per-automation "let other apps run its
+  script steps" opt-in is never imported.
+- M6 step kinds: `redact` (`categories` = `emails`, `phoneNumbers`, `urls`, `paymentCards`, `credentials`, `faces`, `people`; `style` = `pixelate` | `blur` | `solid`) and `ai_annotate` ("AI Describe": `prompt`, `provider` = `settings` | `endpoint:<uuid>` | `cli:<kind>`). An imported `ai_annotate` step is flagged for review like webhook steps.
+- Default after-capture pipelines: `[capture.after.*]` keys stay the format for the simple matrix. A **custom** default pipeline is additionally exported as `[automations.<id>]` with `preset = "system-default-screenshot"` or `"system-default-recording"` and its steps; import writes it back into the default automation (not counted in the 20-automation cap). An imported custom default that needs review runs only its simple form until reviewed.
+- Files from Snapzy before milestone 3 used `steps = ["copy_image",
+  "upload_copy_link:markdown", …]`; that form is still imported
+  (`upload_copy_link` becomes `upload` + `copy_link`).
+- Each table also has `data` (the full automation JSON) so details the keys
+  cannot express (steps or sources from a newer Snapzy) survive a round trip;
+  edited keys and step tables win.
+- The `[automations]` header is always exported. When the file has it, import
+  replaces every automation (an empty section clears them); without it,
+  automations are left untouched. Bad entries, unknown
+  steps and modifier-less or duplicate shortcuts are warnings, never errors.
+
+## Capture toolbar configuration
+
+```toml
+[capture.toolbar]
+show_for_area = false   # the Capture Area shortcut also ends in the toolbar
+double_click = "copy"   # a button token, or "none"
+buttons = ["screenshot", "copy:C", "save:S", "upload:U", "pin:P", "annotate:A", "ocr:T", "record:R", "gif:G", "scroll:L"]
+hidden = []             # tokens of hidden buttons
+```
+
+`buttons` lists the toolbar order; a trailing `:X` is the single letter / digit accelerator (none = no key). Built-in tokens: `screenshot`, `copy`, `save`, `upload`, `pin`, `annotate`, `ocr`, `record`, `gif`, `scroll`; an automation button is `automation:<uuid>` (the automation needs `capture_toolbar = true`). Unknown tokens warn and are ignored; missing built-ins are re-added visible; duplicate accelerators are cleared. The shortcut itself is `capture_toolbar` in the shortcuts table (unbound by default).
 
 ## Example
 

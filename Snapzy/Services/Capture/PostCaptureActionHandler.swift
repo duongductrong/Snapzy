@@ -2,7 +2,12 @@
 //  PostCaptureActionHandler.swift
 //  Snapzy
 //
-//  Executes post-capture actions based on user preferences
+//  Executes post-capture actions based on user preferences.
+//
+//  Milestone 6: a standard capture runs its default after-capture automation
+//  (`AutomationStore.defaultAutomation(for:)`) through `AutomationRunner`.
+//  `executeActions` stays as the fallback when no default automation is wired
+//  (tests) and as the reference for the dual-run parity diagnostics.
 //
 
 import AppKit
@@ -21,31 +26,58 @@ final class PostCaptureActionHandler {
     preferences: PreferencesManager.shared,
     quickAccess: QuickAccessManager.shared,
     fileAccess: SandboxFileAccessManager.shared,
-    screenshotPresetAutoApplier: ScreenshotPresetAutoApplier.shared
+    screenshotPresetAutoApplier: ScreenshotPresetAutoApplier.shared,
+    defaultAutomation: { AutomationStore.shared.defaultAutomation(for: $0) }
   )
 
   private let preferences: PreferencesProviding
   private let quickAccess: QuickAccessManaging
   private let fileAccess: SandboxFileAccessing
   private let screenshotPresetAutoApplier: ScreenshotPresetAutoApplier
+  /// The default after-capture automation for a capture type; `nil` runs the legacy matrix path.
+  private let defaultAutomation: ((CaptureType) -> Automation?)?
 
   init(
     preferences: PreferencesProviding,
     quickAccess: QuickAccessManaging,
     fileAccess: SandboxFileAccessing,
-    screenshotPresetAutoApplier: ScreenshotPresetAutoApplier
+    screenshotPresetAutoApplier: ScreenshotPresetAutoApplier,
+    defaultAutomation: ((CaptureType) -> Automation?)? = nil
   ) {
     self.preferences = preferences
     self.quickAccess = quickAccess
     self.fileAccess = fileAccess
     self.screenshotPresetAutoApplier = screenshotPresetAutoApplier
+    self.defaultAutomation = defaultAutomation
   }
 
   // MARK: - Public API
 
   /// Execute all enabled post-capture actions for a screenshot
   @discardableResult
-  func handleScreenshotCapture(url: URL, pinToScreen: Bool = false) async -> QuickAccessItem? {
+  func handleScreenshotCapture(
+    url: URL,
+    pinToScreen: Bool = false,
+    routing: PostCaptureRouting = .standard
+  ) async -> QuickAccessItem? {
+    // A folder watch on the export folder must not fire on Snapzy's own capture.
+    AutomationFileOriginTracker.shared.markWritten([url])
+    if case .automation(let runID) = routing {
+      await AutomationRunner.shared.complete(runID: runID, capturedURLs: [url])
+      return nil
+    }
+    if case .captureToolbar(let sessionID) = routing {
+      CaptureToolbarController.shared.present(url: url, sessionID: sessionID)
+      return nil
+    }
+
+    if let automation = defaultAutomation?(.screenshot) {
+      // The run adds the History entry itself.
+      let item = await runDefaultAutomation(automation, type: .screenshot, urls: [url], pinToScreen: pinToScreen)
+      AutomationEventMonitor.shared.captureSaved(type: .screenshot, urls: [url])
+      return item
+    }
+
     let quickAccessItem = await executeActions(
       for: .screenshot,
       url: url,
@@ -54,13 +86,24 @@ final class PostCaptureActionHandler {
 
     // Add to capture history
     await addScreenshotToHistory(url: url)
+    AutomationEventMonitor.shared.captureSaved(type: .screenshot, urls: [url])
 
     return quickAccessItem
   }
 
   /// Execute post-capture actions for a batch of screenshots, such as
   /// fullscreen capture across multiple displays.
-  func handleScreenshotCaptures(urls: [URL]) async {
+  func handleScreenshotCaptures(urls: [URL], routing: PostCaptureRouting = .standard) async {
+    AutomationFileOriginTracker.shared.markWritten(urls)
+    if case .automation(let runID) = routing {
+      await AutomationRunner.shared.complete(runID: runID, capturedURLs: urls)
+      return
+    }
+    if case .captureToolbar(let sessionID) = routing, let first = urls.first {
+      CaptureToolbarController.shared.present(url: first, sessionID: sessionID)
+      return
+    }
+
     let validURLs = urls.filter { FileManager.default.fileExists(atPath: $0.path) }
     guard !validURLs.isEmpty else {
       DiagnosticLogger.shared.log(
@@ -74,6 +117,12 @@ final class PostCaptureActionHandler {
 
     guard validURLs.count > 1 else {
       await handleScreenshotCapture(url: validURLs[0])
+      return
+    }
+
+    if let automation = defaultAutomation?(.screenshot) {
+      await runDefaultAutomation(automation, type: .screenshot, urls: validURLs)
+      AutomationEventMonitor.shared.captureSaved(type: .screenshot, urls: validURLs)
       return
     }
 
@@ -127,10 +176,21 @@ final class PostCaptureActionHandler {
     for url in validURLs {
       await addScreenshotToHistory(url: url)
     }
+    AutomationEventMonitor.shared.captureSaved(type: .screenshot, urls: validURLs)
+  }
+
+  /// Bake the default Annotate canvas preset into a fresh screenshot, as every
+  /// routed capture does, and persist the editable session. Shared with automations.
+  func applyDefaultPreset(toScreenshot url: URL) -> AnnotationSessionData? {
+    let sessionData = screenshotPresetAutoApplier.applyDefaultPresetIfNeeded(to: url)
+    if let sessionData {
+      persistAnnotationSessionIfNeeded(sessionData, for: url)
+    }
+    return sessionData
   }
 
   /// Add a screenshot to capture history
-  private func addScreenshotToHistory(url: URL) async {
+  func addScreenshotToHistory(url: URL) async {
     guard FileManager.default.fileExists(atPath: url.path) else {
       DiagnosticLogger.shared.log(
         .warning,
@@ -176,14 +236,21 @@ final class PostCaptureActionHandler {
   /// Execute all enabled post-capture actions for a video recording
   /// - Parameter skipQuickAccess: When true, skip adding to QuickAccess (e.g. GIF flow already added it)
   func handleVideoCapture(url: URL, skipQuickAccess: Bool = false) async {
+    AutomationFileOriginTracker.shared.markWritten([url])
+    if let automation = defaultAutomation?(.recording) {
+      await runDefaultAutomation(automation, type: .recording, urls: [url], skipQuickAccess: skipQuickAccess)
+      AutomationEventMonitor.shared.captureSaved(type: .recording, urls: [url])
+      return
+    }
     await executeActions(for: .recording, url: url, skipQuickAccess: skipQuickAccess)
 
     // Add to capture history
     await addVideoToHistory(url: url)
+    AutomationEventMonitor.shared.captureSaved(type: .recording, urls: [url])
   }
 
   /// Add a video or GIF to capture history
-  private func addVideoToHistory(url: URL) async {
+  func addVideoToHistory(url: URL) async {
     guard FileManager.default.fileExists(atPath: url.path) else {
       DiagnosticLogger.shared.log(
         .warning,
@@ -275,6 +342,82 @@ final class PostCaptureActionHandler {
 
   /// Chained task serializing off-main edited-capture clipboard writes.
   private var editedClipboardTask: Task<Void, Never>?
+
+  // MARK: - Default after-capture automation (milestone 6)
+
+  /// Runs the default automation on a standard capture. Returns the Quick
+  /// Access (or pinned) item the run created for the first file, if any.
+  @discardableResult
+  private func runDefaultAutomation(
+    _ automation: Automation,
+    type: CaptureType,
+    urls: [URL],
+    pinToScreen: Bool = false,
+    skipQuickAccess: Bool = false
+  ) async -> QuickAccessItem? {
+    let scopedAccess = urls.map { fileAccess.beginAccessingURL($0) }
+    defer { scopedAccess.forEach { $0.stop() } }
+
+    guard let firstURL = urls.first, FileManager.default.fileExists(atPath: firstURL.path) else {
+      DiagnosticLogger.shared.log(
+        .error,
+        .action,
+        "Post-capture actions skipped; file missing",
+        context: ["captureType": type.rawValue, "fileName": urls.first?.lastPathComponent ?? ""]
+      )
+      return nil
+    }
+
+    logParity(automation, type: type, pinToScreen: pinToScreen, skipQuickAccess: skipQuickAccess)
+    let environment = StandardCaptureRunEnvironment(
+      quickAccess: quickAccess,
+      prepare: { [weak self] url in self?.applyDefaultPreset(toScreenshot: url) }
+    )
+    await AutomationRunner.shared.runDefault(
+      automation,
+      type: type,
+      files: urls,
+      pinToScreen: pinToScreen,
+      skipQuickAccess: skipQuickAccess,
+      environment: environment
+    )
+    return environment.item(for: firstURL)
+  }
+
+  /// Dual-run diagnostics (one beta): what the legacy matrix handler would have
+  /// done vs. what the default automation runs. A plain default must match.
+  private func logParity(_ automation: Automation, type: CaptureType, pinToScreen: Bool, skipQuickAccess: Bool) {
+    var matrix: [AfterCaptureAction: Bool] = [:]
+    for action in AfterCaptureAction.allCases {
+      matrix[action] = preferences.isActionEnabled(action, for: type)
+    }
+    let legacy = AutomationSystemDefault.legacyEffects(
+      type: type,
+      matrix: matrix,
+      pinToScreen: pinToScreen,
+      skipQuickAccess: skipQuickAccess
+    )
+    let steps = AutomationSystemDefault.runtimeSteps(
+      automation.steps,
+      type: type,
+      pinToScreen: pinToScreen,
+      skipQuickAccess: skipQuickAccess
+    )
+    let actual = AutomationSystemDefault.effects(of: steps)
+    guard legacy != actual else { return }
+    // A custom pipeline differs on purpose; a simple one never should.
+    DiagnosticLogger.shared.log(
+      automation.isCustomizedSystemDefault ? .debug : .warning,
+      .action,
+      "After-capture parity mismatch",
+      context: [
+        "captureType": type.rawValue,
+        "legacy": legacy.map(\.rawValue).joined(separator: ","),
+        "automation": actual.map(\.rawValue).joined(separator: ","),
+        "custom": automation.isCustomizedSystemDefault ? "true" : "false",
+      ]
+    )
+  }
 
   // MARK: - Private
 

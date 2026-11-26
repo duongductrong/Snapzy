@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 import Foundation
 import SnapzyCLIProtocol
 
@@ -13,9 +14,14 @@ import SnapzyCLIProtocol
 final class AppCoordinator {
   private let environment: AppEnvironment
   private var observers: [NSObjectProtocol] = []
+  private var automationShortcutsSubscription: AnyCancellable?
 
   init(environment: AppEnvironment) {
     self.environment = environment
+    AutomationLauncher.shared.captureStarter = environment.screenCaptureViewModel
+    // Custom uploaders resolve `{secret:NAME}` from the automation secret store.
+    CustomUploaderSecrets.provider = AutomationSecretStore.shared
+    AutomationNotificationRouter.install()
   }
 
   func applicationDidFinishLaunching() {
@@ -29,6 +35,16 @@ final class AppCoordinator {
       context: ["previousCrash": didCrash ? "true" : "false"]
     )
     LegacyLicenseCleanupService.shared.runIfNeeded()
+    // The default after-capture automations own the matrix from here on: load
+    // (or migrate) them before anything, a config import included, writes it.
+    _ = AutomationStore.shared
+    // Finder ▸ Quick Actions / Services ▸ "Run Snapzy Automation…".
+    AutomationServicesProvider.shared.install()
+    // Event triggers (milestone 7): watchers start only for automations that use them.
+    AutomationEventMonitor.shared.start()
+    #if DEBUG
+      AutomationRunHUDController.shared.runDemoIfRequested()
+    #endif
 
     let defaults = UserDefaults.standard
     if defaults.object(forKey: PreferencesKeys.diagnosticsRetentionDays) == nil {
@@ -89,6 +105,12 @@ final class AppCoordinator {
     )
 
     CLIServer.shared.startIfEnabled()
+    // Shortcuts / Spotlight list automations by name; refresh when they change.
+    automationShortcutsSubscription = AutomationStore.shared.$automations
+      .map { automations in automations.map { [$0.id.uuidString, $0.displayName, "\($0.externalInvocation)", "\($0.isEnabled)"] } }
+      .removeDuplicates()
+      .debounce(for: .seconds(1), scheduler: RunLoop.main)
+      .sink { _ in AutomationIntentSupport.refreshAppShortcuts() }
 
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
       DiagnosticLogger.shared.log(.debug, .ui, "Splash presentation scheduled")
@@ -99,6 +121,7 @@ final class AppCoordinator {
   }
 
   func applicationWillTerminate() {
+    AutomationRunLog.shared.flush()
     flushConfigurationSyncBeforeTermination()
     CLIServer.shared.shutdown()
     DiagnosticLogger.shared.log(.info, .lifecycle, "App terminated normally")

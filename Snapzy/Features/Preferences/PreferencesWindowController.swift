@@ -39,7 +39,8 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
     }
 
     // Elevate to regular app so Snapzy appears in the top-left menu bar and takes key focus
-    if !didElevateActivationPolicy {
+    // Another window (the automation canvas) may have dropped the policy while ours was hidden.
+    if !didElevateActivationPolicy || NSApp.activationPolicy() != .regular {
       NSApp.setActivationPolicy(.regular)
       didElevateActivationPolicy = true
       DiagnosticLogger.shared.log(.debug, .ui, "Activation policy elevated for preferences window")

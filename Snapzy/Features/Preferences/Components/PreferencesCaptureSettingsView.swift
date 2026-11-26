@@ -827,6 +827,7 @@ struct CaptureSettingsView: View {
         if selectedPane == .general {
           Section(L10n.PreferencesCapture.afterCaptureSection) {
             AfterCaptureMatrixView()
+            AfterCaptureCustomizeRow()
 
             Text(L10n.PreferencesCapture.removeBackground)
               .font(.caption)
@@ -840,6 +841,8 @@ struct CaptureSettingsView: View {
                 .labelsHidden()
             }
           }
+
+          CaptureToolbarSettingsSection()
         }
       }
       .formStyle(.grouped)

@@ -137,7 +137,7 @@ final class MenuBarCustomizationStoreTests: XCTestCase {
       captureOrder,
       [.captureAreaAnnotate, .captureApplication, .captureArea, .captureFullscreen,
        .captureActiveWindow, .scrollingCapture, .captureOCR, .captureTranslate, .captureSmartElement,
-       .captureObjectCutout, .captureDelayed, .captureDelayedFullscreen]
+       .captureObjectCutout, .captureDelayed, .captureDelayedFullscreen, .automations]
     )
     XCTAssertTrue(store.isHidden(.captureAreaAnnotate))
   }

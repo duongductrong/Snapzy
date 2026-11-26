@@ -110,6 +110,12 @@ Sidebar tab after Annotate (deep link `snapzy://settings/ai`, aliases `ask`, `as
 - System-conflict guidance via `SystemScreenshotShortcutManager`.
 - Full mechanics and default bindings: [SHORTCUTS.md](SHORTCUTS.md).
 
+### Automations (`Features/Automations/Settings/PreferencesAutomationsSettingsView.swift`)
+
+- List of automations (`AutomationStore`): shortcut recorder with enable toggle, summary, cloud warning, ⋯ menu (edit, duplicate, delete), drag reorder.
+- **New Automation** sheet (`AutomationEditorSheet`): name, capture mode, save to export folder, shortcut, step checklist, link format. **Restore Built-in Automations** re-adds deleted presets. Cap 20.
+- Details: [AUTOMATIONS.md](AUTOMATIONS.md).
+
 ### Permissions (`PreferencesPermissionsSettingsView.swift`)
 
 - Rows with status labels + System Settings deep links:

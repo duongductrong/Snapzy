@@ -740,9 +740,42 @@ struct QuickAccessCardView: View {
           action: { performAction(action) }
         )
       )
+
+      if action == .uploadToCloud, let automationsEntry = runAutomationContextMenuEntry {
+        entries.append(automationsEntry)
+      }
+    }
+
+    if !contextActions.contains(.uploadToCloud), let automationsEntry = runAutomationContextMenuEntry {
+      let destructiveIndex = entries.firstIndex { if case .separator = $0 { return true } else { return false } }
+      entries.insert(automationsEntry, at: destructiveIndex ?? entries.endIndex)
     }
 
     return entries
+  }
+
+  /// "Run Automation" submenu: automations marked for Quick Access whose steps
+  /// accept this file. They run on the card's file and reuse this card.
+  private var runAutomationContextMenuEntry: QuickAccessContextMenuEntry? {
+    guard let fileKind = AutomationFileKind.of(item.url) else { return nil }
+    let automations = AutomationStore.shared.automations(for: .quickAccess, fileKind: fileKind)
+    guard !automations.isEmpty else { return nil }
+    let item = item
+    return .submenu(
+      title: L10n.Automations.runAutomationMenu,
+      systemImage: "bolt",
+      isEnabled: true,
+      makeEntries: {
+        automations.map { automation in
+          .action(
+            title: automation.displayName,
+            systemImage: automation.symbol ?? "bolt",
+            isEnabled: true,
+            action: { AutomationTriggerActions.runFromQuickAccess(automation.id, item: item) }
+          )
+        }
+      }
+    )
   }
 
   /// Optimize as a submenu so the levels stay reachable from the context menu even
@@ -817,14 +850,13 @@ struct QuickAccessCardView: View {
     cloudUploadProgress = 0
     manager.pauseCountdownForActivity(item.id)
     let uploadStartTime = Date()
-    let oldCloudKey = item.cloudKey  // Save old key for cleanup
     DiagnosticLogger.shared.log(
       .info,
       .cloud,
       "Quick access cloud upload started",
       context: [
         "fileName": item.url.lastPathComponent,
-        "hasOldCloudKey": oldCloudKey == nil ? "false" : "true",
+        "hasOldCloudKey": item.cloudKey == nil ? "false" : "true",
       ]
     )
 
@@ -839,30 +871,10 @@ struct QuickAccessCardView: View {
       }
 
       do {
-        let fileAccess = SandboxFileAccessManager.shared.beginAccessingURL(item.url)
-        defer { fileAccess.stop() }
-
-        // Always upload with a fresh key (new URL avoids CDN cache)
-        let result = try await cloudManager.upload(fileURL: item.url)
-
-        // Delete old cloud file in background (no garbage)
-        if let oldKey = oldCloudKey {
-          Task.detached(priority: .utility) {
-            do {
-              try await CloudManager.shared.deleteByKey(key: oldKey)
-            } catch {
-              DiagnosticLogger.shared.logError(.cloud, error, "Quick access old cloud object cleanup failed")
-            }
-          }
-        }
-
-        // Update item with new cloud URL and key
-        manager.setCloudURL(id: item.id, url: result.publicURL, key: result.key)
-
-        // Auto-copy cloud link
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(result.publicURL.absoluteString, forType: .string)
+        // The automation Upload + Copy Link steps (milestone 6): a fresh key per
+        // upload (new URL avoids CDN cache), the old object removed, the card's
+        // cloud link set and the URL copied.
+        try await QuickAccessActionPerformer.shared.upload(item)
 
         // Ensure minimum visual duration (~600ms total)
         let elapsed = Date().timeIntervalSince(uploadStartTime)

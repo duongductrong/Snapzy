@@ -13,7 +13,7 @@ struct HistoryContextMenu: View {
 
   var body: some View {
     Button(L10n.Common.openInFinder) {
-      NSWorkspace.shared.activateFileViewerSelecting([record.fileURL])
+      FileRevealer.reveal([record.fileURL])
     }
 
     Button(L10n.Common.copy) {
@@ -31,6 +31,26 @@ struct HistoryContextMenu: View {
         Label(uploadMenuTitle, systemImage: uploadMenuIcon)
       }
       .disabled(manager.cloudUploadState(for: record) != nil)
+    }
+
+    let automations = AutomationStore.shared.automations(
+      for: .history,
+      fileKind: AutomationTriggerActions.fileKind(of: record)
+    )
+    if !automations.isEmpty {
+      let fileExists = FileManager.default.fileExists(atPath: record.fileURL.path)
+      Menu {
+        ForEach(automations) { automation in
+          Button {
+            AutomationTriggerActions.runFromHistory(automation.id, record: record)
+          } label: {
+            Label(automation.displayName, systemImage: automation.symbol ?? "bolt")
+          }
+          .disabled(!fileExists)
+        }
+      } label: {
+        Label(L10n.Automations.runAutomationMenu, systemImage: "bolt")
+      }
     }
 
     Divider()

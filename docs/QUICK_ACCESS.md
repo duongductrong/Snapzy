@@ -1,6 +1,6 @@
 # Quick Access
 
-Floating post-capture card stack: appears after every screenshot/video/GIF when the `showQuickAccess` after-capture action is on, offering hover actions, gestures, countdown auto-dismiss, pin windows, and the entry point into Annotate / Video Editor / cloud upload. Code lives in `Snapzy/Features/QuickAccess/`.
+Floating post-capture card stack: appears after every screenshot/video/GIF when the default after-capture automation has its Show Quick Access step on (`showQuickAccess` matrix cell), offering hover actions, gestures, countdown auto-dismiss, pin windows, and the entry point into Annotate / Video Editor / cloud upload. Code lives in `Snapzy/Features/QuickAccess/`.
 
 ## Panel
 
@@ -28,18 +28,32 @@ Default slots (`QuickAccessActionSlot.defaultAssignments`): centerTop copy, cent
 
 | Action | Behavior |
 | --- | --- |
-| `copy` | Clipboard copy + dismiss; temp file kept on disk for paste-time reads (orphans cleaned next launch) |
+| `copy` | Runs the `copyFile` automation step (or copies the cloud link as text when the card has one) through `QuickAccessActionPerformer`, then dismisses; temp file kept on disk for paste-time reads (orphans cleaned next launch) |
 | `saveOrOpen` | Temp: `TempCaptureManager.saveToExportLocation` move + history path update + annotation/video-editor sidecar move, then reveal in Finder unless Open in Finder After Saving is off (`quickAccess.openInFinderAfterSave`). Saved: reveal in Finder |
 | `dismiss` | Card removed; temp file deleted unless a history record exists or the general pasteboard still references the file (#234 paste-integrity guard) |
 | `delete` | Removes history record + annotation sidecar, deletes temp or trashes saved file, deletes recording metadata for videos |
 | `edit` | Opens Annotate (screenshots) or Video Editor (video/GIF); pauses countdown. Video Editor restores its persisted cut/zoom/speed recipe when available. Editor Save commits to the current file and leaves a temporary card available for this card's later Save action |
-| `uploadToCloud` | Manual `CloudManager.upload`, copies public link, deletes old key on re-upload; gated by `CloudManager.isConfigured` |
+| `uploadToCloud` | Runs the `upload` + `copyLink(url)` steps through `QuickAccessActionPerformer` (`CloudShareService.upload(fileURL:replacingKey:)`): sets the card's cloud link, copies the public link, deletes the old key on re-upload; gated by `CloudManager.isConfigured` |
 | `pinToScreen` | Opens always-on-top pin window (screenshots only) |
 | `collapseToEdge` | Tucks the card into the screen edge as a peek (see [Collapse to Edge](#collapse-to-edge-591)); non-destructive, also assignable as a swipe action (collapses from either direction) |
+
+### Actions on step handlers (milestone 6)
+
+`QuickAccessActionPerformer` (`Snapzy/Features/QuickAccess/Services/QuickAccessActionPerformer.swift`) is the one place card Copy and Upload touch the pasteboard or the network: it builds a one-file `AutomationRunState` bound to the card (invocation `quickAccess`, card id registered so the upload step sets that card's cloud link) and calls the same handlers automations use (`CopyFileStepHandler`, `UploadStepHandler`, `CopyLinkStepHandler`). Re-upload passes the card's old cloud key so the previous object is replaced (`QuickAccessActionEnvironment`). Nothing is written to the Activity log: a card button is not an automation run. `QuickAccessCardView` itself has no pasteboard or upload code (`scripts/check-automation-signals.sh` greps for it). Copy completes before the card is dismissed so the temp file still exists for the pasteboard read.
+
+Not steps, still in `QuickAccessManager` / the optimize store: save-or-open, reveal, pin, delete, optimize, edit, dismiss, collapse. They move or rewrite the card's own temp file, history row and session data, which no step does. See [AUTOMATIONS.md](AUTOMATIONS.md).
 
 Keyboard: hovering a card arms its action shortcuts (⌘C copy, ⌘S save/open, ⌘E edit, ⌘U upload, ⌘P pin, ⌘O optimize, ⌘⌫ delete, ⌘W dismiss, ⌥H collapse to edge). Bindings are routed only while `QuickAccessManager.hoveredItemID` is set, matched against the full key code + modifier set, and exact matches route back into `performAction` so keyboard and click share one path. Unregistered combinations always pass through to the focused app. Full mechanics, teardown paths, and validation rules: [SHORTCUTS.md](SHORTCUTS.md).
 
 Customization: `QuickAccessActionConfigurationStore` — context-menu order (`quickAccess.actions.order.v1`), enabled set (`...enabled.v1`), slot assignments (`...slots.v1`). Settings → Quick Access preview card supports drag-to-slot + swipe zones + reset. Note: commit `dd4ccd5` removed only the after-capture auto-upload preference option; the manual `uploadToCloud` card action stays, additionally gated by `isEnabled(.uploadToCloud)`.
+
+## Run Automation
+
+Context menu → **Run Automation** submenu (placed after Upload, or before the destructive group when Upload is not in the menu). Lists automations from `AutomationStore.automations(for: .quickAccess, fileKind:)`: enabled, "Show in Quick Access" on, and at least one enabled step accepts the card's file kind (image / video / GIF). Hidden when empty.
+
+- Runs `AutomationTriggerActions.runFromQuickAccess` → `AutomationLauncher.launch(invocation: .quickAccess, input:)` with the card's file, `isAlreadyInHistory: true` and `sourceQuickAccessItemID` = this card. The automation's capture source is skipped.
+- The card is reused: an upload sets this card's cloud link; no second card, no new History row, no default canvas preset. The card's countdown is paused while the run is in flight.
+- Rejections show a warning toast. Details: [AUTOMATIONS.md](AUTOMATIONS.md).
 
 ## Gestures
 
@@ -115,11 +129,12 @@ Settings → Quick Access: position (left/right), overlay size, sound effects, o
 
 ## Related docs
 
-- [POST_CAPTURE.md](POST_CAPTURE.md) — after-capture routing into Quick Access
+- [POST_CAPTURE.md](POST_CAPTURE.md) — default after-capture automation and routing into Quick Access
 - [CAPTURE.md](CAPTURE.md) — capture flows producing cards
 - [RECORDING.md](RECORDING.md) — GIF conversion placeholder swap
 - [ANNOTATE.md](ANNOTATE.md) — edit action, sidecars, drag-to-app
 - [VIDEO_EDITOR.md](VIDEO_EDITOR.md) — video/GIF editor entry
 - [HISTORY.md](HISTORY.md) — restore-to-Quick-Access flow
+- [AUTOMATIONS.md](AUTOMATIONS.md) — Run Automation on a card
 - [CLOUD.md](CLOUD.md) — manual upload gating
 - [PREFERENCES.md](PREFERENCES.md) — settings keys

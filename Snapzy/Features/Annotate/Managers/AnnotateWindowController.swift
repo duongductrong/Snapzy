@@ -1226,9 +1226,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
     // Copy to clipboard — cloud link (text) if available, otherwise image
     if let cloudURL = state.cloudURL {
-      let pasteboard = NSPasteboard.general
-      pasteboard.clearContents()
-      pasteboard.setString(cloudURL.absoluteString, forType: .string)
+      ClipboardHelper.copyText(cloudURL.absoluteString)
       SoundManager.play("Pop")
     } else if let renderedImage = renderedImage {
       ClipboardHelper.copyImage(renderedImage)
@@ -1315,18 +1313,8 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
           context: ["fileName": sourceURL.lastPathComponent, "mode": "save"]
         )
 
-        let result = try await CloudManager.shared.upload(fileURL: sourceURL)
-
-        // Delete old cloud file in background
-        if let oldKey = oldCloudKey {
-          Task.detached(priority: .utility) {
-            do {
-              try await CloudManager.shared.deleteByKey(key: oldKey)
-            } catch {
-              DiagnosticLogger.shared.logError(.cloud, error, "Annotate old cloud object cleanup failed")
-            }
-          }
-        }
+        // One upload path (milestone 6): the replaced object is deleted in the background.
+        let result = try await CloudShareService.shared.upload(fileURL: sourceURL, replacingKey: oldCloudKey)
 
         // Update state
         capturedState.cloudURL = result.publicURL
@@ -1343,9 +1331,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
         }
 
         // Auto-copy cloud link
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(result.publicURL.absoluteString, forType: .string)
+        ClipboardHelper.copyText(result.publicURL.absoluteString)
 
         SoundManager.play("Pop")
         DiagnosticLogger.shared.log(
@@ -1409,18 +1395,8 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
           context: ["fileName": sourceURL.lastPathComponent, "mode": "copy"]
         )
 
-        let result = try await CloudManager.shared.upload(fileURL: sourceURL)
-
-        // Delete old cloud file
-        if let oldKey = oldCloudKey {
-          Task.detached(priority: .utility) {
-            do {
-              try await CloudManager.shared.deleteByKey(key: oldKey)
-            } catch {
-              DiagnosticLogger.shared.logError(.cloud, error, "Annotate old cloud object cleanup failed")
-            }
-          }
-        }
+        // One upload path (milestone 6): the replaced object is deleted in the background.
+        let result = try await CloudShareService.shared.upload(fileURL: sourceURL, replacingKey: oldCloudKey)
 
         // Update state
         capturedState.cloudURL = result.publicURL
@@ -1437,9 +1413,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
         }
 
         // Copy cloud link to clipboard
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(result.publicURL.absoluteString, forType: .string)
+        ClipboardHelper.copyText(result.publicURL.absoluteString)
 
         SoundManager.play("Pop")
         DiagnosticLogger.shared.log(

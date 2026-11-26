@@ -11,6 +11,12 @@
       ]
     },
     {
+      "file": "Features/Automations.xcstrings",
+      "prefixes": [
+        "automations."
+      ]
+    },
+    {
       "file": "Features/Capture.xcstrings",
       "prefixes": [
         "after-capture.",
@@ -35,6 +41,7 @@
         "cloud-settings.",
         "cloud-transfer.",
         "cloud-usage.",
+        "cloud.custom-uploader.",
         "preferences-cloud-history."
       ]
     },

@@ -194,6 +194,8 @@ struct CloudSettingsView: View {
             LabeledContent(L10n.CloudSettings.credentialsSection) {
               Text(L10n.CloudSettings.storedSecurelyInKeychain)
             }
+          } else if config.providerType == .customHTTP {
+            EmptyView()
           } else if config.providerType == .imgbb {
             LabeledContent(L10n.CloudSettings.imgbbAPIKey) {
               Text(verbatim: cloudManager.cachedMaskedAccessKey)
@@ -237,6 +239,10 @@ struct CloudSettingsView: View {
           }
         }
 
+        if config.providerType == .customHTTP {
+          CustomUploaderSettingsSection(selectedID: activeCustomUploaderBinding)
+        }
+
         if config.providerType.usesObjectStorage {
           cloudStatsSection
           shareLinksSection
@@ -277,6 +283,17 @@ struct CloudSettingsView: View {
       }
       .help(L10n.CloudSettings.editCredentialsPasswordPrompt)
     }
+  }
+
+  /// Picking another uploader while a custom uploader is the saved provider re-saves the configuration.
+  private var activeCustomUploaderBinding: Binding<UUID?> {
+    Binding(
+      get: { CustomHTTPCloudProvider.storedUploaderID() },
+      set: { newValue in
+        guard let newValue else { return }
+        try? cloudManager.saveCustomUploaderConfiguration(uploaderID: newValue)
+      }
+    )
   }
 
   private var showsConfiguredView: Bool {
@@ -570,6 +587,7 @@ struct CloudSettingsView: View {
 /// Lead row of the provider card: provider tile, name, bucket, and connection status.
 private struct CloudProviderSummaryRow: View {
   let config: CloudConfiguration
+  @ObservedObject private var customUploaderStore = CustomUploaderStore.shared
 
   var body: some View {
     HStack(spacing: 12) {
@@ -607,6 +625,7 @@ private struct CloudProviderSummaryRow: View {
     case .cloudflareR2: return "cloud.fill"
     case .googleDrive: return "folder.fill"
     case .imgbb: return "photo.on.rectangle.angled"
+    case .customHTTP: return "server.rack"
     }
   }
 
@@ -616,6 +635,10 @@ private struct CloudProviderSummaryRow: View {
       return config.bucket.isEmpty ? "Snapzy" : config.bucket
     case .imgbb:
       return "imgbb.com"
+    case .customHTTP:
+      return CustomHTTPCloudProvider.storedUploaderID()
+        .flatMap(customUploaderStore.uploader(id:))?.name
+        ?? L10n.CustomUploader.noUploaderSelected
     case .awsS3, .cloudflareR2:
       return config.bucket
     }
@@ -913,6 +936,10 @@ private struct CloudCredentialFormView: View {
   // imgbb
   @State private var imgbbAPIKey = ""
 
+  // Custom uploader
+  @State private var customUploaderID: UUID?
+  @ObservedObject private var customUploaderStore = CustomUploaderStore.shared
+
   // Password fields
   @State private var protectionPassword = ""
   @State private var confirmProtectionPassword = ""
@@ -1052,6 +1079,8 @@ private struct CloudCredentialFormView: View {
             .foregroundColor(.secondary)
             .padding(.vertical, 4)
         }
+      } else if providerType == .customHTTP {
+        CustomUploaderSettingsSection(selectedID: $customUploaderID)
       } else if providerType == .imgbb {
         Section(L10n.CloudSettings.imgbbCredentialsSection) {
           SettingRow(
@@ -1231,8 +1260,8 @@ private struct CloudCredentialFormView: View {
         }
       }
 
-      // Protection password section
-      if !isEditing || !hasExistingPassword {
+      // Protection password section (custom uploaders keep nothing in the cloud Keychain items)
+      if providerType.usesCloudCredentials && (!isEditing || !hasExistingPassword) {
         Section(L10n.CloudSettings.protectionPasswordSection) {
           SettingRow(
             title: L10n.CloudSettings.password,
@@ -1339,6 +1368,12 @@ private struct CloudCredentialFormView: View {
       guard let newValue else { return }
       applyImportedPayload(newValue)
     }
+    .onChange(of: providerType) { newValue in
+      if newValue == .customHTTP, customUploaderID.flatMap(customUploaderStore.uploader(id:)) == nil {
+        customUploaderID = CustomHTTPCloudProvider.storedUploaderID()
+          .flatMap(customUploaderStore.uploader(id:))?.id ?? customUploaderStore.uploaders.first?.id
+      }
+    }
     .alert(L10n.CloudSettings.proceedWithoutPasswordTitle, isPresented: $showSkipPasswordWarning) {
       Button(L10n.CloudSettings.skip, role: .destructive) {
         UserDefaults.standard.set(true, forKey: PreferencesKeys.cloudPasswordSkipped)
@@ -1360,6 +1395,9 @@ private struct CloudCredentialFormView: View {
     }
     if providerType == .imgbb {
       return !imgbbAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    if providerType == .customHTTP {
+      return customUploaderID.flatMap(customUploaderStore.uploader(id:)) != nil
     }
     return !accessKey.trimmingCharacters(in: .whitespaces).isEmpty
       && !secretKey.trimmingCharacters(in: .whitespaces).isEmpty
@@ -1398,6 +1436,11 @@ private struct CloudCredentialFormView: View {
   }
 
   private func handleSave() {
+    if providerType == .customHTTP {
+      saveCustomUploader()
+      return
+    }
+
     // Validate password fields first
     if !protectionPassword.isEmpty {
       guard protectionPassword == confirmProtectionPassword else {
@@ -1419,6 +1462,24 @@ private struct CloudCredentialFormView: View {
     }
 
     saveAndTest()
+  }
+
+  /// Custom uploaders have no credentials to verify: saving only checks the uploader exists.
+  /// The editor's Test button is where the request is exercised.
+  private func saveCustomUploader() {
+    validationError = nil
+    validationSuccess = false
+    guard let customUploaderID else { return }
+    do {
+      try cloudManager.saveCustomUploaderConfiguration(uploaderID: customUploaderID)
+      validationSuccess = true
+      Task {
+        try? await Task.sleep(nanoseconds: 600_000_000)
+        onSave()
+      }
+    } catch {
+      validationError = error.localizedDescription
+    }
   }
 
   private func saveAndTest() {
@@ -1457,6 +1518,10 @@ private struct CloudCredentialFormView: View {
       case .awsS3, .cloudflareR2:
         trimmedAccessKey = accessKey.trimmingCharacters(in: .whitespacesAndNewlines)
         trimmedSecretKey = secretKey.trimmingCharacters(in: .whitespacesAndNewlines)
+      case .customHTTP:
+        // Saved through `saveCustomUploader()`; nothing to send here.
+        trimmedAccessKey = ""
+        trimmedSecretKey = ""
       }
       let refreshToken = isGoogle ? googleRefreshToken : nil
 
@@ -1537,6 +1602,11 @@ private struct CloudCredentialFormView: View {
 
     if config.providerType == .imgbb {
       imgbbAPIKey = cloudManager.loadImgbbAPIKey()
+      return
+    }
+
+    if config.providerType == .customHTTP {
+      customUploaderID = CustomHTTPCloudProvider.storedUploaderID()
       return
     }
 

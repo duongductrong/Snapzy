@@ -151,10 +151,10 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     // Subscribe to capture completions for post-capture actions
     captureManager.captureCompletedPublisher
       .receive(on: DispatchQueue.main)
-      .sink { [weak self] url in
+      .sink { [weak self] event in
         guard let self else { return }
         Task {
-          await self.postCaptureHandler.handleScreenshotCapture(url: url)
+          await self.postCaptureHandler.handleScreenshotCapture(url: event.url, routing: event.routing)
         }
       }
       .store(in: &cancellables)
@@ -412,6 +412,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       captureOCR()
     case .captureTranslate:
       captureTranslate()
+    case .captureWithToolbar:
+      captureWithToolbar()
     case .captureSmartElement:
       SmartElementCaptureController.shared.startCapture()
     case .captureObjectCutout:
@@ -444,6 +446,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       pickColor()
     case .measureScreen:
       measureScreen()
+    case .runAutomation(let id):
+      runAutomation(id: id)
     }
   }
 
@@ -553,7 +557,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     captureManager.openScreenRecordingPreferences()
   }
 
-  func captureFullscreen() {
+  func captureFullscreen(routing: PostCaptureRouting = .standard) {
     Task {
       let targetDisplayID = ScreenUtility.activeDisplayID()
 
@@ -564,11 +568,12 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       else {
         lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
         DiagnosticLogger.shared.log(.error, .capture, "Fullscreen capture aborted: no save location")
+        AutomationRunner.shared.abandon(routing: routing)
         return
       }
       saveDirectory = resolvedSaveDirectory
 
-      let context = CaptureContext.fromFrontmostApp()
+      let context = CaptureContext.fromFrontmostApp().withRouting(routing)
       isCapturing = true
       DiagnosticLogger.shared.log(.info, .capture, "Fullscreen capture flow started", context: [
         "displayID": "\(targetDisplayID)",
@@ -591,7 +596,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       // Resolve save directory based on auto-save toggle
       let actualSaveDirectory = tempCaptureManager.resolveSaveDirectory(
         for: .screenshot,
-        exportDirectory: resolvedSaveDirectory
+        exportDirectory: resolvedSaveDirectory,
+        saveOverride: automationSaveOverride(for: routing)
       )
 
       if hiddenWindowSession.didHideWindows {
@@ -617,12 +623,14 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
       if !result.savedURLs.isEmpty {
         SoundManager.playScreenshotCapture()
-        await postCaptureHandler.handleScreenshotCaptures(urls: result.savedURLs)
+        await postCaptureHandler.handleScreenshotCaptures(urls: result.savedURLs, routing: routing)
+      } else {
+        AutomationRunner.shared.abandon(routing: routing)
       }
     }
   }
 
-  func captureActiveWindow() {
+  func captureActiveWindow(routing: PostCaptureRouting = .standard) {
     Task {
       guard
         let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
@@ -631,6 +639,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       else {
         lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
         DiagnosticLogger.shared.log(.error, .capture, "Active window capture aborted: no save location")
+        AutomationRunner.shared.abandon(routing: routing)
         return
       }
       saveDirectory = resolvedSaveDirectory
@@ -647,15 +656,17 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         isCapturing = false
         lastCaptureResult = .failure(.captureFailed(L10n.ScreenCapture.failedToCropCapturedImage))
         DiagnosticLogger.shared.log(.error, .capture, "Active window capture failed: no resolvable window")
+        AutomationRunner.shared.abandon(routing: routing)
         return
       }
 
       let actualSaveDirectory = tempCaptureManager.resolveSaveDirectory(
         for: .screenshot,
-        exportDirectory: resolvedSaveDirectory
+        exportDirectory: resolvedSaveDirectory,
+        saveOverride: automationSaveOverride(for: routing)
       )
 
-      let context = CaptureContext.fromPID(target.ownerPID, windowTitle: target.title)
+      let context = CaptureContext.fromPID(target.ownerPID, windowTitle: target.title).withRouting(routing)
       let result = await captureManager.captureWindow(
         target: target,
         saveDirectory: actualSaveDirectory,
@@ -673,16 +684,49 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
       if case .success = result {
         SoundManager.playScreenshotCapture()
+      } else {
+        AutomationRunner.shared.abandon(routing: routing)
       }
     }
   }
 
-  func captureArea() {
-    startAreaCapture(initialInteractionMode: .manualRegion)
+  /// The Save choice of the automation behind `routing`, or `nil` for the
+  /// after-capture Save preference.
+  private func automationSaveOverride(for routing: PostCaptureRouting) -> Bool? {
+    // A toolbar capture waits in the temp folder until an action decides (milestone 6).
+    if case .captureToolbar = routing { return false }
+    return AutomationRunner.shared.saveToExportOverride(for: routing)
   }
 
-  func captureApplication() {
-    startAreaCapture(initialInteractionMode: .applicationWindow)
+  /// Hotkey trigger. Rejections stay silent (logged by the launcher) so a
+  /// shortcut pressed mid-capture never shows a toast.
+  func runAutomation(id: UUID) {
+    Task {
+      _ = await AutomationLauncher.shared.launch(.id(id), invocation: .hotkey)
+    }
+  }
+
+  func captureArea(routing: PostCaptureRouting = .standard) {
+    // "Also use the toolbar for Capture Area" (milestone 6, #498).
+    if routing == .standard, CaptureToolbarConfigurationStore.shared.configuration.showsForAreaShortcut {
+      captureWithToolbar()
+      return
+    }
+    startAreaCapture(initialInteractionMode: .manualRegion, routing: routing)
+  }
+
+  /// Unified capture (#498): select an area, then pick an action from a toolbar under it.
+  func captureWithToolbar() {
+    guard !isAreaSelectionActive else {
+      DiagnosticLogger.shared.log(.debug, .capture, "captureWithToolbar blocked: already active")
+      return
+    }
+    CaptureToolbarController.shared.rectStarter = self
+    startAreaCapture(initialInteractionMode: .manualRegion, routing: CaptureToolbarController.shared.beginSession())
+  }
+
+  func captureApplication(routing: PostCaptureRouting = .standard) {
+    startAreaCapture(initialInteractionMode: .applicationWindow, routing: routing)
   }
 
   func captureAreaAnnotate() {
@@ -819,11 +863,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   ///   the Freeze screen preference is off (used by delayed capture).
   private func startAreaCapture(
     initialInteractionMode: AreaSelectionInteractionMode,
-    forceFrozenSelection: Bool = false
+    forceFrozenSelection: Bool = false,
+    routing: PostCaptureRouting = .standard
   ) {
     // Prevent multiple area captures - only one at a time
     if isAreaSelectionActive {
       DiagnosticLogger.shared.log(.debug, .capture, "captureArea blocked: already active")
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
 
@@ -833,11 +879,12 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       )
     else {
       lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
     saveDirectory = resolvedSaveDirectory
 
-    let captureContext = CaptureContext.fromFrontmostApp()
+    let captureContext = CaptureContext.fromFrontmostApp().withRouting(routing)
     // Set flag BEFORE delay to close the race window
     isAreaSelectionActive = true
     DiagnosticLogger.shared.log(.info, .capture, "Area capture flow started", context: [
@@ -971,6 +1018,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             .capture,
             "Frozen area capture setup failed: \(error.localizedDescription)"
           )
+          AutomationRunner.shared.abandon(routing: routing)
           return
         } catch {
           self.isCapturing = false
@@ -982,6 +1030,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             .capture,
             "Frozen area capture setup failed: \(error.localizedDescription)"
           )
+          AutomationRunner.shared.abandon(routing: routing)
           return
         }
         self.startFrozenAreaSelection(
@@ -1264,6 +1313,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         frozenSession.invalidate()
         hiddenWindowSession.restore()
         DiagnosticLogger.shared.log(.info, .capture, "Area capture cancelled by user")
+        AutomationRunner.shared.abandon(routing: context.postCaptureRouting)
         lastCaptureResult = .failure(.cancelled)
         return
       }
@@ -1272,10 +1322,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       if case .rect(let rect) = selection.target {
         ScreenshotLastAreaStore.save(rect)
       }
+      // The capture toolbar anchors to the selection (milestone 6).
+      CaptureToolbarController.shared.noteSelection(selection.target.rect, routing: context.postCaptureRouting)
 
       let selectionContext: CaptureContext = switch selection.target {
       case .window(let target):
         CaptureContext.fromPID(target.ownerPID, windowTitle: target.title)
+          .withRouting(context.postCaptureRouting)
       case .rect, .display:
         context
       }
@@ -1292,7 +1345,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
         let actualSaveDirectory = self.tempCaptureManager.resolveSaveDirectory(
           for: .screenshot,
-          exportDirectory: resolvedSaveDirectory
+          exportDirectory: resolvedSaveDirectory,
+          saveOverride: self.automationSaveOverride(for: selectionContext.postCaptureRouting)
         )
 
         switch selection.target {
@@ -1360,6 +1414,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               frozenSession.invalidate()
               self.isCapturing = false
               self.lastCaptureResult = result
+              if case .failure = self.lastCaptureResult { AutomationRunner.shared.abandon(routing: selectionContext.postCaptureRouting) }
 
               if case .success = result {
                 SoundManager.playScreenshotCapture()
@@ -1368,11 +1423,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               frozenSession.invalidate()
               self.isCapturing = false
               self.lastCaptureResult = .failure(error)
+              if case .failure = self.lastCaptureResult { AutomationRunner.shared.abandon(routing: selectionContext.postCaptureRouting) }
               DiagnosticLogger.shared.log(.error, .capture, "Frozen area crop failed: \(error.localizedDescription)")
             } catch {
               frozenSession.invalidate()
               self.isCapturing = false
               self.lastCaptureResult = .failure(.captureFailed(error.localizedDescription))
+              if case .failure = self.lastCaptureResult { AutomationRunner.shared.abandon(routing: selectionContext.postCaptureRouting) }
               DiagnosticLogger.shared.log(.error, .capture, "Frozen area crop failed: \(error.localizedDescription)")
             }
           } else if self.lazyAreaSnapshotFailedDisplayIDs.contains(selection.displayID) {
@@ -1396,6 +1453,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             frozenSession.invalidate()
             self.isCapturing = false
             self.lastCaptureResult = result
+            if case .failure = self.lastCaptureResult { AutomationRunner.shared.abandon(routing: selectionContext.postCaptureRouting) }
 
             if case .success = result {
               SoundManager.playScreenshotCapture()
@@ -1404,6 +1462,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             frozenSession.invalidate()
             self.isCapturing = false
             self.lastCaptureResult = .failure(.captureFailed(L10n.ScreenCapture.selectionOutsideDisplayBounds))
+            if case .failure = self.lastCaptureResult { AutomationRunner.shared.abandon(routing: selectionContext.postCaptureRouting) }
             DiagnosticLogger.shared.log(
               .error,
               .capture,
@@ -1436,6 +1495,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           frozenSession.invalidate()
           self.isCapturing = false
           self.lastCaptureResult = result
+          if case .failure = self.lastCaptureResult { AutomationRunner.shared.abandon(routing: selectionContext.postCaptureRouting) }
 
           if case .success = result {
             SoundManager.playScreenshotCapture()
@@ -1486,6 +1546,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       guard let selection else {
         hiddenWindowSession.restore()
         DiagnosticLogger.shared.log(.info, .capture, "Live area capture cancelled by user")
+        AutomationRunner.shared.abandon(routing: context.postCaptureRouting)
         lastCaptureResult = .failure(.cancelled)
         return
       }
@@ -1494,10 +1555,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       if case .rect(let rect) = selection.target {
         ScreenshotLastAreaStore.save(rect)
       }
+      // The capture toolbar anchors to the selection (milestone 6).
+      CaptureToolbarController.shared.noteSelection(selection.target.rect, routing: context.postCaptureRouting)
 
       let selectionContext: CaptureContext = switch selection.target {
       case .window(let target):
         CaptureContext.fromPID(target.ownerPID, windowTitle: target.title)
+          .withRouting(context.postCaptureRouting)
       case .rect, .display:
         context
       }
@@ -1530,7 +1594,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
         let actualSaveDirectory = self.tempCaptureManager.resolveSaveDirectory(
           for: .screenshot,
-          exportDirectory: resolvedSaveDirectory
+          exportDirectory: resolvedSaveDirectory,
+          saveOverride: self.automationSaveOverride(for: selectionContext.postCaptureRouting)
         )
 
         let result: CaptureResult
@@ -1566,6 +1631,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
         self.isCapturing = false
         self.lastCaptureResult = result
+        if case .failure = self.lastCaptureResult { AutomationRunner.shared.abandon(routing: selectionContext.postCaptureRouting) }
         if case .success = result {
           SoundManager.playScreenshotCapture()
         }
@@ -2137,18 +2203,20 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     }
   }
 
-  func captureScrolling() {
+  func captureScrolling(routing: PostCaptureRouting = .standard) {
     guard !ScrollingCaptureCoordinator.shared.isActive else {
       AppToastManager.shared.show(
         message: L10n.ScrollingCapture.toastSessionAlreadyActive,
         style: .warning,
         position: .bottomCenter
       )
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
 
     if isAreaSelectionActive {
       DiagnosticLogger.shared.log(.debug, .capture, "captureScrolling blocked: area selection active")
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
 
@@ -2158,6 +2226,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       )
     else {
       lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
     saveDirectory = resolvedSaveDirectory
@@ -2183,6 +2252,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           DiagnosticLogger.shared.log(.warning, .capture, "captureScrolling: self deallocated")
           hiddenWindowSession.restore()
           AreaSelectionController.shared.cancelSelection()
+          AutomationRunner.shared.abandon(routing: routing)
           return
         }
 
@@ -2190,6 +2260,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           guard let self else {
             DiagnosticLogger.shared.log(.warning, .capture, "captureScrolling completion: self deallocated")
             hiddenWindowSession.restore()
+            AutomationRunner.shared.abandon(routing: routing)
             return
           }
 
@@ -2201,12 +2272,14 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             DiagnosticLogger.shared.log(.info, .capture, "Scrolling capture cancelled by user")
             lastCaptureResult = .failure(.cancelled)
             hiddenWindowSession.restore()
+            AutomationRunner.shared.abandon(routing: routing)
             return
           }
 
           let actualSaveDirectory = tempCaptureManager.resolveSaveDirectory(
             for: .screenshot,
-            exportDirectory: resolvedSaveDirectory
+            exportDirectory: resolvedSaveDirectory,
+            saveOverride: AutomationRunner.shared.saveToExportOverride(for: routing)
           )
 
           ScrollingCaptureCoordinator.shared.beginSession(
@@ -2214,6 +2287,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             saveDirectory: actualSaveDirectory,
             format: resolvedFormat,
             prefetchedContentTask: prefetchedContentTask,
+            routing: routing,
             onSessionEnded: {
               hiddenWindowSession.restore()
             }
@@ -2294,18 +2368,26 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     }
   }
 
-  private func startRecordingFlow(initialInteractionMode: AreaSelectionInteractionMode) {
+  private func startRecordingFlow(
+    initialInteractionMode: AreaSelectionInteractionMode,
+    routing: PostCaptureRouting = .standard
+  ) {
     guard hasPermission else {
       requestPermission()
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
 
     // Check if already recording (including a `snapzy record` recording, which has no toolbar)
-    guard !RecordingCoordinator.shared.isActive, !ScreenRecordingManager.shared.isActive else { return }
+    guard !RecordingCoordinator.shared.isActive, !ScreenRecordingManager.shared.isActive else {
+      AutomationRunner.shared.abandon(routing: routing)
+      return
+    }
 
     // Prevent multiple area selections
     guard !isAreaSelectionActive else {
       DiagnosticLogger.shared.log(.debug, .recording, "startRecordingFlow blocked: area selection active")
+      AutomationRunner.shared.abandon(routing: routing)
       return
     }
 
@@ -2327,6 +2409,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           DiagnosticLogger.shared.log(.warning, .recording, "startRecordingFlow: self deallocated")
           hiddenWindowSession.restore()
           AreaSelectionController.shared.cancelSelection()
+          AutomationRunner.shared.abandon(routing: routing)
           return
         }
 
@@ -2346,6 +2429,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           Task { @MainActor in
             RecordingCoordinator.shared.showToolbar(
               for: savedRect,
+              routing: routing,
               onSessionEnded: {
                 hiddenWindowSession.restore()
               }
@@ -2368,6 +2452,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           guard let self else {
             DiagnosticLogger.shared.log(.warning, .recording, "startRecordingFlow completion: self deallocated")
             hiddenWindowSession.restore()
+            AutomationRunner.shared.abandon(routing: routing)
             return
           }
 
@@ -2375,6 +2460,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
           guard let selection else {
             hiddenWindowSession.restore()
+            AutomationRunner.shared.abandon(routing: routing)
             return
           }
 
@@ -2383,6 +2469,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             case .rect:
               RecordingCoordinator.shared.showToolbar(
                 for: selection.rect,
+                routing: routing,
                 onSessionEnded: {
                   hiddenWindowSession.restore()
                 }
@@ -2391,6 +2478,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               RecordingCoordinator.shared.showToolbar(
                 for: selection.rect,
                 captureMode: .fullscreen,
+                routing: routing,
                 onSessionEnded: {
                   hiddenWindowSession.restore()
                 }
@@ -2400,6 +2488,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
                 for: selection.rect,
                 captureMode: .application,
                 windowTarget: target,
+                routing: routing,
                 onSessionEnded: {
                   hiddenWindowSession.restore()
                 }
@@ -3198,5 +3287,106 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       style: .error,
       position: .bottomCenter
     )
+  }
+}
+
+// MARK: - Automation capture seam
+
+extension ScreenCaptureViewModel: AutomationCaptureStarting {
+  func automationCaptureBlocker() -> AutomationLaunchRejection? {
+    guard hasPermission else {
+      requestPermission()
+      return .permissionRequired
+    }
+    guard !isAreaSelectionActive, !isCapturing,
+          !RecordingCoordinator.shared.isActive, !ScreenRecordingManager.shared.isActive,
+          !ScrollingCaptureCoordinator.shared.isActive
+    else {
+      return .captureInProgress
+    }
+    return nil
+  }
+
+  /// The saved file comes back to `AutomationRunner` through `PostCaptureRouting.automation`.
+  func startAutomationCapture(spec: AutomationCaptureSpec, routing: PostCaptureRouting) {
+    switch spec.mode {
+    case .area:
+      captureArea(routing: routing)
+    case .applicationWindow:
+      captureApplication(routing: routing)
+    case .fullscreen:
+      captureFullscreen(routing: routing)
+    case .activeWindow:
+      captureActiveWindow(routing: routing)
+    case .recordingArea:
+      startRecordingFlow(initialInteractionMode: .manualRegion, routing: routing)
+    case .recordingWindow:
+      startRecordingFlow(initialInteractionMode: .applicationWindow, routing: routing)
+    case .scrolling:
+      captureScrolling(routing: routing)
+    }
+  }
+}
+
+// MARK: - Capture toolbar (milestone 6, #498)
+
+extension ScreenCaptureViewModel: CaptureToolbarRectStarting {
+  /// Record / GIF from the toolbar: the recording toolbar on the selected rect.
+  func startRecording(in rect: CGRect, routing: PostCaptureRouting) -> Bool {
+    guard hasPermission else {
+      requestPermission()
+      return false
+    }
+    guard !RecordingCoordinator.shared.isActive, !ScreenRecordingManager.shared.isActive else {
+      return false
+    }
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(shouldHideOwnWindowsForRecordingToolbarFlow)
+    DiagnosticLogger.shared.log(.info, .recording, "Recording started from capture toolbar")
+    RecordingCoordinator.shared.showToolbar(
+      for: rect,
+      routing: routing,
+      onSessionEnded: { hiddenWindowSession.restore() }
+    )
+    return true
+  }
+
+  /// Scroll from the toolbar: a scrolling capture of the selected rect.
+  func startScrollingCapture(in rect: CGRect) -> Bool {
+    guard !ScrollingCaptureCoordinator.shared.isActive else {
+      AppToastManager.shared.show(
+        message: L10n.ScrollingCapture.toastSessionAlreadyActive,
+        style: .warning,
+        position: .bottomCenter
+      )
+      return false
+    }
+    guard let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
+      promptMessage: L10n.Recording.chooseSaveLocationMessage
+    ) else {
+      lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
+      return false
+    }
+    saveDirectory = resolvedSaveDirectory
+    let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
+    let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
+    let prefetchedContentTask = captureManager.prefetchShareableContent(
+      includeDesktopWindows: excludeDesktopIcons || excludeDesktopWidgets
+    )
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(!includesOwnAppInScreenshots)
+    let actualSaveDirectory = tempCaptureManager.resolveSaveDirectory(
+      for: .screenshot,
+      exportDirectory: resolvedSaveDirectory,
+      saveOverride: nil
+    )
+    DiagnosticLogger.shared.log(.info, .capture, "Scrolling capture started from capture toolbar")
+    ScrollingCaptureCoordinator.shared.beginSession(
+      rect: rect,
+      saveDirectory: actualSaveDirectory,
+      format: resolvedFormat,
+      prefetchedContentTask: prefetchedContentTask,
+      routing: .standard,
+      onSessionEnded: { hiddenWindowSession.restore() }
+    )
+    return true
   }
 }

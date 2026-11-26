@@ -378,6 +378,7 @@ private extension KeyboardShortcutManager {
     case .translate: setTranslateShortcut(config)
     case .smartElement: setSmartElementShortcut(config)
     case .objectCutout: setObjectCutoutShortcut(config)
+    case .unifiedCapture: setUnifiedCaptureShortcut(config)
     case .history: setHistoryShortcut(config)
     case .pickColor: setPickColorShortcut(config)
     case .measureScreen: setMeasureScreenShortcut(config)

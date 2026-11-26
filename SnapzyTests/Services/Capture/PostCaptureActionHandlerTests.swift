@@ -75,7 +75,22 @@ final class PostCaptureActionHandlerTests: XCTestCase {
     }
   }
 
+  /// Milestone 6: standard captures run the default automation the matrix
+  /// describes. These tests predate the switch, so they double as parity
+  /// tests of the automation path against the legacy behavior.
   private func makeHandler(quickAccess: QuickAccessManaging) -> PostCaptureActionHandler {
+    let preferences = preferences!
+    return PostCaptureActionHandler(
+      preferences: preferences,
+      quickAccess: quickAccess,
+      fileAccess: SandboxFileAccessManager.shared,
+      screenshotPresetAutoApplier: screenshotPresetAutoApplier,
+      defaultAutomation: { AutomationSystemDefault.make(for: $0, matrix: preferences.storedMatrix(for: $0)) }
+    )
+  }
+
+  /// The pre-milestone-6 matrix handler, for side-by-side parity checks.
+  private func makeLegacyHandler(quickAccess: QuickAccessManaging) -> PostCaptureActionHandler {
     PostCaptureActionHandler(
       preferences: preferences,
       quickAccess: quickAccess,
@@ -343,6 +358,54 @@ final class PostCaptureActionHandlerTests: XCTestCase {
     XCTAssertTrue(fakeQuickAccess.addedScreenshots.isEmpty)
     XCTAssertTrue(fakeQuickAccess.pinnedScreenshotIDs.isEmpty)
     XCTAssertEqual(fakeQuickAccess.pinnedScreenshotURLs, [tempFileURL])
+  }
+
+  // MARK: - Legacy parity (milestone 6)
+
+  /// Every matrix combination without Annotate (it opens a window) × pin flag:
+  /// the automation path makes the same Quick Access / pin calls as the legacy one.
+  func testDefaultAutomationMatchesLegacyQuickAccessAndPinEffects() async throws {
+    for bits in 0..<4 {
+      for pin in [false, true] {
+        preferences.setAction(.copyFile, for: .screenshot, enabled: bits & 1 != 0)
+        preferences.setAction(.showQuickAccess, for: .screenshot, enabled: bits & 2 != 0)
+        preferences.setAction(.openAnnotate, for: .screenshot, enabled: false)
+
+        let legacyQuickAccess = FakeQuickAccessManager()
+        let legacyItem = await makeLegacyHandler(quickAccess: legacyQuickAccess)
+          .handleScreenshotCapture(url: tempFileURL, pinToScreen: pin)
+        let legacyClipboard = NSPasteboard.general.changeCount
+        let newQuickAccess = FakeQuickAccessManager()
+        let newItem = await makeHandler(quickAccess: newQuickAccess)
+          .handleScreenshotCapture(url: tempFileURL, pinToScreen: pin)
+        let label = "copy=\(bits & 1 != 0) qa=\(bits & 2 != 0) pin=\(pin)"
+
+        XCTAssertEqual(newQuickAccess.addedScreenshots, legacyQuickAccess.addedScreenshots, label)
+        XCTAssertEqual(newQuickAccess.pinnedScreenshotIDs.count, legacyQuickAccess.pinnedScreenshotIDs.count, label)
+        XCTAssertEqual(newQuickAccess.pinnedScreenshotURLs, legacyQuickAccess.pinnedScreenshotURLs, label)
+        XCTAssertEqual(newItem == nil, legacyItem == nil, label)
+        // Copy on → the automation path wrote the pasteboard again.
+        XCTAssertEqual(NSPasteboard.general.changeCount != legacyClipboard, bits & 1 != 0, label)
+      }
+    }
+  }
+
+  func testDefaultAutomationMatchesLegacyForRecordingsWithSkipQuickAccess() async throws {
+    let videoURL = tempDirectory.appendingPathComponent("parity.mp4")
+    try Data([0, 1, 2, 3]).write(to: videoURL)
+    for bits in 0..<4 {
+      for skip in [false, true] {
+        preferences.setAction(.copyFile, for: .recording, enabled: bits & 1 != 0)
+        preferences.setAction(.showQuickAccess, for: .recording, enabled: bits & 2 != 0)
+
+        let legacyQuickAccess = FakeQuickAccessManager()
+        await makeLegacyHandler(quickAccess: legacyQuickAccess).handleVideoCapture(url: videoURL, skipQuickAccess: skip)
+        let newQuickAccess = FakeQuickAccessManager()
+        await makeHandler(quickAccess: newQuickAccess).handleVideoCapture(url: videoURL, skipQuickAccess: skip)
+
+        XCTAssertEqual(newQuickAccess.addedVideos, legacyQuickAccess.addedVideos, "bits=\(bits) skip=\(skip)")
+      }
+    }
   }
 
   // MARK: - AfterCaptureAction Properties

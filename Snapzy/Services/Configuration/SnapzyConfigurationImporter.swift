@@ -81,8 +81,24 @@ enum SnapzyConfigurationImporter {
     collectCloud(&reader, defaults: defaults, mutations: &mutations)
     collectAnnotate(&reader, defaults: defaults, mutations: &mutations)
     collectShortcuts(&reader, mutations: &mutations)
+    collectAutomations(&reader, defaults: defaults, mutations: &mutations)
 
     return PreparedImport(issues: reader.issues, mutations: mutations)
+  }
+
+  private static func collectAutomations(
+    _ reader: inout SnapzyConfigurationReader,
+    defaults: UserDefaults,
+    mutations: inout [() -> Void]
+  ) {
+    let result = SnapzyConfigurationAutomationsCodec.parse(reader.document)
+    result.warnings.forEach { reader.warning($0) }
+    // AutomationStore tracks the standard defaults only; tests importing into
+    // isolated defaults must not rewrite the user's automations.
+    guard let automations = result.automations, defaults == UserDefaults.standard else { return }
+    mutations.append {
+      AutomationStore.shared.replaceAll(automations)
+    }
   }
 
   private static func validateSchema(_ reader: inout SnapzyConfigurationReader) {
@@ -283,6 +299,34 @@ enum SnapzyConfigurationImporter {
     }
     collectAfterCapture(&reader, type: .screenshot, mutations: &mutations)
     collectAfterCapture(&reader, type: .recording, mutations: &mutations)
+    collectCaptureToolbar(&reader, defaults: defaults, mutations: &mutations)
+  }
+
+  /// `[capture.toolbar]` (milestone 6, #498).
+  private static func collectCaptureToolbar(
+    _ reader: inout SnapzyConfigurationReader,
+    defaults: UserDefaults,
+    mutations: inout [() -> Void]
+  ) {
+    let buttons = reader.stringArray("capture", "toolbar", "buttons")
+    let hidden = reader.stringArray("capture", "toolbar", "hidden")
+    let doubleClick = reader.string("capture", "toolbar", "double_click")
+    let showsForArea = reader.bool("capture", "toolbar", "show_for_area")
+    guard buttons != nil || doubleClick != nil || showsForArea != nil else { return }
+    var warnings: [String] = []
+    let store = defaults == UserDefaults.standard
+      ? CaptureToolbarConfigurationStore.shared
+      : CaptureToolbarConfigurationStore(defaults: defaults)
+    let configuration = CaptureToolbarConfiguration.fromTOML(
+      buttons: buttons,
+      hidden: hidden,
+      doubleClick: doubleClick,
+      showsForArea: showsForArea,
+      base: store.configuration,
+      warnings: &warnings
+    )
+    warnings.forEach { reader.warning($0) }
+    mutations.append { store.update(configuration) }
   }
 
   private static func collectRecording(
@@ -570,6 +614,14 @@ enum SnapzyConfigurationImporter {
     }
     collectEnumString(&reader, "cloud", "uploads_window_position", allowed: CloudUploadFloatingPosition.allCases.map(\.rawValue), mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.cloudUploadsFloatingPosition)
+    }
+    // Only which custom uploader is active; definitions are never imported.
+    collectString(&reader, "cloud", "custom_uploader", mutations: &mutations) { raw in
+      guard let id = UUID(uuidString: raw) else {
+        if raw.isEmpty { defaults.removeObject(forKey: PreferencesKeys.cloudCustomUploaderID) }
+        return
+      }
+      defaults.set(id.uuidString, forKey: PreferencesKeys.cloudCustomUploaderID)
     }
   }
 

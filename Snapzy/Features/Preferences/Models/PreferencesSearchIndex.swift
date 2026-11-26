@@ -148,6 +148,14 @@ extension PreferencesSearchEntry {
             detail: L10n.AfterCapture.saveDescription, keywords: ["auto", "disk", "post capture"], anchored: false),
       .init(.capture, section: afterCapture, title: AfterCaptureAction.openAnnotate.displayName,
             detail: L10n.AfterCapture.openAnnotateDescription, keywords: ["markup", "post capture"], anchored: false),
+      .init(.capture, section: afterCapture, title: L10n.Automations.systemDefaultCustomize,
+            detail: L10n.Automations.systemDefaultSectionFooter, keywords: ["automation", "pipeline", "post capture"], anchored: false),
+      .init(.capture, section: L10n.CaptureToolbar.settingsSection, title: L10n.CaptureToolbar.settingsSection,
+            detail: L10n.CaptureToolbar.settingsDescription, keywords: ["toolbar", "unified", "498", "record region"]),
+      .init(.capture, section: L10n.CaptureToolbar.settingsSection, title: L10n.CaptureToolbar.showForArea,
+            keywords: ["toolbar", "area"], anchored: false),
+      .init(.capture, section: L10n.CaptureToolbar.settingsSection, title: L10n.CaptureToolbar.doubleClickLabel,
+            keywords: ["toolbar", "double click"], anchored: false),
       .init(.capture, section: afterCapture, title: L10n.PreferencesCapture.autoCropSubjectTitle,
             detail: L10n.PreferencesCapture.autoCropSubjectDescription, keywords: ["remove background", "cutout"]),
     ]
@@ -598,7 +606,7 @@ extension PreferencesSearchEntry {
     let uploadsWindow = L10n.CloudSettings.uploadsWindowSection
     return [
       .init(.cloud, section: provider, title: L10n.CloudSettings.provider,
-            keywords: ["s3", "r2", "google drive", "aws", "imgbb"]),
+            keywords: ["s3", "r2", "google drive", "aws", "imgbb", "custom uploader", "sharex", "sxcu"]),
       .init(.cloud, section: provider, title: L10n.CloudSettings.edit,
             keywords: ["cloud settings", "credentials"], anchored: false),
       .init(.cloud, section: provider, title: L10n.CloudSettings.reset,

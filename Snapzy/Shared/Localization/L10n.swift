@@ -10,6 +10,7 @@ import Foundation
 nonisolated enum L10n {
   private nonisolated static let tableMappings: [(prefix: String, tableName: String)] = [
     ("action.", "Common"),
+    ("automations.", "Automations"),
     ("combine.", "Combine"),
     ("command-line.", "CommandLine"),
     ("menu.", "Menubar"),
@@ -66,6 +67,7 @@ nonisolated enum L10n {
     ("cloud-settings.", "Cloud"),
     ("cloud-transfer.", "Cloud"),
     ("cloud-usage.", "Cloud"),
+    ("cloud.custom-uploader.", "Cloud"),
     ("shortcut-overlay.", "Shortcuts"),
     ("shortcut-recorder.", "Shortcuts"),
     ("shortcut-validation.", "Shortcuts"),
@@ -197,6 +199,11 @@ nonisolated enum L10n {
       "preferences.tab.ai",
       defaultValue: "AI",
       comment: "Preferences tab title for the Annotate AI prompt (Ask) settings"
+    )
+    static let automationsTab = string(
+      "preferences.tab.automations",
+      defaultValue: "Automations",
+      comment: "Settings sidebar tab title for automations"
     )
     static let commandLineTab = string(
       "preferences.tab.command-line",
@@ -5413,6 +5420,11 @@ nonisolated enum L10n {
       defaultValue: "imgbb",
       comment: "Cloud provider display name for the imgbb image host"
     )
+    static let customHTTP = string(
+      "cloud-provider.custom-http",
+      defaultValue: "Custom Uploader",
+      comment: "Cloud provider display name for a user-defined HTTP uploader (ShareX-style)"
+    )
   }
 
   enum CloudExpire {
@@ -5468,6 +5480,11 @@ nonisolated enum L10n {
       "cloud-operation.invalid-credentials",
       defaultValue: "Invalid cloud credentials. Please verify your Access Key and Secret Key.",
       comment: "Error shown when cloud credentials are invalid"
+    )
+    static let googleDriveAuthExpired = string(
+      "cloud-operation.google-drive-auth-expired",
+      defaultValue: "Google Drive sign-in expired or was revoked. Reconnect Google Drive in Preferences -> Cloud.",
+      comment: "Error shown when Google rejects the saved Google Drive sign-in and the user must reconnect"
     )
     static func uploadFailed(_ code: Int, message: String) -> String {
       format(

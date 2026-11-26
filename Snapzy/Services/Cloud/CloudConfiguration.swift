@@ -100,6 +100,9 @@ struct CloudConfiguration: Codable, Equatable {
     case .imgbb:
       // imgbb needs only the API key, which lives in the Keychain.
       return true
+    case .customHTTP:
+      // The uploader is chosen by `cloud.customUploaderID`; nothing to check here.
+      return true
     }
   }
 }

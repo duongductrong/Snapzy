@@ -21,6 +21,12 @@ final class ProtocolModelTests: XCTestCase {
     XCTAssertLessThan(ProtocolVersion(major: 1, minor: 9), ProtocolVersion(major: 2, minor: 0))
   }
 
+  func testProtocolVersion_currentServesAutomations() {
+    XCTAssertEqual(ProtocolVersion.current, ProtocolVersion(major: 1, minor: 1))
+    XCTAssertGreaterThanOrEqual(ProtocolVersion.current, .automations)
+    XCTAssertLessThan(ProtocolVersion(major: 1, minor: 0), .automations)
+  }
+
   func testProtocolVersion_rejectsMalformedJSON() {
     XCTAssertThrowsError(try CLIJSON.makeDecoder().decode(ProtocolVersion.self, from: Data(#""v1""#.utf8)))
   }

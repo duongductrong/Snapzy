@@ -311,9 +311,7 @@ final class TranslationCardManager: NSObject, NSWindowDelegate {
 enum TranslationCardPasteboard {
   @MainActor
   static func copy(_ text: String) {
-    let pasteboard = NSPasteboard.general
-    pasteboard.clearContents()
-    pasteboard.setString(text, forType: .string)
+    ClipboardHelper.copyText(text)
   }
 }
 

@@ -352,11 +352,9 @@ final class HistoryFloatingManager: ObservableObject {
           throw CloudError.fileNotFound(record.fileURL)
         }
 
-        let result = try await CloudManager.shared.upload(fileURL: record.fileURL)
+        let result = try await CloudShareService.shared.upload(fileURL: record.fileURL)
 
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(result.publicURL.absoluteString, forType: .string)
+        ClipboardHelper.copyText(result.publicURL.absoluteString)
 
         let elapsed = Date().timeIntervalSince(uploadStartTime)
         let remainingDelay = max(0, 0.6 - elapsed)

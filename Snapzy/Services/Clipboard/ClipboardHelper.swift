@@ -27,6 +27,61 @@ private nonisolated let logger = Logger(subsystem: "Snapzy", category: "Clipboar
 /// When `ClipboardImageContentOption` is `.imageOnly`, image copies skip the file URL and
 /// write pixel data only (still one pasteboard item). Media and multi-file copies are unaffected.
 enum ClipboardHelper {
+  // MARK: - Text
+
+  /// The one writer for links and text (Cloud links, translations, automations).
+  /// Returns the pasteboard change count after the write.
+  @discardableResult
+  static func copyText(_ text: String) -> Int {
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString(text, forType: .string)
+    SnapzyPasteboardWrites.record(pasteboard)
+    return pasteboard.changeCount
+  }
+
+  // MARK: - Reading
+
+  /// Writes the clipboard's image (pixel data, or an image file reference) as a
+  /// PNG into `directory` and returns it; `nil` when the clipboard holds no image.
+  static func readImageFile(
+    from pasteboard: NSPasteboard = .general,
+    into directory: URL,
+    date: Date = Date()
+  ) -> URL? {
+    let image: NSImage? = {
+      if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
+         let file = urls.first(where: { UTType(filenameExtension: $0.pathExtension)?.conforms(to: .image) == true }),
+         let image = NSImage(contentsOf: file)
+      {
+        return image
+      }
+      return (pasteboard.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage])?.first
+    }()
+    guard let image,
+          let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+    else { return nil }
+
+    let bitmap = NSBitmapImageRep(cgImage: cgImage)
+    guard let data = bitmap.representation(using: .png, properties: [:]) else { return nil }
+    do {
+      try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+      let formatter = DateFormatter()
+      formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+      formatter.locale = Locale(identifier: "en_US_POSIX")
+      let url = CaptureOutputNaming.makeUniqueFileURL(
+        in: directory,
+        baseName: "Snapzy_Clipboard_\(formatter.string(from: date))",
+        fileExtension: "png"
+      )
+      try data.write(to: url, options: .atomic)
+      return url
+    } catch {
+      DiagnosticLogger.shared.logError(.clipboard, error, "Clipboard image write failed")
+      return nil
+    }
+  }
+
   // MARK: - File-based copy
 
   /// Copy one or more file URLs to the clipboard.
@@ -39,6 +94,7 @@ enum ClipboardHelper {
     let pasteboard = NSPasteboard.general
     pasteboard.clearContents()
     let didWrite = pasteboard.writeObjects(urls.map { $0 as NSURL })
+    SnapzyPasteboardWrites.record(pasteboard)
     if didWrite {
       PasteboardReferenceTracker.record(urls: urls, changeCount: pasteboard.changeCount)
     } else {
@@ -81,6 +137,7 @@ enum ClipboardHelper {
     pasteboard.clearContents()
     let didWrite = pasteboard.writeObjects([url as NSURL])
     addFileURLFallbackRepresentations(to: pasteboard, fileURL: url)
+    SnapzyPasteboardWrites.record(pasteboard)
     if didWrite {
       PasteboardReferenceTracker.record(urls: [url], changeCount: pasteboard.changeCount)
     }
@@ -241,6 +298,7 @@ enum ClipboardHelper {
       let pasteboard = NSPasteboard.general
       pasteboard.clearContents()
       pasteboard.writeObjects([image])
+      SnapzyPasteboardWrites.record(pasteboard)
       return
     }
 
@@ -275,6 +333,7 @@ enum ClipboardHelper {
       let pasteboard = NSPasteboard.general
       pasteboard.clearContents()
       pasteboard.writeObjects([image])
+      SnapzyPasteboardWrites.record(pasteboard)
       return
     }
 
@@ -303,6 +362,7 @@ enum ClipboardHelper {
     encodedType: NSPasteboard.PasteboardType?,
     content: ClipboardImageContentOption? = nil
   ) {
+    defer { SnapzyPasteboardWrites.record(pasteboard) }
     if (content ?? ClipboardImageContentOption.current()) == .imageOnly,
        writeImageOnlyItem(
          to: pasteboard,
@@ -405,6 +465,7 @@ enum ClipboardHelper {
       didSetData = item.setData(tiffData, forType: .tiff) && didSetData
     }
     let didWrite = pasteboard.writeObjects([item])
+    SnapzyPasteboardWrites.record(pasteboard)
 
     DiagnosticLogger.shared.log(
       didWrite && didSetData ? .info : .warning,
@@ -497,5 +558,27 @@ enum ClipboardHelper {
       lastWrite = nil
       lock.unlock()
     }
+  }
+}
+
+/// The general pasteboard's change count after Snapzy's last write, so the
+/// "image copied" automation trigger never fires on Snapzy's own copies.
+nonisolated enum SnapzyPasteboardWrites {
+  private static let lock = NSLock()
+  private static var lastChangeCount: Int?
+
+  static func record(_ pasteboard: NSPasteboard) {
+    guard pasteboard.name == .general else { return }
+    let count = pasteboard.changeCount
+    lock.lock()
+    lastChangeCount = count
+    lock.unlock()
+  }
+
+  /// True when the pasteboard still holds what Snapzy wrote last.
+  static func isOwned(changeCount: Int) -> Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return lastChangeCount == changeCount
   }
 }

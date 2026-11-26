@@ -161,7 +161,9 @@ Snapzy/
 
   Features/
     Annotate/
+    Automations/
     Capture/
+    CaptureToolbar/
     CommandLine/
     CrashReport/
     Onboarding/
@@ -264,12 +266,14 @@ SnapzyUITests/
 | `Features/Onboarding/` | Onboarding step views and visual system, including first-run language selection |
 | `Features/Capture/` | High-level screenshot, OCR, Snip to Translate card (`Translation/`), cutout, scrolling-capture, and recording entry actions |
 | `Features/Recording/` | Recording toolbar, overlays, live annotation, stop/GIF handoff |
-| `Features/QuickAccess/` | Floating post-capture stack, temp-file persistence UX, drag-to-app, pinned screenshot windows |
+| `Features/QuickAccess/` | Floating post-capture stack, temp-file persistence UX, drag-to-app, pinned screenshot windows; `Services/QuickAccessActionPerformer` runs card Copy / Upload through automation step handlers |
 | `Features/History/` | Floating capture history panel, compact/expanded cards, restore flow, and direct file drag-out |
 | `Features/Annotate/` | Image editor, export, crop, blur, mockup, cutout-aware editing, inline area annotate |
 | `Features/VideoEditor/` | Trim, zoom, speed (timelapse) segments, background, Smart Camera, GIF/video export |
 | `Features/Preferences/` | General, Capture, Quick Access, Shortcuts, Permissions, History storage/retention, Cloud, Advanced, About tabs |
 | `Features/Shortcuts/` | Keyboard shortcut cheat-sheet overlay |
+| `Features/Automations/` | Automation model, store, runner + step handlers, Settings → Automations (see [`AUTOMATIONS.md`](AUTOMATIONS.md)). Subfolders: `Models/` (incl. `AutomationSystemDefaults`, `AutomationAIConfigs`), `Engine/` (incl. `StandardCaptureRunEnvironment`), `Steps/` (incl. `AutomationAISteps`), `Services/`, `Settings/` (incl. `AutomationSystemDefaultViews`), `Sharing/` (`.snapzyautomation` codec, gallery, import sheet), `Triggers/`, `UI/` |
+| `Features/CaptureToolbar/` | Unified capture toolbar (#498): configuration + store, controller, view, Capture settings section (see [`CAPTURE.md`](CAPTURE.md#capture-toolbar-498)) |
 | `Features/Updates/` | Sparkle menu binding and update UI bridge |
 | `Features/CrashReport/` | Crash report prompt and diagnostics UX |
 | `Features/CommandLine/` | Approval prompt for apps using the `snapzy` command |
@@ -348,6 +352,7 @@ SnapzyUITests/
 - `WindowSelectionQueryService` resolves the hovered topmost app window from CoreGraphics window lists plus `SCShareableContent`, so app-mode hover stays accurate without doing expensive live queries on every draw pass. Before a live overlay appears, it also synchronously retains an already-open eligible third-party menu-bar popover, because a global shortcut can close that UI before asynchronous enumeration begins. It captures the containing display once and crops the popover bounds, which supports transient windows that Core Graphics can enumerate but cannot independently render. `AreaSelectionController` checks the exact WindowServer ID over a short, bounded session-start interval: `AreaSelectionOverlayView` restores the retained image below its dim layer only when that source has disappeared, avoiding double rendering for popovers that remain alive. The retained crop has a 12pt transparent rounded-corner mask for clean PNG output. The retained candidate merges ahead of the regular layer-0 list. Nonzero windows are deliberately never added by the later live query, which keeps the scope limited to UI that was already visible at capture start and excludes Snapzy and dedicated macOS system UI. `ScreenCaptureManager` prefers ScreenCaptureKit, then uses the retained popover image if it has disappeared; Core Graphics is only a live-popover fallback. The selected owner PID flows into `WindowCaptureTarget.ownerPID` for exact window capture metadata.
 - `Services/Capture/SmartElement/` owns the standalone Smart Element session. `SmartElementCaptureController` creates live per-screen overlay panels, resolves the topmost non-Snapzy owner with `SmartElementWindowOwnerResolver`, forwards that PID into `SmartElementQueryService`, and commits highlighted rects through `SmartElementCapturePerformer`.
 - `SmartElementQueryService` and `AXElementInspector` power Smart Element hover detection. The service throttles cursor updates and dispatches AX queries to a background queue to ensure 60fps performance without blocking the main thread, gates on `AXIsProcessTrusted()`, queries the target app via `AXUIElementCreateApplication(pid)`, walks up to the nearest meaningful AX role, and flips the AX top-left rect into AppKit bottom-left global coordinates before publishing. The protocol seam (`AXSnapshotProviding` + `AXElementSnapshot`) keeps the pipeline unit-testable.
+- Since milestone 6 `PostCaptureActionHandler` runs the **default after-capture automation** (`AutomationStore.defaultAutomation(for:)`, `AutomationRunner.runDefault`) for standard captures; the legacy `executeActions` is the fallback and parity reference until one beta shows no "After-capture parity mismatch" logs ([`POST_CAPTURE.md`](POST_CAPTURE.md)).
 - `PostCaptureActionHandler` executes clipboard copy before slower Quick Access and screenshot auto-open actions after files already exist, so auto-copy is not blocked by thumbnail generation or overlay work.
 - `PostCaptureActionHandler` also persists editable annotation sidecars when screenshot default presets are auto-applied before the file reaches clipboard, Quick Access, history, or Annotate auto-open. `ScreenshotPresetAutoApplier` keeps this route lightweight by rendering preset canvas effects directly, without spinning up a full Annotate state object.
 - Manual Open Annotate (`⇧⌘A`, menu bar, and `snapzy://open/annotate`) opens an empty editor through `AnnotateManager.openEmptyAnnotation()` and then applies the configured clipboard-image behavior: ask by default, load automatically, or do nothing.
@@ -407,6 +412,7 @@ Directory structure mirrors the app: `SnapzyTests/Services/Cloud/AWSV4SignerTest
 | `Services/Capture/TempCaptureManager` | Unit | **P1** | File lifecycle, mock `FileManager` |
 | `Services/Capture/PostCaptureActionHandler` | Unit | **P1** | Routing logic, protocol DI |
 | `Services/Cloud/CloudManager` | Integration | **P2** | Facade, mock providers |
+| `Features/Automations` default automations, recipes, AI steps; `Features/CaptureToolbar` | Unit | **P1** | Parity vs legacy effects, fake run environment |
 | `Features/Capture/CaptureViewModel` | Unit | **P2** | State transitions only, high coupling |
 | `Features/Onboarding/`, `Features/Preferences/` | UI | **P3** | XCUITest |
 

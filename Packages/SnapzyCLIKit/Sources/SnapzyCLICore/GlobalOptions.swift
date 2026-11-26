@@ -16,8 +16,18 @@ struct GlobalOptions: ParsableArguments {
   @Flag(help: "Print JSON even when stdout is a terminal.")
   var json = false
 
-  @Option(help: "Seconds to wait for each Snapzy request.")
-  var timeout: Double = 30
+  static let defaultTimeout: Double = 30
+
+  /// `nil` when not given, so a command with a longer default (`automation run`) can tell.
+  @Option(
+    name: .customLong("timeout"),
+    help: "Seconds to wait for each Snapzy request (default 30; `automation run`: 300)."
+  )
+  var timeoutOverride: Double?
+
+  var timeout: Double {
+    timeoutOverride ?? Self.defaultTimeout
+  }
 
   @Option(name: .customLong("launch-timeout"), help: "Seconds to wait for Snapzy to start.")
   var launchTimeout: Double = 15
@@ -26,7 +36,9 @@ struct GlobalOptions: ParsableArguments {
   var noLaunch = false
 
   mutating func validate() throws {
-    guard timeout > 0 else { throw ValidationError("--timeout must be greater than 0.") }
+    if let timeoutOverride, !(timeoutOverride > 0) {
+      throw ValidationError("--timeout must be greater than 0.")
+    }
     guard launchTimeout > 0 else { throw ValidationError("--launch-timeout must be greater than 0.") }
   }
 

@@ -34,7 +34,7 @@ flowchart TD
 
 ## Global shortcut table
 
-All 23 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortcutManager.swift`):
+All 24 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortcutManager.swift`):
 
 | Kind | Action | Default |
 | --- | --- | --- |
@@ -62,8 +62,9 @@ All 23 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 | `delayedFullscreen` | Delayed Fullscreen (countdown, then fullscreen screenshot) | **unbound** |
 | `pickColor` | Pick Color (live loupe, click copies the pixel's hex; pressing again cancels) | **unbound** |
 | `measureScreen` | Measure Screen (frozen screen ruler; pressing again cancels) | `⌥⇧M` |
+| `unifiedCapture` | Capture with Toolbar (#498: select an area, then pick Copy / Save / Upload / Record / … from a toolbar; hotkey signature id 27, TOML token `capture_toolbar`; `ShortcutAction.captureWithToolbar`) | **unbound** |
 
-- The seven unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
+- The eight unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
 - Editing UI: Settings → Shortcuts (see [PREFERENCES.md](PREFERENCES.md)).
 
 ## Overlay shortcuts (in-overlay, not plain global hotkeys)
@@ -148,9 +149,15 @@ Hover a Quick Access card, press the key, the card runs that action. Every `Quic
 - Validation (`validateVideoEditorActionShortcut`): rejects the editor's fixed combos (`VideoEditorShortcutManager.reservedShortcuts`: ⌘Z, ⇧⌘Z, ⌘S, ⌘U, ⌘B, ⌘=, ⌘-, ⌘0, ⌘C/V/X/A, ⌘W/Q/M/H, ⌘,) and enabled global shortcuts (swap offered). Annotate keys may be reused: the two windows are never key at once. Setting a global shortcut to the Video Editor binding is rejected the other way round ("Already used by … in Video Editor").
 - Fixed editor keys (not remappable) are listed in [VIDEO_EDITOR.md](VIDEO_EDITOR.md#editor-shortcuts-video-only).
 
+## Automation shortcuts
+
+User automations ([AUTOMATIONS.md](AUTOMATIONS.md)) register their own global hotkeys after the fixed kinds: signature `0x5A535700` ("ZSW"), ids from 1000 assigned per registration pass and mapped back to the automation id; dispatched as `ShortcutAction.runAutomation(UUID)`. Fn combos use `fnBindings`. `KeyboardShortcutManager` re-registers whenever an automation's enabled state or hotkey changes, and `hasFnBoundShortcuts` includes them.
+
 ## Conflict detection
 
 `ShortcutValidationService` (`Snapzy/Services/Shortcuts/ShortcutValidationService.swift`):
+
+- Automations: `validateAutomationShortcut` requires a modifier and rejects collisions with enabled global shortcuts, other enabled automations, Annotate and Video Editor actions. `validateGlobalShortcut` rejects combos an enabled automation uses (no swap offer).
 
 - Cross-namespace duplicate checks (global ↔ annotate action ↔ video editor action ↔ independent overlay ↔ annotate tool): duplicate → `.reject` with `.error` severity, blocks assignment.
 - System screenshot conflicts: `SystemScreenshotShortcutManager` reads `com.apple.symbolichotkeys` via `UserDefaults(suiteName:)` (requires the shared-preference entitlement — see [APP_LIFECYCLE.md](APP_LIFECYCLE.md)). Symbolic hotkey IDs: 28 (save area), 29 (copy area), 30 (save screen), 31 (copy screen), 184 (screenshot options).
@@ -185,6 +192,7 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 | `snapzy://capture/application` | Application-window capture |
 | `snapzy://capture/active-window` | Capture active window |
 | `snapzy://capture/area-annotate` | Capture area → Annotate |
+| `snapzy://capture/toolbar` | Capture with Toolbar (aliases `capture-toolbar`, `toolbar`, `capture/unified`) |
 | `snapzy://capture/scrolling` | Scrolling capture |
 | `snapzy://capture/ocr` | OCR capture |
 | `snapzy://capture/translate` | Snip to Translate |
@@ -201,11 +209,20 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 | `snapzy://tools/measure` | Measure Screen / Screen Ruler (aliases `tools/ruler`, `measure`, `ruler`, `screen-ruler`, `measure-screen`) |
 | `snapzy://show/shortcuts` | Toggle shortcut cheat sheet |
 | `snapzy://settings` / `snapzy://settings?tab=<tab>` | Open Settings, optionally to a tab |
+| `snapzy://automation/run?id=<uuid>` or `?name=<name>` | Run an automation (aliases `automations/run`, `workflow/run`); see below |
+| `snapzy://automation/import?url=https://…` | Import a `.snapzyautomation` recipe into the import sheet (https only, ≤ 256 KB; asks before downloading, never auto-enables; aliases `automations/import`) |
+| `snapzy://automations` | Open Settings → Automations (aliases `automation`, `workflows`) |
 
 - `open/combine` query params: repeat `?file=` with absolute paths; ≥2 valid files → combines directly, otherwise opens the combine picker (`CombineImagesCoordinator.presentPicker()`). Example:
 
   ```sh
   open 'snapzy://open/combine?file=/tmp/first.png&file=/tmp/second.png'
+  ```
+
+- `automation/run` ([AUTOMATIONS.md](AUTOMATIONS.md)): `id` (UUID) wins over `name` (trimmed, case-insensitive; names are not unique, so use `id` when several share one). A non-UUID `id` is treated as a name. Runs through `AutomationLauncher` with `invocation: .urlScheme`, so it needs **both** the global URL scheme toggle **and** the automation's "Allow URL scheme, command line and Shortcuts" switch (Settings → Automations → editor → Run from Other Apps; default off). The automation's own source runs (usually an interactive capture); an input-source automation is rejected (`needs_file`). `file=` is ignored (logged as a warning): a link must not be able to upload a local file. Rejections (not found, ambiguous name, not allowed, disabled, busy, missing permission) show a warning toast and never reveal other automations' names. Example:
+
+  ```sh
+  open 'snapzy://automation/run?name=Cloud%20Share'
   ```
 
 - Settings tabs: `general`, `capture`, `annotate`, `ai` (`ask`), `quick-access`, `history`, `shortcuts`, `permissions`, `command-line` (`cli`), `cloud`, `advanced`, `about`. Also accepted as path form (`snapzy://settings/capture`).
@@ -220,3 +237,5 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 - [ANNOTATE.md](ANNOTATE.md) — editor tools and actions
 - [VIDEO_EDITOR.md](VIDEO_EDITOR.md) — video editor keys
 - [CONFIGURATION.md](CONFIGURATION.md) — TOML control of shortcut prefs
+- [AUTOMATIONS.md](AUTOMATIONS.md) — automation triggers, external gate, rejection reasons, recipe import
+- [CAPTURE.md](CAPTURE.md#capture-toolbar-498) — capture toolbar

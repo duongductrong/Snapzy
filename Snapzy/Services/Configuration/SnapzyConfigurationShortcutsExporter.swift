@@ -186,6 +186,7 @@ extension GlobalShortcutKind {
     case .history: return "history"
     case .pickColor: return "pick_color"
     case .measureScreen: return "measure_screen"
+    case .unifiedCapture: return "capture_toolbar"
     }
   }
 }

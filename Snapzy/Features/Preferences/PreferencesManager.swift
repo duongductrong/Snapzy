@@ -127,6 +127,10 @@ enum CombineSaveAsEditPreference {
 @MainActor
 final class PreferencesManager: ObservableObject {
 
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   static let shared = PreferencesManager()
 
   // MARK: - Published State
@@ -145,8 +149,54 @@ final class PreferencesManager: ObservableObject {
 
   // MARK: - After Capture Actions
 
+  /// Since milestone 6 the default after-capture automations own the matrix.
+  /// Set by `AutomationStore.shared`; when set, `setAction` edits the default
+  /// automation, which mirrors back through `adoptDefaultAutomationMatrix`.
+  var defaultAutomationWriter: ((AfterCaptureAction, CaptureType, Bool) -> Void)?
+
   /// Set whether an action is enabled for a capture type
   func setAction(_ action: AfterCaptureAction, for type: CaptureType, enabled: Bool) {
+    if let defaultAutomationWriter {
+      DiagnosticLogger.shared.log(
+        .info,
+        .preferences,
+        "After-capture action changed",
+        context: [
+          "action": action.rawValue,
+          "captureType": type.rawValue,
+          "enabled": enabled ? "true" : "false",
+        ]
+      )
+      defaultAutomationWriter(action, type, enabled)
+      return
+    }
+    writeMatrixValue(action, for: type, enabled: enabled)
+  }
+
+  /// The matrix as stored (or its defaults) for one capture type.
+  func storedMatrix(for type: CaptureType) -> [AfterCaptureAction: Bool] {
+    var matrix: [AfterCaptureAction: Bool] = [:]
+    for action in AfterCaptureAction.allCases {
+      matrix[action] = isActionEnabled(action, for: type)
+    }
+    return matrix
+  }
+
+  /// Mirrors a default automation into the matrix: its readers (temp vs
+  /// export, edited-capture copy, config export) and the legacy key a
+  /// downgraded build reads.
+  func adoptDefaultAutomationMatrix(_ matrix: [AfterCaptureAction: Bool], for type: CaptureType) {
+    guard matrix != storedMatrix(for: type) else { return }
+    for (action, enabled) in matrix {
+      if afterCaptureActions[action] == nil {
+        afterCaptureActions[action] = [:]
+      }
+      afterCaptureActions[action]?[type] = enabled
+    }
+    saveAfterCaptureActions()
+  }
+
+  private func writeMatrixValue(_ action: AfterCaptureAction, for type: CaptureType, enabled: Bool) {
     if afterCaptureActions[action] == nil {
       afterCaptureActions[action] = [:]
     }

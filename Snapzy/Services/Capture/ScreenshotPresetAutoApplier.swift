@@ -134,6 +134,49 @@ final class ScreenshotPresetAutoApplier {
     )
   }
 
+  // MARK: - Automation steps
+
+  /// The preset with `id`, or the default preset when `id` is nil.
+  func preset(id: UUID?) -> AnnotateCanvasPreset? {
+    let presets = presetStore.loadPresets()
+    let wanted = id ?? presetStore.loadDefaultPresetId(validating: presets)
+    guard let wanted else { return nil }
+    return presets.first { $0.id == wanted }
+  }
+
+  /// Renders `preset` over `source` into `destination` (the source is untouched).
+  /// Returns `nil` without writing when the preset leaves the image unchanged.
+  func apply(_ preset: AnnotateCanvasPreset, from source: URL, writingTo destination: URL) throws -> AnnotationSessionData? {
+    guard Self.defaultPresetChangesCanvas(preset.payload) else { return nil }
+    let originalImageData = try fileAccess.withScopedAccess(to: source) {
+      try Data(contentsOf: source)
+    }
+    guard let sourceImage = AnnotateState.loadImageWithCorrectScale(from: source) else {
+      throw AutomationStepError.noFile
+    }
+    let effects = Self.canvasEffects(from: preset.payload)
+    guard let renderedImage = AnnotateExporter.renderCanvasEffects(sourceImage: sourceImage, effects: effects),
+          let renderedData = AnnotateExporter.imageData(from: renderedImage, for: destination.pathExtension)
+    else {
+      throw AutomationStepError.renderFailed
+    }
+    try renderedData.write(to: destination, options: .atomic)
+    DiagnosticLogger.shared.log(
+      .info,
+      .annotate,
+      "Automation canvas preset applied",
+      context: ["fileName": source.lastPathComponent, "preset": preset.name]
+    )
+    return AnnotationSessionData(
+      originalImageData: originalImageData,
+      annotations: [],
+      canvasEffects: effects,
+      selectedCanvasPresetId: preset.id,
+      isSelectedCanvasPresetDirty: false,
+      cropRect: nil
+    )
+  }
+
   private static func defaultPresetChangesCanvas(_ payload: AnnotateCanvasPresetPayload) -> Bool {
     emptyCanvasPresetPayload.approximatelyEquals(payload) == false
   }

@@ -43,12 +43,12 @@ flowchart TD
 
 ## AppCoordinator duties
 
-`Snapzy/App/AppCoordinator.swift` — `applicationDidFinishLaunching()` performs, in order:
+`Snapzy/App/AppCoordinator.swift` — `init(environment:)` wires `AutomationLauncher.shared.captureStarter = environment.screenCaptureViewModel` (the capture seam every automation trigger launches through). `applicationDidFinishLaunching()` performs, in order:
 
 1. `AppIdentityManager.shared.refresh()`.
 2. `CrashSentinel.shared.checkAndReset()` → `didCrash` flag.
 3. `DiagnosticLogger.shared.startSession()` + launch log with `previousCrash` context.
-4. `LegacyLicenseCleanupService.shared.runIfNeeded()`.
+4. `LegacyLicenseCleanupService.shared.runIfNeeded()`, then `AutomationServicesProvider.shared.install()` — sets `NSApp.servicesProvider` for Finder's "Run Snapzy Automation…" service and calls `NSUpdateDynamicServices()` once per `CFBundleVersion` (`automations.servicesRegisteredVersion`); see [AUTOMATIONS.md](AUTOMATIONS.md#triggers).
 5. UserDefaults defaults seeding (only when key absent):
 
    | Key | Seeded value |
@@ -67,7 +67,7 @@ flowchart TD
 6. TOML configuration: `SnapzyConfigurationAutoImporter.applyIfNeededOnLaunch()` → `SnapzyConfigurationSyncCoordinator.start()`; when the auto-import did not apply, `scheduleSync(reason: .appLaunch)`.
 7. Schedulers: `LogCleanupScheduler`, `RecordingMetadataCleanupScheduler`, `CaptureHistoryRetentionService` — all `.start()`.
 8. `AppStatusBarController.shared.setup(viewModel:updater:didCrash:)` — `didCrash` prompt only when crash detected **and** `DiagnosticLogger.isEnabled`; also pre-allocates the area-selection window pool via `AreaSelectionController.shared.prepareWindowPool()` (targets <150 ms activation).
-9. `CLIServer.shared.startIfEnabled()` — starts the `snapzy` CLI socket when `cliEnabled` is on and keeps following that key via KVO (see [CLI.md](CLI.md)); also sweeps expired headless captures.
+9. `CLIServer.shared.startIfEnabled()` — starts the `snapzy` CLI socket when `cliEnabled` is on and keeps following that key via KVO (see [CLI.md](CLI.md)); also sweeps expired headless captures. Right after, a Combine subscription on `AutomationStore.$automations` (debounced 1 s) calls `AutomationIntentSupport.refreshAppShortcuts()` so Shortcuts/Spotlight parameter phrases follow automation names and the external flag.
 10. After 0.3 s: `presentStartupExperience(...)` (see Onboarding).
 11. `.showOnboarding` notification observer → `SplashWindowController.shared.show(forceOnboarding: true)` ("Restart Onboarding" path).
 
@@ -104,6 +104,7 @@ State machine (`SplashScreen`): `splash` → `language` → `sponsor` (only when
   - When recording/paused: **Stop Recording (mm:ss)** and **Pause/Resume Recording**, then separator.
   - Captures: Capture Area, Capture Area & Annotate, Application Capture (overlay shortcut), Capture Fullscreen, Capture Active Window, Scrolling Capture (disabled while a session is active), Capture Text (OCR), Capture Smart Element, Object Cutout (macOS 14+ only).
   - Recording: Record Screen, Application Recording (both disabled while recorder active).
+  - Automations (capture group): submenu of automations with "Show in menu bar", hidden when none; entries run `AutomationLauncher.launch(invocation: .menuBar)`; ends with Manage Automations… ([AUTOMATIONS.md](AUTOMATIONS.md)).
   - Tools: Open Annotate, Edit Video, Cloud Uploads (enabled only when `CloudManager.shared.isConfigured`), History, Keyboard Shortcuts.
   - Conditional: **Grant Permission** (when screen permission missing), **What's New** (pending `FeatureIntroManager` campaign).
   - Check for Updates, Preferences `⌘,`, Quit `⌘Q`.
@@ -112,6 +113,7 @@ State machine (`SplashScreen`): `splash` → `language` → `sponsor` (only when
 - Icon customization (`MenuBarIconRenderer` + `MenuBarIconStyle`, `menuBar.iconStyle`): bundled default (occupancy-normalized), SF Symbol alternates, or custom PNG from `Application Support/Snapzy/MenuBarIcon/custom.png` (alpha-bounds normalized, template-rendered monochrome). The cached idle image invalidates on style or custom-file change.
 - Recording state rendering: while recording, the title shows a monospaced-digit timer (`recorder.formattedDuration`); when paused it is prefixed with `|| `; tooltip mirrors state. `setProcessing(_:)` swaps the icon for an `NSProgressIndicator` spinner (used e.g. during OCR) on Core Animation so it keeps animating.
 - Visibility: `showMenuBarIcon` pref toggles the status item (`syncStatusItemVisibility`).
+- File drops: `AutomationStatusItemDropTarget` registers the status item's window for `.fileURL` drags (attached on setup and again after 2 s, when the window surely exists) and becomes its delegate only when it has none. Image / video / GIF files highlight the icon; a drop opens the automation picker (`invocation: .menuBarDrop`).
 - Preferences activation-policy dance (`presentPreferencesWindow`): elevates `.accessory` → `.regular` so Snapzy appears in the app menu/Cmd+Tab, triggers the Settings scene (synthesized `⌘,` key equivalent on macOS 14+, `showSettingsWindow:` before), tracks the window (12 retry passes), and reverts to `.accessory` in `windowDidClose` when no other normal windows remain. While recording, the tracked Preferences window is added to the recorder's runtime exclusion list so Snapzy's own window isn't captured.
 
 Known leftover: `reportProblemAction` (calls `CrashReportService.presentAlert()`) and the stored `didDetectCrash` flag exist, but **no menu item is wired to them** in `buildMenu()` — problem reporting currently lives in Preferences → General → Help and the About support links (GitHub issues). See [UPDATES.md](UPDATES.md).
@@ -155,6 +157,7 @@ The Permissions tab reflects unhealthy identity as `grantedButUnavailableDueToAp
 `Snapzy/Resources/Info.plist`:
 
 - `CFBundleURLTypes`: `snapzy://` scheme (deep links — see [SHORTCUTS.md](SHORTCUTS.md)).
+- `NSServices`: "Run Snapzy Automation…" (`NSMessage = runAutomationService`, `NSPortName = Snapzy`, `NSSendFileTypes` `public.image`, `public.movie`, `com.compuserve.gif`) — Finder ▸ Quick Actions / Services. macOS caches Services: test from /Applications; if hidden, enable it in System Settings ▸ Keyboard ▸ Keyboard Shortcuts ▸ Services.
 - `CFBundleDocumentTypes`: Editor role (rank `Alternate`) for `public.png`, `public.jpeg`, `public.heic`, `public.heif`, `public.tiff`, `com.compuserve.gif`, `org.webmproject.webp`, `public.bmp` — routes "Open With" into the Annotate editor.
 - `NSMicrophoneUsageDescription`, `NSScreenCaptureUsageDescription`.
 - Sparkle keys: `SUFeedURL`, `SUPublicEDKey`, `SUEnableInstallerLauncherService` — see [UPDATES.md](UPDATES.md).
@@ -163,7 +166,7 @@ Security-scoped bookmarks persisted in UserDefaults: `exportLocation.bookmark` (
 
 ## Deep link dispatch
 
-AppleEvent `kAEGetURL` → `AppDelegate.handleGetURLEvent` → queued until coordinator ready → `AppCoordinator.handleDeepLink` → `SnapzyDeepLinkHandler.handle(url)`. Gated by `urlSchemeEnabled` (default `true`); unknown routes are logged and ignored. Full route table: [SHORTCUTS.md](SHORTCUTS.md#url-scheme-automation).
+AppleEvent `kAEGetURL` → `AppDelegate.handleGetURLEvent` → queued until coordinator ready → `AppCoordinator.handleDeepLink` → `SnapzyDeepLinkHandler.handle(url)`. Gated by `urlSchemeEnabled` (default `true`); unknown routes are logged and ignored. Full route table: [SHORTCUTS.md](SHORTCUTS.md#url-scheme-automation). `snapzy://automation/run` additionally needs the automation's external switch ([AUTOMATIONS.md](AUTOMATIONS.md#external-gate)).
 
 Deep links are fire-and-forget and mostly interactive. Agents and scripts that need a file path, JSON, and exit codes use the `snapzy` command line tool instead ([CLI.md](CLI.md)).
 

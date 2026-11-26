@@ -947,9 +947,7 @@ private struct CloudUploadExpandedCardView: View {
   }
 
   private func copyLink() {
-    let pasteboard = NSPasteboard.general
-    pasteboard.clearContents()
-    pasteboard.setString(record.publicURL.absoluteString, forType: .string)
+    ClipboardHelper.copyText(record.publicURL.absoluteString)
     copied = true
     Task {
       try? await Task.sleep(nanoseconds: 1_500_000_000)

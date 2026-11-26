@@ -143,12 +143,15 @@ final class CLIServer {
     router.register(.recordArea, CLIRecordAreaHandler())
     router.register(.recordStop, CLIRecordStopHandler())
     router.register(.recordStatus, CLIRecordStatusHandler())
+    router.register(.automationList, CLIAutomationListHandler())
+    router.register(.automationRun, CLIAutomationRunHandler())
     registerAgentRoutes(&router)
     return router
   }
 
   /// Only what `snapzy mcp` needs, for when command line access is off. `system.status`
-  /// stays so `snapzy status`/`doctor` still report access as off.
+  /// stays so `snapzy status`/`doctor` still report access as off. Never `automation.*`:
+  /// those capture and upload, and must stay behind the command line access switch.
   static func makeAgentRouter() -> CLIRequestRouter {
     var router = CLIRequestRouter()
     router.register(.systemStatus, CLIStatusHandler())

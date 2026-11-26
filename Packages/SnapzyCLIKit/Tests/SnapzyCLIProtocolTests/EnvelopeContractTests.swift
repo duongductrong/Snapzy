@@ -30,7 +30,7 @@ final class EnvelopeContractTests: XCTestCase {
 
     XCTAssertEqual(
       try json(request),
-      #"{"id":1,"method":"hello","params":{"cliVersion":"2.1.0","pid":42,"protocolVersion":"1.0"}}"#
+      #"{"id":1,"method":"hello","params":{"cliVersion":"2.1.0","pid":42,"protocolVersion":"1.1"}}"#
     )
   }
 
@@ -153,6 +153,57 @@ final class EnvelopeContractTests: XCTestCase {
     )
   }
 
+  func testAutomationRequestsAndResults() throws {
+    XCTAssertEqual(
+      try json(CLIRequestEnvelope(
+        id: 4,
+        method: .automationRun,
+        params: CLIAutomationRunParams(ref: "Cloud Share", files: ["/tmp/a.png"])
+      )),
+      #"{"id":4,"method":"automation.run","params":{"files":["/tmp/a.png"],"ref":"Cloud Share"}}"#
+    )
+    XCTAssertEqual(try json(CLIAutomationRunParams(ref: "Quick Copy")), #"{"ref":"Quick Copy"}"#)
+
+    let result = CLIAutomationRunResult(
+      runId: "R",
+      automationId: "A",
+      state: .finished,
+      files: ["/tmp/a.png"],
+      link: "https://example.com/x",
+      message: "Link copied",
+      isError: false
+    )
+    XCTAssertEqual(
+      try json(result),
+      #"{"automationId":"A","files":["/tmp/a.png"],"isError":false,"link":"https://example.com/x","#
+        + #""message":"Link copied","runId":"R","state":"finished"}"#
+    )
+    XCTAssertEqual(
+      try json(CLIAutomationRunResult(runId: "R", automationId: "A", state: .cancelled)),
+      #"{"automationId":"A","files":[],"isError":false,"message":"","runId":"R","state":"cancelled"}"#
+    )
+
+    let list = CLIAutomationList(automations: [
+      CLIAutomationSummary(id: "A", name: "Cloud Share", source: "area",
+                           steps: ["copyImage", "uploadAndCopyLink"], enabled: true, external: true),
+    ])
+    XCTAssertEqual(
+      try json(list),
+      #"{"automations":[{"enabled":true,"external":true,"id":"A","name":"Cloud Share","#
+        + #""source":"area","steps":["copyImage","uploadAndCopyLink"]}]}"#
+    )
+    XCTAssertEqual(try decode(CLIAutomationList.self, try json(list)), list)
+  }
+
+  func testAutomationRunState_unknownReadsAsFinished() throws {
+    let result = try decode(
+      CLIAutomationRunResult.self,
+      #"{"automationId":"A","files":[],"isError":true,"message":"x","runId":"R","state":"paused"}"#
+    )
+    XCTAssertEqual(result.state, .finished)
+    XCTAssertTrue(result.isError)
+  }
+
   func testUnknownValuesFromNewerAppDecodeToFallbacks() throws {
     let response = try decode(
       CLIResponseEnvelope<CLIEmpty>.self,
@@ -209,6 +260,7 @@ final class EnvelopeContractTests: XCTestCase {
         "hello", "system.status", "list.displays", "list.windows", "list.apps",
         "capture.screen", "capture.window", "capture.area",
         "record.screen", "record.window", "record.area", "record.stop", "record.status",
+        "automation.list", "automation.run",
         "agent.tools", "agent.call",
       ]
     )

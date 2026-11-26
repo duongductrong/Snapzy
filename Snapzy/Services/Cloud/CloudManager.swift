@@ -71,6 +71,7 @@ final class CloudManager: ObservableObject {
 
   /// Save cloud configuration and credentials.
   /// Non-sensitive config goes to UserDefaults, secrets go to Keychain.
+  /// Providers without Keychain credentials (custom uploaders) skip the Keychain entirely.
   func saveConfiguration(
     _ config: CloudConfiguration,
     accessKey: String,
@@ -84,8 +85,87 @@ final class CloudManager: ObservableObject {
       context: cloudContext(for: config)
     )
 
+    if config.providerType.usesCloudCredentials {
+      try saveCredentials(
+        for: config,
+        accessKey: accessKey,
+        secretKey: secretKey,
+        googleRefreshToken: googleRefreshToken
+      )
+    }
+
     let isGoogle = config.providerType == .googleDrive
     let usesObjectStorage = config.providerType.usesObjectStorage
+    let hasNoBucket = config.providerType == .imgbb || config.providerType == .customHTTP
+    let defaults = UserDefaults.standard
+    defaults.set(config.providerType.rawValue, forKey: PreferencesKeys.cloudProviderType)
+    // Google Drive and custom uploaders have no expiration.
+    let finalExpireTime = isGoogle || config.providerType == .customHTTP ? CloudExpireTime.permanent : config.expireTime
+    let finalBucket = hasNoBucket ? "" : config.bucket
+
+    defaults.set(finalBucket, forKey: PreferencesKeys.cloudBucket)
+    defaults.set(usesObjectStorage ? config.region : "", forKey: PreferencesKeys.cloudRegion)
+    defaults.set(usesObjectStorage ? (config.endpoint ?? "") : "", forKey: PreferencesKeys.cloudEndpoint)
+    defaults.set(usesObjectStorage ? (config.customDomain ?? "") : "", forKey: PreferencesKeys.cloudCustomDomain)
+    defaults.set(finalExpireTime.rawValue, forKey: PreferencesKeys.cloudExpireTime)
+    defaults.set(true, forKey: PreferencesKeys.cloudConfigured)
+
+    // Update state
+    isConfigured = true
+    providerType = config.providerType
+
+    let finalConfig = CloudConfiguration(
+      providerType: config.providerType,
+      bucket: finalBucket,
+      region: usesObjectStorage ? config.region : "",
+      endpoint: usesObjectStorage ? config.endpoint : nil,
+      customDomain: usesObjectStorage ? config.customDomain : nil,
+      expireTime: finalExpireTime
+    )
+    cachedConfiguration = finalConfig
+    cachedMaskedAccessKey = config.providerType.usesCloudCredentials
+      ? accessKeySummary(for: accessKey) : DisplayStrings.hidden
+    CloudUsageService.shared.invalidateCache()
+
+    logger.info("Cloud configuration saved: \(config.providerType.displayName)")
+    DiagnosticLogger.shared.log(
+      .info,
+      .cloud,
+      "Cloud configuration saved",
+      context: cloudContext(for: finalConfig)
+    )
+  }
+
+  /// Selects a custom uploader as the Cloud destination and marks Cloud configured
+  /// through `saveConfiguration`. Nothing goes to the Keychain: uploader definitions hold
+  /// only `{secret:NAME}` references.
+  func saveCustomUploaderConfiguration(uploaderID: UUID) throws {
+    guard CustomUploaderStore.shared.uploader(id: uploaderID) != nil else {
+      throw CustomUploaderError.uploaderNotFound
+    }
+    UserDefaults.standard.set(uploaderID.uuidString, forKey: PreferencesKeys.cloudCustomUploaderID)
+    try saveConfiguration(
+      CloudConfiguration(
+        providerType: .customHTTP,
+        bucket: "",
+        region: "",
+        endpoint: nil,
+        customDomain: nil,
+        expireTime: .permanent
+      ),
+      accessKey: "",
+      secretKey: ""
+    )
+  }
+
+  /// Writes the provider's Keychain items, restoring the previous values if any write fails.
+  private func saveCredentials(
+    for config: CloudConfiguration,
+    accessKey: String,
+    secretKey: String,
+    googleRefreshToken: String?
+  ) throws {
+    let isGoogle = config.providerType == .googleDrive
     let items = Self.credentialItems(for: config.providerType)
     let accessItem = items.access
     let secretItem = items.secret
@@ -120,42 +200,6 @@ final class CloudManager: ObservableObject {
       )
       throw error
     }
-
-    let defaults = UserDefaults.standard
-    defaults.set(config.providerType.rawValue, forKey: PreferencesKeys.cloudProviderType)
-    let finalExpireTime = isGoogle ? CloudExpireTime.permanent : config.expireTime
-    let finalBucket = config.providerType == .imgbb ? "" : config.bucket
-
-    defaults.set(finalBucket, forKey: PreferencesKeys.cloudBucket)
-    defaults.set(usesObjectStorage ? config.region : "", forKey: PreferencesKeys.cloudRegion)
-    defaults.set(usesObjectStorage ? (config.endpoint ?? "") : "", forKey: PreferencesKeys.cloudEndpoint)
-    defaults.set(usesObjectStorage ? (config.customDomain ?? "") : "", forKey: PreferencesKeys.cloudCustomDomain)
-    defaults.set(finalExpireTime.rawValue, forKey: PreferencesKeys.cloudExpireTime)
-    defaults.set(true, forKey: PreferencesKeys.cloudConfigured)
-
-    // Update state
-    isConfigured = true
-    providerType = config.providerType
-    
-    let finalConfig = CloudConfiguration(
-      providerType: config.providerType,
-      bucket: finalBucket,
-      region: usesObjectStorage ? config.region : "",
-      endpoint: usesObjectStorage ? config.endpoint : nil,
-      customDomain: usesObjectStorage ? config.customDomain : nil,
-      expireTime: finalExpireTime
-    )
-    cachedConfiguration = finalConfig
-    cachedMaskedAccessKey = accessKeySummary(for: accessKey)
-    CloudUsageService.shared.invalidateCache()
-
-    logger.info("Cloud configuration saved: \(config.providerType.displayName)")
-    DiagnosticLogger.shared.log(
-      .info,
-      .cloud,
-      "Cloud configuration saved",
-      context: cloudContext(for: finalConfig)
-    )
   }
 
   /// Apply lifecycle expiration rule using explicit credentials before persistence.
@@ -246,6 +290,7 @@ final class CloudManager: ObservableObject {
 
   /// Load masked access key for display (e.g. "AKIA••••WXYZ")
   func maskedAccessKey() -> String {
+    guard providerType?.usesCloudCredentials ?? true else { return DisplayStrings.hidden }
     let item = Self.credentialItems(for: providerType ?? .awsS3).access
     guard let key = loadFromKeychain(item: item, context: "maskedAccessKey") else {
       return isConfigured ? DisplayStrings.storedSecurely : DisplayStrings.hidden
@@ -335,6 +380,11 @@ final class CloudManager: ObservableObject {
 
   /// Create an in-memory snapshot of the current cloud configuration for transfer export.
   func exportTransferPayload() throws -> CloudCredentialTransferPayload {
+    // Custom uploaders live in Settings and their secrets in the automation secret store;
+    // an archive of Keychain credentials has nothing to carry for them.
+    if let configuration = loadConfiguration(), !configuration.providerType.usesCloudCredentials {
+      throw CustomUploaderError.transferUnsupported
+    }
     guard let configuration = loadConfiguration(),
       let credentials = loadCredentialPair(context: "exportTransferPayload")
     else {
@@ -398,6 +448,7 @@ final class CloudManager: ObservableObject {
     defaults.removeObject(forKey: PreferencesKeys.cloudCustomDomain)
     defaults.removeObject(forKey: PreferencesKeys.cloudExpireTime)
     defaults.removeObject(forKey: PreferencesKeys.cloudShareLinkStyle)
+    defaults.removeObject(forKey: PreferencesKeys.cloudCustomUploaderID)
     defaults.set(false, forKey: PreferencesKeys.cloudConfigured)
     defaults.removeObject(forKey: PreferencesKeys.cloudPasswordSkipped)
   }
@@ -409,6 +460,10 @@ final class CloudManager: ObservableObject {
     guard let config = loadConfiguration() else {
       DiagnosticLogger.shared.log(.warning, .cloud, "Cloud provider creation skipped; configuration missing")
       return nil
+    }
+    // Custom uploaders have no Keychain credentials to load.
+    if config.providerType == .customHTTP {
+      return CustomHTTPCloudProvider(uploaderID: CustomHTTPCloudProvider.storedUploaderID())
     }
     guard let credentials = loadCredentialPair(context: "createProvider")
     else {
@@ -449,10 +504,14 @@ final class CloudManager: ObservableObject {
       )
     case .imgbb:
       return ImgbbCloudProvider(apiKey: accessKey)
+    case .customHTTP:
+      return CustomHTTPCloudProvider(uploaderID: CustomHTTPCloudProvider.storedUploaderID())
     }
   }
 
   /// Keychain items holding a provider's credentials. imgbb has a single API key, so no secret item.
+  /// Custom uploaders store nothing here (`usesCloudCredentials == false`); callers skip them, and
+  /// the S3 access item returned for them is never read or written.
   static func credentialItems(
     for providerType: CloudProviderType
   ) -> (access: CloudKeychainItem, secret: CloudKeychainItem?) {
@@ -463,6 +522,8 @@ final class CloudManager: ObservableObject {
       return (.googleClientId, .googleClientSecret)
     case .imgbb:
       return (.imgbbAPIKey, nil)
+    case .customHTTP:
+      return (.accessKey, nil)
     }
   }
 
@@ -749,8 +810,8 @@ final class CloudManager: ObservableObject {
 
   /// Delete a single object from cloud storage and remove local record.
   func deleteFromCloud(record: CloudUploadRecord) async throws {
-    if record.providerType == .imgbb {
-      removeImgbbRecord(record)
+    if !record.providerType.supportsRemoteDelete {
+      removeRecordWithDeletePage(record)
       return
     }
 
@@ -799,10 +860,15 @@ final class CloudManager: ObservableObject {
       DiagnosticLogger.shared.log(.warning, .cloud, "Cloud delete-by-key requested while provider is not configured")
       throw CloudError.notConfigured
     }
-    // imgbb can't delete through its API, so the old image stays online after a re-upload.
-    // Keep its history row: it holds the only link to the image's delete page.
-    guard provider.providerType != .imgbb else {
-      DiagnosticLogger.shared.log(.info, .cloud, "Cloud delete-by-key skipped for imgbb; history kept")
+    // imgbb and custom uploaders can't delete through an API, so the old upload stays online
+    // after a re-upload. Keep its history row: it holds the only link to the delete page.
+    guard provider.providerType.supportsRemoteDelete else {
+      DiagnosticLogger.shared.log(
+        .info,
+        .cloud,
+        "Cloud delete-by-key skipped; provider has no delete API, history kept",
+        context: ["provider": provider.providerType.rawValue]
+      )
       return
     }
     do {
@@ -833,8 +899,9 @@ final class CloudManager: ObservableObject {
     var lastError: Error?
     var failedCount = 0
     for record in records {
-      // imgbb has no delete API; opening one delete page per record would flood the browser.
-      guard record.providerType != .imgbb else { continue }
+      // imgbb and custom uploaders have no delete API; opening one delete page per record
+      // would flood the browser.
+      guard record.providerType.supportsRemoteDelete else { continue }
       do {
         try await provider.delete(key: record.key)
       } catch {
@@ -866,9 +933,9 @@ final class CloudManager: ObservableObject {
     }
   }
 
-  /// imgbb can only delete through the web page it returned at upload. Open that page so the
-  /// user can confirm there, and drop the local record.
-  private func removeImgbbRecord(_ record: CloudUploadRecord) {
+  /// imgbb and custom uploaders can only delete through the web page returned at upload.
+  /// Open that page (if any) so the user can confirm there, and drop the local record.
+  private func removeRecordWithDeletePage(_ record: CloudUploadRecord) {
     if let deleteURL = record.deleteURL {
       NSWorkspace.shared.open(deleteURL)
     }
@@ -877,8 +944,11 @@ final class CloudManager: ObservableObject {
     DiagnosticLogger.shared.log(
       .info,
       .cloud,
-      "imgbb record removed; delete page opened in browser",
-      context: ["hasDeleteURL": record.deleteURL == nil ? "false" : "true"]
+      "Cloud record removed; delete page opened in browser",
+      context: [
+        "provider": record.providerType.rawValue,
+        "hasDeleteURL": record.deleteURL == nil ? "false" : "true",
+      ]
     )
   }
 

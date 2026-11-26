@@ -248,4 +248,35 @@ enum PreferencesKeys {
   nonisolated static let cloudUploadsFloatingPosition = "cloud.uploads.floatingPosition"
   nonisolated static let cloudShareLinkStyle = "cloud.shareLinkStyle"
   static let cloudGoogleFolderId = "cloud.google.folderId"
+  /// JSON array of `CustomUploader` definitions (no secret values, only `{secret:NAME}` references).
+  nonisolated static let cloudCustomUploaders = "cloud.customUploaders"
+  /// UUID of the custom uploader used when the Cloud provider is `custom_http`.
+  nonisolated static let cloudCustomUploaderID = "cloud.customUploaderID"
+
+  // Automations
+  /// JSON `[Automation]`.
+  static let automations = "automations.items"
+  /// Built-in presets were seeded once; deleting them must not re-seed.
+  static let automationsSeeded = "automations.seeded"
+  /// Milestone 6: the two default after-capture automations (JSON array).
+  static let automationsSystemDefaults = "automations.systemDefaults"
+  /// Milestone 6 (#498): capture toolbar items, accelerators and double-click action (JSON).
+  static let captureToolbarConfiguration = "captureToolbar.configuration"
+  /// JSON `[UUID: {bookmark, path}]` of folders picked for Save to Folder steps.
+  static let automationFolders = "automations.folders"
+  /// Keep the Activity run log (on by default).
+  static let automationsActivityLogEnabled = "automations.activityLogEnabled"
+  /// Allow shell script and Apple Shortcut steps to run (off by default). Never
+  /// imported from a configuration file.
+  static let automationsAllowCodeSteps = "automations.allowCodeSteps"
+  /// Name → Keychain account index for automation secrets (values live in the Keychain).
+  static let automationSecrets = "automations.secrets"
+  /// Finder service / menu bar drop: skip the picker when only one automation fits (off by default).
+  static let automationsRunSingleFileTriggerDirectly = "automations.runSingleFileTriggerDirectly"
+  /// Last app version that refreshed the Services menu (Finder "Run Snapzy Automation…").
+  static let automationsServicesRegisteredVersion = "automations.servicesRegisteredVersion"
+  /// Which editor Edit / New opens: `list` (sheet) or `canvas` (node window).
+  static let automationsEditorStyle = "automations.editorStyle"
+  /// Milestone 7: stop every event trigger (capture saved, image copied, folder watch). Off by default.
+  static let automationsEventTriggersPaused = "automations.eventTriggersPaused"
 }
