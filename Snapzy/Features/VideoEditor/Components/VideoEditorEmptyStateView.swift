@@ -22,6 +22,14 @@ struct VideoEditorEmptyStateView: View {
 
   private let supportedTypes: [UTType] = [.movie, .video, .quickTimeMovie, .mpeg4Movie, .gif]
 
+  private var supportedDropTypes: [UTType] {
+    [SnapzyProjectPackage.projectUTType, .package, .fileURL] + supportedTypes
+  }
+
+  private var supportedOpenPanelTypes: [UTType] {
+    [SnapzyProjectPackage.projectUTType] + supportedTypes
+  }
+
   var body: some View {
     VStack(spacing: 0) {
       Spacer()
@@ -33,7 +41,15 @@ struct VideoEditorEmptyStateView: View {
       footer
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .onDrop(of: supportedTypes, isTargeted: $isTargeted) { providers in
+    .background {
+      Button("") {
+        browseForVideo()
+      }
+      .keyboardShortcut("o", modifiers: [.command])
+      .opacity(0)
+      .frame(width: 0, height: 0)
+    }
+    .onDrop(of: supportedDropTypes, isTargeted: $isTargeted) { providers in
       handleDrop(providers: providers)
     }
     .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isTargeted)
@@ -57,10 +73,12 @@ struct VideoEditorEmptyStateView: View {
         Text(L10n.VideoEditor.dropVideoHereToEdit)
           .font(.system(size: 16, weight: .semibold))
           .foregroundColor(.primary)
+          .lineLimit(1)
 
-        Text(L10n.VideoEditor.supportsVideoFormats)
+        Text("\(L10n.VideoEditor.supportsVideoFormats) • .SNAPZY")
           .font(.subheadline)
           .foregroundColor(.secondary)
+          .lineLimit(1)
       }
 
       LiquidGlassActionButton(
@@ -126,6 +144,31 @@ struct VideoEditorEmptyStateView: View {
       "Video editor drop received",
       context: ["registeredTypeCount": "\(provider.registeredTypeIdentifiers.count)"]
     )
+
+    // Prefer direct local `fileURL` first so `.snapzy` packages and large videos open zero-copy!
+    if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+      provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, error in
+        let resolvedURL: URL? = if let url = item as? URL {
+          url
+        } else if let data = item as? Data {
+          URL(dataRepresentation: data, relativeTo: nil)
+        } else {
+          nil
+        }
+        if let localURL = resolvedURL, localURL.isFileURL, FileManager.default.fileExists(atPath: localURL.path) {
+          DispatchQueue.main.async {
+            validateAndLoad(url: localURL, originalURL: localURL)
+          }
+          return
+        }
+        if let error {
+          DispatchQueue.main.async {
+            showError(message: L10n.VideoEditor.failedToLoadFile(error.localizedDescription))
+          }
+        }
+      }
+      return true
+    }
 
     // Find the first video type the provider can load
     guard let videoType = supportedTypes.first(where: {
@@ -250,10 +293,12 @@ struct VideoEditorEmptyStateView: View {
 
   private func browseForVideo() {
     let panel = NSOpenPanel()
+    panel.title = L10n.VideoEditor.projectOpenPanelTitle
     panel.allowsMultipleSelection = false
     panel.canChooseDirectories = false
     panel.canChooseFiles = true
-    panel.allowedContentTypes = supportedTypes
+    panel.treatsFilePackagesAsDirectories = false
+    panel.allowedContentTypes = supportedOpenPanelTypes
 
     panel.begin { response in
       if response == .OK, let url = panel.url {
@@ -281,6 +326,17 @@ struct VideoEditorEmptyStateView: View {
         context: ["fileName": url.lastPathComponent]
       )
       showError(message: L10n.VideoEditor.fileNotFound)
+      return
+    }
+
+    if SnapzyProjectPackage.isProjectURL(url) {
+      do {
+        _ = try SnapzyProjectPackage.readManifest(from: url)
+        onVideoDropped(url, originalURL ?? url)
+      } catch {
+        DiagnosticLogger.shared.logError(.editor, error, "Invalid .snapzy package selected")
+        showError(message: error.localizedDescription)
+      }
       return
     }
 

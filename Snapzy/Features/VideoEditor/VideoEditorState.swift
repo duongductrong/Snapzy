@@ -385,7 +385,7 @@ final class VideoEditorState: ObservableObject {
   var editingSourceURL: URL {
     assetURL
   }
-  let asset: AVAsset
+  private(set) var asset: AVAsset
   let player: AVPlayer
   let playbackState = VideoEditorPlaybackState()
   /// Timeline zoom/scroll window (UI-only, not undoable).
@@ -514,9 +514,70 @@ final class VideoEditorState: ObservableObject {
   private func placementForClip(_ id: UUID?) -> TimelineSequence.Placement? {
     guard let id else { return nil }
     if cachedPlacementLookup == nil {
-      cachedPlacementLookup = Dictionary(uniqueKeysWithValues: placements.map { ($0.clip.id, $0) })
+      cachedPlacementLookup = Dictionary(placements.map { ($0.clip.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
     return cachedPlacementLookup?[id]
+  }
+
+  /// Rebinds internal media URLs after saving, moving, or renaming a `.snapzy` project package
+  /// so playback, re-saving, and export never reference stale paths in an older package location.
+  func rebindProjectMediaURLs(
+    from reloadedSession: VideoEditorSessionData,
+    newPackageURL: URL? = nil
+  ) {
+    let previousAssetURL = assetURL.standardizedFileURL
+    let nextAssetURL = reloadedSession.sourceSnapshotURL.standardizedFileURL
+    if nextAssetURL != previousAssetURL {
+      assetURL = reloadedSession.sourceSnapshotURL
+      let reboundAsset = AVURLAsset(url: reloadedSession.sourceSnapshotURL)
+      asset = reboundAsset
+      let newItem = AVPlayerItem(asset: reboundAsset)
+      primaryPlayerItem = newItem
+      let wasPlaying = playbackState.isPlaying
+      let savedTime = playbackState.currentTime
+      player.replaceCurrentItem(with: newItem)
+      seek(to: savedTime)
+      if wasPlaying {
+        play()
+      }
+    }
+    clipAssets.removeAll()
+    if let newPackageURL,
+       SnapzyProjectPackage.isProjectURL(originalURL) || SnapzyProjectPackage.isProjectURL(newPackageURL) {
+      originalURL = newPackageURL
+    }
+
+    let clipsById = Dictionary(
+      reloadedSession.clips.map { ($0.id, $0) },
+      uniquingKeysWith: { first, _ in first }
+    )
+    let remappedClips: [TimelineClip] = clips.map { clip in
+      guard case .file = clip.source,
+            let updated = clipsById[clip.id],
+            case .file(let newURL) = updated.source
+      else { return clip }
+      return TimelineClip(
+        id: clip.id,
+        source: .file(url: newURL),
+        sourceDuration: clip.sourceDuration,
+        sourceStart: clip.sourceStart,
+        sourceEnd: clip.sourceEnd,
+        slotStart: clip.slotStart,
+        slotEnd: clip.slotEnd
+      )
+    }
+    if remappedClips != clips {
+      clips = remappedClips
+    }
+
+    switch (backgroundStyle, reloadedSession.backgroundStyle) {
+    case (.wallpaper, .wallpaper(let newURL)):
+      backgroundStyle = .wallpaper(newURL)
+    case (.blurred, .blurred(let newURL)):
+      backgroundStyle = .blurred(newURL)
+    default:
+      break
+    }
   }
 
   /// Clips laid out on the playable/export axis, with inactive trim slots collapsed.
@@ -894,6 +955,9 @@ final class VideoEditorState: ObservableObject {
   private var isPerformanceWorkClosed = false
   private let restoredSessionData: VideoEditorSessionData?
   private var didRestoreSession = false
+  /// True when `restoredSessionData` was provided (e.g. from a `.snapzy` package) but timeline
+  /// validation or metadata loading failed, blocking in-place overwrites of the original package.
+  @Published private(set) var sessionRestoreFailed: Bool = false
 
   // MARK: - Computed Properties
 
@@ -1072,7 +1136,8 @@ final class VideoEditorState: ObservableObject {
        metadata.audioSourceURL != nil,
        !metadata.audioSourceTracks.isEmpty {
       let rolesByTrackID = Dictionary(
-        uniqueKeysWithValues: metadata.audioSourceTracks.map { ($0.trackID, $0.role) }
+        metadata.audioSourceTracks.map { ($0.trackID, $0.role) },
+        uniquingKeysWith: { first, _ in first }
       )
       let resolvedRoles = audioTracks.compactMap { track in
         rolesByTrackID[Int(track.trackID)].map(Self.videoEditorAudioTrackRole)
@@ -1197,6 +1262,9 @@ final class VideoEditorState: ObservableObject {
       // Calculate initial file size estimate after metadata loads
       recalculateEstimatedFileSize()
     } catch {
+      if restoredSessionData != nil {
+        sessionRestoreFailed = true
+      }
       DiagnosticLogger.shared.logError(.editor, error, "Failed to load video metadata")
       print("Failed to load video metadata: \(error)")
     }
@@ -1208,7 +1276,7 @@ final class VideoEditorState: ObservableObject {
   @discardableResult
   private func restoreSessionIfNeeded(primaryDuration: TimeInterval? = nil) -> Bool {
     guard !didRestoreSession else {
-      return restoredSessionData != nil && (!clips.isEmpty || isGIF)
+      return restoredSessionData != nil && !sessionRestoreFailed && (!clips.isEmpty || isGIF)
     }
     didRestoreSession = true
 
@@ -1221,6 +1289,7 @@ final class VideoEditorState: ObservableObject {
             !sessionData.clips.isEmpty,
             sessionData.clips.allSatisfy({ isRestorableClip($0, primaryDuration: primaryDuration) })
       else {
+        sessionRestoreFailed = true
         DiagnosticLogger.shared.log(
           .warning,
           .editor,
@@ -1346,7 +1415,7 @@ final class VideoEditorState: ObservableObject {
   private var clipTrimOriginal: TimelineClip?
   /// Latest scrub position waiting for the in-flight seek to land (chase seek).
   private var pendingScrubSeekSeconds: TimeInterval?
-  private let primaryPlayerItem: AVPlayerItem
+  private var primaryPlayerItem: AVPlayerItem
 
   func play() {
     if speedPreviewBuildFailed {
@@ -4222,9 +4291,10 @@ final class VideoEditorState: ObservableObject {
 
   private func rebuildAutoFocusPaths(for segments: [ZoomSegment]) {
     guard !isPerformanceWorkClosed else { return }
-    let inputs = Dictionary(uniqueKeysWithValues: segments.filter(\.isAutoMode).map {
-      ($0.id, AutoFocusPathInput(segment: $0))
-    })
+    let inputs = Dictionary(
+      segments.filter(\.isAutoMode).map { ($0.id, AutoFocusPathInput(segment: $0)) },
+      uniquingKeysWith: { first, _ in first }
+    )
     guard inputs != autoFocusPathInputs else { return }
     PerfSignpost.VideoEditor.event("AutoFocusRequested")
     autoFocusPathInputs = inputs

@@ -16,6 +16,8 @@ extension Notification.Name {
 
 /// Custom NSWindow for video editing with dark mode appearance
 class VideoEditorWindow: NSWindow {
+  nonisolated deinit {}
+
   private static let activeEditorLevel = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
   private static let copyKeyCode: UInt16 = 8 // kVK_ANSI_C
   private static let spaceKeyCode: UInt16 = 49 // kVK_Space
@@ -79,6 +81,20 @@ class VideoEditorWindow: NSWindow {
     level = restingLevel
   }
 
+  override func close() {
+    if let hostedContent = contentView {
+      contentView = nil
+      // Defer `NSHostingView.deinit` onto a raw C RunLoop turn outside any active
+      // Swift Concurrency `Task` frame (works even when the window was never ordered front
+      // and AppKit skips `windowWillClose`).
+      CFRunLoopPerformBlock(CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue) {
+        withExtendedLifetime(hostedContent) {}
+      }
+      CFRunLoopWakeUp(CFRunLoopGetMain())
+    }
+    super.close()
+  }
+
   func syncLevelWithFocusState() {
     level = (isKeyWindow || isMainWindow) ? Self.activeEditorLevel : restingLevel
   }
@@ -110,7 +126,9 @@ class VideoEditorWindow: NSWindow {
        !(firstResponder is NSTextField) {
       // AVPlayerView can otherwise consume Space before the SwiftUI shortcut and
       // change its transport without updating the editor's playback state.
-      if !event.isARepeat { onTogglePlayback?() }
+      if !event.isARepeat {
+        onTogglePlayback?()
+      }
       return
     }
 
@@ -127,8 +145,12 @@ class VideoEditorWindow: NSWindow {
     if let onAIPromptShortcut,
        VideoEditorShortcutManager.shared.matches(.aiPrompt, event: event) {
       // Holding the combo must not flip the prompt open/closed on every repeat.
-      if event.isARepeat { return true }
-      if onAIPromptShortcut() { return true }
+      if event.isARepeat {
+        return true
+      }
+      if onAIPromptShortcut() {
+        return true
+      }
     }
 
     if super.performKeyEquivalent(with: event) {

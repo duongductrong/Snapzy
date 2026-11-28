@@ -137,6 +137,54 @@ final class VideoEditorSessionStore {
 
   // MARK: - Persist
 
+  private nonisolated static let maxManifestBytes: Int = 8_388_608
+
+  /// Off-main-thread auto-recovery draft persistence so copying large video sources never
+  /// blocks `@MainActor` during editing.
+  nonisolated func persistDraftOffMain(
+    snapshot: VideoEditorSessionData,
+    existingSourceSnapshotURL: URL?,
+    for targetURL: URL
+  ) async -> VideoEditorSessionData? {
+    guard !SnapzyProjectPackage.isInsideProjectPackage(targetURL) else { return nil }
+    let sourceURL = existingSourceSnapshotURL ?? snapshot.sourceSnapshotURL
+    guard FileManager.default.fileExists(atPath: sourceURL.path) else { return nil }
+
+    let normalizedTargetPath = Self.normalizedPath(for: targetURL)
+    let pathHash = Self.pathHash(for: normalizedTargetPath)
+    let existingCommittedDir = rootDirectory.appendingPathComponent(pathHash, isDirectory: true)
+    let alreadyInCommittedStore = sourceURL.standardizedFileURL.path
+      .hasPrefix(existingCommittedDir.standardizedFileURL.path + "/")
+
+    var prepared: PreparedSourceSnapshot?
+    if !alreadyInCommittedStore {
+      prepared = try? await prepareSourceSnapshot(from: sourceURL, for: targetURL)
+    }
+
+    var finalSnapshot = snapshot
+    if let prepared {
+      finalSnapshot.sourceSnapshotURL = prepared.sourceURL
+    }
+    let didPersist = await persistOffMain(
+      finalSnapshot,
+      for: targetURL,
+      preparedSourceDirectory: prepared?.directoryURL
+    )
+    guard didPersist else {
+      if let prepared {
+        discardPreparedSourceSnapshot(prepared)
+      }
+      return nil
+    }
+    if prepared != nil {
+      finalSnapshot.sourceSnapshotURL = committedSourceSnapshotURL(
+        for: targetURL,
+        fileName: finalSnapshot.sourceSnapshotURL.lastPathComponent
+      )
+    }
+    return finalSnapshot
+  }
+
   @discardableResult
   func persist(
     _ sessionData: VideoEditorSessionData,
@@ -466,7 +514,14 @@ final class VideoEditorSessionStore {
   private nonisolated static func readManifest(
     at url: URL
   ) -> PersistedVideoEditorSession? {
-    guard let data = try? Data(contentsOf: url) else { return nil }
+    guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+          values.isRegularFile == true,
+          let fileSize = values.fileSize,
+          fileSize > 0,
+          fileSize <= maxManifestBytes,
+          let data = try? Data(contentsOf: url, options: [.mappedIfSafe]),
+          data.count <= maxManifestBytes
+    else { return nil }
     let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .iso8601
     return try? decoder.decode(PersistedVideoEditorSession.self, from: data)

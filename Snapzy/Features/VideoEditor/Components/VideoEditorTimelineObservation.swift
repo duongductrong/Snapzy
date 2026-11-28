@@ -4,6 +4,8 @@ import Foundation
 
 @MainActor
 final class VideoEditorTimelineObservation: ObservableObject {
+  nonisolated deinit {}
+
   enum Surface { case container, zoom, speed, clips, captions, camera }
   @Published private(set) var revision: UInt64 = 0
   private var subscriptions = Set<AnyCancellable>()
@@ -20,7 +22,7 @@ final class VideoEditorTimelineObservation: ObservableObject {
     }
     var changes: [AnyPublisher<Void, Never>] = [
       clipsChange,
-      state.$duration.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
+      state.$duration.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
     ]
     switch surface {
     case .container:
@@ -30,18 +32,18 @@ final class VideoEditorTimelineObservation: ObservableObject {
         state.$isZoomTrackVisible.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
         state.$isSpeedTrackVisible.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
         state.$captions.map(\.isEmpty).removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
-        state.$recordingMetadata.map { _ in () }.eraseToAnyPublisher()
+        state.$recordingMetadata.map { _ in () }.eraseToAnyPublisher(),
       ]
     case .zoom:
       changes += [
         state.$zoomSegments.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
-        state.$selectedZoomId.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
+        state.$selectedZoomId.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
       ]
     case .speed:
       changes += [
         state.$speedSegments.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
         state.$selectedSpeedId.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
-        state.$zoomSegments.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
+        state.$zoomSegments.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
       ]
     case .camera:
       changes += [state.$cameraSettings.map(\.hiddenRanges).removeDuplicates().map { _ in () }.eraseToAnyPublisher()]
@@ -52,7 +54,7 @@ final class VideoEditorTimelineObservation: ObservableObject {
         state.$selectedClipId.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
         state.$canSplitAtPlayhead.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
         state.$frameThumbnails.map { _ in () }.eraseToAnyPublisher(),
-        state.$isExtractingFrames.removeDuplicates().map { _ in () }.eraseToAnyPublisher()
+        state.$isExtractingFrames.removeDuplicates().map { _ in () }.eraseToAnyPublisher(),
       ]
     }
     // Published emits before storage (willSet). Defer to the next main queue

@@ -79,7 +79,7 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
 
   /// Caption pieces laid on primary clips of the structural timeline.
   private var pieces: [Piece] {
-    let segments = Dictionary(uniqueKeysWithValues: state.captions.segments.map { ($0.id, $0) })
+    let segments = Dictionary(state.captions.segments.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     return VideoEditorSourceTrackLayout.pieces(
       state.captions.segments.map { ($0.id, $0.start, $0.end) },
       placements: state.placements,

@@ -9,6 +9,26 @@
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>snapzy</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>SnapzyProjectIcon</string>
+			<key>CFBundleTypeName</key>
+			<string>Snapzy Project</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.trongduong.snapzy.project</string>
+			</array>
+			<key>LSTypeIsPackage</key>
+			<true/>
+		</dict>
+		<dict>
 			<key>CFBundleTypeName</key>
 			<string>Image</string>
 			<key>CFBundleTypeRole</key>
@@ -43,6 +63,26 @@
 	</array>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>com.apple.package</string>
+				<string>public.composite-content</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Snapzy Video Project</string>
+			<key>UTTypeIconFile</key>
+			<string>SnapzyProjectIcon</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.trongduong.snapzy.project</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>snapzy</string>
+				</array>
+			</dict>
+		</dict>
 		<dict>
 			<key>UTTypeIdentifier</key>
 			<string>com.trongduong.snapzy.automation</string>

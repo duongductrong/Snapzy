@@ -456,7 +456,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
   private func openImageURLs(_ urls: [URL]) {
     for url in urls {
-      AnnotateManager.shared.openAnnotation(url: url)
+      if SnapzyProjectPackage.isProjectURL(url) {
+        VideoEditorManager.shared.openProject(at: url)
+      } else {
+        AnnotateManager.shared.openAnnotation(url: url)
+      }
     }
   }
 

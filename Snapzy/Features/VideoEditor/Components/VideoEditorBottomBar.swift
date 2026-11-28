@@ -56,6 +56,16 @@ struct VideoEditorBottomBar: View {
             .opacity
               .combined(with: .move(edge: .bottom))
           )
+          .background {
+            Button("") {
+              withAnimation(LiquidGlassTokens.settleSpring) {
+                expandedSettingsTab = nil
+              }
+            }
+            .keyboardShortcut(.escape, modifiers: [])
+            .opacity(0)
+            .frame(width: 0, height: 0)
+          }
         }
 
         HStack(spacing: 12) {
@@ -87,10 +97,10 @@ struct VideoEditorBottomBar: View {
             .disabled(isCloudUploading || alreadyUploadedToCloud)
           }
 
-          // Primary action button (right) - always enabled
+          // Primary action button (right) — ⌘E exports rendered video while ⌘S saves .snapzy project
           Button(primaryActionTitle, action: onConvert)
             .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
-            .keyboardShortcut("s", modifiers: [.command])
+            .keyboardShortcut("e", modifiers: [.command])
         }
         .padding(.horizontal, WindowSpacingConfiguration.default.toolbarHPadding)
         .padding(.vertical, 12)

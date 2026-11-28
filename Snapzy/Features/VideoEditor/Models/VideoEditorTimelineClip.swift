@@ -46,6 +46,7 @@ nonisolated struct TimelineClip: Identifiable, Equatable, Hashable, Codable {
 
   /// Shortest a clip may be trimmed. Splitting also refuses to create anything shorter.
   static let minDuration: TimeInterval = 0.1
+  static let maxDurationSeconds: TimeInterval = 864_000
 
   var duration: TimeInterval {
     max(0, sourceEnd - sourceStart)
@@ -86,9 +87,13 @@ nonisolated struct TimelineClip: Identifiable, Equatable, Hashable, Codable {
   ) {
     self.id = id
     self.source = source
-    self.sourceDuration = max(0, sourceDuration)
-    let requestedSlotStart = slotStart ?? sourceStart
-    let requestedSlotEnd = slotEnd ?? sourceEnd ?? self.sourceDuration
+    self.sourceDuration = sourceDuration.isFinite ? min(max(0, sourceDuration), Self.maxDurationSeconds) : 0
+    let safeSourceStart = sourceStart.isFinite ? sourceStart : 0
+    let safeSourceEnd = sourceEnd?.isFinite == true ? sourceEnd : nil
+    let safeSlotStart = slotStart?.isFinite == true ? slotStart : nil
+    let safeSlotEnd = slotEnd?.isFinite == true ? slotEnd : nil
+    let requestedSlotStart = safeSlotStart ?? safeSourceStart
+    let requestedSlotEnd = safeSlotEnd ?? safeSourceEnd ?? self.sourceDuration
     var normalizedSlotStart = max(0, min(requestedSlotStart, self.sourceDuration))
     var normalizedSlotEnd = max(normalizedSlotStart, min(requestedSlotEnd, self.sourceDuration))
     if normalizedSlotEnd - normalizedSlotStart < Self.minDuration {
@@ -102,8 +107,8 @@ nonisolated struct TimelineClip: Identifiable, Equatable, Hashable, Codable {
     self.slotStart = normalizedSlotStart
     self.slotEnd = normalizedSlotEnd
 
-    let start = max(normalizedSlotStart, min(sourceStart, normalizedSlotEnd))
-    let end = min(normalizedSlotEnd, sourceEnd ?? normalizedSlotEnd)
+    let start = max(normalizedSlotStart, min(safeSourceStart, normalizedSlotEnd))
+    let end = min(normalizedSlotEnd, safeSourceEnd ?? normalizedSlotEnd)
     self.sourceStart = start
     // Keep the clip at least `minDuration` long, preferring to extend the out-point
     // and falling back to pulling the in-point back when there is no room after it.
@@ -121,6 +126,26 @@ nonisolated struct TimelineClip: Identifiable, Equatable, Hashable, Codable {
 
   func contains(sourceTime: TimeInterval) -> Bool {
     sourceTime >= sourceStart && sourceTime < sourceEnd
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    let decodedId = try c.decode(UUID.self, forKey: .id)
+    let decodedSource = try c.decode(Source.self, forKey: .source)
+    let rawDuration = (try? c.decode(TimeInterval.self, forKey: .sourceDuration)) ?? 0
+    let rawSourceStart = (try? c.decode(TimeInterval.self, forKey: .sourceStart)) ?? 0
+    let rawSourceEnd = try? c.decode(TimeInterval.self, forKey: .sourceEnd)
+    let rawSlotStart = try? c.decode(TimeInterval.self, forKey: .slotStart)
+    let rawSlotEnd = try? c.decode(TimeInterval.self, forKey: .slotEnd)
+    self.init(
+      id: decodedId,
+      source: decodedSource,
+      sourceDuration: rawDuration,
+      sourceStart: rawSourceStart,
+      sourceEnd: rawSourceEnd,
+      slotStart: rawSlotStart,
+      slotEnd: rawSlotEnd
+    )
   }
 }
 

@@ -77,6 +77,8 @@ nonisolated struct VideoEditorSessionData: Equatable {
 /// JSON-safe edit fields. SwiftUI `Color` and the background enum are converted
 /// using the same durable representation as Annotate sessions.
 nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
+  static let maxDecodedItems: Int = 2_000
+
   var clips: [TimelineClip]
   var zoomSegments: [ZoomSegment]
   var speedSegments: [SpeedSegment]
@@ -94,6 +96,102 @@ nonisolated struct PersistedVideoEditorEditState: Codable, Equatable {
   var cameraSettings: VideoEditorCameraSettings?
   var captions: VideoEditorCaptions?
   var motionBlurSettings: VideoEditorMotionBlurSettings?
+
+  private enum CodingKeys: String, CodingKey {
+    case clips, zoomSegments, speedSegments, backgroundStyle
+    case backgroundPadding, backgroundShadowIntensity, backgroundCornerRadius
+    case backgroundAlignment, backgroundAspectRatio, exportSettings, isMuted
+    case cursorSettings, cameraSettings, captions, motionBlurSettings
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    let rawClips = try c.decode([TimelineClip].self, forKey: .clips)
+    clips = Self.deduplicateClips(Array(rawClips.prefix(Self.maxDecodedItems)))
+    let rawZooms = try c.decode([ZoomSegment].self, forKey: .zoomSegments)
+    zoomSegments = Self.deduplicateZooms(Array(rawZooms.prefix(Self.maxDecodedItems)))
+    let rawSpeeds = try c.decode([SpeedSegment].self, forKey: .speedSegments)
+    speedSegments = Self.deduplicateSpeeds(Array(rawSpeeds.prefix(Self.maxDecodedItems)))
+    backgroundStyle = try c.decode(CodableBackgroundStyle.self, forKey: .backgroundStyle)
+    let rawPad = (try? c.decode(CGFloat.self, forKey: .backgroundPadding)) ?? 0
+    backgroundPadding = rawPad.isFinite ? min(500, max(0, rawPad)) : 0
+    let rawShadow = (try? c.decode(CGFloat.self, forKey: .backgroundShadowIntensity)) ?? 0
+    backgroundShadowIntensity = rawShadow.isFinite ? min(1, max(0, rawShadow)) : 0
+    let rawRadius = (try? c.decode(CGFloat.self, forKey: .backgroundCornerRadius)) ?? 0
+    backgroundCornerRadius = rawRadius.isFinite ? min(500, max(0, rawRadius)) : 0
+    backgroundAlignment = try c.decode(String.self, forKey: .backgroundAlignment)
+    backgroundAspectRatio = try c.decode(String.self, forKey: .backgroundAspectRatio)
+    exportSettings = try c.decode(ExportSettings.self, forKey: .exportSettings)
+    isMuted = try c.decode(Bool.self, forKey: .isMuted)
+    cursorSettings = try c.decodeIfPresent(VideoEditorCursorSettings.self, forKey: .cursorSettings)
+    cameraSettings = try c.decodeIfPresent(VideoEditorCameraSettings.self, forKey: .cameraSettings)
+    captions = try c.decodeIfPresent(VideoEditorCaptions.self, forKey: .captions)
+    motionBlurSettings = try c.decodeIfPresent(VideoEditorMotionBlurSettings.self, forKey: .motionBlurSettings)
+  }
+
+  private static func deduplicateClips(_ items: [TimelineClip]) -> [TimelineClip] {
+    var seen: Set<UUID> = []
+    return items.map { item in
+      guard !seen.contains(item.id) else {
+        let freshId = UUID()
+        seen.insert(freshId)
+        return TimelineClip(
+          id: freshId,
+          source: item.source,
+          sourceDuration: item.sourceDuration,
+          sourceStart: item.sourceStart,
+          sourceEnd: item.sourceEnd,
+          slotStart: item.slotStart,
+          slotEnd: item.slotEnd
+        )
+      }
+      seen.insert(item.id)
+      return item
+    }
+  }
+
+  private static func deduplicateZooms(_ items: [ZoomSegment]) -> [ZoomSegment] {
+    var seen: Set<UUID> = []
+    return items.map { item in
+      guard !seen.contains(item.id) else {
+        let freshId = UUID()
+        seen.insert(freshId)
+        return ZoomSegment(
+          id: freshId,
+          startTime: item.startTime,
+          duration: item.duration,
+          zoomLevel: item.zoomLevel,
+          zoomCenter: item.zoomCenter,
+          zoomType: item.zoomType,
+          followSpeed: item.followSpeed,
+          focusMargin: item.focusMargin,
+          isEnabled: item.isEnabled,
+          smartKeyframes: item.smartKeyframes
+        )
+      }
+      seen.insert(item.id)
+      return item
+    }
+  }
+
+  private static func deduplicateSpeeds(_ items: [SpeedSegment]) -> [SpeedSegment] {
+    var seen: Set<UUID> = []
+    return items.map { item in
+      guard !seen.contains(item.id) else {
+        let freshId = UUID()
+        seen.insert(freshId)
+        return SpeedSegment(
+          id: freshId,
+          startTime: item.startTime,
+          duration: item.duration,
+          rate: item.rate,
+          isEnabled: item.isEnabled
+        )
+      }
+      seen.insert(item.id)
+      return item
+    }
+  }
 
   init(sessionData: VideoEditorSessionData) {
     clips = sessionData.clips
