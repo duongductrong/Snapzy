@@ -343,6 +343,7 @@ extension PreferencesTab {
     case .automations: return PreferencesIconTint(hue: 52, saturation: 0.8)
     case .annotate: return PreferencesIconTint(hue: 350)
     case .ai: return PreferencesIconTint(hue: 282, saturation: 0.55)
+    case .translate: return PreferencesIconTint(hue: 150, saturation: 0.6)
     case .history: return PreferencesIconTint(hue: 40, saturation: 0.66)
     case .menuBar: return PreferencesIconTint(hue: 174)
     case .cloud: return PreferencesIconTint(hue: 198)

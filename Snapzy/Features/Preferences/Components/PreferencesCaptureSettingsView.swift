@@ -480,7 +480,6 @@ struct CaptureSettingsView: View {
             }
           }
 
-          PreferencesTranslateSettingsSection()
         }
 
         if selectedPane == .general {

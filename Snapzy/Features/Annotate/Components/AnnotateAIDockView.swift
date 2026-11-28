@@ -893,8 +893,10 @@ private struct AnnotateAIDockTranslateSection: View {
     switch TranslationEngineResolver().resolve() {
     case .apple:
       return L10n.AnnotateTranslate.engineApple
-    case .remote(let model):
+    case .remote(.endpoint(let model)):
       return L10n.AnnotateTranslate.engineRemote(model.name)
+    case .remote(.agentCLI(let kind)):
+      return L10n.AnnotateTranslate.engineAgentCLI(kind.displayName)
     case .unavailable:
       return L10n.Translate.requiresMacOS15Title
     }

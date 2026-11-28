@@ -263,8 +263,10 @@ struct TranslationCardView: View {
     switch model.route {
     case .apple:
       note(L10n.Translate.engineAppleFooter, systemImage: "lock")
-    case .remote(let endpoint):
+    case .remote(.endpoint(let endpoint)):
       note(L10n.Translate.engineRemoteFooter(endpoint.name), systemImage: "network")
+    case .remote(.agentCLI(let kind)):
+      note(L10n.Translate.engineAgentCLIFooter(kind.displayName), systemImage: "terminal")
     case .unavailable:
       EmptyView()
     }

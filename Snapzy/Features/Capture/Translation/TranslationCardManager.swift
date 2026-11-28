@@ -296,7 +296,7 @@ final class TranslationCardManager: NSObject, NSWindowDelegate {
 
   private func openSettings() {
     dismiss()
-    AppStatusBarController.shared.openPreferencesWindow(tab: .capture)
+    AppStatusBarController.shared.openPreferencesWindow(tab: .translate)
     PreferencesNavigationState.shared.reveal(
       PreferencesSearchEntry(
         .capture,

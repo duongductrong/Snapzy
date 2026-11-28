@@ -43,8 +43,8 @@ final class VideoEditorCaptionTranslator: ObservableObject {
     route: TranslationRoute
   ) async throws -> BlockTranslationOutput {
     switch route {
-    case .remote(let model):
-      return try await RemoteBlockTranslator(model: model).translate(texts, to: target)
+    case .remote(let engine):
+      return try await RemoteBlockTranslator(engine: engine).translate(texts, to: target)
     case .unavailable:
       throw VideoEditorCaptionTranslationError.requiresMacOS15
     case .apple:

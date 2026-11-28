@@ -171,6 +171,63 @@ nonisolated enum AnnotateAgentCLIAdapter {
     )
   }
 
+  // MARK: Text only
+
+  /// A one-shot text task (translation): no MCP server, no built-in tools, no image.
+  /// The prompt carries its own instructions, so every CLI gets the same text.
+  static func textInvocation(
+    for kind: AnnotateAgentCLIKind,
+    prompt: String,
+    model: String?,
+    effort: String?,
+    directory: String,
+    runID: String
+  ) -> AnnotateAgentCLIInvocation {
+    switch kind {
+    case .claudeCode:
+      // --strict-mcp-config with no --mcp-config = no MCP servers at all.
+      var arguments = [
+        "-p",
+        "--output-format", "stream-json",
+        "--verbose",
+        "--strict-mcp-config",
+        "--tools", "",
+        "--permission-mode", "dontAsk",
+      ]
+      if let model { arguments += ["--model", model] }
+      if let effort { arguments += ["--effort", effort] }
+      return AnnotateAgentCLIInvocation(arguments: arguments, stdin: prompt)
+    case .codex:
+      var arguments = [
+        "exec", "--json", "--skip-git-repo-check",
+        "-c", "sandbox_mode=\"read-only\"",
+        "-c", "approval_policy=\"never\"",
+      ]
+      if let model { arguments += ["--model", model] }
+      if let effort { arguments += ["-c", "model_reasoning_effort=\(toml(effort))"] }
+      arguments += ["-"]
+      return AnnotateAgentCLIInvocation(arguments: arguments, stdin: prompt)
+    case .openCode:
+      let config = json([
+        "$schema": "https://opencode.ai/config.json",
+        "permission": Dictionary(uniqueKeysWithValues: openCodeDeniedTools.map { ($0, "deny") }),
+      ])
+      let configName = openCodeConfigFileName(runID)
+      let configPath = (directory as NSString).appendingPathComponent(configName)
+      var arguments = ["run", "--standalone", "--format", "json"]
+      if var model {
+        if let effort, !model.contains("#") { model += "#\(effort)" }
+        arguments += ["--model", model]
+      }
+      arguments += ["--", prompt]
+      return AnnotateAgentCLIInvocation(
+        arguments: arguments,
+        environment: ["OPENCODE_CONFIG": configPath],
+        files: [configName: config]
+      )
+    }
+  }
+
   static let openCodeDeniedTools = ["bash", "edit", "webfetch", "websearch", "read", "grep", "glob", "list", "task", "codesearch"]
 
   private static func firstMessage(_ input: AnnotateAgentCLIRunInput) -> String {

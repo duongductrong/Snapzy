@@ -12,7 +12,7 @@ import Foundation
 extension PreferencesSearchEntry {
   /// Every searchable setting, in page order. Built on demand so it follows the app language.
   static func catalog() -> [PreferencesSearchEntry] {
-    general + menuBar + capture + annotate + ai + quickAccess + history + shortcuts
+    general + menuBar + capture + annotate + ai + translate + quickAccess + history + shortcuts
       + permissions + commandLine + cloud + advanced + about
   }
 
@@ -262,11 +262,6 @@ extension PreferencesSearchEntry {
             detail: L10n.PreferencesCapture.ocrSuccessNotificationDescription, keywords: ["alert", "text recognition"]),
       .init(.capture, section: textActions, title: L10n.PreferencesCapture.ocrLinkDetectionTitle,
             detail: L10n.PreferencesCapture.ocrLinkDetectionDescription, keywords: ["url", "ocr"]),
-      .init(.capture, section: L10n.Translate.settingsSection, title: L10n.Translate.targetLanguageLabel,
-            detail: L10n.Translate.settingsTargetDescription, keywords: ["translate", "translation", "language"]),
-      .init(.capture, section: L10n.Translate.settingsSection, title: L10n.Translate.settingsEngineTitle,
-            detail: L10n.Translate.settingsEngineDescription,
-            keywords: ["translate", "translation", "apple", "llm", "endpoint"]),
     ]
   }
 
@@ -547,6 +542,19 @@ extension PreferencesSearchEntry {
   }
 
   // MARK: - AI
+
+  private static var translate: [PreferencesSearchEntry] {
+    let language = L10n.Translate.settingsLanguageSection
+    let engine = L10n.Translate.settingsEngineTitle
+    return [
+      .init(.translate, section: language, title: L10n.Translate.targetLanguageLabel,
+            detail: L10n.Translate.settingsTargetDescription, keywords: ["translate", "translation", "language"]),
+      .init(.translate, section: engine, title: engine,
+            detail: L10n.Translate.settingsEngineDescriptionAll,
+            keywords: ["translate", "translation", "apple", "llm", "endpoint", "agent", "cli", "claude", "codex", "opencode", "model"],
+            anchored: false),
+    ]
+  }
 
   private static var ai: [PreferencesSearchEntry] {
     let provider = L10n.AnnotateAI.settingsProviderSection
