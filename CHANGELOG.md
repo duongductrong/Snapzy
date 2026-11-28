@@ -4,6 +4,18 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.3.0-beta.14] - 2026-11-28
+
+### Features
+- Added agent CLI translation engine and a dedicated Translate settings tab (#824) (ee8308b6)
+
+### Chore
+- refactor: remove capture toolbar (304dfcf1)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.3.0-beta.13] - 2026-11-26
 
 ### Features
