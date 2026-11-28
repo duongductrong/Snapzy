@@ -18,7 +18,6 @@ Every interactive screenshot carries a `PostCaptureRouting` inside its `CaptureC
 | --- | --- | --- |
 | `.standard` | every normal capture (shortcut, menu, deep link, recording stop) | The **default after-capture automation** for the capture type (below) |
 | `.automation(runID)` | `AutomationLauncher` through `ScreenCaptureViewModel.startAutomationCapture` | `AutomationRunner.complete` runs that automation's steps instead: the default automation — including its Save flag, which the automation decides through `TempCaptureManager.resolveSaveDirectory(saveOverride:)` — is skipped, the default canvas preset is still applied (unless the automation has an Apply canvas preset step), and history is still recorded. See [`AUTOMATIONS.md`](AUTOMATIONS.md) |
-| `.captureToolbar(sessionID)` | `ScreenCaptureViewModel.captureWithToolbar` (M6, #498) | `CaptureToolbarController.present`: the capture waits in the temp folder under a toolbar; the chosen button decides (Screenshot re-enters `.standard`). See [`CAPTURE.md`](CAPTURE.md#capture-toolbar-498) |
 
 Scrolling captures pass the routing into `saveProcessedImage(context:)`, so the stitched image takes the same path. Recordings started by an automation keep the routing in `RecordingCoordinator`: on stop, GIF output is converted and studio recordings flattened without a Quick Access card, then `AutomationRunner.complete` runs the steps instead of `handleVideoCapture`; the recording's save folder follows the automation (`makeRecordingSavePlan(saveOverride:)`). Deleting or cancelling a recording, or cancelling a scrolling session, abandons the run. A stale toolbar session never drops a capture: it falls back to `.standard`. Cancelling the toolbar's area selection ends its session; toolbar fallbacks and automation buttons apply the default Save choice before running.
 
@@ -161,7 +160,6 @@ Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegate
 | `Snapzy/Features/Automations/Engine/StandardCaptureRunEnvironment.swift` | Run environment for the default automation (Quick Access manager, preset applier, Pin / Annotate on the run's card) |
 | `Snapzy/Features/Automations/Engine/AutomationRunner.swift` | `runDefault`: quiet standard-capture run, invocation `afterCapture` |
 | `Snapzy/Features/Automations/Services/AutomationStore.swift` | `systemAutomations`, migration from the matrix, mirror back into `PreferencesManager` |
-| `Snapzy/Features/CaptureToolbar/CaptureToolbarController.swift` | `.captureToolbar` routing: toolbar session around the capture |
 | `Snapzy/Services/Capture/TempCaptureManager.swift` | Save-vs-temp destination, recording save plan, temp lifecycle, orphan cleanup |
 | `Snapzy/Services/Capture/ScreenCaptureManager.swift` | `captureCompletedPublisher`, `ImageFormat`, file writing, native output scale |
 | `Snapzy/Services/Capture/CaptureOutputNaming.swift` | Naming templates, context tokens, sanitization, unique dedupe |
@@ -183,6 +181,5 @@ Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegate
 - [`HISTORY.md`](HISTORY.md) — history records, retention, cache clearing
 - [`CLOUD.md`](CLOUD.md) — manual cloud upload entry points
 - [`PREFERENCES.md`](PREFERENCES.md) — after-capture matrix and export folder settings
-- [`SHORTCUTS.md`](SHORTCUTS.md) — `unifiedCapture` shortcut and `snapzy://capture/toolbar`
 - [`CONFIGURATION.md`](CONFIGURATION.md) — TOML keys for after-capture actions and custom default pipelines
 - [`LOCALIZATION.md`](LOCALIZATION.md) — ownership of post-capture copy

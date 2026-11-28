@@ -168,7 +168,6 @@ enum ShortcutOverlayContentBuilder {
       globalItem(kind: .delayedCapture, icon: "timer", manager: manager),
       globalItem(kind: .delayedFullscreen, icon: "display", manager: manager),
       globalItem(kind: .areaAnnotate, icon: "pencil.and.scribble", manager: manager),
-      globalItem(kind: .unifiedCapture, icon: "rectangle.and.hand.point.up.left", manager: manager),
       globalItem(kind: .activeWindow, icon: "macwindow", manager: manager),
       globalItem(kind: .scrollingCapture, icon: "arrow.up.and.down", manager: manager),
     ]

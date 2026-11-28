@@ -62,7 +62,6 @@ All 24 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 | `delayedFullscreen` | Delayed Fullscreen (countdown, then fullscreen screenshot) | **unbound** |
 | `pickColor` | Pick Color (live loupe, click copies the pixel's hex; pressing again cancels) | **unbound** |
 | `measureScreen` | Measure Screen (frozen screen ruler; pressing again cancels) | `⌥⇧M` |
-| `unifiedCapture` | Capture with Toolbar (#498: select an area, then pick Copy / Save / Upload / Record / … from a toolbar; hotkey signature id 27, TOML token `capture_toolbar`; `ShortcutAction.captureWithToolbar`) | **unbound** |
 
 - The eight unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
 - Editing UI: Settings → Shortcuts (see [PREFERENCES.md](PREFERENCES.md)).
@@ -192,7 +191,6 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 | `snapzy://capture/application` | Application-window capture |
 | `snapzy://capture/active-window` | Capture active window |
 | `snapzy://capture/area-annotate` | Capture area → Annotate |
-| `snapzy://capture/toolbar` | Capture with Toolbar (aliases `capture-toolbar`, `toolbar`, `capture/unified`) |
 | `snapzy://capture/scrolling` | Scrolling capture |
 | `snapzy://capture/ocr` | OCR capture |
 | `snapzy://capture/translate` | Snip to Translate |
@@ -238,4 +236,3 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 - [VIDEO_EDITOR.md](VIDEO_EDITOR.md) — video editor keys
 - [CONFIGURATION.md](CONFIGURATION.md) — TOML control of shortcut prefs
 - [AUTOMATIONS.md](AUTOMATIONS.md) — automation triggers, external gate, rejection reasons, recipe import
-- [CAPTURE.md](CAPTURE.md#capture-toolbar-498) — capture toolbar

@@ -5,7 +5,7 @@
 #
 # Fails when a capture path grows its own pasteboard-link writer or upload
 # call, or when a GlobalShortcutKind is added for a combination (automations
-# cover those; `unifiedCapture` is the only kind allowed since milestone 1).
+# cover those; no kind added since milestone 1).
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -33,8 +33,8 @@ check "One upload path (CloudShareService)" \
 check "No upload or pasteboard code in the Quick Access card view" \
   "$(grep -nE "NSPasteboard|ClipboardHelper|CloudShareService|CloudManager\.shared\.upload" Snapzy/Features/QuickAccess/Components/QuickAccessCardView.swift || true)"
 
-# GlobalShortcutKind cases as of milestone 1 (12c076b2) plus `unifiedCapture`.
-allowed="fullscreen area repeatArea areaAnnotate activeWindow scrollingCapture recording pauseResumeRecording togglePenRecording restartRecording deleteRecording delayedCapture delayedFullscreen annotate videoEditor cloudUploads shortcutList ocr translate smartElement objectCutout history pickColor measureScreen unifiedCapture"
+# GlobalShortcutKind cases as of milestone 1 (12c076b2).
+allowed="fullscreen area repeatArea areaAnnotate activeWindow scrollingCapture recording pauseResumeRecording togglePenRecording restartRecording deleteRecording delayedCapture delayedFullscreen annotate videoEditor cloudUploads shortcutList ocr translate smartElement objectCutout history pickColor measureScreen"
 cases=$(awk '/^enum GlobalShortcutKind/{flag=1; next} flag && /^  var /{flag=0} flag && /^  case /{print $2}' Snapzy/Services/Shortcuts/KeyboardShortcutManager.swift)
 unexpected=""
 for kind in $cases; do

@@ -66,7 +66,6 @@ struct AutomationTriggersInspector: View {
         Toggle(L10n.Automations.showInQuickAccess, isOn: $automation.showsInQuickAccess)
         Toggle(L10n.Automations.showInHistory, isOn: $automation.showsInHistory)
         Toggle(L10n.Automations.showInFinder, isOn: $automation.showsInFinder)
-        Toggle(L10n.Automations.showInCaptureToolbar, isOn: $automation.showsInCaptureToolbar)
       } header: {
         Text(L10n.Automations.showInLabel)
       } footer: {

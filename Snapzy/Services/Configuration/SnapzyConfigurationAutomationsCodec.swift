@@ -21,7 +21,6 @@
 //    quick_access = true
 //    history = true
 //    finder = false               # Finder "Run Snapzy Automation…" + menu bar drop
-//    capture_toolbar = false      # button in the unified capture toolbar (milestone 6)
 //    external_invocation = false
 //    data = "{…}"   # full JSON; keeps what the keys can't (newer steps or
 //                   # sources). Keys win when edited.
@@ -95,7 +94,6 @@ enum SnapzyConfigurationAutomationsCodec {
       writer.value("quick_access", automation.showsInQuickAccess)
       writer.value("history", automation.showsInHistory)
       writer.value("finder", automation.showsInFinder)
-      writer.value("capture_toolbar", automation.showsInCaptureToolbar)
       // Event triggers (milestone 7)
       writer.value("capture_event", captureEventToken(automation.captureEvent))
       writer.value("clipboard_event", automation.runsOnClipboardChange)
@@ -272,9 +270,6 @@ enum SnapzyConfigurationAutomationsCodec {
       }
       if let history = fields["history"]?.boolValue {
         automation.showsInHistory = history
-      }
-      if let captureToolbar = fields["capture_toolbar"]?.boolValue {
-        automation.showsInCaptureToolbar = captureToolbar
       }
       if let finder = fields["finder"]?.boolValue {
         automation.showsInFinder = finder

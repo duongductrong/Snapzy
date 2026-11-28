@@ -163,7 +163,6 @@ Snapzy/
     Annotate/
     Automations/
     Capture/
-    CaptureToolbar/
     CommandLine/
     CrashReport/
     Onboarding/
@@ -273,7 +272,6 @@ SnapzyUITests/
 | `Features/Preferences/` | General, Capture, Quick Access, Shortcuts, Permissions, History storage/retention, Cloud, Advanced, About tabs |
 | `Features/Shortcuts/` | Keyboard shortcut cheat-sheet overlay |
 | `Features/Automations/` | Automation model, store, runner + step handlers, Settings → Automations (see [`AUTOMATIONS.md`](AUTOMATIONS.md)). Subfolders: `Models/` (incl. `AutomationSystemDefaults`, `AutomationAIConfigs`), `Engine/` (incl. `StandardCaptureRunEnvironment`), `Steps/` (incl. `AutomationAISteps`), `Services/`, `Settings/` (incl. `AutomationSystemDefaultViews`), `Sharing/` (`.snapzyautomation` codec, gallery, import sheet), `Triggers/`, `UI/` |
-| `Features/CaptureToolbar/` | Unified capture toolbar (#498): configuration + store, controller, view, Capture settings section (see [`CAPTURE.md`](CAPTURE.md#capture-toolbar-498)) |
 | `Features/Updates/` | Sparkle menu binding and update UI bridge |
 | `Features/CrashReport/` | Crash report prompt and diagnostics UX |
 | `Features/CommandLine/` | Approval prompt for apps using the `snapzy` command |
@@ -412,7 +410,7 @@ Directory structure mirrors the app: `SnapzyTests/Services/Cloud/AWSV4SignerTest
 | `Services/Capture/TempCaptureManager` | Unit | **P1** | File lifecycle, mock `FileManager` |
 | `Services/Capture/PostCaptureActionHandler` | Unit | **P1** | Routing logic, protocol DI |
 | `Services/Cloud/CloudManager` | Integration | **P2** | Facade, mock providers |
-| `Features/Automations` default automations, recipes, AI steps; `Features/CaptureToolbar` | Unit | **P1** | Parity vs legacy effects, fake run environment |
+| `Features/Automations` default automations, recipes, AI steps | Unit | **P1** | Parity vs legacy effects, fake run environment |
 | `Features/Capture/CaptureViewModel` | Unit | **P2** | State transitions only, high coupling |
 | `Features/Onboarding/`, `Features/Preferences/` | UI | **P3** | XCUITest |
 

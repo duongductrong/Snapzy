@@ -261,8 +261,6 @@ enum PreferencesKeys {
   static let automationsSeeded = "automations.seeded"
   /// Milestone 6: the two default after-capture automations (JSON array).
   static let automationsSystemDefaults = "automations.systemDefaults"
-  /// Milestone 6 (#498): capture toolbar items, accelerators and double-click action (JSON).
-  static let captureToolbarConfiguration = "captureToolbar.configuration"
   /// JSON `[UUID: {bookmark, path}]` of folders picked for Save to Folder steps.
   static let automationFolders = "automations.folders"
   /// Keep the Activity run log (on by default).

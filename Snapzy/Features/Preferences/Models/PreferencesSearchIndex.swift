@@ -150,12 +150,6 @@ extension PreferencesSearchEntry {
             detail: L10n.AfterCapture.openAnnotateDescription, keywords: ["markup", "post capture"], anchored: false),
       .init(.capture, section: afterCapture, title: L10n.Automations.systemDefaultCustomize,
             detail: L10n.Automations.systemDefaultSectionFooter, keywords: ["automation", "pipeline", "post capture"], anchored: false),
-      .init(.capture, section: L10n.CaptureToolbar.settingsSection, title: L10n.CaptureToolbar.settingsSection,
-            detail: L10n.CaptureToolbar.settingsDescription, keywords: ["toolbar", "unified", "498", "record region"]),
-      .init(.capture, section: L10n.CaptureToolbar.settingsSection, title: L10n.CaptureToolbar.showForArea,
-            keywords: ["toolbar", "area"], anchored: false),
-      .init(.capture, section: L10n.CaptureToolbar.settingsSection, title: L10n.CaptureToolbar.doubleClickLabel,
-            keywords: ["toolbar", "double click"], anchored: false),
       .init(.capture, section: afterCapture, title: L10n.PreferencesCapture.autoCropSubjectTitle,
             detail: L10n.PreferencesCapture.autoCropSubjectDescription, keywords: ["remove background", "cutout"]),
     ]

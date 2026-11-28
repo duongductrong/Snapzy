@@ -34,7 +34,6 @@ struct ShortcutsSettingsView: View {
   @State private var cloudUploadsShortcut: ShortcutConfig?
   @State private var shortcutListShortcut: ShortcutConfig?
   @State private var pickColorShortcut: ShortcutConfig?
-  @State private var unifiedCaptureShortcut: ShortcutConfig?
   @State private var measureScreenShortcut: ShortcutConfig?
   @State private var historyShortcut: ShortcutConfig?
   @State private var openEditorShortcut: ShortcutConfig?
@@ -110,7 +109,6 @@ struct ShortcutsSettingsView: View {
     _cloudUploadsShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .cloudUploads))
     _shortcutListShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .shortcutList))
     _pickColorShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .pickColor))
-    _unifiedCaptureShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .unifiedCapture))
     _measureScreenShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .measureScreen))
     _historyShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .history))
     _openEditorShortcut = State(initialValue: QuickAccessManager.shared.openEditorShortcut)
@@ -443,17 +441,6 @@ struct ShortcutsSettingsView: View {
       validationIssue: globalValidationIssues[.areaAnnotate],
       onSwap: swapAction(for: .global(.areaAnnotate)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .areaAnnotate) }
-    )
-
-    ShortcutRecorderView(
-      label: L10n.CaptureToolbar.shortcutTitle,
-      description: L10n.CaptureToolbar.settingsDescription,
-      shortcut: $unifiedCaptureShortcut,
-      defaultShortcut: nil,
-      isEnabled: globalEnabledBinding(for: .unifiedCapture),
-      validationIssue: globalValidationIssues[.unifiedCapture],
-      onSwap: swapAction(for: .global(.unifiedCapture)),
-      onShortcutChanged: { handleGlobalShortcutChange($0, for: .unifiedCapture) }
     )
 
     ShortcutRecorderView(
@@ -882,11 +869,10 @@ struct ShortcutsSettingsView: View {
     ocrShortcut = .defaultOCR
     translateShortcut = .defaultTranslate
     smartElementShortcut = .defaultSmartElement
-    unifiedCaptureShortcut = nil
 
     let captureKinds: [GlobalShortcutKind] = [
       .fullscreen, .area, .repeatArea, .delayedCapture, .delayedFullscreen, .areaAnnotate, .activeWindow, .scrollingCapture, .objectCutout, .ocr,
-      .translate, .smartElement, .unifiedCapture,
+      .translate, .smartElement,
     ]
     for kind in captureKinds {
       globalShortcutEnabled[kind] = true
@@ -907,7 +893,6 @@ struct ShortcutsSettingsView: View {
     manager.setOCRShortcut(.defaultOCR)
     manager.setTranslateShortcut(.defaultTranslate)
     manager.setSmartElementShortcut(.defaultSmartElement)
-    manager.setUnifiedCaptureShortcut(nil)
     CaptureOverlayShortcutSettings.resetApplicationCaptureShortcut()
 
     if refresh {
@@ -1339,9 +1324,6 @@ struct ShortcutsSettingsView: View {
       case .pickColor:
         pickColorShortcut = config
         manager.setPickColorShortcut(config)
-      case .unifiedCapture:
-        unifiedCaptureShortcut = config
-        manager.setUnifiedCaptureShortcut(config)
       case .measureScreen:
         measureScreenShortcut = config
         manager.setMeasureScreenShortcut(config)

@@ -49,6 +49,15 @@ final class AutomationEventTriggerModelTests: XCTestCase {
     XCTAssertEqual(trigger, .captureSaved(AutomationCaptureEventConfig(kinds: [.screenshot])))
   }
 
+  /// The capture toolbar (#498) was removed: its stored trigger loads as inert and round-trips.
+  func testRemovedCaptureToolbarTriggerStaysInert() throws {
+    let json = #"{"kind":"captureToolbar"}"#
+    let trigger = try JSONDecoder().decode(AutomationTrigger.self, from: Data(json.utf8))
+    guard case .unsupported = trigger else { return XCTFail("expected .unsupported, got \(trigger)") }
+    let reencoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(trigger)) as? [String: String]
+    XCTAssertEqual(reencoded, ["kind": "captureToolbar"])
+  }
+
   func testNormalizationKeepsOneOfEachAndDropsEmptyCaptureEvent() {
     var automation = Automation(name: "N", source: .input, steps: [AutomationStep(.copyImage)])
     automation.triggers = [

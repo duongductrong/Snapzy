@@ -65,8 +65,6 @@ struct SnapzyDeepLinkHandler {
       screenCaptureViewModel.captureActiveWindow()
     case .captureAreaAnnotate:
       screenCaptureViewModel.captureAreaAnnotate()
-    case .captureWithToolbar:
-      screenCaptureViewModel.captureWithToolbar()
     case .captureScrolling:
       screenCaptureViewModel.captureScrolling()
     case .captureOCR:
@@ -140,8 +138,6 @@ enum SnapzyDeepLinkAction: Equatable {
   case captureApplication
   case captureActiveWindow
   case captureAreaAnnotate
-  /// Unified capture with the action toolbar (milestone 6, #498).
-  case captureWithToolbar
   case captureScrolling
   case captureOCR
   case captureTranslate
@@ -190,8 +186,6 @@ enum SnapzyDeepLinkAction: Equatable {
       self = .captureActiveWindow
     case "capture/area-annotate", "capture-area-annotate", "area-annotate", "screenshot/area-annotate":
       self = .captureAreaAnnotate
-    case "capture/toolbar", "capture-toolbar", "toolbar", "capture/unified":
-      self = .captureWithToolbar
     case "capture/scrolling", "scrolling-capture", "capture-scrolling", "scrolling", "screenshot/scrolling":
       self = .captureScrolling
     case "capture/ocr", "capture/text", "capture-text", "ocr", "text":
@@ -253,7 +247,6 @@ enum SnapzyDeepLinkAction: Equatable {
     case .captureApplication: return "captureApplication"
     case .captureActiveWindow: return "captureActiveWindow"
     case .captureAreaAnnotate: return "captureAreaAnnotate"
-    case .captureWithToolbar: return "captureWithToolbar"
     case .captureScrolling: return "captureScrolling"
     case .captureOCR: return "captureOCR"
     case .captureTranslate: return "captureTranslate"

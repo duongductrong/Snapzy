@@ -26,8 +26,6 @@ enum AutomationInvocation: String, CaseIterable, Sendable {
   case menuBarDrop
   /// A standard capture ran its default after-capture automation (milestone 6).
   case afterCapture
-  /// A capture toolbar button (milestone 6, #498).
-  case captureToolbar
   // Event triggers (milestone 7)
   /// A standard Snapzy capture was saved.
   case captureSaved

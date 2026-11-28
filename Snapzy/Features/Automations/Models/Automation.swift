@@ -137,8 +137,6 @@ enum AutomationTrigger: Equatable {
   /// Offered by Finder's "Run Snapzy Automation…" service and when files are
   /// dropped on the menu bar icon (milestone 5).
   case finderQuickAction
-  /// A button in the unified capture toolbar (milestone 6, #498).
-  case captureToolbar
   // Event triggers (milestone 7): start a run by themselves.
   /// A standard Snapzy capture finished its default after-capture automation.
   case captureSaved(AutomationCaptureEventConfig)
@@ -172,7 +170,6 @@ enum AutomationTrigger: Equatable {
     "quickAccessAction": .quickAccessAction,
     "historyAction": .historyAction,
     "finderQuickAction": .finderQuickAction,
-    "captureToolbar": .captureToolbar,
     "clipboardChange": .clipboardChange,
   ]
 
@@ -182,7 +179,6 @@ enum AutomationTrigger: Equatable {
     case .quickAccessAction: "quickAccessAction"
     case .historyAction: "historyAction"
     case .finderQuickAction: "finderQuickAction"
-    case .captureToolbar: "captureToolbar"
     case .clipboardChange: "clipboardChange"
     case .hotkey, .captureSaved, .folderWatch, .unsupported: nil
     }
@@ -219,7 +215,7 @@ extension AutomationTrigger: Codable {
       var container = encoder.container(keyedBy: CodingKeys.self)
       try container.encode("hotkey", forKey: .kind)
       try container.encode(shortcut, forKey: .shortcut)
-    case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction, .captureToolbar, .clipboardChange:
+    case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction, .clipboardChange:
       var container = encoder.container(keyedBy: CodingKeys.self)
       try container.encode(simpleKind, forKey: .kind)
     case .captureSaved(let config):
@@ -671,12 +667,6 @@ struct Automation: Identifiable, Equatable {
     set { setTrigger(.finderQuickAction, on: newValue) }
   }
 
-  /// A button in the unified capture toolbar (milestone 6).
-  var showsInCaptureToolbar: Bool {
-    get { triggers.contains(.captureToolbar) }
-    set { setTrigger(.captureToolbar, on: newValue) }
-  }
-
   // MARK: Event triggers (milestone 7)
 
   /// "When a Snapzy capture is saved". Setting `nil` removes it.
@@ -814,7 +804,7 @@ struct Automation: Identifiable, Equatable {
         return !keptHotkey
       case .menuBar where needsInput:
         return false
-      case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction, .captureToolbar, .clipboardChange:
+      case .menuBar, .quickAccessAction, .historyAction, .finderQuickAction, .clipboardChange:
         return seenSimple.insert(trigger.simpleKind ?? "").inserted
       case .captureSaved(let config):
         // Nothing to fire on: drop rather than keep a trigger that never runs.

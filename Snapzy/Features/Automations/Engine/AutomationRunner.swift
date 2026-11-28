@@ -138,7 +138,6 @@ final class AutomationRunner {
 
   /// The capture behind `routing` was cancelled or failed before saving a file.
   func abandon(routing: PostCaptureRouting) {
-    CaptureToolbarController.shared.abandon(routing: routing)
     guard case .automation(let runID) = routing,
           let pending = pendingRuns.removeValue(forKey: runID) else { return }
     DiagnosticLogger.shared.log(.info, .action, "Automation run ended without a capture", context: ["runID": runID.uuidString])
@@ -197,7 +196,7 @@ final class AutomationRunner {
   // MARK: - Execution
 
   /// Runs the steps on freshly captured files. `quiet`: no progress HUD and
-  /// only failures logged (instant capture toolbar actions).
+  /// only failures logged.
   @discardableResult
   func run(
     _ automation: Automation,

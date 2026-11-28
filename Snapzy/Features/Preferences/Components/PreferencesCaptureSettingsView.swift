@@ -840,8 +840,6 @@ struct CaptureSettingsView: View {
                 .labelsHidden()
             }
           }
-
-          CaptureToolbarSettingsSection()
         }
       }
       .formStyle(.grouped)

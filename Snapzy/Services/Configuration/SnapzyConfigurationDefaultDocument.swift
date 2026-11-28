@@ -331,7 +331,6 @@ enum SnapzyConfigurationDefaultDocument {
     case .history: return .defaultHistory
     case .pickColor: return nil
     case .measureScreen: return .defaultMeasureScreen
-    case .unifiedCapture: return nil
     }
   }
 

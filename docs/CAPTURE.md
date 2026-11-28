@@ -45,7 +45,6 @@ flowchart TD
 | OCR text | `⇧⌘2` | `OCRService` + `QRCodeService` | Clipboard text only (no file) |
 | Snip to Translate | `⌥⇧2` / `snapzy://capture/translate` | Same OCR flow → `TranslationCardManager` (see [Snip to Translate](#snip-to-translate)) | Floating translation card (no file, clipboard untouched) |
 | Object cutout | `⇧⌘1` (macOS 14+) | `ForegroundCutoutService` | Transparent PNG |
-| Capture with Toolbar (#498) | unbound / `snapzy://capture/toolbar` | `ScreenCaptureViewModel.captureWithToolbar()` → area selection with `.captureToolbar` routing → `CaptureToolbarController` (see [Capture toolbar](#capture-toolbar-498)) | Whatever the chosen button produces |
 | Smart element | `⌥⇧4` | `SmartElementCaptureController` + AX services | Cropped image file |
 | Headless (CLI) | `snapzy capture screen\|window\|area` | `HeadlessCaptureService` → `ScreenCaptureManager` with `invocation: .headless` (see [Headless capture](#headless-capture-snapzy-cli)) | File in the CLI staging folder, moved by the CLI to `--output` |
 
@@ -196,26 +195,6 @@ Snapzy's capture UI shows up in screen recordings (Snapzy's own and third-party 
 - Clicking inside the highlighted rect commits through `ScreenCaptureViewModel.captureSmartElement(rect:)`, which reuses the screenshot save and post-capture pipeline. Clicking outside the highlight or pressing `Escape` cancels without writing a capture.
 - Known limitation: Chromium-based apps (Chrome, Slack, Claude desktop, Electron) may expose only `AXWebArea` for web content unless launched with `--force-renderer-accessibility` (Chromium) or `app.setAccessibilitySupportEnabled(true)` (Electron). Inside such apps the highlight may snap to the whole web view rather than individual DOM elements.
 
-## Capture toolbar (#498)
-
-`Snapzy/Features/CaptureToolbar/`. One shortcut (`GlobalShortcutKind.unifiedCapture`, **unbound by default**, Settings → Shortcuts row "Capture with Toolbar", TOML token `capture_toolbar`) or `snapzy://capture/toolbar` starts the normal area selection (window picking, magnifier, frozen or live) with `PostCaptureRouting.captureToolbar(sessionID:)`. The capture is **capture-first**: it saves to the temp folder, `CaptureToolbarController.noteSelection` remembers the rect, and when the file arrives a dashed outline marks the selection and `CaptureToolbarView` appears under it (above it at the screen bottom, clamped to the visible frame). Cancelling the selection ends the session.
-
-| Button | Runs |
-| --- | --- |
-| Screenshot | The default after-capture automation, with the default Save choice applied first |
-| Copy | `copyImage` (quiet) |
-| Save | `saveToFolder(export folder)` + notify |
-| Upload | `upload` + `copyLink(url)` + notify |
-| Pin / Annotate | `pin` / `openAnnotate` (quiet) |
-| Text | `ocr` + `copyText` + notify |
-| Record / GIF / Scroll | Discard the still and start the recording toolbar / scrolling capture on the same rect (GIF: transient automation with the default recording steps and gif output) |
-| Automation buttons | Any enabled, reviewed automation with the **Capture toolbar** trigger that can take an image; runs on this capture, invocation `captureToolbar` |
-
-- Object cutout is not a button.
-- Accelerators: one letter or digit; defaults Copy `C`, Save `S`, Upload `U`, Pin `P`, Annotate `A`, Text `T`, Record `R`, GIF `G`, Scroll `L`; Return runs the first button; Esc or a click elsewhere cancels and deletes the unused capture; automations get free digits. Double-click inside the outline runs the configured item (default Copy, or none).
-- Settings → Capture → **Capture toolbar**: also use the toolbar for Capture Area (`show_for_area`), double-click action, show / hide / reorder buttons, key per button, reset. Stored by `CaptureToolbarConfigurationStore` (UserDefaults `captureToolbar.configuration`), TOML `[capture.toolbar]` ([CONFIGURATION.md](CONFIGURATION.md)).
-- Steps and run semantics: [AUTOMATIONS.md](AUTOMATIONS.md#capture-toolbar-498-milestone-6).
-
 ## Headless capture (snapzy CLI)
 
 `HeadlessCaptureService` (`Snapzy/Services/Capture/HeadlessCapture/`) captures with no user interaction for the `snapzy` command line tool ([`CLI.md`](CLI.md)). It is CLI-agnostic: the CLI handlers map wire models to `HeadlessCaptureRequest`.
@@ -256,14 +235,12 @@ Snapzy's capture UI shows up in screen recordings (Snapzy's own and third-party 
 | `Snapzy/Services/Wallpaper/DesktopIconManager.swift` | SCK content-filter exclusion to hide desktop icons/widgets at capture |
 | `Snapzy/Services/Capture/TempCaptureManager.swift` | Save-vs-temp destination logic and temp capture lifecycle |
 | `Snapzy/Services/Capture/PostCaptureActionHandler.swift` | Runs the default after-capture automation (see [`POST_CAPTURE.md`](POST_CAPTURE.md)) |
-| `Snapzy/Features/CaptureToolbar/` | Unified capture toolbar: models + configuration store, controller (session, outline, actions), view, settings section |
 | `Snapzy/Services/Capture/HeadlessCapture/` | Headless capture for the `snapzy` CLI: service, target resolver, staging, post-processor, app-name matching |
 
 ## Related docs
 
 - [`SCROLLING_CAPTURE.md`](SCROLLING_CAPTURE.md) — long screenshot stitching subsystem
 - [`RECORDING.md`](RECORDING.md) — screen recording, GIF output, Smart Camera metadata
-- [`AUTOMATIONS.md`](AUTOMATIONS.md) — steps behind the capture toolbar
 - [`POST_CAPTURE.md`](POST_CAPTURE.md) — default after-capture automations, matrix, destinations, formats, clipboard
 - [`ANNOTATE.md`](ANNOTATE.md) — inline area annotate (Capture Markup) and the full editor
 - [`QUICK_ACCESS.md`](QUICK_ACCESS.md) — floating post-capture panel

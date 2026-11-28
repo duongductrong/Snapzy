@@ -110,11 +110,6 @@ extension L10n {
       defaultValue: "Finder",
       comment: "Trigger node: offered by the Finder service"
     )
-    static let canvasTriggerCaptureToolbar = string(
-      "automations.canvas.trigger.capture-toolbar",
-      defaultValue: "Capture toolbar",
-      comment: "Trigger node: a button in the capture toolbar"
-    )
     static let canvasTriggerExternal = string(
       "automations.canvas.trigger.external",
       defaultValue: "Other apps",
@@ -2792,16 +2787,6 @@ extension L10n {
         name
       )
     }
-    static let invocationCaptureToolbar = string(
-      "automations.invocation.capture-toolbar",
-      defaultValue: "Capture toolbar",
-      comment: "Name of a way an automation was started: a capture toolbar button"
-    )
-    static let showInCaptureToolbar = string(
-      "automations.trigger.capture-toolbar",
-      defaultValue: "Capture toolbar",
-      comment: "Trigger toggle: show this automation as a capture toolbar button"
-    )
     static func importURLConfirmTitle(_ host: String) -> String {
       format(
         "automations.import.url-confirm.title",
@@ -3133,126 +3118,5 @@ extension L10n {
       defaultValue: "Stops automations that run by themselves when a capture is saved, an image is copied or a file is added to a folder.",
       comment: "Caption under the pause event triggers toggle"
     )
-  }
-
-  nonisolated enum CaptureToolbar {
-    static let screenshot = L10n.string(
-      "automations.toolbar.screenshot",
-      defaultValue: "Screenshot",
-      comment: "Capture toolbar button: keep the capture and run the default after-capture steps"
-    )
-    static let copy = L10n.string(
-      "automations.toolbar.copy",
-      defaultValue: "Copy",
-      comment: "Capture toolbar button"
-    )
-    static let save = L10n.string(
-      "automations.toolbar.save",
-      defaultValue: "Save",
-      comment: "Capture toolbar button"
-    )
-    static let upload = L10n.string(
-      "automations.toolbar.upload",
-      defaultValue: "Upload",
-      comment: "Capture toolbar button"
-    )
-    static let pin = L10n.string(
-      "automations.toolbar.pin",
-      defaultValue: "Pin",
-      comment: "Capture toolbar button"
-    )
-    static let annotate = L10n.string(
-      "automations.toolbar.annotate",
-      defaultValue: "Annotate",
-      comment: "Capture toolbar button"
-    )
-    static let text = L10n.string(
-      "automations.toolbar.text",
-      defaultValue: "Text",
-      comment: "Capture toolbar button: recognize and copy the text"
-    )
-    static let record = L10n.string(
-      "automations.toolbar.record",
-      defaultValue: "Record",
-      comment: "Capture toolbar button: record this area"
-    )
-    static let scroll = L10n.string(
-      "automations.toolbar.scroll",
-      defaultValue: "Scroll",
-      comment: "Capture toolbar button: scrolling capture of this area"
-    )
-    static let cancelHelp = L10n.string(
-      "automations.toolbar.cancel-help",
-      defaultValue: "Cancel (Esc)",
-      comment: "Capture toolbar close button tooltip"
-    )
-    static let accessibilityLabel = L10n.string(
-      "automations.toolbar.accessibility",
-      defaultValue: "Capture actions",
-      comment: "VoiceOver label of the capture toolbar"
-    )
-    static let shortcutTitle = L10n.string(
-      "automations.toolbar.shortcut",
-      defaultValue: "Capture with Toolbar",
-      comment: "Shortcut / menu name: select an area, then pick an action from a toolbar"
-    )
-    static let settingsSection = L10n.string(
-      "automations.toolbar.settings.section",
-      defaultValue: "Capture toolbar",
-      comment: "Capture settings section title"
-    )
-    static let settingsDescription = L10n.string(
-      "automations.toolbar.settings.description",
-      defaultValue: "Select an area, then pick what to do from a toolbar under it. Press a button's letter, Return for the first one, or Esc to cancel.",
-      comment: "Capture settings section description"
-    )
-    static let showForArea = L10n.string(
-      "automations.toolbar.settings.show-for-area",
-      defaultValue: "Also use the toolbar for Capture Area",
-      comment: "Toggle: the area shortcut ends in the toolbar too"
-    )
-    static let doubleClickLabel = L10n.string(
-      "automations.toolbar.settings.double-click",
-      defaultValue: "Double-click in selection",
-      comment: "Picker label: what double-clicking inside the selection does"
-    )
-    static let doubleClickNone = L10n.string(
-      "automations.toolbar.settings.double-click-none",
-      defaultValue: "Nothing",
-      comment: "Double-click action choice"
-    )
-    static let itemsHeader = L10n.string(
-      "automations.toolbar.settings.items",
-      defaultValue: "Buttons",
-      comment: "Settings list header"
-    )
-    static let acceleratorLabel = L10n.string(
-      "automations.toolbar.settings.accelerator",
-      defaultValue: "Key",
-      comment: "Column / field: single-key accelerator"
-    )
-    static let acceleratorTaken = L10n.string(
-      "automations.toolbar.settings.accelerator-taken",
-      defaultValue: "Already used by another button",
-      comment: "Validation message"
-    )
-    static let automationsNote = L10n.string(
-      "automations.toolbar.settings.automations-note",
-      defaultValue: "Automations appear here when “Capture toolbar” is on in their triggers.",
-      comment: "Settings footer"
-    )
-    static let resetButton = L10n.string(
-      "automations.toolbar.settings.reset",
-      defaultValue: "Reset Toolbar",
-      comment: "Button: restore the default toolbar"
-    )
-    static func acceleratorHint(_ key: String) -> String {
-      L10n.format(
-        "automations.toolbar.accelerator-hint",
-        defaultValue: "Press %@",
-        comment: "VoiceOver hint. %@ = key",
-        key
-      )
-    }
   }
 }

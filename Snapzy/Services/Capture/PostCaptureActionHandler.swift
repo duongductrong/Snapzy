@@ -66,10 +66,6 @@ final class PostCaptureActionHandler {
       await AutomationRunner.shared.complete(runID: runID, capturedURLs: [url])
       return nil
     }
-    if case .captureToolbar(let sessionID) = routing {
-      CaptureToolbarController.shared.present(url: url, sessionID: sessionID)
-      return nil
-    }
 
     if let automation = defaultAutomation?(.screenshot) {
       // The run adds the History entry itself.
@@ -97,10 +93,6 @@ final class PostCaptureActionHandler {
     AutomationFileOriginTracker.shared.markWritten(urls)
     if case .automation(let runID) = routing {
       await AutomationRunner.shared.complete(runID: runID, capturedURLs: urls)
-      return
-    }
-    if case .captureToolbar(let sessionID) = routing, let first = urls.first {
-      CaptureToolbarController.shared.present(url: first, sessionID: sessionID)
       return
     }
 

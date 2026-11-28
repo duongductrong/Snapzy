@@ -467,8 +467,6 @@ private extension KeyboardShortcutManager {
       setPickColorShortcut(config)
     case .measureScreen:
       setMeasureScreenShortcut(config)
-    case .unifiedCapture:
-      setUnifiedCaptureShortcut(config)
     }
   }
 }

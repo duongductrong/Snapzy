@@ -50,7 +50,6 @@ The TOML file covers portable app preferences:
 - Updates: automatic check/download and the Sparkle update channel (`stable` or `beta`).
 - Capture settings: naming templates, screenshot format (`[capture.screenshot] format`: `"png"`, `"jpeg"`, `"webp"`, `"heic"`, or `"avif"`; importing `"avif"` on a macOS without an AVIF encoder keeps the value but warns, and captures save as PNG there), clipboard content for copied images (`[capture.screenshot] clipboard_content`: `"image_and_file"` (default) or `"image_only"`, which drops the file reference for Citrix/RDP/terminal paste targets), cursor/app inclusion, freeze area, Delayed Capture countdown (`[capture.screenshot] delayed_capture_seconds`: `3`, `5`, or `10`, default `3`; shared by delayed area and delayed fullscreen), show selection area overlay, magnifier preferences (`[capture.screenshot] reverse_magnifier_zoom_direction`, `show_magnifier_by_default`, `show_magnifier_color_panel`, `magnifier_size`: `"small"`, `"medium"`, or `"large"`, default `"medium"`), window shadow in Application Capture (`[capture.screenshot] include_window_shadow`, default `true`), scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR provider selection (`[capture.ocr] selected_model`: `"builtin"` or `"custom:<uuid>"`), and custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), object cutout auto-crop.
 - After-capture actions for screenshot and recording: `save`, `quick_access`, `copy_file`, and `open_annotate` under `[capture.after.screenshot]` / `[capture.after.recording]`. Cloud upload is not part of this matrix — it is manual-only from Quick Access, Annotate, Video Editor, and History surfaces.
-- Capture toolbar (#498): `[capture.toolbar]` `show_for_area`, `double_click`, `buttons`, `hidden` (see [Capture toolbar configuration](#capture-toolbar-configuration)).
 - Recording settings: format, quality, FPS, audio, microphone device id, cursor, click highlights, keystroke overlay, live annotation shortcuts, video editor zoom transition duration.
 - Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, pinned image zoom mode (`pin_zoom_mode`: `fixedViewport` by default or `windowFollowsImage`), swipe left/right actions, hide card when window open, animation style, open in Finder after saving (`[quick_access] open_in_finder_after_save`, default `true`), action order, enabled actions, card slots, hover-activated card action shortcuts.
 - History: retention, maximum count, floating panel layout and filter.
@@ -164,7 +163,6 @@ kind = "notify"
   `recording_output = "video" | "gif"`), `clipboard` (the clipboard image), or
   `input` (runs on a file handed in by Quick Access, History, CLI or
   Shortcuts; `save_to_export` and shortcuts do not apply and are not exported).
-- `capture_toolbar`: show the automation as a button in the capture toolbar (M6; needs an image-capable chain).
 - Event triggers (M7, [AUTOMATIONS.md](AUTOMATIONS.md#event-triggers-milestone-7)):
   `capture_event = "off" | "screenshot" | "recording" | "both"` (run after a
   standard Snapzy capture), `clipboard_event = true|false` (run when another app
@@ -207,18 +205,6 @@ kind = "notify"
   replaces every automation (an empty section clears them); without it,
   automations are left untouched. Bad entries, unknown
   steps and modifier-less or duplicate shortcuts are warnings, never errors.
-
-## Capture toolbar configuration
-
-```toml
-[capture.toolbar]
-show_for_area = false   # the Capture Area shortcut also ends in the toolbar
-double_click = "copy"   # a button token, or "none"
-buttons = ["screenshot", "copy:C", "save:S", "upload:U", "pin:P", "annotate:A", "ocr:T", "record:R", "gif:G", "scroll:L"]
-hidden = []             # tokens of hidden buttons
-```
-
-`buttons` lists the toolbar order; a trailing `:X` is the single letter / digit accelerator (none = no key). Built-in tokens: `screenshot`, `copy`, `save`, `upload`, `pin`, `annotate`, `ocr`, `record`, `gif`, `scroll`; an automation button is `automation:<uuid>` (the automation needs `capture_toolbar = true`). Unknown tokens warn and are ignored; missing built-ins are re-added visible; duplicate accelerators are cleared. The shortcut itself is `capture_toolbar` in the shortcuts table (unbound by default).
 
 ## Example
 

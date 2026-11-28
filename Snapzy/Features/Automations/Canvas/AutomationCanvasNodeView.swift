@@ -89,7 +89,6 @@ extension AutomationCanvasNodeInfo {
     if automation.showsInQuickAccess { parts.append(L10n.Automations.canvasTriggerQuickAccess) }
     if automation.showsInHistory { parts.append(L10n.Automations.canvasTriggerHistory) }
     if automation.showsInFinder { parts.append(L10n.Automations.canvasTriggerFinder) }
-    if automation.showsInCaptureToolbar { parts.append(L10n.Automations.canvasTriggerCaptureToolbar) }
     if automation.captureEvent != nil { parts.append(L10n.Automations.invocationCaptureSaved) }
     if automation.runsOnClipboardChange { parts.append(L10n.Automations.invocationClipboardChange) }
     if let folder = automation.folderWatch {
