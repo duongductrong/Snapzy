@@ -61,8 +61,19 @@ extension VideoEditorAgentToolbox {
       hideWhenFast: settings.hideDuringFastSpeed,
       language: settings.languageIdentifier,
       count: captions.segments.count,
-      items: Array(items)
+      items: Array(items),
+      font: settings.customFontId,
+      fontWeight: settings.fontWeight,
+      italic: settings.isItalic
     )
+  }
+
+  func availableFontsList() -> [String] {
+    let manager = VideoEditorFontManager.shared
+    var result: [String] = [VideoEditorFontResolver.defaultFamilyId]
+    result.append(contentsOf: manager.downloadedCatalogIds.sorted())
+    result.append(contentsOf: manager.importedFonts.map(\.id))
+    return result
   }
 
   /// A caption with its timeline span: the first playing piece of the recording it falls on.

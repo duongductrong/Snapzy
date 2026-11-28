@@ -196,6 +196,13 @@ enum VideoEditorAgentStepDescriber {
       let identifier = (payload["language"] as? String) ?? (args["language"] as? String) ?? ""
       let name = TranslationLanguage.language(for: identifier)?.displayName ?? identifier
       return VideoEditorAgentStep(symbolName: "translate", title: L10n.VideoEditorAI.stepTranslateCaptions(name))
+    case .closeGaps:
+      let closed = number(payload["closed_seconds"])
+      return VideoEditorAgentStep(
+        symbolName: "arrow.right.and.line.vertical.and.arrow.left",
+        title: L10n.VideoEditor.aiStepClosedGaps,
+        detail: closed.flatMap { $0 > 0 ? "−\(format($0)) s" : nil }
+      )
     case .getTimeline, .seek, .getActivity, .getFrame, .findOnScreen, .getTranscript, .getCaptions:
       return nil
     }

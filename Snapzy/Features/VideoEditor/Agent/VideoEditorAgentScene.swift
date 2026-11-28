@@ -119,6 +119,9 @@ nonisolated struct VideoEditorAgentScene: Encodable, Equatable {
     let count: Int
     /// The first captions only; `count` tells how many there are.
     let items: [Caption]
+    var font: String?
+    var fontWeight: Int?
+    var italic: Bool?
   }
 
   /// Timeline length, trimmed footage included.
@@ -142,4 +145,6 @@ nonisolated struct VideoEditorAgentScene: Encodable, Equatable {
   var camera: Camera?
   /// nil before captions are generated.
   var captions: Captions?
+  /// Locally available font IDs (`system`, downloaded OFL IDs, and imported font IDs).
+  var availableFonts: [String] = []
 }

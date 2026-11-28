@@ -840,7 +840,7 @@ final class VideoEditorAgentController: ObservableObject {
     case .trimClip: L10n.VideoEditorAI.statusTrim
     case .split: L10n.VideoEditorAI.statusSplit
     case .moveClip: L10n.VideoEditorAI.statusMove
-    case .deleteClip: L10n.VideoEditorAI.statusDelete
+    case .deleteClip, .closeGaps: L10n.VideoEditorAI.statusDelete
     case .addZoom: L10n.VideoEditorAI.statusZoom
     case .updateZoom, .removeZoom: L10n.VideoEditorAI.statusEditZoom
     case .addSpeed, .updateSpeed, .removeSpeed: L10n.VideoEditorAI.statusSpeed
