@@ -139,8 +139,9 @@ enum PreferencesKeys {
   static let ocrCustomModels = "ocr.customModels"
   /// Snip to Translate target language (BCP-47). Unset = ask on first use.
   static let translateTargetLanguage = "translate.targetLanguage"
-  /// Snip to Translate engine: `builtin` (Apple Translation) or `custom:<uuid>`.
+  /// Snip to Translate engine: `builtin` (Apple Translation), `custom:<uuid>` or `cli:<kind>`.
   static let translateSelectedEngine = "translate.selectedEngine"
+  // Per-CLI translation model override: `translate.cli.<kind>.model` (TranslationAgentCLISettings).
 
   // Floating Screenshot (Quick Access)
   static let floatingEnabled = "floatingScreenshot.enabled"

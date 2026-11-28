@@ -99,8 +99,8 @@ enum AutomationTranslator {
     }
 
     switch TranslationEngineResolver().resolve() {
-    case .remote(let model):
-      return try await RemoteTranslationProvider(model: model).translate(text, to: target)
+    case .remote(let engine):
+      return try await RemoteTranslationProvider(engine: engine).translate(text, to: target)
     case .apple:
       if #available(macOS 15.0, *) {
         return try await HeadlessTranslationHost.shared.translate(text, target: target)

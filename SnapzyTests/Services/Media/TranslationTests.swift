@@ -43,7 +43,7 @@ final class TranslationEngineResolverTests: XCTestCase {
     try store([model], in: defaults)
     let resolver = TranslationEngineResolver(defaults: defaults, isAppleTranslationSupported: false)
     resolver.store(.custom(model.id))
-    XCTAssertEqual(resolver.resolve(), .remote(model))
+    XCTAssertEqual(resolver.resolve(), .remote(.endpoint(model)))
   }
 
   func testMissingEndpointCanonicalizesToBuiltIn() {

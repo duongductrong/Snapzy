@@ -28178,6 +28178,1590 @@
           }
         }
       }
+    },
+    "translate.settings-engine-description-all": {
+      "comment": "Settings description of the translation engine picker",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Übersetzen läuft auf diesem Mac. Agent-CLIs und eigene Endpunkte senden den Text an ihren Modellanbieter."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Translation runs on this Mac. Agent CLIs and custom endpoints send the text to their model provider."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traducción de Apple funciona en este Mac. Las CLI de agentes y los endpoints personalizados envían el texto a su proveedor de modelos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La traduction d’Apple s’exécute sur ce Mac. Les CLI d’agent et les points de terminaison personnalisés envoient le texte à leur fournisseur de modèles."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התרגום של Apple פועל במק הזה. ממשקי CLI של סוכנים ונקודות קצה מותאמות שולחים את הטקסט לספק המודל שלהם."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appleの翻訳はこのMac上で動作します。エージェントCLIとカスタムエンドポイントは、テキストを各モデルプロバイダへ送信します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 번역은 이 Mac에서 실행됩니다. 에이전트 CLI와 사용자 지정 엔드포인트는 텍스트를 해당 모델 제공업체로 보냅니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перевод Apple работает на этом Mac. CLI агентов и свои эндпоинты отправляют текст своему поставщику моделей."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Translation chạy ngay trên máy Mac này. Agent CLI và endpoint tùy chỉnh sẽ gửi văn bản tới nhà cung cấp mô hình của chúng."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 翻译在这台 Mac 上运行。代理 CLI 和自定义端点会将文本发送到其模型提供商。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 翻譯在這台 Mac 上執行。代理 CLI 和自訂端點會將文字傳送到其模型供應商。"
+          }
+        }
+      }
+    },
+    "translate.settings-group-device": {
+      "comment": "Translation engine picker: heading over Apple Translation",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Mac"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On this Mac"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En este Mac"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur ce Mac"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "במק הזה"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMac上"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Mac에서"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На этом Mac"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trên máy Mac này"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这台 Mac 上"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在這台 Mac 上"
+          }
+        }
+      }
+    },
+    "translate.settings-group-agent-cli": {
+      "comment": "Translation engine picker: heading over Claude Code, Codex and OpenCode",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agent-CLIs"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agent CLIs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLI de agentes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLI d’agent"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLI של סוכנים"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントCLI"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "에이전트 CLI"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLI агентов"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agent CLI"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理 CLI"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理 CLI"
+          }
+        }
+      }
+    },
+    "translate.settings-group-endpoints": {
+      "comment": "Translation engine picker: heading over custom OpenAI-compatible endpoints",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene Endpunkte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom endpoints"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoints personalizados"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Points de terminaison personnalisés"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נקודות קצה מותאמות"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタムエンドポイント"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용자 지정 엔드포인트"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Свои эндпоинты"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint tùy chỉnh"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义端点"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自訂端點"
+          }
+        }
+      }
+    },
+    "translate.settings-apple-tile-title": {
+      "comment": "Translation engine tile title for Apple Translation",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Übersetzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Translation"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traducción de Apple"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduction d’Apple"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התרגום של Apple"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appleの翻訳"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 번역"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перевод Apple"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Translation"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 翻译"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 翻譯"
+          }
+        }
+      }
+    },
+    "translate.settings-apple-tile-subtitle": {
+      "comment": "Translation engine tile subtitle for Apple Translation",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privat, auf dem Gerät"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private, on device"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privado, en el dispositivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privé, sur l’appareil"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פרטי, במכשיר"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライベート、デバイス上"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비공개, 기기 내"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приватно, на устройстве"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riêng tư, ngay trên máy"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私密，设备端"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私密，裝置端"
+          }
+        }
+      }
+    },
+    "translate.settings-apple-tile-unavailable": {
+      "comment": "Translation engine tile subtitle when Apple Translation is not available on this macOS",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erfordert macOS 15"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs macOS 15"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requiere macOS 15"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nécessite macOS 15"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "דורש macOS 15"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 15が必要"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 15 필요"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нужна macOS 15"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cần macOS 15"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要 macOS 15"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要 macOS 15"
+          }
+        }
+      }
+    },
+    "translate.settings-apple-detail": {
+      "comment": "Note under the engine picker when Apple Translation is selected",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Übersetzung läuft auf diesem Mac. Dein Text verlässt ihn nie."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation runs on this Mac. Your text never leaves it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La traducción se hace en este Mac. Tu texto nunca sale de él."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La traduction s’effectue sur ce Mac. Votre texte ne le quitte jamais."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התרגום מתבצע במק הזה. הטקסט שלך לא יוצא ממנו."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻訳はこのMac上で行われます。テキストが外部へ送られることはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번역은 이 Mac에서 실행됩니다. 텍스트가 밖으로 나가지 않습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перевод выполняется на этом Mac. Текст никуда не отправляется."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Việc dịch chạy ngay trên máy Mac này. Văn bản của bạn không bao giờ rời khỏi máy."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译在这台 Mac 上进行，文本不会离开设备。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻譯在這台 Mac 上進行，文字不會離開裝置。"
+          }
+        }
+      }
+    },
+    "translate.settings-cli-not-installed": {
+      "comment": "Translation engine tile subtitle for an agent CLI that was not found on this Mac",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht installiert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not installed"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No instalado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non installé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא מותקן"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未インストール"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설치되지 않음"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не установлен"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa cài đặt"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未安装"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未安裝"
+          }
+        }
+      }
+    },
+    "translate.settings-open-ai-settings": {
+      "comment": "Button that opens Settings › AI from the translation settings",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KI-Einstellungen …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI Settings…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes de IA…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages IA…"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדרות AI…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI設定…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 설정…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки ИИ…"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cài đặt AI…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 设置…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 設定…"
+          }
+        }
+      }
+    },
+    "translate.settings-cli-model-title": {
+      "comment": "Title of the model override picker for translating with an agent CLI",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersetzungsmodell"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation model"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo de traducción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle de traduction"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מודל תרגום"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻訳モデル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번역 모델"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Модель для перевода"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mô hình dịch"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译模型"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻譯模型"
+          }
+        }
+      }
+    },
+    "translate.settings-cli-model-description": {
+      "comment": "Description of the model override picker for translating with an agent CLI",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behalte das Modell aus Einstellungen › KI oder wähle ein schnelleres nur für Übersetzungen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep the model from Settings › AI, or pick a faster one just for translating."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa el modelo de Ajustes › IA o elige uno más rápido solo para traducir."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gardez le modèle de Réglages › IA, ou choisissez-en un plus rapide uniquement pour traduire."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השאר את המודל מהגדרות › AI, או בחר מודל מהיר יותר רק לתרגום."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定 › AI のモデルをそのまま使うか、翻訳専用に高速なモデルを選びます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 › AI의 모델을 그대로 쓰거나 번역 전용으로 더 빠른 모델을 고르세요."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оставьте модель из Настроек › ИИ или выберите более быструю только для перевода."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giữ mô hình trong Cài đặt › AI, hoặc chọn một mô hình nhanh hơn chỉ dành cho việc dịch."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沿用“设置 › AI”中的模型，或仅为翻译选择更快的模型。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沿用「設定 › AI」中的模型，或僅為翻譯選擇更快的模型。"
+          }
+        }
+      }
+    },
+    "translate.settings-cli-model-follow-ai": {
+      "comment": "Model override picker option: use the model set in Settings › AI. %@ is that model's name",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie in KI-Einstellungen (%@)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same as AI settings (%@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Igual que en Ajustes de IA (%@)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comme dans les réglages IA (%@)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כמו בהגדרות AI ‏(%@)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI設定と同じ（%@）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 설정과 동일 (%@)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Как в настройках ИИ (%@)"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giống cài đặt AI (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与 AI 设置相同（%@）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "與 AI 設定相同（%@）"
+          }
+        }
+      }
+    },
+    "translate.settings-cli-model-overridden": {
+      "comment": "Small badge shown when translation uses its own model instead of the AI settings one",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Übersetzung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation only"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo traducción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduction uniquement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לתרגום בלבד"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻訳専用"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번역 전용"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Только перевод"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chỉ cho dịch"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅用于翻译"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅用於翻譯"
+          }
+        }
+      }
+    },
+    "translate.settings-cli-privacy": {
+      "comment": "Privacy note when an agent CLI translates. %@ is the CLI name, e.g. Claude Code",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Text geht an den Modellanbieter, bei dem %@ angemeldet ist. Snapzy startet es ohne Werkzeuge und ohne Dateizugriff."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The text goes to the model provider %@ is signed in to. Snapzy runs it with no tools and no file access."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El texto va al proveedor de modelos en el que %@ tiene la sesión iniciada. Snapzy lo ejecuta sin herramientas ni acceso a archivos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le texte est envoyé au fournisseur de modèles auquel %@ est connecté. Snapzy l’exécute sans outils ni accès aux fichiers."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הטקסט נשלח לספק המודל ש־%@ מחובר אליו. Snapzy מריץ אותו ללא כלים וללא גישה לקבצים."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキストは %@ がサインインしているモデルプロバイダへ送られます。Snapzy はツールもファイルアクセスもなしで実行します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트는 %@이(가) 로그인한 모델 제공업체로 전송됩니다. Snapzy는 도구나 파일 접근 없이 실행합니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текст отправляется поставщику моделей, в котором выполнен вход в %@. Snapzy запускает его без инструментов и доступа к файлам."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Văn bản được gửi tới nhà cung cấp mô hình mà %@ đang đăng nhập. Snapzy chạy nó không kèm công cụ và không truy cập tệp."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本会发送到 %@ 已登录的模型提供商。Snapzy 运行它时不提供任何工具，也不允许访问文件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文字會傳送到 %@ 已登入的模型供應商。Snapzy 執行時不提供任何工具，也不允許存取檔案。"
+          }
+        }
+      }
+    },
+    "translate.settings-cli-test": {
+      "comment": "Button that translates a sample sentence with the selected agent CLI",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausprobieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try It"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essayer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נסה"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용해 보기"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверить"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thử ngay"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试一试"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試試看"
+          }
+        }
+      }
+    },
+    "translate.settings-cli-testing": {
+      "comment": "Status while the agent CLI translates the sample sentence",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersetze ein Beispiel …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translating a sample…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduciendo un ejemplo…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduction d’un exemple…"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מתרגם דוגמה…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サンプルを翻訳中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "샘플 번역 중…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перевожу пример…"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang dịch câu mẫu…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在翻译示例…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在翻譯範例…"
+          }
+        }
+      }
+    },
+    "translate.settings-cli-test-done": {
+      "comment": "Status after the agent CLI translated the sample sentence. %@ is the time in seconds, e.g. 4.2",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antwort nach %@ s"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Answered in %@ s"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Respondió en %@ s"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réponse en %@ s"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נענה תוך %@ שנ׳"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 秒で応答"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@초 만에 응답"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ответ за %@ с"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phản hồi sau %@ giây"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 秒内响应"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 秒內回應"
+          }
+        }
+      }
+    },
+    "translate.engine-agent-cli-footer": {
+      "comment": "Footer on the translation card when an agent CLI produced the result. %@ is the CLI name",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersetzt von %@. Der Text wurde über diese Agent-CLI gesendet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translated by %@. The text was sent through this agent CLI."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traducido por %@. El texto se envió a través de esta CLI de agente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduit par %@. Le texte a été envoyé via cette CLI d’agent."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תורגם על ידי %@. הטקסט נשלח דרך CLI הסוכן הזה."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ による翻訳。テキストはこのエージェントCLI経由で送信されました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 번역했습니다. 텍스트가 이 에이전트 CLI를 통해 전송되었습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Переведено с помощью %@. Текст отправлен через этот CLI агента."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Được dịch bởi %@. Văn bản đã được gửi qua agent CLI này."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由 %@ 翻译。文本已通过此代理 CLI 发送。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由 %@ 翻譯。文字已透過此代理 CLI 傳送。"
+          }
+        }
+      }
+    },
+    "translate.settings-cli-configure": {
+      "comment": "Help and accessibility label of the gear button on an agent CLI tile. %@ is the CLI name",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ für Übersetzungen konfigurieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configure %@ for translation"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurar %@ para traducir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurer %@ pour la traduction"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדרת %@ לתרגום"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻訳用に %@ を設定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번역용 %@ 설정"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настроить %@ для перевода"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cấu hình %@ cho việc dịch"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置用于翻译的 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定用於翻譯的 %@"
+          }
+        }
+      }
+    },
+    "translate.settings-hero-subtitle": {
+      "comment": "Settings › Translate page subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle Sprache und Engine, mit der Snapzy übersetzt – auf diesem Mac oder mit deiner eigenen KI."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick the language and the engine Snapzy translates with, on this Mac or through your own AI."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige el idioma y el motor con el que Snapzy traduce, en este Mac o con tu propia IA."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez la langue et le moteur de traduction de Snapzy, sur ce Mac ou via votre propre IA."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר את השפה ואת המנוע שבהם Snapzy מתרגם, במק הזה או דרך ה־AI שלך."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy が翻訳に使う言語とエンジンを選びます。このMac上でも、お使いのAI経由でも翻訳できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy가 번역에 사용할 언어와 엔진을 고르세요. 이 Mac에서 또는 사용 중인 AI로 번역할 수 있습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите язык и движок, которым переводит Snapzy: на этом Mac или через ваш собственный ИИ."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chọn ngôn ngữ và công cụ Snapzy dùng để dịch, ngay trên máy Mac này hoặc qua AI của riêng bạn."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择 Snapzy 翻译所用的语言和引擎，可在这台 Mac 上运行，也可使用你自己的 AI。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇 Snapzy 翻譯所用的語言和引擎，可在這台 Mac 上執行，也可使用你自己的 AI。"
+          }
+        }
+      }
+    },
+    "translate.settings-language-section": {
+      "comment": "Settings › Translate section title over the target language picker",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שפה"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "言語"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "언어"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Язык"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ngôn ngữ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语言"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語言"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

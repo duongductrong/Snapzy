@@ -43,12 +43,19 @@ enum AppleBlockTranslator {
   }
 }
 
-/// Translates blocks through a custom OpenAI-compatible endpoint with a JSON
-/// array in and out, so every result maps back to its block by id.
+/// Translates blocks through a remote engine (custom endpoint or agent CLI) with a
+/// JSON array in and out, so every result maps back to its block by id.
 struct RemoteBlockTranslator {
   static let maxBlocksPerRequest = 40
+  /// Each CLI run pays a start-up cost of seconds, so it takes bigger batches.
+  static let maxBlocksPerCLIRequest = 120
 
-  private let client: OpenAICompatibleChatClient
+  /// Characters per CLI run: OpenCode takes the prompt on argv (ARG_MAX ≈ 1 MB).
+  static let maxCharactersPerCLIRequest = 60_000
+
+  private let completer: TranslationPromptCompleter
+  private let blocksPerRequest: Int
+  private var charactersPerRequest = Int.max
 
   init(
     model: CustomOCRModel,
@@ -56,12 +63,18 @@ struct RemoteBlockTranslator {
     session: URLSessionProtocol = URLSession.shared,
     timeout: TimeInterval = 90
   ) {
-    client = OpenAICompatibleChatClient(
-      model: model,
-      keychainStore: keychainStore,
-      session: session,
-      timeout: timeout
-    )
+    completer = .endpoint(model, keychainStore: keychainStore, session: session, timeout: timeout)
+    blocksPerRequest = Self.maxBlocksPerRequest
+  }
+
+  init(engine: RemoteTranslationEngine) {
+    completer = .engine(engine, endpointTimeout: 90)
+    if case .agentCLI = engine {
+      blocksPerRequest = Self.maxBlocksPerCLIRequest
+      charactersPerRequest = Self.maxCharactersPerCLIRequest
+    } else {
+      blocksPerRequest = Self.maxBlocksPerRequest
+    }
   }
 
   func translate(_ blocks: [String], to target: TranslationLanguage) async throws -> BlockTranslationOutput {
@@ -69,14 +82,12 @@ struct RemoteBlockTranslator {
     var firstError: Error?
     var translatedAny = false
 
-    for start in stride(from: 0, to: blocks.count, by: Self.maxBlocksPerRequest) {
+    for range in Self.chunks(blocks, maxCount: blocksPerRequest, maxCharacters: charactersPerRequest) {
       try Task.checkCancellation()
-      let end = min(start + Self.maxBlocksPerRequest, blocks.count)
-      let chunk = Array(blocks[start..<end])
+      let start = range.lowerBound
+      let chunk = Array(blocks[range])
       do {
-        let content = try await client.complete(messages: [
-          ChatCompletionMessage(role: "user", content: [.text(Self.prompt(blocks: chunk, target: target))]),
-        ])
+        let content = try await completer.complete(Self.prompt(blocks: chunk, target: target))
         let parsed = Self.parse(content, count: chunk.count)
         for (offset, text) in parsed.enumerated() where text != nil {
           texts[start + offset] = text
@@ -93,6 +104,24 @@ struct RemoteBlockTranslator {
       throw firstError
     }
     return BlockTranslationOutput(texts: texts, sourceLanguageIdentifier: nil)
+  }
+
+  /// Consecutive ranges of at most `maxCount` blocks and (past the first block) `maxCharacters`.
+  static func chunks(_ blocks: [String], maxCount: Int, maxCharacters: Int) -> [Range<Int>] {
+    var ranges: [Range<Int>] = []
+    var start = 0
+    var characters = 0
+    for (index, block) in blocks.enumerated() {
+      let count = index - start
+      if count > 0, count >= maxCount || characters + block.count > maxCharacters {
+        ranges.append(start..<index)
+        start = index
+        characters = 0
+      }
+      characters += block.count
+    }
+    if start < blocks.count { ranges.append(start..<blocks.count) }
+    return ranges
   }
 
   static func prompt(blocks: [String], target: TranslationLanguage) -> String {

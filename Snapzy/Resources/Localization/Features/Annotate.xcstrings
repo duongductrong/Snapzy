@@ -31873,6 +31873,78 @@
           }
         }
       }
+    },
+    "annotate.translate.engine-agent-cli": {
+      "comment": "Auto Translate menu: current engine is an agent CLI. %@ is the CLI name",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (Text wird über diese Agent-CLI gesendet)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (text is sent through this agent CLI)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (el texto se envía a través de esta CLI de agente)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (le texte passe par cette CLI d’agent)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (הטקסט נשלח דרך CLI הסוכן הזה)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（テキストはこのエージェントCLI経由で送信）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (텍스트가 이 에이전트 CLI로 전송됨)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (текст отправляется через этот CLI агента)"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (văn bản được gửi qua agent CLI này)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（文本通过此代理 CLI 发送）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（文字透過此代理 CLI 傳送）"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

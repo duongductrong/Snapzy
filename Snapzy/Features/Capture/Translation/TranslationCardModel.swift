@@ -104,17 +104,17 @@ final class TranslationCardModel: ObservableObject {
     switch route {
     case .apple:
       appleRequestToken += 1
-    case .remote(let model):
+    case .remote(let engine):
       let text = sourceText
       let detected = detectedSourceIdentifier
       remoteTask = Task { [weak self] in
         do {
-          let translated = try await RemoteTranslationProvider(model: model).translate(text, to: target)
+          let translated = try await RemoteTranslationProvider(engine: engine).translate(text, to: target)
           guard !Task.isCancelled else { return }
           self?.finish(.done(TranslationOutput(text: translated, sourceLanguageIdentifier: detected)))
         } catch {
           guard !Task.isCancelled else { return }
-          DiagnosticLogger.shared.logError(.ocr, error, "Remote translation failed")
+          DiagnosticLogger.shared.logError(.ocr, error, "Remote translation failed (\(engine.logName))")
           self?.finish(.failed(.other(error.localizedDescription)))
         }
       }
@@ -134,7 +134,7 @@ final class TranslationCardModel: ObservableObject {
   func translateWithAlternativeEndpoint() {
     guard let alternativeEndpoint else { return }
     DiagnosticLogger.shared.log(.info, .ocr, "Translation retried with custom endpoint by user")
-    route = .remote(alternativeEndpoint)
+    route = .remote(.endpoint(alternativeEndpoint))
     start()
   }
 

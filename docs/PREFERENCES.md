@@ -67,7 +67,7 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
     - A removed or unavailable custom endpoint falls back to Built-in OCR (`OCRModelResolver`). Legacy downloadable selections are treated as Built-in OCR.
   - Notifications: OCR Notifications (`ocr.successNotificationEnabled`, default on — posts a native macOS notification with a preview of the recognized text; falls back to an in-app toast when notifications are unavailable). When the toggle is on, an inline row surfaces the macOS-level permission only when it would block delivery: `notDetermined` shows an "Allow" button that triggers the system prompt in place, `denied` shows an orange hint plus "Open Settings". A granted (or unavailable) state renders nothing, so a healthy setup stays uncluttered. The row refreshes on `NSApplication.didBecomeActiveNotification`, so returning from System Settings updates it.
   - Text Actions: Link Detection (`ocr.linkDetectionEnabled`).
-  - Snip to Translate (`PreferencesTranslateSettingsSection`): Translate to (`translate.targetLanguage`, empty = "Ask on first use") and Translation engine (`translate.selectedEngine`, `builtin` = Apple Translation, or one of the custom endpoints from the OCR Model list). On macOS 13/14 the Apple option reads "requires macOS 15" and a hint explains how to translate with a custom endpoint; choosing an endpoint shows that text is sent to it. Exported/imported under `[capture.translate]` (`target_language`, `selected_engine`).
+  - Snip to Translate settings moved to their own **Translate** tab (see below).
 
 ### Annotate (`PreferencesAnnotateSettingsView.swift`)
 
@@ -80,6 +80,10 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
   - Clipboard image open behavior (`annotate.clipboardImageOpenBehavior`): `ask` (default) / `loadAutomatically` / `doNothing` (`AnnotateClipboardImageBehavior`).
   - Close After Drag (`annotate.closeAfterDrag`, default on).
   - Bring Forward After Drag (`annotate.bringForwardAfterDrag`, default off; disabled when Close After Drag is on).
+
+### Translate
+
+Sidebar tab after AI (`PreferencesTab.translate`, `TranslateSettingsView` in `PreferencesTranslateSettingsView.swift`; deep link `snapzy://settings/translate`, aliases `translation`, `translations`). Hero, then Language and Translation engine sections, then the Auto Translate note. Translation errors' Open Settings (Snip to Translate card, Annotate Auto Translate) land here. Translate to (`translate.targetLanguage`, empty = "Ask on first use") and Translation engine (`translate.selectedEngine`: `builtin` = Apple Translation, `cli:<kind>` = an agent CLI from Settings › AI, or `custom:<uuid>` = a custom endpoint from the OCR Model list), shown as a gallery of Liquid Glass tiles grouped On this Mac / Agent CLIs / Custom endpoints (CLI tiles show version · model, dimmed when not installed). On macOS 13/14 the Apple tile reads "Needs macOS 15" and a hint explains how to translate with a custom endpoint; choosing an endpoint shows that text is sent to it. A CLI tile's gear opens a glass detail card under the CLI row: path/version, **AI Settings…**, Translation model (`translate.cli.<kind>.model`; "Same as AI settings (…)" = empty, catalog models, Custom…) with a "Translation only" badge when overridden, privacy note, and **Try It** (translates a sample sentence into the target language and shows the reply time). Exported/imported under `[capture.translate]` (`target_language`, `selected_engine`). Tiles: resting = faint glass + hairline; selected = denser glass (`liquidGlassChrome` active), top-left specular rim with a faint accent hairline and a small accent check seal (no accent fill, no shadow). CLI settings open from the tile's gear, under the CLI row. Custom endpoints group links to Capture › OCR (**Manage Endpoints…**, dashed Add tile when empty).
 
 ### AI (`PreferencesAISettingsView.swift`)
 

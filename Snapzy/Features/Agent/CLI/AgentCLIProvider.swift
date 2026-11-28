@@ -251,7 +251,7 @@ final class AgentCLIProvider: AgentProvider {
   /// hold its stdout (an MCP server, a worker) so the read can finish.
   nonisolated static let drainAfterExit: TimeInterval = 1
 
-  nonisolated private static func collect(
+  nonisolated static func collect(
     process: AnnotateAgentCLIProcess,
     kind: AnnotateAgentCLIKind,
     timeout: TimeInterval

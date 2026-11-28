@@ -271,7 +271,7 @@ extension VideoEditorAgentToolbox {
     state.setCaptions(captions)
     var payload: [String: Any] = ["language": target.identifier, "translated": translated]
     if translated < captions.segments.count { payload["untranslated"] = captions.segments.count - translated }
-    if case .remote(let model) = route { payload["engine"] = model.name } else { payload["engine"] = "Apple Translation (on this Mac)" }
+    if case .remote(let engine) = route { payload["engine"] = engine.displayName } else { payload["engine"] = "Apple Translation (on this Mac)" }
     return .success(payload)
   }
 

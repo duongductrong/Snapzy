@@ -131,7 +131,7 @@ extension AnnotateState {
     }
 
     let resolver = TranslationEngineResolver()
-    let route: TranslationRoute = endpoint.map { .remote($0) } ?? resolver.resolve()
+    let route: TranslationRoute = endpoint.map { .remote(.endpoint($0)) } ?? resolver.resolve()
     if case .unavailable = route {
       showAutoTranslateNotice(.failure(message: L10n.Translate.requiresMacOS15Title, action: .openSettings))
       return
@@ -425,8 +425,8 @@ extension AnnotateState {
           targetLanguageIdentifier: target.identifier
         )
       }
-    case .remote(let model):
-      return try await RemoteBlockTranslator(model: model).translate(texts, to: target)
+    case .remote(let engine):
+      return try await RemoteBlockTranslator(engine: engine).translate(texts, to: target)
     case .unavailable:
       throw AnnotateAutoTranslateError.noText
     }
@@ -609,7 +609,7 @@ extension AnnotateState {
   private static func engineName(_ route: TranslationRoute) -> String {
     switch route {
     case .apple: "apple"
-    case .remote: "remote"
+    case .remote(let engine): engine.logName
     case .unavailable: "unavailable"
     }
   }
@@ -620,7 +620,7 @@ extension AnnotateState {
   }
 
   static func openTranslationSettings() {
-    AppStatusBarController.shared.openPreferencesWindow(tab: .capture)
+    AppStatusBarController.shared.openPreferencesWindow(tab: .translate)
     PreferencesNavigationState.shared.reveal(
       PreferencesSearchEntry(
         .capture,
