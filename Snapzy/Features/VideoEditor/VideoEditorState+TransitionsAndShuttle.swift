@@ -156,13 +156,16 @@ extension VideoEditorState {
 
     if wasReversing {
       playbackState.setPlaying(false)
-      syncPlayerAudioWithExportSettings()
     }
 
     playbackState.setShuttleRate(nextRate)
+    if wasReversing {
+      syncPlayerAudioWithExportSettings()
+    }
     if !playbackState.isPlaying {
       play()
     }
+    player.isMuted = shouldMutePreviewPlayer
 
     if audioTailPlaybackTimer == nil {
       if nextRate > 1.05 {

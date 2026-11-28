@@ -120,16 +120,32 @@ nonisolated enum VideoEditorFontResolver {
     installedIdByLowercasedName = byLower
     lock.unlock()
 
-    // 2. Register only committed user-imported local font records listed in `imported_fonts.json`
-    // (removing any stale `.staging-*` directories left by an interrupted process).
+    // 2. Clean up incomplete `.staging-*` directories and recover any `.backup-<familyId>`
+    // left behind if the app crashed mid-replace before `dest` was put in place.
     let root = storageRootURL()
     if let allItems = try? FileManager.default.contentsOfDirectory(
       at: root,
       includingPropertiesForKeys: nil,
       options: []
     ) {
-      for item in allItems where item.lastPathComponent.hasPrefix(".staging-") {
-        try? FileManager.default.removeItem(at: item)
+      let backupPrefix = ".backup-"
+      for item in allItems {
+        let name = item.lastPathComponent
+        if name.hasPrefix(".staging-") {
+          try? FileManager.default.removeItem(at: item)
+        } else if name.hasPrefix(backupPrefix) {
+          let familyId = String(name.dropFirst(backupPrefix.count))
+          guard !familyId.isEmpty else {
+            try? FileManager.default.removeItem(at: item)
+            continue
+          }
+          let destDir = root.appendingPathComponent(familyId, isDirectory: true)
+          if FileManager.default.fileExists(atPath: destDir.path) {
+            try? FileManager.default.removeItem(at: item)
+          } else {
+            try? FileManager.default.moveItem(at: item, to: destDir)
+          }
+        }
       }
     }
     let manifestURL = root.appendingPathComponent("imported_fonts.json")
@@ -481,6 +497,7 @@ final class VideoEditorFontManager: ObservableObject {
 
   private static let maxManifestBytes: Int = 1_048_576
   private nonisolated static let maxImportedFontFileBytes: Int = 33_554_432
+  private nonisolated static let importLock = NSLock()
 
   /// Explicit and nonisolated: avoids macOS 13-15 swift_task_deinitOnExecutor abort (#668).
   nonisolated deinit {}
@@ -540,10 +557,13 @@ final class VideoEditorFontManager: ObservableObject {
   }
 
   /// Stage, validate, atomically install, and register font files without leaving partial files
-  /// behind if any file in `urls` fails validation or registration.
+  /// behind or losing an existing family directory if replacement fails.
   private nonisolated static func stageAndRegisterFontFiles(
     from urls: [URL]
   ) throws -> VideoEditorImportedFontRecord? {
+    importLock.lock()
+    defer { importLock.unlock() }
+
     let valid = urls.filter { ["ttf", "otf", "ttc"].contains($0.pathExtension.lowercased()) }
     guard !valid.isEmpty else { return nil }
 
@@ -555,6 +575,7 @@ final class VideoEditorFontManager: ObservableObject {
     let root = VideoEditorFontResolver.storageRootURL()
     let stagingDir = root.appendingPathComponent(".staging-\(UUID().uuidString)", isDirectory: true)
     let destDir = root.appendingPathComponent(familyId, isDirectory: true)
+    let backupDir = root.appendingPathComponent(".backup-\(familyId)", isDirectory: true)
     defer {
       try? FileManager.default.removeItem(at: stagingDir)
     }
@@ -585,30 +606,37 @@ final class VideoEditorFontManager: ObservableObject {
       stagedNames.append(safeFileName)
     }
 
-    let previousBackupDir: URL? = if FileManager.default.fileExists(atPath: destDir.path) {
-      {
-        let backup = root.appendingPathComponent(".staging-backup-\(UUID().uuidString)", isDirectory: true)
-        try? FileManager.default.moveItem(at: destDir, to: backup)
-        return backup
-      }()
-    } else {
-      nil
+    var movedExistingToBackup = false
+    if FileManager.default.fileExists(atPath: destDir.path) {
+      if FileManager.default.fileExists(atPath: backupDir.path) {
+        try FileManager.default.removeItem(at: backupDir)
+      }
+      try FileManager.default.moveItem(at: destDir, to: backupDir)
+      movedExistingToBackup = true
     }
+
+    var committedNewDest = false
     defer {
-      if let previousBackupDir {
-        try? FileManager.default.removeItem(at: previousBackupDir)
+      if committedNewDest {
+        if movedExistingToBackup {
+          try? FileManager.default.removeItem(at: backupDir)
+        }
+      } else {
+        if FileManager.default.fileExists(atPath: destDir.path) {
+          try? FileManager.default.removeItem(at: destDir)
+        }
+        if movedExistingToBackup {
+          try? FileManager.default.moveItem(at: backupDir, to: destDir)
+        }
       }
     }
 
     try FileManager.default.moveItem(at: stagingDir, to: destDir)
     let installedURLs = stagedNames.map { destDir.appendingPathComponent($0) }
     guard let familyName = VideoEditorFontResolver.registerFontFiles(urls: installedURLs, forFamilyId: familyId) else {
-      try? FileManager.default.removeItem(at: destDir)
-      if let previousBackupDir {
-        try? FileManager.default.moveItem(at: previousBackupDir, to: destDir)
-      }
       return nil
     }
+    committedNewDest = true
 
     return VideoEditorImportedFontRecord(
       id: familyId,
@@ -618,7 +646,7 @@ final class VideoEditorFontManager: ObservableObject {
   }
 
   /// Asynchronously import one or more local `.ttf`, `.otf`, or `.ttc` font files off `@MainActor`
-  /// using atomic staging so UI frames never stall and partial failures leave zero orphan files.
+  /// using serialized atomic staging so UI frames never stall and failed replacements restore the prior font.
   @discardableResult
   func importFontFilesAsync(from urls: [URL]) async -> String? {
     do {
@@ -626,23 +654,6 @@ final class VideoEditorFontManager: ObservableObject {
         try Self.stageAndRegisterFontFiles(from: urls)
       }.value
       guard let record else { return nil }
-      importedFonts.removeAll { $0.id == record.id }
-      importedFonts.append(record)
-      persistManifest()
-      lastErrorMessage = nil
-      revision += 1
-      return record.id
-    } catch {
-      lastErrorMessage = error.localizedDescription
-      return nil
-    }
-  }
-
-  /// Synchronous variant using the same atomic hidden `.staging-*` directory transaction.
-  @discardableResult
-  func importFontFiles(from urls: [URL]) -> String? {
-    do {
-      guard let record = try Self.stageAndRegisterFontFiles(from: urls) else { return nil }
       importedFonts.removeAll { $0.id == record.id }
       importedFonts.append(record)
       persistManifest()

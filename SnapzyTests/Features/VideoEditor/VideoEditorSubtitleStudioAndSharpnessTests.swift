@@ -52,7 +52,7 @@ final class VideoEditorSubtitleStudioAndSharpnessTests: XCTestCase {
 
   // MARK: - 2. System Font Default, Installed Device Fonts & Per-Item Text Presets
 
-  func testSystemAndInstalledFontsAndAllTextPresetsRenderVietnameseCleanly() throws {
+  func testSystemAndInstalledFontsAndAllTextPresetsRenderVietnameseCleanly() async throws {
     XCTAssertEqual(VideoEditorFontResolver.defaultFamilyId, "system")
     XCTAssertFalse(
       VideoEditorFontManager.shared.installedFamilies.isEmpty,
@@ -123,7 +123,8 @@ final class VideoEditorSubtitleStudioAndSharpnessTests: XCTestCase {
     )
     let copyTTF = tempDir.appendingPathComponent("StudioCustomUpright_\(UUID().uuidString.prefix(6)).ttf")
     try FileManager.default.copyItem(at: uprightTTF, to: copyTTF)
-    let importedId = try XCTUnwrap(VideoEditorFontManager.shared.importFontFiles(from: [copyTTF]))
+    let rawImportedId = await VideoEditorFontManager.shared.importFontFilesAsync(from: [copyTTF])
+    let importedId = try XCTUnwrap(rawImportedId)
     let importedDir = VideoEditorFontResolver.storageRootURL().appendingPathComponent(importedId, isDirectory: true)
     defer {
       try? FileManager.default.removeItem(at: importedDir)

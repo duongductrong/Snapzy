@@ -502,6 +502,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
         invalidateEditedCloudState()
         guard await persistSessionAfterCommit(for: state, preparedSource: preparedSource) else {
+          if let preparedSource {
+            VideoEditorSessionStore.shared.discardPreparedSourceSnapshot(preparedSource)
+          }
           state.isExporting = false
           showExportError(VideoEditorSessionStore.StoreError.packageUnavailable)
           return
@@ -522,7 +525,13 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         }
         DiagnosticLogger.shared.logError(.export, error, "GIF replace original failed")
         state.isExporting = false
-        showExportError(error)
+        if case VideoEditorSessionStore.StoreError.sessionQuarantined = error {
+          showQuarantinedSessionRecoveryAlert(for: state.originalURL) { [weak self] in
+            self?.performGIFReplaceOriginal()
+          }
+        } else {
+          showExportError(error)
+        }
       }
     }
   }
@@ -607,6 +616,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         }
         invalidateEditedCloudState()
         guard await persistSessionAfterCommit(for: state, preparedSource: preparedSource) else {
+          if let preparedSource {
+            VideoEditorSessionStore.shared.discardPreparedSourceSnapshot(preparedSource)
+          }
           state.isExporting = false
           showExportError(VideoEditorSessionStore.StoreError.packageUnavailable)
           return
@@ -633,7 +645,11 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         }
         DiagnosticLogger.shared.logError(.export, error, "Video replace original failed")
         state.isExporting = false
-        if error.isPermissionDenied {
+        if case VideoEditorSessionStore.StoreError.sessionQuarantined = error {
+          showQuarantinedSessionRecoveryAlert(for: state.originalURL) { [weak self] in
+            self?.performReplaceOriginal(offerPostExportUpload: offerPostExportUpload)
+          }
+        } else if error.isPermissionDenied {
           showReplaceOriginalPermissionFallback(error)
         } else {
           showExportError(error)
@@ -726,16 +742,19 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       return false
     }
 
+    let hadCommittedSession = sessionData != nil
     let snapshot = VideoEditorSessionData.snapshot(
       from: state,
       sourceSnapshotURL: sourceSnapshotURL
     )
-    if let quickAccessItemID {
-      VideoEditorManager.shared.saveSessionData(snapshot, for: quickAccessItemID)
-    } else {
-      VideoEditorManager.shared.saveSessionData(snapshot, for: state.originalURL)
+    if hadCommittedSession {
+      if let quickAccessItemID {
+        VideoEditorManager.shared.saveSessionData(snapshot, for: quickAccessItemID)
+      } else {
+        VideoEditorManager.shared.saveSessionData(snapshot, for: state.originalURL)
+      }
+      sessionData = snapshot
     }
-    sessionData = snapshot
 
     let didPersist = await VideoEditorSessionStore.shared.persistOffMain(
       snapshot,
@@ -746,7 +765,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       DiagnosticLogger.shared.log(
         .warning,
         .editor,
-        "Video Editor session disk persistence failed; in-memory session retained",
+        "Video Editor session disk persistence failed; in-memory session retained if backed by committed snapshot",
         context: ["fileName": state.originalURL.lastPathComponent]
       )
       return false
@@ -811,6 +830,39 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     alert.alertStyle = .critical
     alert.addButton(withTitle: L10n.Common.ok)
     alert.beginSheetModal(for: window)
+  }
+
+  private func showQuarantinedSessionRecoveryAlert(
+    for sourceURL: URL,
+    retryReplace: @escaping () -> Void
+  ) {
+    guard let window else { return }
+    let preservedURL = VideoEditorSessionStore.shared.quarantinedOriginalSnapshotURL(for: sourceURL)
+      ?? VideoEditorSessionStore.shared.quarantinedDirectory(for: sourceURL)
+
+    let alert = NSAlert()
+    alert.messageText = L10n.VideoEditor.exportFailedTitle
+    alert.informativeText = VideoEditorSessionStore.StoreError.sessionQuarantined.localizedDescription
+    alert.alertStyle = .warning
+    alert.addButton(withTitle: L10n.VideoEditor.replaceOriginal)
+    if preservedURL != nil {
+      alert.addButton(withTitle: L10n.Common.openInFinder)
+    }
+    alert.addButton(withTitle: L10n.Common.cancel)
+
+    alert.beginSheetModal(for: window) { response in
+      switch response {
+      case .alertFirstButtonReturn:
+        VideoEditorSessionStore.shared.deleteSession(for: sourceURL)
+        retryReplace()
+      case .alertSecondButtonReturn where preservedURL != nil:
+        if let preservedURL {
+          NSWorkspace.shared.activateFileViewerSelecting([preservedURL])
+        }
+      default:
+        break
+      }
+    }
   }
 
   private func showReplaceOriginalPermissionFallback(_ error: Error) {

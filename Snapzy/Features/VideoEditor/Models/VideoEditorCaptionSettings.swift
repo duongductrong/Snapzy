@@ -714,8 +714,17 @@ nonisolated struct VideoEditorCaptions: Codable, Equatable, Sendable {
 
   init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
-    let rawSegments = ((try? c.decodeIfPresent([LossyDecodableSegment].self, forKey: .segments)) ?? [])
-      .compactMap(\.segment)
+    let lossyEntries = (try? c.decodeIfPresent([LossyDecodableSegment].self, forKey: .segments)) ?? []
+    let rawSegments = lossyEntries.compactMap(\.segment)
+    let droppedCount = lossyEntries.count - rawSegments.count
+    if droppedCount > 0 {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .editor,
+        "Dropped malformed caption segment(s) during decode",
+        context: ["dropped": "\(droppedCount)", "kept": "\(rawSegments.count)"]
+      )
+    }
     segments = Self.deduplicatingAndCapping(rawSegments)
     settings = (try? c.decodeIfPresent(VideoEditorCaptionSettings.self, forKey: .settings)) ?? .default
   }
@@ -740,9 +749,12 @@ nonisolated struct VideoEditorCaptions: Codable, Equatable, Sendable {
           guard word.start.isFinite, word.duration.isFinite, word.start >= 0, word.duration >= 0 else {
             return nil
           }
+          let wordStart = min(max(clampedStart, word.start), clampedEnd)
+          let maxDuration = max(0, clampedEnd - wordStart)
+          let wordDuration = min(max(0, word.duration), maxDuration)
           return VideoEditorTranscriptWord(
-            start: min(word.start, 864_000),
-            duration: min(word.duration, 864_000),
+            start: wordStart,
+            duration: wordDuration,
             text: String(word.text.prefix(200))
           )
         }

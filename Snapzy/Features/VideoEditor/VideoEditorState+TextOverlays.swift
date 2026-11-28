@@ -7,6 +7,7 @@
 //  with Captions.
 //
 
+import AppKit
 import AVFoundation
 import Foundation
 
@@ -57,6 +58,7 @@ extension VideoEditorState {
       existing: textOverlays,
       preferredTrack: preferredTrack ?? selectedTextOverlay?.trackIndex ?? 0
     ) else {
+      NSSound.beep()
       return nil
     }
 
@@ -85,10 +87,12 @@ extension VideoEditorState {
     preset: VideoEditorCaptionSettings.EditorialPreset = .cyberCyan
   ) {
     guard !isGIF else { return }
-    _ = addTextOverlay(
+    guard addTextOverlay(
       at: CMTimeGetSeconds(currentTime),
       preset: preset
-    )
+    ) != nil else {
+      return
+    }
     leftSidebarPanel = .text
     isLeftSidebarVisible = true
   }
@@ -545,12 +549,17 @@ extension VideoEditorState {
     case .bottom: min(0.88, 1.0 - max(0.12, captions.settings.margin + 0.08))
     }
 
-    let targetTrack = TextTimelineLaneLayout.firstAvailableTrackIndex(
-      start: mapped.start,
-      duration: mapped.duration,
-      existing: textOverlays,
-      preferredTrack: 0
-    )
+    guard let targetTrack = (0 ..< TextTimelineLaneLayout.maxLanes).first(where: { lane in
+      TextTimelineLaneLayout.isLaneFree(
+        lane,
+        start: mapped.start,
+        duration: mapped.duration,
+        existing: textOverlays
+      )
+    }) else {
+      NSSound.beep()
+      return nil
+    }
 
     let created = VideoEditorTextOverlay(
       text: segment.text,

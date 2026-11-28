@@ -1916,6 +1916,87 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     XCTAssertEqual(decodedCaptions.segments[1].words?.first?.text, "Second")
   }
 
+  func testTransientReadError_doesNotQuarantineSession_andDeleteSessionClearsQuarantine() async throws {
+    try XCTSkipIf(geteuid() == 0, "POSIX 000 permission simulation does not block root")
+
+    let targetURL = try writeFile(named: "transient-io.mov", contents: "rendered")
+    let masterURL = try writeFile(named: "transient-io-master.mov", contents: "master-unrendered")
+    let sessionData = makeSessionData(sourceSnapshotURL: masterURL)
+    XCTAssertTrue(store.persist(sessionData, for: targetURL))
+
+    let liveDir = sessionDirectory(for: targetURL)
+    let manifestURL = liveDir.appendingPathComponent("manifest.json")
+    XCTAssertTrue(FileManager.default.fileExists(atPath: manifestURL.path))
+
+    // 1. Simulate a transient read-permission error on manifest.json (`chmod 000`).
+    try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: manifestURL.path)
+    var restoredPermissions = false
+    defer {
+      if !restoredPermissions {
+        try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: manifestURL.path)
+      }
+    }
+
+    XCTAssertNil(store.load(for: targetURL))
+    store.cleanup(keepingMediaFilePaths: [])
+    XCTAssertFalse(
+      store.hasQuarantinedSession(for: targetURL),
+      "Transient IO / permission read failure must never quarantine a valid session"
+    )
+    XCTAssertTrue(
+      FileManager.default.fileExists(atPath: liveDir.path),
+      "cleanup must not delete a session whose manifest suffered a transient read failure"
+    )
+
+    // Restoring read permissions allows the existing session to load again untouched.
+    try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: manifestURL.path)
+    restoredPermissions = true
+    XCTAssertNotNil(store.load(for: targetURL))
+
+    // 2. Actual decode corruption quarantines the package, and `deleteSession(for:)` clears the quarantine.
+    try Data("{corrupt-manifest-json".utf8).write(to: manifestURL, options: .atomic)
+    XCTAssertNil(store.load(for: targetURL))
+    XCTAssertTrue(store.hasQuarantinedSession(for: targetURL))
+    XCTAssertNotNil(store.quarantinedOriginalSnapshotURL(for: targetURL))
+
+    store.deleteSession(for: targetURL)
+    XCTAssertFalse(
+      store.hasQuarantinedSession(for: targetURL),
+      "deleteSession(for:) must clear any quarantined package for that source URL"
+    )
+
+    // After clearing quarantine via deleteSession, new saves and snapshots succeed again.
+    let prepared = try await store.prepareSourceSnapshot(from: masterURL, for: targetURL)
+    defer { store.discardPreparedSourceSnapshot(prepared) }
+    XCTAssertTrue(FileManager.default.fileExists(atPath: prepared.sourceURL.path))
+    XCTAssertTrue(store.persist(sessionData, for: targetURL))
+  }
+
+  func testCleanup_removesStalePendingDotPrefixedPackagesWhileKeepingFreshOnes() throws {
+    try FileManager.default.createDirectory(at: sessionsDirectory, withIntermediateDirectories: true)
+
+    let stalePending = sessionsDirectory.appendingPathComponent(".stalehash.\(UUID().uuidString)", isDirectory: true)
+    let freshPending = sessionsDirectory.appendingPathComponent(".freshhash.\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: stalePending, withIntermediateDirectories: true)
+    try FileManager.default.createDirectory(at: freshPending, withIntermediateDirectories: true)
+    try Data("stale-copy".utf8).write(to: stalePending.appendingPathComponent("source.mov"))
+    try Data("fresh-copy".utf8).write(to: freshPending.appendingPathComponent("source.mov"))
+
+    let staleDate = Date().addingTimeInterval(-(VideoEditorSessionStore.stalePendingPackageMaxAge + 120))
+    try FileManager.default.setAttributes([.modificationDate: staleDate], ofItemAtPath: stalePending.path)
+
+    store.cleanup(keepingMediaFilePaths: [])
+
+    XCTAssertFalse(
+      FileManager.default.fileExists(atPath: stalePending.path),
+      "Stale pending dot-prefixed package older than max age must be removed by cleanup"
+    )
+    XCTAssertTrue(
+      FileManager.default.fileExists(atPath: freshPending.path),
+      "Fresh in-flight pending dot-prefixed package must be preserved during cleanup"
+    )
+  }
+
   private func writeFile(at url: URL, contents: String) throws {
     try Data(contents.utf8).write(to: url, options: .atomic)
   }

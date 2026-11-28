@@ -1275,7 +1275,7 @@ enum VideoEditorExporter {
       insertedSettings.audioVolume = settings.audioVolume
       insertedSettings.setAudioFadeIn(settings.clampedAudioFadeIn)
       insertedSettings.setAudioFadeOut(settings.clampedAudioFadeOut)
-      let insertedRoles = Array(repeating: VideoEditorAudioTrackRole.systemAudio, count: insertedCompositionTracks.count)
+      let insertedRoles = Array(repeating: VideoEditorAudioTrackRole.mixed, count: insertedCompositionTracks.count)
       if let insertedMix = makeAudioMix(
         for: insertedCompositionTracks,
         settings: insertedSettings,

@@ -724,7 +724,7 @@ final class VideoEditorProNLEUpgradeTests: XCTestCase {
     XCTAssertFalse(state.mutedAudioLanes.contains(0))
     XCTAssertFalse(state.hasUnsavedChanges)
 
-    // 2. AddedAudioPlayer honors volume > 1.0 (up to 2.0) and speed segment rate (2.0x).
+    // 2. AddedAudioPlayer honors volume > 1.0 (up to 2.0 via AVAudioEngine) and speed segment rate (2.0x).
     let rawSfxClip = await state.addAudioClip(url: addedAudioURL, at: 0.0, preferredTrack: 1)
     let sfxClip = try XCTUnwrap(rawSfxClip)
     state.setAudioClipVolume(id: sfxClip.id, volume: 1.8)
@@ -732,9 +732,27 @@ final class VideoEditorProNLEUpgradeTests: XCTestCase {
     state.seek(to: CMTime(seconds: 0.5, preferredTimescale: 600))
     state.addedAudioPlayer.play(at: 0.5, forceSeek: true)
     let previewAudio = try XCTUnwrap(state.addedAudioPlayer.previewStateForTesting(clipId: sfxClip.id))
-    XCTAssertEqual(previewAudio.volume, 1.8, accuracy: 0.02)
+    let hasHardwareAudioOutput = AVAudioEngine().mainMixerNode.outputFormat(forBus: 0).channelCount > 0
+    if hasHardwareAudioOutput {
+      XCTAssertEqual(previewAudio.volume, 1.8, accuracy: 0.02)
+    } else {
+      XCTAssertEqual(previewAudio.volume, 1.0, accuracy: 0.02)
+    }
     XCTAssertEqual(previewAudio.rate, 2.0, accuracy: 0.02)
     state.addedAudioPlayer.pause()
+
+    let peakUnity = try VideoEditorAddedAudioPlayer.renderBoostedPeakForTesting(
+      url: addedAudioURL,
+      volume: 1.0,
+      rate: 2.0
+    )
+    let peakBoosted = try VideoEditorAddedAudioPlayer.renderBoostedPeakForTesting(
+      url: addedAudioURL,
+      volume: 1.8,
+      rate: 2.0
+    )
+    XCTAssertGreaterThan(peakUnity, 0.05)
+    XCTAssertEqual(Double(peakBoosted / peakUnity), 1.8, accuracy: 0.08)
 
     // 3. Mixed detached primary clip + non-detached inserted `.file` clip keeps AVPlayer unmuted on `.file` clip.
     let primaryClipId = try XCTUnwrap(state.clips.first?.id)
@@ -748,8 +766,8 @@ final class VideoEditorProNLEUpgradeTests: XCTestCase {
       "Non-detached inserted .file clip must keep AVPlayer unmuted even when primary audio is detached"
     )
 
-    // 4. promoteCaptionToTextOverlay picks firstAvailableTrackIndex (T2 when T1 is occupied),
-    //    and full text lanes (T1..T6) advance startTime instead of overlapping.
+    // 4. promoteCaptionToTextOverlay picks first free lane (T2 when T1 is occupied),
+    //    and refuses cleanly (returns nil without overlapping T1) when T1..T6 are all busy.
     _ = state.addTextOverlay(text: "Existing T1", at: 0.2, duration: 2.0, preferredTrack: 0)
     let cap = CaptionSegment(sourceRange: 0.3 ... 1.5, text: "Promoted Cue")
     state.setCaptions(VideoEditorCaptions(segments: [cap]))
@@ -759,6 +777,12 @@ final class VideoEditorProNLEUpgradeTests: XCTestCase {
     for lane in 2 ..< TextTimelineLaneLayout.maxLanes {
       _ = state.addTextOverlay(text: "Fill T\(lane + 1)", at: 0.2, duration: 2.0, preferredTrack: lane)
     }
+    let blockedCap = CaptionSegment(sourceRange: 0.4 ... 1.2, text: "All Lanes Busy")
+    state.setCaptions(VideoEditorCaptions(segments: [blockedCap]))
+    XCTAssertNil(
+      state.promoteCaptionToTextOverlay(captionId: blockedCap.id),
+      "promoteCaptionToTextOverlay must refuse instead of stacking onto occupied T1 when T1..T6 are busy"
+    )
     let overflowOverlay = try XCTUnwrap(state.addTextOverlay(text: "No Overlap", at: 0.4, duration: 1.0))
     XCTAssertGreaterThanOrEqual(overflowOverlay.startTime, 1.5 - 0.02)
 
@@ -767,7 +791,37 @@ final class VideoEditorProNLEUpgradeTests: XCTestCase {
     let sfxAfterBlockedMove = try XCTUnwrap(state.audioClips.first(where: { $0.id == sfxClip.id }))
     XCTAssertEqual(sfxAfterBlockedMove.trackIndex, 1, "Moving onto occupied A1 must be rejected cleanly")
 
-    // 6. Multi-file font import with a corrupt font cleans up staging and leaves no orphaned files.
+    // 6. Font import: failed replacement of an existing custom family restores the previous valid font!
+    let candidateTTFs: [URL] = [
+      URL(fileURLWithPath: "/System/Library/Fonts/Supplemental/Tahoma.ttf"),
+      URL(fileURLWithPath: "/System/Library/Fonts/Supplemental/Impact.ttf"),
+      URL(fileURLWithPath: "/System/Library/Fonts/SFNSMono.ttf"),
+      URL(fileURLWithPath: "/System/Library/Fonts/Geneva.ttf"),
+    ]
+    if let validSystemTTF = candidateTTFs.first(where: { FileManager.default.fileExists(atPath: $0.path) }) {
+      let slugName = "replace_guard_\(UUID().uuidString.prefix(6)).ttf"
+      let validCopyURL = tempDir.appendingPathComponent(slugName)
+      try FileManager.default.copyItem(at: validSystemTTF, to: validCopyURL)
+      let rawFirstImportedId = await VideoEditorFontManager.shared.importFontFilesAsync(from: [validCopyURL])
+      let firstImportedId = try XCTUnwrap(rawFirstImportedId)
+      let installedDir = VideoEditorFontResolver.storageRootURL().appendingPathComponent(firstImportedId, isDirectory: true)
+      defer { try? FileManager.default.removeItem(at: installedDir) }
+      XCTAssertTrue(FileManager.default.fileExists(atPath: installedDir.appendingPathComponent(slugName).path))
+
+      // Overwrite source file with corrupt bytes using the exact same slug and attempt replacement.
+      let badSubdir = tempDir.appendingPathComponent("corrupt_same_slug", isDirectory: true)
+      try FileManager.default.createDirectory(at: badSubdir, withIntermediateDirectories: true)
+      let corruptSameSlugURL = badSubdir.appendingPathComponent(slugName)
+      try Data("corrupt-font-payload".utf8).write(to: corruptSameSlugURL)
+      let failedReplace = await VideoEditorFontManager.shared.importFontFilesAsync(from: [corruptSameSlugURL])
+      XCTAssertNil(failedReplace)
+      XCTAssertTrue(
+        FileManager.default.fileExists(atPath: installedDir.appendingPathComponent(slugName).path),
+        "Failed font replacement must restore the previous valid family directory"
+      )
+      XCTAssertTrue(VideoEditorFontManager.shared.isFontAvailable(firstImportedId))
+    }
+
     let bogusFontURL = tempDir.appendingPathComponent("corrupt_review_font_\(UUID().uuidString.prefix(6)).ttf")
     try Data("not-a-valid-opentype-font".utf8).write(to: bogusFontURL)
     let importedFont = await VideoEditorFontManager.shared.importFontFilesAsync(from: [bogusFontURL])
@@ -775,8 +829,10 @@ final class VideoEditorProNLEUpgradeTests: XCTestCase {
     let fontRoot = VideoEditorFontResolver.storageRootURL()
     let strayEntries = (try? FileManager.default.contentsOfDirectory(atPath: fontRoot.path)) ?? []
     XCTAssertFalse(
-      strayEntries.contains(where: { $0.contains("corrupt-review-font") || $0.hasPrefix(".staging-") }),
-      "Failed font import must not leave staged or partial directories behind: \(strayEntries)"
+      strayEntries.contains(where: {
+        $0.contains("corrupt-review-font") || $0.hasPrefix(".staging-") || $0.hasPrefix(".backup-")
+      }),
+      "Failed font import must not leave staged or backup directories behind: \(strayEntries)"
     )
 
     // 7. ZoomSegment & SpeedSegment hostile Codable clamping.
@@ -812,5 +868,130 @@ final class VideoEditorProNLEUpgradeTests: XCTestCase {
     XCTAssertEqual(decodedSpeed.startTime, 0)
     XCTAssertEqual(decodedSpeed.duration, SpeedSegment.maxDuration)
     XCTAssertEqual(decodedSpeed.rate, SpeedSegment.minRate)
+  }
+
+  func testShuttleJToLUnmutesPlayer_handoffMuteFollowsIncomingClip_andInsertedClipExportAppliesGlobalVolume() async throws {
+    let primaryURL = try await makeTestMovieWithAudio(name: "round3_primary.mov", durationSeconds: 2.0)
+    let insertedURL = try await makeTestMovieWithAudio(name: "round3_inserted.mov", durationSeconds: 2.0)
+
+    let state = VideoEditorState(url: primaryURL)
+    await state.loadMetadata()
+    defer { state.cancelPendingPerformanceWork() }
+
+    // 1. J -> L in non-speed path (after initial seek settles) must unmute AVPlayer immediately.
+    state.seek(to: CMTime(seconds: 1.2, preferredTimescale: 600))
+    try await Task.sleep(nanoseconds: 120_000_000)
+    state.shuttleReverse()
+    XCTAssertTrue(state.player.isMuted)
+    XCTAssertEqual(state.playbackState.shuttleRate, -1.0, accuracy: 0.01)
+
+    state.shuttleForward()
+    XCTAssertTrue(state.isPlaying)
+    XCTAssertEqual(state.playbackState.shuttleRate, 1.0, accuracy: 0.01)
+    XCTAssertFalse(state.player.isMuted, "Pressing L directly from reverse shuttle J must unmute AVPlayer")
+    state.shuttlePause()
+
+    // 2. Natural clip handoff mute follows the INCOMING clip even while playhead is still on outgoing clip.
+    let (_, secondPrimaryId) = try XCTUnwrap(state.splitClip(atTimeline: 1.0))
+    let firstPrimaryId = state.clips[0].id
+    _ = await state.detachAudio(fromClipId: firstPrimaryId)
+    let rawInsertedId = await state.insertClip(url: insertedURL, at: 1)
+    let insertedId = try XCTUnwrap(rawInsertedId)
+    let insertedClip = try XCTUnwrap(state.clips.first(where: { $0.id == insertedId }))
+    let trailingPrimaryClip = try XCTUnwrap(state.clips.first(where: { $0.id == secondPrimaryId }))
+
+    // Playhead still at 0.5s (inside detached primary clip -> muted), handing off to non-detached `.file` clip:
+    state.seek(to: CMTime(seconds: 0.5, preferredTimescale: 600))
+    XCTAssertTrue(state.player.isMuted)
+    state.resumeVideoPlayback(for: insertedClip)
+    XCTAssertFalse(
+      state.player.isMuted,
+      "Handoff from detached primary clip to non-detached inserted .file clip must unmute AVPlayer immediately"
+    )
+
+    // Now simulate playhead inside non-detached `.file` clip, handing off to primary clip (whose audio runs on independent lane):
+    let insertedStart = try XCTUnwrap(state.placements.first(where: { $0.clip.id == insertedId })?.activeStart)
+    state.seek(to: CMTime(seconds: insertedStart + 0.3, preferredTimescale: 600))
+    XCTAssertFalse(state.player.isMuted)
+    state.resumeVideoPlayback(for: trailingPrimaryClip)
+    XCTAssertTrue(
+      state.player.isMuted,
+      "Handoff from inserted .file clip back to primary clip with independent audio lane must mute AVPlayer immediately"
+    )
+    state.pause()
+
+    // 3. Export with an inserted `.file` clip and non-default global `audioVolume` (`0.25`) applies the volume!
+    let exportStateUnity = VideoEditorState(url: primaryURL)
+    await exportStateUnity.loadMetadata()
+    defer { exportStateUnity.cancelPendingPerformanceWork() }
+    _ = await exportStateUnity.insertClip(url: insertedURL, at: 1)
+
+    let unityOutURL = tempDir.appendingPathComponent("export_inserted_unity.mp4")
+    try await VideoEditorExporter.exportTrimmed(state: exportStateUnity, to: unityOutURL) { _ in }
+
+    let exportStateAttenuated = VideoEditorState(url: primaryURL)
+    await exportStateAttenuated.loadMetadata()
+    defer { exportStateAttenuated.cancelPendingPerformanceWork() }
+    _ = await exportStateAttenuated.insertClip(url: insertedURL, at: 1)
+    var quietSettings = exportStateAttenuated.exportSettings
+    quietSettings.audioMode = .custom
+    quietSettings.audioVolume = 0.25
+    exportStateAttenuated.updateExportSettings(quietSettings)
+
+    let quietOutURL = tempDir.appendingPathComponent("export_inserted_quiet.mp4")
+    try await VideoEditorExporter.exportTrimmed(state: exportStateAttenuated, to: quietOutURL) { _ in }
+
+    // Measure peak PCM amplitude inside the inserted `.file` clip span (`2.3s ... 3.7s`).
+    let unityInsertedPeak = try await measureAudioPeak(in: unityOutURL, range: 2.3 ... 3.7)
+    let quietInsertedPeak = try await measureAudioPeak(in: quietOutURL, range: 2.3 ... 3.7)
+    XCTAssertGreaterThan(unityInsertedPeak, 0.05, "Inserted .file clip must be audible at unity volume")
+    let ratio = quietInsertedPeak / unityInsertedPeak
+    XCTAssertEqual(
+      Double(ratio),
+      0.25,
+      accuracy: 0.10,
+      "Export must apply global audioVolume (0.25) to inserted .file clips (got ratio \(ratio))"
+    )
+  }
+
+  private func measureAudioPeak(in movieURL: URL, range: ClosedRange<TimeInterval>) async throws -> Float {
+    let asset = AVURLAsset(url: movieURL)
+    let rawTrack = try await asset.loadTracks(withMediaType: .audio).first
+    let track = try XCTUnwrap(rawTrack)
+    let reader = try AVAssetReader(asset: asset)
+    reader.timeRange = CMTimeRange(
+      start: CMTime(seconds: range.lowerBound, preferredTimescale: 600),
+      duration: CMTime(seconds: range.upperBound - range.lowerBound, preferredTimescale: 600)
+    )
+    let output = AVAssetReaderTrackOutput(
+      track: track,
+      outputSettings: [
+        AVFormatIDKey: kAudioFormatLinearPCM,
+        AVLinearPCMBitDepthKey: 32,
+        AVLinearPCMIsFloatKey: true,
+        AVLinearPCMIsBigEndianKey: false,
+        AVLinearPCMIsNonInterleaved: false,
+      ]
+    )
+    reader.add(output)
+    XCTAssertTrue(reader.startReading())
+
+    var maxAbs: Float = 0
+    while let sampleBuffer = output.copyNextSampleBuffer() {
+      guard let block = CMSampleBufferGetDataBuffer(sampleBuffer) else { continue }
+      let byteCount = CMBlockBufferGetDataLength(block)
+      guard byteCount >= MemoryLayout<Float>.size else { continue }
+      var bytes = [UInt8](repeating: 0, count: byteCount)
+      guard CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: byteCount, destination: &bytes) == kCMBlockBufferNoErr else {
+        continue
+      }
+      bytes.withUnsafeBytes { raw in
+        let floats = raw.bindMemory(to: Float.self)
+        for sample in floats {
+          maxAbs = max(maxAbs, abs(sample))
+        }
+      }
+    }
+    return maxAbs
   }
 }

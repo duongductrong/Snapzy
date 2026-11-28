@@ -909,8 +909,23 @@ final class VideoEditorState: ObservableObject {
   /// Non-detached external `.file` clips play their embedded audio through `AVPlayer`
   /// even when primary or other clips use independent audio lanes.
   var shouldMutePreviewPlayer: Bool {
+    shouldMutePreviewPlayer(forIncomingClip: nil)
+  }
+
+  /// Evaluates whether `AVPlayer` should be muted, using `incomingClip` directly during
+  /// natural clip handoffs before `playbackState.currentTime` advances to the incoming clip.
+  func shouldMutePreviewPlayer(forIncomingClip incomingClip: TimelineClip?) -> Bool {
     if isMuted || exportSettings.audioMode == .mute || playbackState.shuttleRate < 0 {
       return true
+    }
+    if let incomingClip {
+      if incomingClip.isAudioDetached {
+        return true
+      }
+      if !incomingClip.isPrimary {
+        return false
+      }
+      return usesIndependentAudioPlayback
     }
     let playheadSeconds = CMTimeGetSeconds(playbackState.currentTime)
     let activeClip: TimelineClip? = TimelineSequence.activePlacement(
@@ -929,7 +944,7 @@ final class VideoEditorState: ObservableObject {
   }
 
   /// Sync player preview audio with export audio mode and custom volume settings.
-  func syncPlayerAudioWithExportSettings() {
+  func syncPlayerAudioWithExportSettings(forIncomingClip incomingClip: TimelineClip? = nil) {
     syncAddedAudioPlayer()
     let hasExternalAudio = audioClips.contains { !$0.isPrimary }
     let hasAttachedInsertedClips = clips.contains { !$0.isPrimary && !$0.isAudioDetached }
@@ -942,7 +957,7 @@ final class VideoEditorState: ObservableObject {
       isMuted = true
       isSyncingAudioMute = false
     }
-    player.isMuted = shouldMutePreviewPlayer
+    player.isMuted = shouldMutePreviewPlayer(forIncomingClip: incomingClip)
 
     guard exportSettings.requiresAudioMix else {
       player.volume = 1.0
@@ -2286,8 +2301,8 @@ final class VideoEditorState: ObservableObject {
     }
     activeItemSource = clip.source
     player.currentItem?.audioTimePitchAlgorithm = .spectral
-    player.isMuted = shouldMutePreviewPlayer
-    syncPlayerAudioWithExportSettings()
+    player.isMuted = shouldMutePreviewPlayer(forIncomingClip: clip)
+    syncPlayerAudioWithExportSettings(forIncomingClip: clip)
   }
 
   /// Clamp to the sequence axis.
@@ -3454,6 +3469,26 @@ final class VideoEditorState: ObservableObject {
         var shifted = seg
         shifted.startTime = max(0, range.lowerBound)
         shifted.duration = max(ZoomSegment.minDuration, range.upperBound - range.lowerBound)
+        if let keyframes = shifted.smartKeyframes,
+           !keyframes.isEmpty,
+           abs(shifted.duration - seg.duration) > 0.0001 {
+          let segRange = shifted.startTime ... shifted.endTime
+          let coveredSourceRanges = placements.compactMap { placement -> ClosedRange<TimeInterval>? in
+            guard placement.clip.isPrimary else { return nil }
+            let lo = max(segRange.lowerBound, placement.activeStart)
+            let hi = min(segRange.upperBound, placement.activeEnd)
+            guard hi > lo else { return nil }
+            let sLo = placement.sourceTime(at: lo)
+            let sHi = placement.sourceTime(at: hi)
+            return min(sLo, sHi) ... max(sLo, sHi)
+          }
+          let trimmedKeyframes = keyframes.filter { sample in
+            coveredSourceRanges.contains {
+              ($0.lowerBound - 0.001 ... $0.upperBound + 0.001).contains(sample.time)
+            }
+          }
+          shifted.smartKeyframes = trimmedKeyframes.isEmpty ? nil : trimmedKeyframes
+        }
         return shifted
       }
       if newZooms != oldZooms {
@@ -4948,7 +4983,7 @@ final class VideoEditorState: ObservableObject {
         }
         if playbackState.isPlaying {
           if playbackState.shuttleRate <= 1.05 {
-            addedAudioPlayer.play(at: CMTimeGetSeconds(time))
+            addedAudioPlayer.play(at: CMTimeGetSeconds(time), forceSeek: false)
           } else {
             addedAudioPlayer.pause()
           }
@@ -5021,6 +5056,7 @@ final class VideoEditorState: ObservableObject {
       ?? CMTimeGetSeconds(currentTime)
     activeClipId = nextId
     activateItemIfNeeded(for: next)
+    player.isMuted = shouldMutePreviewPlayer(forIncomingClip: next)
     // The seek completes asynchronously; until it lands, ticks and end
     // notifications still report the outgoing clip's coordinates.
     let handoffToken = UUID()
@@ -5053,7 +5089,8 @@ final class VideoEditorState: ObservableObject {
           return
         }
         guard isPlaying, playbackState.shuttleRate >= 0 else { return }
-        player.isMuted = shouldMutePreviewPlayer
+        let liveIncoming = clips.first(where: { $0.id == nextId }) ?? next
+        player.isMuted = shouldMutePreviewPlayer(forIncomingClip: liveIncoming)
 
         // The independent completion normally resumed playback already. If
         // AVPlayer stayed paused, preserve the user's Play intent here as well.

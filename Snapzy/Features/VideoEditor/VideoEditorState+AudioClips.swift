@@ -37,10 +37,7 @@ extension VideoEditorState {
     let trailingLane = lanes - 1
     guard !audioClips.contains(where: { $0.trackIndex == trailingLane }) else { return }
     minimumAudioLanes = max(1, trailingLane)
-    if mutedAudioLanes.contains(trailingLane) {
-      let before = mutedAudioLanes
-      mutedAudioLanes.remove(trailingLane)
-      recordAction(.updateMutedAudioLanes(old: before, new: mutedAudioLanes))
+    if mutedAudioLanes.remove(trailingLane) != nil {
       syncPlayerAudioWithExportSettings()
       updateHasUnsavedChanges()
     }
