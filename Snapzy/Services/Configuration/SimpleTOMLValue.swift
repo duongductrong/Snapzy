@@ -29,8 +29,8 @@ enum SimpleTOMLValue: Equatable {
     switch self {
     case .integer(let value):
       return value
-    case .double(let value) where value.rounded() == value:
-      return Int(value)
+    case .double(let value):
+      return Int(exactly: value)
     default:
       return nil
     }

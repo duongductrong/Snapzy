@@ -100,15 +100,46 @@ enum SimpleTOMLParser {
   }
 
   private static func parseKeyPath(_ key: String) throws -> [String] {
-    let parts = key.split(separator: ".").map {
-      String($0).trimmingCharacters(in: .whitespacesAndNewlines)
+    var rawParts: [String] = []
+    var current = ""
+    var isInString = false
+    var isEscaped = false
+
+    for character in key {
+      if isEscaped {
+        current.append(character)
+        isEscaped = false
+        continue
+      }
+      if character == "\\" {
+        current.append(character)
+        isEscaped = isInString
+        continue
+      }
+      if character == "\"" {
+        current.append(character)
+        isInString.toggle()
+        continue
+      }
+      if character == ".", !isInString {
+        rawParts.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
+        current = ""
+        continue
+      }
+      current.append(character)
     }
-    guard !parts.isEmpty, parts.allSatisfy({ !$0.isEmpty }) else {
+
+    guard !isInString else {
       throw SimpleTOMLError.invalidKey(key)
     }
-    return parts.map { part in
-      if part.hasPrefix("\""), part.hasSuffix("\"") {
-        return String(part.dropFirst().dropLast())
+    rawParts.append(current.trimmingCharacters(in: .whitespacesAndNewlines))
+
+    guard !rawParts.isEmpty, rawParts.allSatisfy({ !$0.isEmpty }) else {
+      throw SimpleTOMLError.invalidKey(key)
+    }
+    return rawParts.map { part in
+      if part.count >= 2, part.hasPrefix("\""), part.hasSuffix("\"") {
+        return unescape(String(part.dropFirst().dropLast()))
       }
       return part
     }
@@ -116,7 +147,7 @@ enum SimpleTOMLParser {
 
   private static func parseValue(_ value: String, line: Int) throws -> SimpleTOMLValue {
     if value.hasPrefix("\"") {
-      guard value.hasSuffix("\"") else { throw SimpleTOMLError.invalidValue(line, value) }
+      guard value.count >= 2, value.hasSuffix("\"") else { throw SimpleTOMLError.invalidValue(line, value) }
       return .string(unescape(String(value.dropFirst().dropLast())))
     }
     if value == "true" { return .bool(true) }
@@ -124,7 +155,7 @@ enum SimpleTOMLParser {
     if value.hasPrefix("[") {
       guard value.hasSuffix("]") else { throw SimpleTOMLError.invalidValue(line, value) }
       let inner = String(value.dropFirst().dropLast())
-      let values = try splitArray(inner).map { try parseValue($0, line: line) }
+      let values = try splitArray(inner, line: line, fullValue: value).map { try parseValue($0, line: line) }
       return .array(values)
     }
     if let intValue = Int(value) { return .integer(intValue) }
@@ -132,7 +163,7 @@ enum SimpleTOMLParser {
     throw SimpleTOMLError.invalidValue(line, value)
   }
 
-  private static func splitArray(_ value: String) throws -> [String] {
+  private static func splitArray(_ value: String, line: Int, fullValue: String) throws -> [String] {
     var result: [String] = []
     var current = ""
     var isInString = false
@@ -156,7 +187,12 @@ enum SimpleTOMLParser {
         continue
       }
       if character == "[", !isInString { depth += 1 }
-      if character == "]", !isInString { depth -= 1 }
+      if character == "]", !isInString {
+        depth -= 1
+        if depth < 0 {
+          throw SimpleTOMLError.invalidValue(line, fullValue)
+        }
+      }
       if character == ",", !isInString, depth == 0 {
         let item = current.trimmingCharacters(in: .whitespacesAndNewlines)
         if !item.isEmpty { result.append(item) }
@@ -164,6 +200,10 @@ enum SimpleTOMLParser {
         continue
       }
       current.append(character)
+    }
+
+    guard !isInString, depth == 0 else {
+      throw SimpleTOMLError.invalidValue(line, fullValue)
     }
 
     let item = current.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -194,6 +234,7 @@ enum SimpleTOMLParser {
         switch value[next] {
         case "\"": result.append("\"")
         case "\\": result.append("\\")
+        case "r": result.append("\r")
         case "n": result.append("\n")
         case "t": result.append("\t")
         default:

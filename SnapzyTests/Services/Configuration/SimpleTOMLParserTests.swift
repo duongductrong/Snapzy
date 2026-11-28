@@ -99,4 +99,32 @@ final class SimpleTOMLParserTests: XCTestCase {
     XCTAssertEqual(document.value(at: "key")?.stringValue, original)
     XCTAssertEqual(document.value(at: "key")?.stringValue?.count, 3)
   }
+
+  func testRoundTripPreservesCarriageReturnsAndCRLF() throws {
+    let original = "Line 1\r\nLine 2\rLine 3"
+    var writer = SimpleTOMLWriter()
+    writer.value("prompt", original)
+
+    let document = try SimpleTOMLParser.parse(writer.output)
+    XCTAssertEqual(document.value(at: "prompt")?.stringValue, original)
+  }
+
+  func testParsesQuotedKeyContainingDot() throws {
+    let document = try SimpleTOMLParser.parse(#""a.b" = 42"#)
+    XCTAssertEqual(document.value(at: "a.b")?.intValue, 42)
+    XCTAssertNil(document.value(at: ["\"a", "b\""]))
+  }
+
+  func testRejectsMalformedArrayWithUnbalancedBrackets() {
+    XCTAssertThrowsError(try SimpleTOMLParser.parse(#"items = ["a"], ["b"]"#)) { error in
+      XCTAssertEqual(error as? SimpleTOMLError, .invalidValue(1, #"["a"], ["b"]"#))
+    }
+  }
+
+  func testDoubleIntValueReturnsNilInsteadOfTrappingOnOverflow() throws {
+    let document = try SimpleTOMLParser.parse("huge = 1e20\nwhole = 42.0\nfrac = 42.5")
+    XCTAssertNil(document.value(at: "huge")?.intValue)
+    XCTAssertEqual(document.value(at: "whole")?.intValue, 42)
+    XCTAssertNil(document.value(at: "frac")?.intValue)
+  }
 }

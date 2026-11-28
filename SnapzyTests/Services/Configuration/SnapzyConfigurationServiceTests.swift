@@ -474,6 +474,20 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     XCTAssertEqual(document.value(at: "quick_access", "animation_style")?.stringValue, "scale")
   }
 
+  /// Regression: restore-defaults TOML must include Smart Element's default shortcut (`⌥⇧4`)
+  /// instead of writing an empty key that wipes the binding.
+  func testDefaultDocumentIncludesSmartElementShortcut() throws {
+    let document = try SimpleTOMLParser.parse(SnapzyConfigurationDefaultDocument.toml())
+    XCTAssertEqual(
+      document.value(at: "shortcuts", "global", "smart_element", "key")?.stringValue,
+      SnapzyConfigurationShortcutCodec.exportKey(.defaultSmartElement)
+    )
+    XCTAssertEqual(
+      document.value(at: "shortcuts", "global", "smart_element", "modifiers")?.stringArrayValue,
+      SnapzyConfigurationShortcutCodec.exportModifiers(.defaultSmartElement)
+    )
+  }
+
   private func temporaryHomeDirectory() -> URL {
     FileManager.default.temporaryDirectory
       .appendingPathComponent("snapzy-config-service-\(UUID().uuidString)", isDirectory: true)
