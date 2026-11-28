@@ -358,22 +358,49 @@ struct SpeedTimelineTrack: View, Equatable {
   private func previewSegment(from segment: SpeedSegment, anchorTimeline: TimeInterval) -> SpeedSegment {
     var preview = segment
     let initialDuration = dragInitialEndTime - dragInitialStartTime
+    let pixelsPerSecond = videoDuration > 0 ? timelineWidth / CGFloat(videoDuration) : 0
+    let candidates = state.timelineSnapCandidates(excludingSpeedId: segment.id)
+    let bypassSnap = !state.isSnappingEnabled || VideoEditorTimelineSnapGuideState.isBypassKeyPressed
 
     switch dragMode {
     case .none:
+      state.timelineSnapGuide.clear()
       return preview
 
     case .position:
-      preview.startTime = anchorTimeline - dragGrabTimelineOffset
+      let rawStart = anchorTimeline - dragGrabTimelineOffset
+      let snapped = VideoEditorTimelineSnapper.snapRange(
+        start: rawStart,
+        duration: initialDuration,
+        candidates: candidates,
+        pixelsPerSecond: pixelsPerSecond,
+        isDisabled: bypassSnap
+      )
+      state.timelineSnapGuide.update(snapped.target)
+      preview.startTime = snapped.start
       preview.duration = initialDuration
 
     case .startEdge:
-      preview.startTime = anchorTimeline
-      preview.duration = max(SpeedSegment.minDuration, dragInitialEndTime - anchorTimeline)
+      let snapped = VideoEditorTimelineSnapper.snap(
+        time: anchorTimeline,
+        candidates: candidates,
+        pixelsPerSecond: pixelsPerSecond,
+        isDisabled: bypassSnap
+      )
+      state.timelineSnapGuide.update(snapped.target)
+      preview.startTime = snapped.time
+      preview.duration = max(SpeedSegment.minDuration, dragInitialEndTime - snapped.time)
 
     case .endEdge:
+      let snapped = VideoEditorTimelineSnapper.snap(
+        time: anchorTimeline,
+        candidates: candidates,
+        pixelsPerSecond: pixelsPerSecond,
+        isDisabled: bypassSnap
+      )
+      state.timelineSnapGuide.update(snapped.target)
       preview.startTime = dragInitialStartTime
-      preview.duration = max(SpeedSegment.minDuration, anchorTimeline - dragInitialStartTime)
+      preview.duration = max(SpeedSegment.minDuration, snapped.time - dragInitialStartTime)
     }
 
     return state.resolvedSpeedSegment(id: segment.id, startTime: preview.startTime, duration: preview.duration) ?? segment
@@ -398,6 +425,7 @@ struct SpeedTimelineTrack: View, Equatable {
       commitDragPreviewIfNeeded(dragPreviewSegment, force: true)
     }
     state.endSpeedEdit(id: id)
+    state.timelineSnapGuide.clear()
     dragMode = .none
     dragSegmentId = nil
     dragPreviewSegment = nil

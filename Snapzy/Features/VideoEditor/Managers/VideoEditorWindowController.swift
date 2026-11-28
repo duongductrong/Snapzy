@@ -34,6 +34,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private var sourceFileAccess: SandboxFileAccessManager.ScopedAccess?
   private var originalFileAccess: SandboxFileAccessManager.ScopedAccess?
   private var sourceURL: URL?
+  private var ownedTempDropDirectoryURL: URL?
   private var state: VideoEditorState?
   private var sessionData: VideoEditorSessionData?
   private var documentEditedCancellable: AnyCancellable?
@@ -89,6 +90,13 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       originalFileAccess = fileAccessManager.beginAccessingURL(originalURL)
     }
     sourceURL = url
+    let parentDir = url.deletingLastPathComponent().standardizedFileURL
+    let tempRoot = FileManager.default.temporaryDirectory.standardizedFileURL
+    if url.standardizedFileURL != originalURL?.standardizedFileURL,
+       parentDir.deletingLastPathComponent() == tempRoot,
+       parentDir.lastPathComponent.hasPrefix("VideoEditor_") {
+      ownedTempDropDirectoryURL = parentDir
+    }
     self.sessionData = sessionData
     state = VideoEditorState(
       url: url,
@@ -118,6 +126,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   deinit {
     sourceFileAccess?.stop()
     originalFileAccess?.stop()
+    if let tempDir = ownedTempDropDirectoryURL {
+      try? FileManager.default.removeItem(at: tempDir)
+    }
   }
 
   @available(*, unavailable)
@@ -157,6 +168,44 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       guard state?.isExporting != true else { return }
       state?.togglePlayback()
     }
+    (window as? VideoEditorWindow)?.onSelectAllTrackItems = { [weak state] in
+      guard let state, !state.isExporting, !state.isEditingTextOverlayField else { return false }
+      return state.selectAllInActiveTrack()
+    }
+    (window as? VideoEditorWindow)?.onTransportKey = { [weak state] key in
+      guard let state,
+            !state.isGIF,
+            !state.isExporting,
+            !state.isEditingTextOverlayField,
+            !state.agent.chrome.isRunning,
+            state.agent.chrome.allowsPlainKeyShortcuts
+      else { return false }
+      switch key {
+      case .shuttleReverse:
+        state.shuttleReverse()
+      case .shuttlePause:
+        state.shuttlePause()
+      case .shuttleForward:
+        state.shuttleForward()
+      case .stepBackward:
+        state.stepFrame(forward: false)
+      case .stepForward:
+        state.stepFrame(forward: true)
+      case .trimStartToPlayhead:
+        guard state.canTrimLeftAtPlayhead else { return false }
+        state.trimSelectedLeftToPlayhead()
+      case .trimEndToPlayhead:
+        guard state.canTrimRightAtPlayhead else { return false }
+        state.trimSelectedRightToPlayhead()
+      case .addTextOverlay:
+        state.addTextOverlayAtPlayheadAndOpenPanel()
+      case .toggleBookmark:
+        state.toggleBookmarkAtPlayhead()
+      case .toggleSnapping:
+        state.isSnappingEnabled.toggle()
+      }
+      return true
+    }
     (window as? VideoEditorWindow)?.onAIPromptShortcut = { [weak state, weak window] in
       guard let state, !state.isExporting else { return false }
       let agent = state.agent
@@ -170,6 +219,8 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private func setupEmptyContent() {
     bindDocumentEditedState(to: nil)
     (window as? VideoEditorWindow)?.onTogglePlayback = nil
+    (window as? VideoEditorWindow)?.onSelectAllTrackItems = nil
+    (window as? VideoEditorWindow)?.onTransportKey = nil
     (window as? VideoEditorWindow)?.onAIPromptShortcut = nil
     let emptyView = VideoEditorEmptyStateView { [weak self] url, originalURL in
       self?.onVideoLoaded?(url, originalURL)
@@ -228,18 +279,27 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   // MARK: - NSWindowDelegate
 
+  private func flushActiveTextEditing() {
+    window?.makeFirstResponder(nil)
+    if state?.isEditingTextOverlayField == true {
+      state?.isEditingTextOverlayField = false
+    }
+  }
+
   func windowShouldClose(_ sender: NSWindow) -> Bool {
     // Empty state can always close
     guard let state else { return true }
 
-    // An AI run keeps what it changed so far; the unsaved-changes question covers it.
-    state.agentIfLoaded?.stop()
+    flushActiveTextEditing()
 
     guard state.hasUnsavedChanges else {
+      state.agentIfLoaded?.stop()
       state.pause()
       return true
     }
 
+    // Do not stop the AI agent or pause playback before presenting the alert so
+    // choosing Cancel leaves an active AI run and playback undisturbed.
     showUnsavedChangesAlert(for: sender)
     return false
   }
@@ -247,6 +307,10 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   func windowWillClose(_: Notification) {
     state?.agentIfLoaded?.stop()
     state?.cancelPendingPerformanceWork()
+    if let tempDir = ownedTempDropDirectoryURL {
+      ownedTempDropDirectoryURL = nil
+      try? FileManager.default.removeItem(at: tempDir)
+    }
     window?.alphaValue = 0
     if let itemId = quickAccessItemID {
       QuickAccessManager.shared.setWindowOpen(id: itemId, isOpen: false)
@@ -270,6 +334,8 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
       switch response {
       case .alertFirstButtonReturn:
+        state?.agentIfLoaded?.stop()
+        state?.pause()
         showSaveConfirmation()
 
       case .alertSecondButtonReturn:
@@ -436,6 +502,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
         invalidateEditedCloudState()
         guard await persistSessionAfterCommit(for: state, preparedSource: preparedSource) else {
+          if let preparedSource {
+            VideoEditorSessionStore.shared.discardPreparedSourceSnapshot(preparedSource)
+          }
           state.isExporting = false
           showExportError(VideoEditorSessionStore.StoreError.packageUnavailable)
           return
@@ -456,7 +525,13 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         }
         DiagnosticLogger.shared.logError(.export, error, "GIF replace original failed")
         state.isExporting = false
-        showExportError(error)
+        if case VideoEditorSessionStore.StoreError.sessionQuarantined = error {
+          showQuarantinedSessionRecoveryAlert(for: state.originalURL) { [weak self] in
+            self?.performGIFReplaceOriginal()
+          }
+        } else {
+          showExportError(error)
+        }
       }
     }
   }
@@ -541,6 +616,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         }
         invalidateEditedCloudState()
         guard await persistSessionAfterCommit(for: state, preparedSource: preparedSource) else {
+          if let preparedSource {
+            VideoEditorSessionStore.shared.discardPreparedSourceSnapshot(preparedSource)
+          }
           state.isExporting = false
           showExportError(VideoEditorSessionStore.StoreError.packageUnavailable)
           return
@@ -567,7 +645,11 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         }
         DiagnosticLogger.shared.logError(.export, error, "Video replace original failed")
         state.isExporting = false
-        if error.isPermissionDenied {
+        if case VideoEditorSessionStore.StoreError.sessionQuarantined = error {
+          showQuarantinedSessionRecoveryAlert(for: state.originalURL) { [weak self] in
+            self?.performReplaceOriginal(offerPostExportUpload: offerPostExportUpload)
+          }
+        } else if error.isPermissionDenied {
           showReplaceOriginalPermissionFallback(error)
         } else {
           showExportError(error)
@@ -660,16 +742,19 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       return false
     }
 
+    let hadCommittedSession = sessionData != nil
     let snapshot = VideoEditorSessionData.snapshot(
       from: state,
       sourceSnapshotURL: sourceSnapshotURL
     )
-    if let quickAccessItemID {
-      VideoEditorManager.shared.saveSessionData(snapshot, for: quickAccessItemID)
-    } else {
-      VideoEditorManager.shared.saveSessionData(snapshot, for: state.originalURL)
+    if hadCommittedSession {
+      if let quickAccessItemID {
+        VideoEditorManager.shared.saveSessionData(snapshot, for: quickAccessItemID)
+      } else {
+        VideoEditorManager.shared.saveSessionData(snapshot, for: state.originalURL)
+      }
+      sessionData = snapshot
     }
-    sessionData = snapshot
 
     let didPersist = await VideoEditorSessionStore.shared.persistOffMain(
       snapshot,
@@ -680,7 +765,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       DiagnosticLogger.shared.log(
         .warning,
         .editor,
-        "Video Editor session disk persistence failed; in-memory session retained",
+        "Video Editor session disk persistence failed; in-memory session retained if backed by committed snapshot",
         context: ["fileName": state.originalURL.lastPathComponent]
       )
       return false
@@ -745,6 +830,39 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     alert.alertStyle = .critical
     alert.addButton(withTitle: L10n.Common.ok)
     alert.beginSheetModal(for: window)
+  }
+
+  private func showQuarantinedSessionRecoveryAlert(
+    for sourceURL: URL,
+    retryReplace: @escaping () -> Void
+  ) {
+    guard let window else { return }
+    let preservedURL = VideoEditorSessionStore.shared.quarantinedOriginalSnapshotURL(for: sourceURL)
+      ?? VideoEditorSessionStore.shared.quarantinedDirectory(for: sourceURL)
+
+    let alert = NSAlert()
+    alert.messageText = L10n.VideoEditor.exportFailedTitle
+    alert.informativeText = VideoEditorSessionStore.StoreError.sessionQuarantined.localizedDescription
+    alert.alertStyle = .warning
+    alert.addButton(withTitle: L10n.VideoEditor.replaceOriginal)
+    if preservedURL != nil {
+      alert.addButton(withTitle: L10n.Common.openInFinder)
+    }
+    alert.addButton(withTitle: L10n.Common.cancel)
+
+    alert.beginSheetModal(for: window) { response in
+      switch response {
+      case .alertFirstButtonReturn:
+        VideoEditorSessionStore.shared.deleteSession(for: sourceURL)
+        retryReplace()
+      case .alertSecondButtonReturn where preservedURL != nil:
+        if let preservedURL {
+          NSWorkspace.shared.activateFileViewerSelecting([preservedURL])
+        }
+      default:
+        break
+      }
+    }
   }
 
   private func showReplaceOriginalPermissionFallback(_ error: Error) {
@@ -837,6 +955,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func forceClose() {
+    state?.agentIfLoaded?.stop()
     state?.pause()
     state?.hasUnsavedChanges = false
     window?.close()
@@ -853,6 +972,8 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   private func handleCancel() {
     guard let window else { return }
+
+    flushActiveTextEditing()
 
     if let state, state.hasUnsavedChanges {
       showUnsavedChangesAlert(for: window)

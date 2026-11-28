@@ -2,8 +2,8 @@
 //  VideoEditorCaptionSegmentList.swift
 //  Snapzy
 //
-//  Editable caption list for the captions panel: start time (click to jump there),
-//  text field (commits on Return or when focus leaves, one undo step), delete.
+//  Editable caption list for the captions panel: start time (click to jump),
+//  1-click promote to independent Text (`Aa`) overlay, inline text editing, and delete.
 //
 
 import AVFoundation
@@ -30,28 +30,62 @@ private struct VideoEditorCaptionSegmentRow: View {
   @FocusState private var isFocused: Bool
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 2) {
-      HStack {
+    VStack(alignment: .leading, spacing: 3) {
+      HStack(spacing: 6) {
         Button(Self.timestamp(segment.start)) { jump() }
           .buttonStyle(.plain)
           .font(Typography.labelSmall.monospacedDigit())
           .foregroundColor(SidebarColors.labelSecondary)
+
         Spacer()
+
+        Button {
+          _ = state.promoteCaptionToTextOverlay(captionId: segment.id)
+        } label: {
+          HStack(spacing: 2.5) {
+            Image(systemName: "arrow.up.forward.square")
+              .font(.system(size: 8.5, weight: .semibold))
+            Text("Aa")
+              .font(.system(size: 9, weight: .bold))
+          }
+          .foregroundColor(.accentColor)
+          .padding(.horizontal, 6)
+          .padding(.vertical, 2)
+          .background(Color.accentColor.opacity(0.11), in: Radius.rect(Radius.ornament))
+        }
+        .buttonStyle(.plain)
+        .help(L10n.VideoEditor.captionsPromoteCueToText)
+        .accessibilityLabel(L10n.VideoEditor.captionsPromoteCueToText)
+
         Button { state.deleteCaption(id: segment.id) } label: {
-          Image(systemName: "xmark").font(.system(size: 9, weight: .semibold))
+          Image(systemName: "xmark")
+            .font(.system(size: 9, weight: .semibold))
         }
         .buttonStyle(.plain)
         .foregroundColor(SidebarColors.labelSecondary)
         .help(L10n.VideoEditor.captionsDelete)
       }
+
       TextField("", text: $draft, axis: .vertical)
         .textFieldStyle(.roundedBorder)
         .font(Typography.labelSmall)
         .lineLimit(1 ... 3)
         .focused($isFocused)
-        .onSubmit(commit)
+        .onSubmit {
+          commit()
+          isFocused = false
+        }
         .onChange(of: isFocused) { focused in
-          if !focused { commit() }
+          let token = "caption-row-\(segment.id.uuidString)"
+          if focused {
+            state.beginTextFieldEditing(token: token)
+          } else {
+            state.endTextFieldEditing(token: token)
+            commit()
+          }
+        }
+        .onDisappear {
+          state.endTextFieldEditing(token: "caption-row-\(segment.id.uuidString)")
         }
     }
     .onAppear { draft = segment.text }
@@ -64,7 +98,6 @@ private struct VideoEditorCaptionSegmentRow: View {
     state.updateCaptionText(id: segment.id, text: text)
   }
 
-  /// Jumps the playhead to the caption's first visible frame on the timeline.
   private func jump() {
     guard let placement = state.placements.first(where: {
       $0.clip.isPrimary && segment.start >= $0.clip.sourceStart && segment.start < $0.clip.sourceEnd

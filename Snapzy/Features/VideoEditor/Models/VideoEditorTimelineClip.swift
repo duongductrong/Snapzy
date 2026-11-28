@@ -43,9 +43,17 @@ nonisolated struct TimelineClip: Identifiable, Equatable, Hashable, Codable {
   let slotStart: TimeInterval
   /// End of this clip's fixed structural slot within the backing asset.
   let slotEnd: TimeInterval
+  /// Optional empty gap (black frames) placed before this clip on the timeline axis.
+  var leadingGap: TimeInterval = 0
+  /// True when this clip's embedded audio has been detached onto an independent audio lane.
+  var isAudioDetached: Bool = false
+  /// Optional video transition applied across the seam entering this clip.
+  var leadingTransition: TimelineClipTransition? = nil
 
   /// Shortest a clip may be trimmed. Splitting also refuses to create anything shorter.
   static let minDuration: TimeInterval = 0.1
+  static let maxDurationSeconds: TimeInterval = 864_000
+  static let maxLeadingGapSeconds: TimeInterval = 3_600
 
   var duration: TimeInterval {
     max(0, sourceEnd - sourceStart)
@@ -56,12 +64,16 @@ nonisolated struct TimelineClip: Identifiable, Equatable, Hashable, Codable {
   }
 
   var isPrimary: Bool {
-    if case .primary = source { return true }
+    if case .primary = source {
+      return true
+    }
     return false
   }
 
   var url: URL? {
-    if case .file(let url) = source { return url }
+    if case .file(let url) = source {
+      return url
+    }
     return nil
   }
 
@@ -82,13 +94,23 @@ nonisolated struct TimelineClip: Identifiable, Equatable, Hashable, Codable {
     sourceStart: TimeInterval = 0,
     sourceEnd: TimeInterval? = nil,
     slotStart: TimeInterval? = nil,
-    slotEnd: TimeInterval? = nil
+    slotEnd: TimeInterval? = nil,
+    leadingGap: TimeInterval = 0,
+    isAudioDetached: Bool = false,
+    leadingTransition: TimelineClipTransition? = nil
   ) {
     self.id = id
     self.source = source
-    self.sourceDuration = max(0, sourceDuration)
-    let requestedSlotStart = slotStart ?? sourceStart
-    let requestedSlotEnd = slotEnd ?? sourceEnd ?? self.sourceDuration
+    self.sourceDuration = sourceDuration.isFinite ? min(max(0, sourceDuration), Self.maxDurationSeconds) : 0
+    self.leadingGap = leadingGap.isFinite ? min(max(0, leadingGap), Self.maxLeadingGapSeconds) : 0
+    self.isAudioDetached = isAudioDetached
+    self.leadingTransition = leadingTransition?.isActive == true ? leadingTransition : nil
+    let safeSourceStart = sourceStart.isFinite ? sourceStart : 0
+    let safeSourceEnd = sourceEnd?.isFinite == true ? sourceEnd : nil
+    let safeSlotStart = slotStart?.isFinite == true ? slotStart : nil
+    let safeSlotEnd = slotEnd?.isFinite == true ? slotEnd : nil
+    let requestedSlotStart = safeSlotStart ?? safeSourceStart
+    let requestedSlotEnd = safeSlotEnd ?? safeSourceEnd ?? self.sourceDuration
     var normalizedSlotStart = max(0, min(requestedSlotStart, self.sourceDuration))
     var normalizedSlotEnd = max(normalizedSlotStart, min(requestedSlotEnd, self.sourceDuration))
     if normalizedSlotEnd - normalizedSlotStart < Self.minDuration {
@@ -102,8 +124,8 @@ nonisolated struct TimelineClip: Identifiable, Equatable, Hashable, Codable {
     self.slotStart = normalizedSlotStart
     self.slotEnd = normalizedSlotEnd
 
-    let start = max(normalizedSlotStart, min(sourceStart, normalizedSlotEnd))
-    let end = min(normalizedSlotEnd, sourceEnd ?? normalizedSlotEnd)
+    let start = max(normalizedSlotStart, min(safeSourceStart, normalizedSlotEnd))
+    let end = min(normalizedSlotEnd, safeSourceEnd ?? normalizedSlotEnd)
     self.sourceStart = start
     // Keep the clip at least `minDuration` long, preferring to extend the out-point
     // and falling back to pulling the in-point back when there is no room after it.
@@ -121,6 +143,32 @@ nonisolated struct TimelineClip: Identifiable, Equatable, Hashable, Codable {
 
   func contains(sourceTime: TimeInterval) -> Bool {
     sourceTime >= sourceStart && sourceTime < sourceEnd
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    let decodedId = try c.decode(UUID.self, forKey: .id)
+    let decodedSource = try c.decode(Source.self, forKey: .source)
+    let rawDuration = (try? c.decode(TimeInterval.self, forKey: .sourceDuration)) ?? 0
+    let rawSourceStart = (try? c.decode(TimeInterval.self, forKey: .sourceStart)) ?? 0
+    let rawSourceEnd = try? c.decode(TimeInterval.self, forKey: .sourceEnd)
+    let rawSlotStart = try? c.decode(TimeInterval.self, forKey: .slotStart)
+    let rawSlotEnd = try? c.decode(TimeInterval.self, forKey: .slotEnd)
+    let rawGap = (try? c.decodeIfPresent(TimeInterval.self, forKey: .leadingGap)) ?? 0
+    let decodedDetached = (try? c.decodeIfPresent(Bool.self, forKey: .isAudioDetached)) ?? false
+    let decodedTransition = try? c.decodeIfPresent(TimelineClipTransition.self, forKey: .leadingTransition)
+    self.init(
+      id: decodedId,
+      source: decodedSource,
+      sourceDuration: rawDuration,
+      sourceStart: rawSourceStart,
+      sourceEnd: rawSourceEnd,
+      slotStart: rawSlotStart,
+      slotEnd: rawSlotEnd,
+      leadingGap: rawGap,
+      isAudioDetached: decodedDetached,
+      leadingTransition: decodedTransition
+    )
   }
 }
 
@@ -184,6 +232,7 @@ nonisolated enum TimelineSequence {
     for (index, clip) in clips.enumerated() {
       let duration = clip.slotDuration
       guard duration > 0.0001 else { continue }
+      cursor += max(0, clip.leadingGap)
       placements.append(
         Placement(
           clip: clip,
@@ -224,7 +273,7 @@ nonisolated enum TimelineSequence {
   }
 
   static func duration(_ clips: [TimelineClip]) -> TimeInterval {
-    clips.reduce(0) { $0 + $1.slotDuration }
+    clips.reduce(0) { $0 + max(0, $1.leadingGap) + $1.slotDuration }
   }
 
   static func playableDuration(_ clips: [TimelineClip]) -> TimeInterval {
@@ -234,7 +283,9 @@ nonisolated enum TimelineSequence {
   /// Placement covering a sequence time; the last placement answers for the exact
   /// end of the sequence so a playhead parked at the tail still has a clip.
   static func placement(at sequenceTime: TimeInterval, in placements: [Placement]) -> Placement? {
-    if let match = placements.first(where: { $0.contains(sequenceTime) }) { return match }
+    if let match = placements.first(where: { $0.contains(sequenceTime) }) {
+      return match
+    }
     guard let last = placements.last, sequenceTime >= last.end - 0.0001 else {
       return placements.first
     }

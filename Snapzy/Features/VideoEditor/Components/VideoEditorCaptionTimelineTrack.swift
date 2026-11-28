@@ -24,7 +24,6 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
   /// popover must stay mounted.
   let visibleRange: ClosedRange<CGFloat>
   @StateObject private var observation: VideoEditorTimelineObservation
-  @State private var selectedId: UUID?
   @State private var editingId: UUID?
   @State private var editText = ""
   @State private var drag: DragState?
@@ -75,11 +74,16 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
     .frame(width: timelineWidth, height: trackHeight, alignment: .leading)
   }
 
-  private var duration: TimeInterval { CMTimeGetSeconds(state.timelineDuration) }
+  private var duration: TimeInterval {
+    CMTimeGetSeconds(state.timelineDuration)
+  }
 
   /// Caption pieces laid on primary clips of the structural timeline.
   private var pieces: [Piece] {
-    let segments = Dictionary(uniqueKeysWithValues: state.captions.segments.map { ($0.id, $0) })
+    let segments = Dictionary(
+      state.captions.segments.map { ($0.id, $0) },
+      uniquingKeysWith: { first, _ in first }
+    )
     return VideoEditorSourceTrackLayout.pieces(
       state.captions.segments.map { ($0.id, $0.start, $0.end) },
       placements: state.placements,
@@ -93,14 +97,16 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
   private var visiblePieces: [Piece] {
     pieces.filter { piece in
       (piece.x + piece.width >= visibleRange.lowerBound && piece.x <= visibleRange.upperBound)
-        || piece.segment.id == selectedId
+        || piece.segment.id == state.selectedCaptionId
+        || state.selectedCaptionIds.contains(piece.segment.id)
         || piece.segment.id == editingId
         || piece.segment.id == drag?.id
     }
   }
 
   private func block(_ piece: Piece) -> some View {
-    let isSelected = selectedId == piece.segment.id
+    let isSelected = state.selectedCaptionId == piece.segment.id
+      || state.selectedCaptionIds.contains(piece.segment.id)
     return ZStack(alignment: .leading) {
       TimelineSegmentChrome(
         height: blockHeight,
@@ -123,12 +129,16 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
     .gesture(dragGesture(piece))
     .simultaneousGesture(TapGesture(count: 2).onEnded { beginEditing(piece.segment) })
     .simultaneousGesture(TapGesture().onEnded {
-      selectedId = piece.segment.id
+      state.selectCaption(id: piece.segment.id)
       state.seek(to: CMTime(seconds: piece.x / timelineWidth * duration + 0.001, preferredTimescale: 600))
     })
     .popover(isPresented: Binding(
       get: { editingId == piece.segment.id },
-      set: { if !$0 { endEditing() } }
+      set: {
+        if !$0 {
+          endEditing()
+        }
+      }
     )) {
       TextField("", text: $editText, axis: .vertical)
         .textFieldStyle(.roundedBorder)
@@ -136,6 +146,7 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
         .frame(width: 280)
         .padding(10)
         .onSubmit { endEditing() }
+        .onDisappear { endEditing() }
     }
   }
 
@@ -146,7 +157,7 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
           let local = value.startLocation.x
           let mode: DragState.Mode = local < edgeWidth ? .start : (local > piece.width - edgeWidth ? .end : .move)
           drag = DragState(id: piece.segment.id, mode: mode, original: state.captions)
-          selectedId = piece.segment.id
+          state.selectCaption(id: piece.segment.id)
         }
         guard let drag, let original = drag.original.segments.first(where: { $0.id == drag.id }) else { return }
         let delta = value.translation.width / timelineWidth * duration
@@ -163,18 +174,22 @@ struct VideoEditorCaptionTimelineTrack: View, Equatable {
         state.updateCaptionRange(id: drag.id, range: range, recordUndo: false)
       }
       .onEnded { _ in
-        if let drag { state.commitCaptions(from: drag.original) }
+        if let drag {
+          state.commitCaptions(from: drag.original)
+        }
         drag = nil
       }
   }
 
   private func beginEditing(_ segment: CaptionSegment) {
-    selectedId = segment.id
+    state.selectCaption(id: segment.id)
     editText = segment.text
     editingId = segment.id
+    state.beginTextFieldEditing(token: "caption-popover")
   }
 
   private func endEditing() {
+    state.endTextFieldEditing(token: "caption-popover")
     if let id = editingId {
       state.updateCaptionText(id: id, text: editText.trimmingCharacters(in: .whitespacesAndNewlines))
     }

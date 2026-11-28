@@ -11,7 +11,7 @@ import CoreVideo
 import SwiftUI
 
 /// Compositor that applies zoom effects during video export
-class ZoomCompositor {
+nonisolated class ZoomCompositor {
   // MARK: - Properties
 
   private let zooms: [ZoomSegment]
@@ -26,6 +26,8 @@ class ZoomCompositor {
   private let cornerRadius: CGFloat
   private let studioRecipe: VideoEditorStudioRecipe
   private let motionBlur: VideoEditorMotionBlurSettings
+  let textOverlays: [VideoEditorTextOverlay]
+  private let exportTransitions: [VideoEditorExportTransition]
   let paddedRenderSize: CGSize
 
   // MARK: - Initialization
@@ -40,7 +42,9 @@ class ZoomCompositor {
     backgroundPadding: CGFloat = 0,
     cornerRadius: CGFloat = 0,
     studioRecipe: VideoEditorStudioRecipe = .empty,
-    motionBlur: VideoEditorMotionBlurSettings = .disabled
+    motionBlur: VideoEditorMotionBlurSettings = .disabled,
+    textOverlays: [VideoEditorTextOverlay] = [],
+    exportTransitions: [VideoEditorExportTransition] = []
   ) {
     self.zooms = zooms.filter(\.isEnabled)
     self.autoFocusPaths = autoFocusPaths
@@ -52,6 +56,15 @@ class ZoomCompositor {
     self.cornerRadius = cornerRadius
     self.studioRecipe = studioRecipe
     self.motionBlur = motionBlur
+    self.textOverlays = textOverlays
+      .filter(\.isEnabled)
+      .sorted { lhs, rhs in
+        if lhs.trackIndex != rhs.trackIndex {
+          return lhs.trackIndex < rhs.trackIndex
+        }
+        return lhs.startTime < rhs.startTime
+      }
+    self.exportTransitions = exportTransitions
 
     // Calculate padded render size
     if backgroundStyle != .none, backgroundPadding > 0 {
@@ -77,6 +90,7 @@ class ZoomCompositor {
     for asset: AVAsset,
     timeRange: CMTimeRange,
     screenTrackID: CMPersistentTrackID? = nil,
+    secondaryVideoTrackID: CMPersistentTrackID? = nil,
     auxiliaryTrackIDs: [VideoEditorStudioAuxiliaryTrack: CMPersistentTrackID] = [:]
   ) async throws -> AVMutableVideoComposition {
     print("🎬 [ZoomCompositor] Creating video composition")
@@ -106,6 +120,7 @@ class ZoomCompositor {
       zooms: zooms,
       autoFocusPaths: autoFocusPaths,
       trackID: resolvedScreenTrackID,
+      secondaryVideoTrackID: secondaryVideoTrackID,
       renderSize: renderSize,
       transitionDuration: transitionDuration,
       backgroundStyle: backgroundStyle,
@@ -115,7 +130,9 @@ class ZoomCompositor {
       studioRecipe: studioRecipe,
       auxiliaryTrackIDs: auxiliaryTrackIDs,
       motionBlur: motionBlur,
-      frameDurationSeconds: resolvedFrameDuration
+      frameDurationSeconds: resolvedFrameDuration,
+      textOverlays: textOverlays,
+      exportTransitions: exportTransitions
     )
     print("🎬 [ZoomCompositor] Created instruction with trackID: \(resolvedScreenTrackID)")
 
@@ -179,11 +196,12 @@ class ZoomCompositor {
 
 // MARK: - Custom Video Composition Instruction
 
-class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionProtocol {
+nonisolated class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionProtocol {
   let timeRange: CMTimeRange
   let zooms: [ZoomSegment]
   let autoFocusPaths: [UUID: [AutoFocusCameraSample]]
   let trackID: CMPersistentTrackID
+  let secondaryVideoTrackID: CMPersistentTrackID?
   let renderSize: CGSize
   let transitionDuration: TimeInterval
   let backgroundStyle: BackgroundStyle
@@ -197,6 +215,8 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
   let auxiliaryTrackIDs: [VideoEditorStudioAuxiliaryTrack: CMPersistentTrackID]
   let motionBlur: VideoEditorMotionBlurSettings
   let frameDurationSeconds: TimeInterval
+  let textOverlays: [VideoEditorTextOverlay]
+  let exportTransitions: [VideoEditorExportTransition]
 
   var enablePostProcessing: Bool {
     true
@@ -208,16 +228,30 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
 
   var requiredSourceTrackIDs: [NSValue]? {
     // Must return NSNumber (which is a subclass of NSValue) for track IDs
-    // AVFoundation calls intValue on these objects. Screen track first.
+    // AVFoundation calls intValue on these objects. Screen track(s) first.
+    var ids: [CMPersistentTrackID] = [trackID]
+    if let secondaryVideoTrackID, secondaryVideoTrackID != trackID {
+      ids.append(secondaryVideoTrackID)
+    }
     let auxiliary = auxiliaryTrackIDs
       .sorted { $0.key.rawValue < $1.key.rawValue }
       .map(\.value)
-      .filter { $0 != trackID }
-    return ([trackID] + auxiliary).map { NSNumber(value: $0) }
+      .filter { !ids.contains($0) }
+    return (ids + auxiliary).map { NSNumber(value: $0) }
   }
 
   /// Layers draw something, so the compositor must not pass frames through untouched.
-  var hasStudioLayers: Bool { studioRecipe.hasActiveLayers }
+  var hasStudioLayers: Bool {
+    studioRecipe.hasActiveLayers
+  }
+
+  var hasTextOverlays: Bool {
+    !textOverlays.isEmpty
+  }
+
+  var hasTransitions: Bool {
+    !exportTransitions.isEmpty
+  }
 
   var passthroughTrackID: CMPersistentTrackID {
     kCMPersistentTrackID_Invalid
@@ -228,6 +262,7 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
     zooms: [ZoomSegment],
     autoFocusPaths: [UUID: [AutoFocusCameraSample]],
     trackID: CMPersistentTrackID,
+    secondaryVideoTrackID: CMPersistentTrackID? = nil,
     renderSize: CGSize,
     transitionDuration: TimeInterval,
     backgroundStyle: BackgroundStyle = .none,
@@ -237,12 +272,15 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
     studioRecipe: VideoEditorStudioRecipe = .empty,
     auxiliaryTrackIDs: [VideoEditorStudioAuxiliaryTrack: CMPersistentTrackID] = [:],
     motionBlur: VideoEditorMotionBlurSettings = .disabled,
-    frameDurationSeconds: TimeInterval = 1.0 / 30.0
+    frameDurationSeconds: TimeInterval = 1.0 / 30.0,
+    textOverlays: [VideoEditorTextOverlay] = [],
+    exportTransitions: [VideoEditorExportTransition] = []
   ) {
     self.timeRange = timeRange
     self.zooms = zooms
     self.autoFocusPaths = autoFocusPaths
     self.trackID = trackID
+    self.secondaryVideoTrackID = secondaryVideoTrackID
     self.renderSize = renderSize
     self.transitionDuration = transitionDuration
     self.backgroundStyle = backgroundStyle
@@ -259,13 +297,15 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
     self.auxiliaryTrackIDs = auxiliaryTrackIDs
     self.motionBlur = motionBlur
     self.frameDurationSeconds = frameDurationSeconds
+    self.textOverlays = textOverlays
+    self.exportTransitions = exportTransitions
     super.init()
   }
 }
 
 // MARK: - Custom Video Compositor
 
-class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
+nonisolated class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
   private let minimumRenderableZoomLevel: CGFloat = 1.0001
 
   /// Required properties
@@ -305,15 +345,31 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
   private var cachedBlurredSize: CGSize?
   private var cachedBlurredWallpaper: CIImage?
 
+  // Precomputed CoreText layouts + byte-budgeted LRU cache of rasterized text overlay pills so
+  // export evaluates `VideoEditorCaptionLayout.make` once per overlay and bounds RGBA memory.
+  private var cachedTextOverlayLayouts: [
+    VideoEditorTextOverlayRenderer.LayoutCacheKey: (layout: VideoEditorCaptionLayout, generation: UInt64)
+  ] = [:]
+  private var cachedTextOverlayImages: [
+    VideoEditorTextOverlayRenderer.CacheKey: (image: CIImage, byteCost: Int, generation: UInt64)
+  ] = [:]
+  private var cachedTextOverlayTotalBytes: Int = 0
+  private var textOverlayCacheGeneration: UInt64 = 0
+  private let maxCachedTextOverlayImages = 64
+  private let maxCachedTextOverlayBytes = VideoEditorCaptionImageCache.defaultMaxBytes
+
   // MARK: - AVVideoCompositing Protocol
 
   func renderContextChanged(_ newRenderContext: AVVideoCompositionRenderContext) {
     queue.sync {
       renderContext = newRenderContext
-      // Clear wallpaper cache if size changed to ensure correct scaling
+      // Clear wallpaper & text overlay caches if size changed to ensure correct scaling
       if cachedWallpaperSize != newRenderContext.size {
         cachedScaledWallpaper = nil
         cachedBlurredWallpaper = nil
+        cachedTextOverlayLayouts.removeAll()
+        cachedTextOverlayImages.removeAll()
+        cachedTextOverlayTotalBytes = 0
       }
       print("🎥 [Compositor] Render context changed - size: \(newRenderContext.size)")
     }
@@ -349,9 +405,54 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
       return
     }
 
-    guard let sourceBuffer = request.sourceFrame(byTrackID: instruction.trackID) else {
-      // Try to find any available source frame as fallback
+    let activeTransition = instruction.exportTransitions.first { $0.contains(currentTime) }
+    var sourceBuffer: CVPixelBuffer?
+    var crossfadeIncomingBuffer: CVPixelBuffer?
+
+    if let activeTransition, activeTransition.style == .crossfade {
+      let outgoing = request.sourceFrame(byTrackID: activeTransition.outgoingTrackID)
+      let incoming = request.sourceFrame(byTrackID: activeTransition.incomingTrackID)
+      if let outgoing, let incoming {
+        sourceBuffer = outgoing
+        crossfadeIncomingBuffer = incoming
+      } else {
+        sourceBuffer = outgoing ?? incoming
+      }
+    } else {
+      sourceBuffer = request.sourceFrame(byTrackID: instruction.trackID)
+      if sourceBuffer == nil, let secondaryID = instruction.secondaryVideoTrackID {
+        sourceBuffer = request.sourceFrame(byTrackID: secondaryID)
+      }
+    }
+
+    guard let sourceBuffer else {
       let availableTrackIDs = request.sourceTrackIDs.map(\.int32Value)
+      let auxiliaryIDs = Set(instruction.auxiliaryTrackIDs.values)
+      if let firstTrackID = availableTrackIDs.first(where: { !auxiliaryIDs.contains($0) }),
+         let fallbackBuffer = request.sourceFrame(byTrackID: firstTrackID) {
+        print("🔄 [Compositor] Frame \(frameCount): Using fallback trackID \(firstTrackID)")
+        request.finish(withComposedVideoFrame: fallbackBuffer)
+        return
+      }
+
+      // Empty video time range (black-screen gap before/between clips or audio extending
+      // past the final video frame): render a clean opaque black frame (plus any active text overlays).
+      if availableTrackIDs.isEmpty || availableTrackIDs.allSatisfy({ auxiliaryIDs.contains($0) }),
+         let outputBuffer = renderContext?.newPixelBuffer() {
+        let canvasRect = CGRect(origin: .zero, size: instruction.paddedRenderSize)
+        var blackImage = CIImage(color: .black).cropped(to: canvasRect)
+        if instruction.hasTextOverlays {
+          blackImage = compositeTextOverlays(
+            blackImage,
+            outputTime: currentTime,
+            instruction: instruction
+          )
+        }
+        ciContext.render(blackImage, to: outputBuffer)
+        request.finish(withComposedVideoFrame: outputBuffer)
+        return
+      }
+
       print("❌ [Compositor] Frame \(frameCount): No source frame for trackID \(instruction.trackID)")
       print("❌ [Compositor] Available track IDs: \(availableTrackIDs)")
       DiagnosticLogger.shared.log(
@@ -364,16 +465,6 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
           "availableTrackCount": "\(availableTrackIDs.count)",
         ]
       )
-
-      // Try fallback: use first available track that is not an auxiliary (camera, ...)
-      // track — passing a camera frame through as the screen would be worse than failing.
-      let auxiliaryIDs = Set(instruction.auxiliaryTrackIDs.values)
-      if let firstTrackID = availableTrackIDs.first(where: { !auxiliaryIDs.contains($0) }),
-         let fallbackBuffer = request.sourceFrame(byTrackID: firstTrackID) {
-        print("🔄 [Compositor] Frame \(frameCount): Using fallback trackID \(firstTrackID)")
-        request.finish(withComposedVideoFrame: fallbackBuffer)
-        return
-      }
 
       request.finish(with: ZoomCompositor.ZoomCompositorError.trackMismatch(
         expected: instruction.trackID,
@@ -409,20 +500,27 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
     )
     let needsCanvasFit = abs(sourceSize.width - instruction.renderSize.width) > 0.5
       || abs(sourceSize.height - instruction.renderSize.height) > 0.5
+    let hasActiveTextAtTime = instruction.hasTextOverlays
+      && instruction.textOverlays.contains { $0.contains(time: currentTime) }
 
-    // If no zoom, no active shutter motion blur, no background and no Studio layer, pass through original frame
+    // If no zoom, no active shutter motion blur, no background, no Studio layer,
+    // no active transition, and no active text overlay, pass through original frame.
     if zoomLevel <= minimumRenderableZoomLevel,
        !shutterPlan.isActive,
        !instruction.hasBackground,
        !needsCanvasFit,
-       !instruction.hasStudioLayers {
+       !instruction.hasStudioLayers,
+       !hasActiveTextAtTime,
+       activeTransition == nil {
       request.finish(withComposedVideoFrame: sourceBuffer)
       return
     }
 
-    // Apply zoom, true shutter-angle motion blur, and/or background effect
+    // Apply transitions, zoom, true shutter-angle motion blur, background, Studio & text layers
     guard let outputBuffer = applyEffects(
       to: sourceBuffer,
+      crossfadeIncomingBuffer: crossfadeIncomingBuffer,
+      activeTransition: activeTransition,
       zoomLevel: zoomLevel,
       center: zoomCenter,
       shutterPlan: shutterPlan,
@@ -448,6 +546,8 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
 
   private func applyEffects(
     to sourceBuffer: CVPixelBuffer,
+    crossfadeIncomingBuffer: CVPixelBuffer?,
+    activeTransition: VideoEditorExportTransition?,
     zoomLevel: CGFloat,
     center: CGPoint,
     shutterPlan: VideoEditorMotionBlurEngine.ShutterPlan,
@@ -458,6 +558,46 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
     // Create CIImage from source buffer
     var processedImage = CIImage(cvPixelBuffer: sourceBuffer)
     let sourceExtent = processedImage.extent
+
+    // Blend dual-track Crossfade transition or apply Dip-to-Black curve on video frames.
+    if let activeTransition {
+      switch activeTransition.style {
+      case .crossfade:
+        if let incomingBuffer = crossfadeIncomingBuffer {
+          let progress = activeTransition.progress(at: outputTime)
+          var incomingImage = CIImage(cvPixelBuffer: incomingBuffer)
+          if incomingImage.extent.size != sourceExtent.size,
+             incomingImage.extent.width > 0,
+             incomingImage.extent.height > 0 {
+            let sx = sourceExtent.width / incomingImage.extent.width
+            let sy = sourceExtent.height / incomingImage.extent.height
+            incomingImage = incomingImage
+              .transformed(by: CGAffineTransform(
+                translationX: -incomingImage.extent.origin.x,
+                y: -incomingImage.extent.origin.y
+              ))
+              .transformed(by: CGAffineTransform(scaleX: sx, y: sy))
+              .transformed(by: CGAffineTransform(translationX: sourceExtent.origin.x, y: sourceExtent.origin.y))
+          }
+          if let alphaFilter = CIFilter(name: "CIColorMatrix") {
+            alphaFilter.setValue(incomingImage, forKey: kCIInputImageKey)
+            alphaFilter.setValue(CIVector(x: 0, y: 0, z: 0, w: CGFloat(progress)), forKey: "inputAVector")
+            if let fadedIncoming = alphaFilter.outputImage {
+              processedImage = fadedIncoming.composited(over: processedImage).cropped(to: sourceExtent)
+            }
+          }
+        }
+      case .dipToBlack:
+        let dipAlpha = activeTransition.dipBlackAlpha(at: outputTime)
+        if dipAlpha > 0.001 {
+          let blackOverlay = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: CGFloat(dipAlpha)))
+            .cropped(to: sourceExtent)
+          processedImage = blackOverlay.composited(over: processedImage).cropped(to: sourceExtent)
+        }
+      case .none:
+        break
+      }
+    }
 
     // Studio source-space layers (cursor, clicks) ride along with the screen into zoom.
     processedImage = compositeSourceSpaceLayers(
@@ -541,6 +681,15 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
       videoRect: fittedRect.offsetBy(dx: padding, dy: padding)
     )
 
+    // Timeline Text / Title overlays (canvas-space, cached pills, GPU-composited).
+    if instruction.hasTextOverlays {
+      processedImage = compositeTextOverlays(
+        processedImage,
+        outputTime: outputTime,
+        instruction: instruction
+      )
+    }
+
     // Create output buffer
     guard let renderContext else { return nil }
     guard let outputBuffer = renderContext.newPixelBuffer() else { return nil }
@@ -586,6 +735,106 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
     return instruction.studioRecipe
       .composite(base, space: .canvas, outputTime: outputTime, auxiliaryFrames: auxiliaryFrames, videoRect: videoRect)
       .cropped(to: canvasRect)
+  }
+
+  /// Composites active timeline Text / Title overlays over the final canvas using
+  /// precomputed CoreText layouts, single-pass `motionState` evaluation, and single-entry
+  /// LRU eviction so animated overlays never thrash the cache.
+  private func compositeTextOverlays(
+    _ image: CIImage,
+    outputTime: TimeInterval,
+    instruction: ZoomVideoCompositionInstruction
+  ) -> CIImage {
+    let canvasSize = instruction.paddedRenderSize
+    let canvasRect = CGRect(origin: .zero, size: canvasSize)
+    var current = image.extent.isInfinite ? image.cropped(to: canvasRect) : image
+    guard canvasSize.width > 16, canvasSize.height > 16 else { return current }
+
+    for overlay in instruction.textOverlays where overlay.contains(time: outputTime) {
+      let motion = overlay.motionState(at: outputTime)
+      guard motion.opacity > 0.002 else { continue }
+
+      let trimmed = overlay.text.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !trimmed.isEmpty else { continue }
+
+      let layoutKey = VideoEditorTextOverlayRenderer.LayoutCacheKey(overlay: overlay, canvasSize: canvasSize)
+      let layout: VideoEditorCaptionLayout
+      if var cachedLayout = cachedTextOverlayLayouts[layoutKey] {
+        textOverlayCacheGeneration &+= 1
+        cachedLayout.generation = textOverlayCacheGeneration
+        cachedTextOverlayLayouts[layoutKey] = cachedLayout
+        layout = cachedLayout.layout
+      } else {
+        guard let built = VideoEditorCaptionLayout.make(
+          text: trimmed,
+          settings: overlay.style,
+          videoSize: canvasSize
+        ) else { continue }
+        if cachedTextOverlayLayouts.count >= maxCachedTextOverlayImages,
+           let oldestLayoutKey = cachedTextOverlayLayouts
+             .min(by: { $0.value.generation < $1.value.generation })?.key {
+          cachedTextOverlayLayouts.removeValue(forKey: oldestLayoutKey)
+        }
+        textOverlayCacheGeneration &+= 1
+        cachedTextOverlayLayouts[layoutKey] = (built, textOverlayCacheGeneration)
+        layout = built
+      }
+
+      let key = VideoEditorTextOverlayRenderer.CacheKey(
+        layoutKey: layoutKey,
+        overlay: overlay,
+        layout: layout,
+        motion: motion,
+        outputTime: outputTime
+      )
+      let pill: CIImage?
+      if var cached = cachedTextOverlayImages[key] {
+        textOverlayCacheGeneration &+= 1
+        cached.generation = textOverlayCacheGeneration
+        cachedTextOverlayImages[key] = cached
+        pill = cached.image
+      } else {
+        let rendered = VideoEditorTextOverlayRenderer.renderPillImage(
+          for: overlay,
+          layout: layout,
+          motion: motion,
+          outputTime: outputTime
+        )
+        if let rendered {
+          let w = max(1, Int(ceil(max(1, rendered.extent.width))))
+          let h = max(1, Int(ceil(max(1, rendered.extent.height))))
+          let cost = max(1, w * h * 4)
+          if cost <= maxCachedTextOverlayBytes {
+            if let prior = cachedTextOverlayImages.removeValue(forKey: key) {
+              cachedTextOverlayTotalBytes = max(0, cachedTextOverlayTotalBytes - prior.byteCost)
+            }
+            textOverlayCacheGeneration &+= 1
+            cachedTextOverlayImages[key] = (rendered, cost, textOverlayCacheGeneration)
+            cachedTextOverlayTotalBytes += cost
+            while cachedTextOverlayImages.count > maxCachedTextOverlayImages
+              || (cachedTextOverlayTotalBytes > maxCachedTextOverlayBytes && cachedTextOverlayImages.count > 1) {
+              guard let oldest = cachedTextOverlayImages
+                .min(by: { $0.value.generation < $1.value.generation })
+              else { break }
+              cachedTextOverlayImages.removeValue(forKey: oldest.key)
+              cachedTextOverlayTotalBytes = max(0, cachedTextOverlayTotalBytes - oldest.value.byteCost)
+            }
+          }
+        }
+        pill = rendered
+      }
+      if let pill {
+        current = VideoEditorTextOverlayRenderer.composite(
+          pillImage: pill,
+          onto: current,
+          overlay: overlay,
+          canvasSize: canvasSize,
+          motion: motion
+        )
+      }
+    }
+
+    return current.cropped(to: canvasRect)
   }
 
   /// Auxiliary frames only for tracks the active layers actually need.

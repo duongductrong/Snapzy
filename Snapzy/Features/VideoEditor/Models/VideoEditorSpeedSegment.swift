@@ -34,7 +34,13 @@ nonisolated struct SpeedSegment: Identifiable, Codable, Equatable, Hashable {
   static let maxRate: Double = 8.0
   static let defaultRate: Double = 2.0
   static let minDuration: TimeInterval = 0.5
+  static let maxDuration: TimeInterval = 864_000
+  static let maxTimelineStart: TimeInterval = 864_000
   static let defaultDuration: TimeInterval = 3.0
+
+  private enum CodingKeys: String, CodingKey {
+    case id, startTime, duration, rate, isEnabled
+  }
 
   // MARK: - Initialization
 
@@ -46,17 +52,37 @@ nonisolated struct SpeedSegment: Identifiable, Codable, Equatable, Hashable {
     isEnabled: Bool = true
   ) {
     self.id = id
-    self.startTime = max(0, startTime)
-    self.duration = max(Self.minDuration, duration)
+    let safeStart = startTime.isFinite ? startTime : 0
+    self.startTime = min(max(0, safeStart), Self.maxTimelineStart)
+    let safeDuration = duration.isFinite ? duration : Self.defaultDuration
+    self.duration = min(max(Self.minDuration, safeDuration), Self.maxDuration)
     self.rate = Self.clampRate(rate)
     self.isEnabled = isEnabled
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    let decodedId = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+    let decodedStart = (try? c.decodeIfPresent(TimeInterval.self, forKey: .startTime)) ?? 0
+    let decodedDuration = (try? c.decodeIfPresent(TimeInterval.self, forKey: .duration)) ?? Self.defaultDuration
+    let decodedRate = (try? c.decodeIfPresent(Double.self, forKey: .rate)) ?? Self.defaultRate
+    let decodedEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .isEnabled)) ?? true
+
+    self.init(
+      id: decodedId,
+      startTime: decodedStart,
+      duration: decodedDuration,
+      rate: decodedRate,
+      isEnabled: decodedEnabled
+    )
   }
 
   // MARK: - Helpers
 
   /// Clamp an arbitrary rate into the supported range.
   static func clampRate(_ r: Double) -> Double {
-    min(max(r, minRate), maxRate)
+    guard r.isFinite else { return defaultRate }
+    return min(max(r, minRate), maxRate)
   }
 
   /// Check if a given time falls within this segment.

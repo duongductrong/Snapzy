@@ -18,10 +18,10 @@ final class VideoEditorClipThumbnailCache: ObservableObject {
 
   private var inFlight: Set<URL> = []
 
-  /// Frames per inserted clip. Lower than the primary strip's budget: inserted clips
-  /// are usually short and several can be on screen at once.
-  private nonisolated static let frameCount = 12
-  private nonisolated static let targetSize = CGSize(width: 120, height: 68)
+  /// Frames per inserted clip at 2× Retina resolution so inserted B-roll matches
+  /// the primary recording's filmstrip sharpness without bloating memory.
+  private nonisolated static let frameCount = 18
+  private nonisolated static let targetSize = CGSize(width: 420, height: 236)
 
   /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
   /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
@@ -74,7 +74,15 @@ final class VideoEditorClipThumbnailCache: ObservableObject {
             let progress = (Double(index) + 0.5) / Double(safeCount)
             let time = CMTime(seconds: seconds * progress, preferredTimescale: 600)
             guard let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) else { continue }
-            images.append(NSImage(cgImage: cgImage, size: NSSize(width: 120, height: 68)))
+            let pointSize = NSSize(
+              width: max(1, CGFloat(cgImage.width) / 2.0),
+              height: max(1, CGFloat(cgImage.height) / 2.0)
+            )
+            let rep = NSBitmapImageRep(cgImage: cgImage)
+            rep.size = pointSize
+            let nsImage = NSImage(size: pointSize)
+            nsImage.addRepresentation(rep)
+            images.append(nsImage)
           }
 
           continuation.resume(returning: images)

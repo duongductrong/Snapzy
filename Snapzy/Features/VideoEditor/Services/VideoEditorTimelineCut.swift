@@ -67,7 +67,10 @@ nonisolated enum VideoEditorTimelineCut {
           sourceStart: activeStart,
           sourceEnd: activeEnd,
           slotStart: piece.slot.lowerBound,
-          slotEnd: piece.slot.upperBound
+          slotEnd: piece.slot.upperBound,
+          leadingGap: keptOriginalID ? 0 : clip.leadingGap,
+          isAudioDetached: clip.isAudioDetached,
+          leadingTransition: keptOriginalID ? nil : clip.leadingTransition
         ))
         keptOriginalID = true
       }
@@ -98,6 +101,78 @@ nonisolated enum VideoEditorTimelineCut {
     let newEnd = shifted(end, removing: removed)
     guard newEnd - newStart >= minDuration - 0.0001 else { return nil }
     return newStart ... newEnd
+  }
+
+  /// Ripple-cut independent audio clips along the same removed timeline spans
+  /// so AI silence removal and range cuts keep audio waveforms and playback
+  /// synced with video instead of leaving uncut trailing audio.
+  static func cutAudioClips(
+    _ audioClips: [AudioTimelineClip],
+    removing removed: [ClosedRange<TimeInterval>]
+  ) -> [AudioTimelineClip] {
+    let spans = merged(removed)
+    guard !spans.isEmpty, !audioClips.isEmpty else { return audioClips }
+
+    var output: [AudioTimelineClip] = []
+    output.reserveCapacity(audioClips.count)
+
+    for clip in audioClips {
+      let clipStart = clip.timelineStart
+      let clipEnd = clip.timelineEnd
+      var pieces: [ClosedRange<TimeInterval>] = [clipStart ... clipEnd]
+
+      for span in spans {
+        var nextPieces: [ClosedRange<TimeInterval>] = []
+        for piece in pieces {
+          if piece.upperBound <= span.lowerBound + 0.0001 || piece.lowerBound >= span.upperBound - 0.0001 {
+            nextPieces.append(piece)
+          } else {
+            if piece.lowerBound < span.lowerBound - 0.0001 {
+              nextPieces.append(piece.lowerBound ... span.lowerBound)
+            }
+            if piece.upperBound > span.upperBound + 0.0001 {
+              nextPieces.append(span.upperBound ... piece.upperBound)
+            }
+          }
+        }
+        pieces = nextPieces
+      }
+
+      var keptOriginalID = false
+      for piece in pieces {
+        let pieceDuration = piece.upperBound - piece.lowerBound
+        guard pieceDuration >= AudioTimelineClip.minDuration - 0.0001 else { continue }
+        let offsetInClip = max(0, piece.lowerBound - clipStart)
+        let newSourceStart = min(clip.sourceDuration, clip.sourceStart + offsetInClip)
+        let newSourceEnd = min(clip.sourceDuration, newSourceStart + pieceDuration)
+        let actualDuration = newSourceEnd - newSourceStart
+        guard actualDuration >= AudioTimelineClip.minDuration - 0.0001 else { continue }
+
+        let newTimelineStart = shifted(piece.lowerBound, removing: spans)
+        let keepsLeadingEdge = piece.lowerBound <= clipStart + 0.0001
+        let keepsTrailingEdge = piece.upperBound >= clipEnd - 0.0001
+        let newFadeIn = keepsLeadingEdge ? min(clip.fadeIn, actualDuration) : 0
+        let newFadeOut = keepsTrailingEdge ? min(clip.fadeOut, actualDuration) : 0
+
+        output.append(AudioTimelineClip(
+          id: keptOriginalID ? UUID() : clip.id,
+          source: clip.source,
+          name: clip.name,
+          timelineStart: newTimelineStart,
+          sourceDuration: clip.sourceDuration,
+          sourceStart: newSourceStart,
+          sourceEnd: newSourceEnd,
+          volume: clip.volume,
+          isMuted: clip.isMuted,
+          fadeIn: newFadeIn,
+          fadeOut: newFadeOut,
+          trackIndex: clip.trackIndex
+        ))
+        keptOriginalID = true
+      }
+    }
+
+    return output
   }
 
   static func merged(_ spans: [ClosedRange<TimeInterval>]) -> [ClosedRange<TimeInterval>] {

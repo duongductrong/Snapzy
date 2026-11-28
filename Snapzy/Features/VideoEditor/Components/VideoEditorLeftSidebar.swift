@@ -23,6 +23,10 @@ struct VideoEditorLeftSidebar: View {
       ZoomSettingsContent(state: state, previewImage: previewImage)
         .frame(width: 320)
         .frame(maxHeight: .infinity)
+    case .text:
+      VideoEditorTextSettingsPanel(state: state)
+        .frame(width: 240)
+        .frame(maxHeight: .infinity)
     case .cursor:
       VideoEditorCursorSettingsPanel(state: state)
         .frame(width: 240)

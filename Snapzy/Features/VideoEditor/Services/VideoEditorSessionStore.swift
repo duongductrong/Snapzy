@@ -20,6 +20,8 @@ final class VideoEditorSessionStore {
   enum StoreError: LocalizedError {
     case sourceUnavailable(URL)
     case packageUnavailable
+    case manifestTooLarge(Int)
+    case sessionQuarantined
 
     var errorDescription: String? {
       switch self {
@@ -27,9 +29,31 @@ final class VideoEditorSessionStore {
         "The original video source could not be preserved for continued editing: \(url.lastPathComponent)"
       case .packageUnavailable:
         "The editable video session could not be stored."
+      case .manifestTooLarge:
+        "The editable video session exceeded the maximum allowed manifest size."
+      case .sessionQuarantined:
+        "An existing video session could not be read and was quarantined to preserve its original recording."
       }
     }
   }
+
+  private enum ManifestReadResult {
+    case valid(PersistedVideoEditorSession)
+    case missing
+    case newerSchema(Int)
+    case transientError(Error)
+    case corruptOrOversized(String)
+  }
+
+  private struct ManifestSchemaProbe: Decodable {
+    let schemaVersion: Int
+  }
+
+  nonisolated static let maxManifestBytes: Int = 33_554_432
+  nonisolated static let stalePendingPackageMaxAge: TimeInterval = 15 * 60
+  nonisolated static let quarantineMaxAge: TimeInterval = 7 * 24 * 60 * 60
+  nonisolated static let maxQuarantinedPackages: Int = 8
+  private nonisolated static let quarantineFolderName = "Quarantined"
 
   private nonisolated let rootDirectory: URL
 
@@ -49,8 +73,36 @@ final class VideoEditorSessionStore {
     let directory = sessionDirectory(pathHash: pathHash)
     let manifestURL = directory.appendingPathComponent("manifest.json")
 
-    guard let manifest = Self.readManifest(at: manifestURL),
-          manifest.schemaVersion == PersistedVideoEditorSession.currentSchemaVersion,
+    let manifest: PersistedVideoEditorSession
+    switch Self.inspectManifest(at: manifestURL) {
+    case .valid(let decoded):
+      manifest = decoded
+    case .missing:
+      if Self.directoryContainsSourceSnapshot(directory) {
+        quarantineDirectory(directory, pathHash: pathHash, reason: "missing-manifest-with-source")
+      }
+      return nil
+    case .newerSchema(let version):
+      DiagnosticLogger.shared.log(
+        .warning,
+        .editor,
+        "Skipping Video Editor session with newer schema version",
+        context: ["schemaVersion": "\(version)", "fileName": sourceURL.lastPathComponent]
+      )
+      return nil
+    case .transientError(let error):
+      DiagnosticLogger.shared.logError(
+        .editor,
+        error,
+        "Transient IO error reading Video Editor session manifest; preserving live package"
+      )
+      return nil
+    case .corruptOrOversized(let reason):
+      quarantineDirectory(directory, pathHash: pathHash, reason: reason)
+      return nil
+    }
+
+    guard manifest.schemaVersion == PersistedVideoEditorSession.currentSchemaVersion,
           manifest.sourceFilePath == normalizedPath,
           manifest.sourceFilePathHash == pathHash,
           let currentSignature = fileSignature(for: sourceURL),
@@ -68,6 +120,31 @@ final class VideoEditorSessionStore {
     }
 
     return manifest.sessionData(sourceSnapshotURL: sourceSnapshotURL)
+  }
+
+  nonisolated func quarantinedDirectory(for sourceURL: URL) -> URL? {
+    let pathHash = Self.pathHash(for: Self.normalizedPath(for: sourceURL))
+    let candidate = quarantineRootDirectory.appendingPathComponent(pathHash, isDirectory: true)
+    return FileManager.default.fileExists(atPath: candidate.path) ? candidate : nil
+  }
+
+  nonisolated func hasQuarantinedSession(for sourceURL: URL) -> Bool {
+    quarantinedDirectory(for: sourceURL) != nil
+  }
+
+  nonisolated func quarantinedOriginalSnapshotURL(for sourceURL: URL) -> URL? {
+    guard let directory = quarantinedDirectory(for: sourceURL),
+          let items = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil
+          )
+    else {
+      return nil
+    }
+    return items.first { url in
+      let name = url.lastPathComponent
+      return name == "source" || name.hasPrefix("source.")
+    }
   }
 
   // MARK: - Source Snapshot
@@ -91,6 +168,14 @@ final class VideoEditorSessionStore {
 
     let normalizedTargetPath = Self.normalizedPath(for: targetURL)
     let pathHash = Self.pathHash(for: normalizedTargetPath)
+    switch preflightExistingPackageForReplace(pathHash: pathHash) {
+    case .allowReplace:
+      break
+    case .quarantined:
+      throw StoreError.sessionQuarantined
+    case .transientOrUnsupported:
+      throw StoreError.packageUnavailable
+    }
     let pendingDirectory = rootDirectory.appendingPathComponent(
       ".\(pathHash).\(UUID().uuidString)",
       isDirectory: true
@@ -198,11 +283,20 @@ final class VideoEditorSessionStore {
     let newPath = Self.normalizedPath(for: newURL)
     let newHash = Self.pathHash(for: newPath)
     let newDirectory = sessionDirectory(pathHash: newHash)
+    if oldDirectory.standardizedFileURL != newDirectory.standardizedFileURL,
+       preflightExistingPackageForReplace(pathHash: newHash) != .allowReplace {
+      return false
+    }
     guard let signature = fileSignature(for: newURL),
           var manifest = Self.readManifest(
             at: oldDirectory.appendingPathComponent("manifest.json")
           )
     else {
+      if case .corruptOrOversized(let reason) = Self.inspectManifest(
+        at: oldDirectory.appendingPathComponent("manifest.json")
+      ) {
+        quarantineDirectory(oldDirectory, pathHash: oldHash, reason: reason)
+      }
       return false
     }
 
@@ -238,27 +332,60 @@ final class VideoEditorSessionStore {
   func deleteSession(for sourceURL: URL) {
     let pathHash = Self.pathHash(for: Self.normalizedPath(for: sourceURL))
     let directory = sessionDirectory(pathHash: pathHash)
-    guard FileManager.default.fileExists(atPath: directory.path) else { return }
-    do {
-      try FileManager.default.removeItem(at: directory)
-    } catch {
-      DiagnosticLogger.shared.logError(.editor, error, "Video Editor session delete failed")
+    if FileManager.default.fileExists(atPath: directory.path) {
+      do {
+        try FileManager.default.removeItem(at: directory)
+      } catch {
+        DiagnosticLogger.shared.logError(.editor, error, "Video Editor session delete failed")
+      }
     }
+    removeQuarantinedSessions(pathHash: pathHash)
   }
 
-  func cleanup(keepingMediaFilePaths paths: Set<String>) {
+  func cleanup(keepingMediaFilePaths paths: Set<String>, now: Date = Date()) {
+    pruneQuarantineDirectory(now: now)
+
     guard let contents = try? FileManager.default.contentsOfDirectory(
       at: rootDirectory,
-      includingPropertiesForKeys: [.isDirectoryKey]
+      includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey],
+      options: []
     ) else {
       return
     }
 
     let activePaths = Set(paths.map(Self.normalizedPath(forPath:)))
     for directory in contents {
+      let name = directory.lastPathComponent
+      if name == Self.quarantineFolderName {
+        continue
+      }
+      if name.hasPrefix(".") {
+        if name == ".DS_Store" {
+          continue
+        }
+        if let modifiedAt = Self.itemModificationDate(at: directory),
+           now.timeIntervalSince(modifiedAt) >= Self.stalePendingPackageMaxAge {
+          try? FileManager.default.removeItem(at: directory)
+        }
+        continue
+      }
       let manifestURL = directory.appendingPathComponent("manifest.json")
-      guard let manifest = Self.readManifest(at: manifestURL) else {
-        try? FileManager.default.removeItem(at: directory)
+      let manifest: PersistedVideoEditorSession
+      switch Self.inspectManifest(at: manifestURL) {
+      case .valid(let decoded):
+        manifest = decoded
+      case .corruptOrOversized(let reason):
+        quarantineDirectory(directory, pathHash: name, reason: reason)
+        continue
+      case .newerSchema, .transientError:
+        // Never quarantine or delete a package on transient IO failure or schema downgrade.
+        continue
+      case .missing:
+        if Self.directoryContainsSourceSnapshot(directory) {
+          quarantineDirectory(directory, pathHash: name, reason: "missing-manifest-with-source")
+        } else {
+          try? FileManager.default.removeItem(at: directory)
+        }
         continue
       }
 
@@ -300,8 +427,151 @@ final class VideoEditorSessionStore {
 
   // MARK: - Private Persistence
 
+  private nonisolated var quarantineRootDirectory: URL {
+    rootDirectory.appendingPathComponent(Self.quarantineFolderName, isDirectory: true)
+  }
+
   private nonisolated func sessionDirectory(pathHash: String) -> URL {
     rootDirectory.appendingPathComponent(pathHash, isDirectory: true)
+  }
+
+  private nonisolated static func directoryContainsSourceSnapshot(_ directory: URL) -> Bool {
+    guard let items = try? FileManager.default.contentsOfDirectory(
+      at: directory,
+      includingPropertiesForKeys: nil
+    ) else {
+      return false
+    }
+    return items.contains { url in
+      let name = url.lastPathComponent
+      return name == "source" || name.hasPrefix("source.")
+    }
+  }
+
+  private enum ExistingPackagePreflight: Equatable {
+    case allowReplace
+    case quarantined
+    case transientOrUnsupported
+  }
+
+  private nonisolated static func itemModificationDate(at url: URL) -> Date? {
+    if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+       let modDate = attrs[.modificationDate] as? Date {
+      return modDate
+    }
+    return (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+  }
+
+  private nonisolated func removeQuarantinedSessions(pathHash: String) {
+    guard let entries = try? FileManager.default.contentsOfDirectory(
+      at: quarantineRootDirectory,
+      includingPropertiesForKeys: nil
+    ) else {
+      return
+    }
+    for entry in entries {
+      let name = entry.lastPathComponent
+      if name == pathHash || name.hasPrefix("\(pathHash)-") {
+        try? FileManager.default.removeItem(at: entry)
+      }
+    }
+  }
+
+  private nonisolated func pruneQuarantineDirectory(now: Date) {
+    guard let entries = try? FileManager.default.contentsOfDirectory(
+      at: quarantineRootDirectory,
+      includingPropertiesForKeys: [.contentModificationDateKey]
+    ), !entries.isEmpty else {
+      return
+    }
+
+    var surviving: [(url: URL, modifiedAt: Date)] = []
+    for entry in entries {
+      let modifiedAt = Self.itemModificationDate(at: entry) ?? .distantPast
+      if now.timeIntervalSince(modifiedAt) >= Self.quarantineMaxAge {
+        try? FileManager.default.removeItem(at: entry)
+      } else {
+        surviving.append((entry, modifiedAt))
+      }
+    }
+
+    if surviving.count > Self.maxQuarantinedPackages {
+      let sortedOldestFirst = surviving.sorted { $0.modifiedAt < $1.modifiedAt }
+      let excess = sortedOldestFirst.count - Self.maxQuarantinedPackages
+      for item in sortedOldestFirst.prefix(excess) {
+        try? FileManager.default.removeItem(at: item.url)
+      }
+    }
+  }
+
+  private nonisolated func quarantineDirectory(
+    _ directory: URL,
+    pathHash: String,
+    reason: String
+  ) {
+    guard FileManager.default.fileExists(atPath: directory.path) else { return }
+    do {
+      try FileManager.default.createDirectory(
+        at: quarantineRootDirectory,
+        withIntermediateDirectories: true
+      )
+      let primaryTarget = quarantineRootDirectory.appendingPathComponent(pathHash, isDirectory: true)
+      let destination: URL = if FileManager.default.fileExists(atPath: primaryTarget.path) {
+        quarantineRootDirectory.appendingPathComponent(
+          "\(pathHash)-\(UUID().uuidString)",
+          isDirectory: true
+        )
+      } else {
+        primaryTarget
+      }
+      try FileManager.default.moveItem(at: directory, to: destination)
+      try? FileManager.default.setAttributes(
+        [.modificationDate: Date()],
+        ofItemAtPath: destination.path
+      )
+      DiagnosticLogger.shared.log(
+        .warning,
+        .editor,
+        "Video Editor session quarantined",
+        context: [
+          "directory": pathHash,
+          "quarantine": destination.lastPathComponent,
+          "reason": reason,
+        ]
+      )
+      pruneQuarantineDirectory(now: Date())
+    } catch {
+      DiagnosticLogger.shared.logError(.editor, error, "Failed to quarantine unreadable Video Editor session")
+    }
+  }
+
+  /// Inspects whether `pathHash` already has an active quarantine or a corrupt/oversized live
+  /// manifest before replacing a session. Transient IO errors and newer schemas block silent
+  /// replacement without quarantining the live directory.
+  private nonisolated func preflightExistingPackageForReplace(pathHash: String) -> ExistingPackagePreflight {
+    pruneQuarantineDirectory(now: Date())
+    let quarantined = quarantineRootDirectory.appendingPathComponent(pathHash, isDirectory: true)
+    if FileManager.default.fileExists(atPath: quarantined.path) {
+      return .quarantined
+    }
+    let directory = sessionDirectory(pathHash: pathHash)
+    guard FileManager.default.fileExists(atPath: directory.path) else { return .allowReplace }
+    let manifestURL = directory.appendingPathComponent("manifest.json")
+    switch Self.inspectManifest(at: manifestURL) {
+    case .valid:
+      return .allowReplace
+    case .corruptOrOversized(let reason):
+      quarantineDirectory(directory, pathHash: pathHash, reason: reason)
+      return .quarantined
+    case .newerSchema, .transientError:
+      return .transientOrUnsupported
+    case .missing:
+      if Self.directoryContainsSourceSnapshot(directory) {
+        quarantineDirectory(directory, pathHash: pathHash, reason: "missing-manifest-with-source")
+        return .quarantined
+      }
+      return .allowReplace
+    }
   }
 
   private nonisolated func makeManifest(
@@ -336,6 +606,14 @@ final class VideoEditorSessionStore {
 
     do {
       try FileManager.default.createDirectory(at: rootDirectory, withIntermediateDirectories: true)
+      switch preflightExistingPackageForReplace(pathHash: manifest.sourceFilePathHash) {
+      case .allowReplace:
+        break
+      case .quarantined:
+        throw StoreError.sessionQuarantined
+      case .transientOrUnsupported:
+        throw StoreError.packageUnavailable
+      }
 
       if let preparedSourceDirectory {
         guard preparedSourceDirectory.deletingLastPathComponent().standardizedFileURL
@@ -460,15 +738,92 @@ final class VideoEditorSessionStore {
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
     encoder.outputFormatting = [.sortedKeys]
-    try encoder.encode(manifest).write(to: url, options: .atomic)
+    let data = try encoder.encode(manifest)
+    guard data.count <= maxManifestBytes else {
+      throw StoreError.manifestTooLarge(data.count)
+    }
+    try data.write(to: url, options: .atomic)
   }
 
   private nonisolated static func readManifest(
     at url: URL
   ) -> PersistedVideoEditorSession? {
-    guard let data = try? Data(contentsOf: url) else { return nil }
+    if case .valid(let manifest) = inspectManifest(at: url) {
+      return manifest
+    }
+    return nil
+  }
+
+  private nonisolated static func isMissingFileError(_ error: Error) -> Bool {
+    let nsError = error as NSError
+    if nsError.domain == NSCocoaErrorDomain {
+      return nsError.code == NSFileNoSuchFileError || nsError.code == NSFileReadNoSuchFileError
+    }
+    if nsError.domain == NSPOSIXErrorDomain {
+      return nsError.code == Int(ENOENT)
+    }
+    return false
+  }
+
+  private nonisolated static func readDataWithSingleRetry(from url: URL) throws -> Data {
+    do {
+      return try Data(contentsOf: url)
+    } catch {
+      if isMissingFileError(error) {
+        throw error
+      }
+      Thread.sleep(forTimeInterval: 0.005)
+      return try Data(contentsOf: url)
+    }
+  }
+
+  private nonisolated static func inspectManifest(
+    at url: URL
+  ) -> ManifestReadResult {
+    let attributes: [FileAttributeKey: Any]
+    do {
+      attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+    } catch {
+      if isMissingFileError(error) {
+        return .missing
+      }
+      return .transientError(error)
+    }
+
+    if let fileType = attributes[.type] as? FileAttributeType, fileType != .typeRegular {
+      return .corruptOrOversized("non-regular-file")
+    }
+    let fileSize = (attributes[.size] as? NSNumber)?.int64Value ?? 0
+    if fileSize <= 0 || fileSize > Int64(maxManifestBytes) {
+      return .corruptOrOversized("size=\(fileSize)")
+    }
+
+    let data: Data
+    do {
+      data = try readDataWithSingleRetry(from: url)
+    } catch {
+      if isMissingFileError(error) {
+        return .missing
+      }
+      return .transientError(error)
+    }
+
+    guard !data.isEmpty, data.count <= maxManifestBytes else {
+      return .corruptOrOversized("bytes=\(data.count)")
+    }
+
+    if let probe = try? JSONDecoder().decode(ManifestSchemaProbe.self, from: data),
+       probe.schemaVersion > PersistedVideoEditorSession.currentSchemaVersion {
+      return .newerSchema(probe.schemaVersion)
+    }
+
     let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .iso8601
-    return try? decoder.decode(PersistedVideoEditorSession.self, from: data)
+    do {
+      let decoded = try decoder.decode(PersistedVideoEditorSession.self, from: data)
+      return .valid(decoded)
+    } catch {
+      return .corruptOrOversized("decode-failed")
+    }
   }
 }

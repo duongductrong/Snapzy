@@ -122,7 +122,7 @@ private enum VideoControlsLayoutStyle {
 }
 
 private enum VideoControlsPart: Hashable {
-  case status, zoom, trailingFrame
+  case leftCore, leftExtras, leadingFrame, status, snap, zoom, trailingFrame
 }
 
 /// The one rule the status badges are shown under: their group has to fit the width the trailing
@@ -222,15 +222,15 @@ struct VideoControlsView: View {
     // (Not `ViewThatFits`: probing both glass candidates on every layout pass made each
     // editor layout ~15× slower.)
     HStack(spacing: controlsLayout.outerSpacing) {
-      leftActions
+      leftActions(showsExtras: showsLeadingExtras)
         .disabled(aiChrome.isRunning)
-        .fixedSize(horizontal: true, vertical: false)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .measureVideoControlsPart(.leadingFrame)
 
       centerTransport
         .fixedSize(horizontal: true, vertical: false)
 
-      rightActions(showsStatus: showsStatus)
+      rightActions(showsStatus: showsStatus, showsSnapToggle: showsSnapToggle)
         .frame(maxWidth: .infinity, alignment: .trailing)
         .measureVideoControlsPart(.trailingFrame)
     }
@@ -250,6 +250,32 @@ struct VideoControlsView: View {
     .onReceive(agent.chromePublisher) { aiChrome = $0 }
   }
 
+  private var showsLeadingExtras: Bool {
+    guard let leading = partWidths[.leadingFrame],
+          let core = partWidths[.leftCore],
+          let extras = partWidths[.leftExtras]
+    else { return true }
+    return VideoControlsFitPolicy.showsStatus(
+      trailingWidth: leading,
+      zoomWidth: core,
+      statusWidth: extras,
+      badgeSpacing: controlsLayout.metadataSpacing
+    )
+  }
+
+  private var showsSnapToggle: Bool {
+    guard let trailing = partWidths[.trailingFrame],
+          let zoom = partWidths[.zoom],
+          let snap = partWidths[.snap]
+    else { return true }
+    return VideoControlsFitPolicy.showsStatus(
+      trailingWidth: trailing,
+      zoomWidth: zoom,
+      statusWidth: snap,
+      badgeSpacing: controlsLayout.metadataSpacing
+    )
+  }
+
   /// Whether the status badges fit beside the zoom cluster inside the width the trailing side was
   /// laid out in. See `VideoControlsFitPolicy` for why that measured frame, and not the row's
   /// leftover space, is what the badges have to live in.
@@ -258,9 +284,14 @@ struct VideoControlsView: View {
           let zoom = partWidths[.zoom],
           let status = partWidths[.status]
     else { return true }
+    let snapOccupied: CGFloat = if showsSnapToggle, let snap = partWidths[.snap], snap > 0 {
+      controlsLayout.metadataSpacing + snap
+    } else {
+      0
+    }
     return VideoControlsFitPolicy.showsStatus(
       trailingWidth: trailing,
-      zoomWidth: zoom,
+      zoomWidth: zoom + snapOccupied,
       statusWidth: status,
       badgeSpacing: controlsLayout.metadataSpacing
     )
@@ -270,27 +301,129 @@ struct VideoControlsView: View {
     VideoControlsLayoutStyle.forWidth(containerWidth > 0 ? containerWidth : 920)
   }
 
-  private var leftActions: some View {
-    // Clip-editing (cut) controls share one quiet glass capsule — same treatment and
-    // metrics as the zoom cluster on the trailing edge — so the row reads as a
-    // matching pair of grouped instrument chips.
+  private func leftActions(showsExtras: Bool) -> some View {
+    // `HStack(spacing: 0)` with leading padding inside the `.frame(minWidth: 0)` wrapper ensures
+    // optional tools add zero inter-item spacing to `NSHostingView`'s content minimum width.
+    HStack(spacing: 0) {
+      leftCoreCapsule
+        .fixedSize(horizontal: true, vertical: false)
+        .measureVideoControlsPart(.leftCore)
+
+      if showsExtras {
+        leftExtrasCapsule
+          .fixedSize(horizontal: true, vertical: false)
+          .measureVideoControlsPart(.leftExtras)
+          .padding(.leading, controlsLayout.metadataSpacing)
+          .fixedSize(horizontal: true, vertical: false)
+          .frame(minWidth: 0, alignment: .leading)
+      }
+    }
+    .background(alignment: .leading) {
+      if !showsExtras {
+        leftExtrasCapsule
+          .fixedSize(horizontal: true, vertical: false)
+          .hidden()
+          .measureVideoControlsPart(.leftExtras)
+          .allowsHitTesting(false)
+      }
+    }
+  }
+
+  private var leftCoreCapsule: some View {
+    // Primary clip-editing controls share one quiet glass capsule matching master's minimum width.
     HStack(spacing: 4) {
-      cutButton(icon: "scissors", isDisabled: !state.canSplitAtPlayhead) {
+      cutButton(
+        icon: "scissors",
+        label: L10n.VideoEditor.splitAtPlayhead,
+        isDisabled: !state.canSplitAnyAtPlayhead
+      ) {
         state.splitAtPlayhead()
       }
-      .keyboardShortcut(aiChrome.allowsPlainKeyShortcuts ? KeyboardShortcut("s", modifiers: []) : nil)
       .help(L10n.VideoEditor.splitAtPlayheadHint)
 
-      cutButton(icon: "trash", isDisabled: !state.canDeleteSelectedClip) {
-        state.deleteSelectedClip()
+      cutButton(
+        icon: "trash",
+        label: L10n.VideoEditor.removeClip,
+        isDisabled: !state.canDeleteAnySelected
+      ) {
+        state.deleteSelectedTimelineItem()
       }
-      .keyboardShortcut(aiChrome.allowsPlainKeyShortcuts ? KeyboardShortcut(.delete, modifiers: []) : nil)
       .help(L10n.VideoEditor.deleteClipHint)
 
-      cutButton(icon: "plus.viewfinder", isDisabled: false) {
+      cutButton(
+        icon: "plus.viewfinder",
+        label: L10n.VideoEditor.addVideoClip,
+        isDisabled: false
+      ) {
         insertClipsViaPicker()
       }
       .help(L10n.VideoEditor.addClipHint)
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 6)
+    .liquidGlassChrome(
+      shape: Capsule(style: .continuous),
+      isVisible: true,
+      isActive: false
+    )
+  }
+
+  private var leftExtrasCapsule: some View {
+    HStack(spacing: 4) {
+      cutButton(
+        icon: "arrow.right.to.line",
+        label: L10n.VideoEditor.trimStartToPlayhead,
+        isDisabled: !state.canTrimLeftAtPlayhead
+      ) {
+        state.trimSelectedLeftToPlayhead()
+      }
+      .help(L10n.VideoEditor.trimStartToPlayheadHint)
+
+      cutButton(
+        icon: "arrow.left.to.line",
+        label: L10n.VideoEditor.trimEndToPlayhead,
+        isDisabled: !state.canTrimRightAtPlayhead
+      ) {
+        state.trimSelectedRightToPlayhead()
+      }
+      .help(L10n.VideoEditor.trimEndToPlayheadHint)
+
+      cutButton(
+        icon: "plus.square.on.square",
+        label: L10n.VideoEditor.duplicateClip,
+        isDisabled: !state.canDuplicateSelected
+      ) {
+        state.duplicateSelectedTimelineItem()
+      }
+      .help(L10n.VideoEditor.duplicateClipHint)
+
+      cutButton(
+        icon: "textformat",
+        label: L10n.VideoEditor.addTextAtPlayhead,
+        isDisabled: state.isGIF
+      ) {
+        state.addTextOverlayAtPlayheadAndOpenPanel()
+      }
+      .help(L10n.VideoEditor.textAndTitlesHint)
+
+      cutButton(
+        icon: "waveform.badge.plus",
+        label: L10n.VideoEditor.addAudioTrack,
+        isDisabled: state.isGIF
+      ) {
+        state.promptAddAudioClip()
+      }
+      .help(L10n.VideoEditor.addAudioTrackHint)
+
+      cutButton(
+        icon: state.hasBookmarkNearPlayhead ? "bookmark.fill" : "bookmark",
+        label: state.hasBookmarkNearPlayhead ? L10n.VideoEditor.removeBookmark : L10n.VideoEditor.addBookmark,
+        isDisabled: state.isGIF,
+        tint: state.hasBookmarkNearPlayhead ? .orange : nil
+      ) {
+        state.toggleBookmarkAtPlayhead()
+      }
+      .help(L10n.VideoEditor.toggleBookmarkHint)
     }
     .padding(.horizontal, 10)
     .padding(.vertical, 6)
@@ -307,13 +440,15 @@ struct VideoControlsView: View {
   /// `.opacity()` around the glass surface (Rule 2).
   private func cutButton(
     icon: String,
+    label: String,
     isDisabled: Bool,
+    tint: Color? = nil,
     action: @escaping () -> Void
   ) -> some View {
     Button(action: action) {
       Image(systemName: icon)
         .font(.system(size: 12, weight: .medium))
-        .foregroundColor(isDisabled ? Color.primary.opacity(0.4) : .primary)
+        .foregroundColor(isDisabled ? Color.primary.opacity(0.4) : (tint ?? .primary))
         // Square frames keep each hit target equal and give the glyphs even breathing
         // room, so the group's rhythm does not follow each symbol's natural width.
         .frame(width: 16, height: 14)
@@ -321,6 +456,7 @@ struct VideoControlsView: View {
     }
     .buttonStyle(.plain)
     .disabled(isDisabled)
+    .accessibilityLabel(label)
   }
 
   private func insertClipsViaPicker() {
@@ -358,14 +494,14 @@ struct VideoControlsView: View {
         state.stepTimeline(by: stepIntervalSeconds)
       }
 
-      timeLabel(state.formattedDuration, alignment: .leading)
+      timeLabel(state.formattedTimelineDuration, alignment: .leading)
     }
     // Transport siblings merge optically on macOS 26+ and sample once.
     .liquidGlassGroup(spacing: controlsLayout.centerSpacing)
   }
 
-  private func rightActions(showsStatus: Bool) -> some View {
-    HStack(spacing: controlsLayout.metadataSpacing) {
+  private func rightActions(showsStatus: Bool, showsSnapToggle: Bool) -> some View {
+    HStack(spacing: 0) {
       if showsStatus, hasStatusBadges {
         // Natural width when shown, but no contribution to the row's minimum: otherwise
         // the editor's minimum would keep room for the badges, the AI slot would give up
@@ -373,6 +509,17 @@ struct VideoControlsView: View {
         statusBadges
           .fixedSize(horizontal: true, vertical: false)
           .measureVideoControlsPart(.status)
+          .padding(.trailing, controlsLayout.metadataSpacing)
+          .fixedSize(horizontal: true, vertical: false)
+          .frame(minWidth: 0, alignment: .trailing)
+      }
+
+      if showsSnapToggle {
+        snapTogglePill
+          .fixedSize(horizontal: true, vertical: false)
+          .measureVideoControlsPart(.snap)
+          .padding(.trailing, controlsLayout.metadataSpacing)
+          .fixedSize(horizontal: true, vertical: false)
           .frame(minWidth: 0, alignment: .trailing)
       }
 
@@ -384,17 +531,57 @@ struct VideoControlsView: View {
       .fixedSize(horizontal: true, vertical: false)
       .measureVideoControlsPart(.zoom)
     }
-    // Hidden badges are still measured (one invisible copy, only while narrow) so a badge
-    // added or removed while hidden updates the decision.
+    // Hidden badges / snap toggle are still measured (one invisible copy, only while narrow)
+    // so a badge added or removed while hidden updates the decision.
     .background(alignment: .trailing) {
-      if !showsStatus, hasStatusBadges {
-        statusBadges
-          .fixedSize(horizontal: true, vertical: false)
-          .hidden()
-          .measureVideoControlsPart(.status)
-          .allowsHitTesting(false)
+      HStack(spacing: 0) {
+        if !showsStatus, hasStatusBadges {
+          statusBadges
+            .fixedSize(horizontal: true, vertical: false)
+            .hidden()
+            .measureVideoControlsPart(.status)
+            .allowsHitTesting(false)
+        }
+        if !showsSnapToggle {
+          snapTogglePill
+            .fixedSize(horizontal: true, vertical: false)
+            .hidden()
+            .measureVideoControlsPart(.snap)
+            .allowsHitTesting(false)
+        }
       }
     }
+  }
+
+  private var snapTogglePill: some View {
+    Button {
+      withAnimation(LiquidGlassTokens.settleSpring) {
+        state.isSnappingEnabled.toggle()
+      }
+    } label: {
+      ControlsSnapMagnetIcon()
+        .stroke(
+          state.isSnappingEnabled ? Color.accentColor : Color.secondary,
+          style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
+        )
+        .frame(width: 10, height: 11)
+        .frame(width: 13, height: 13)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .contentShape(Capsule(style: .continuous))
+    }
+    .buttonStyle(.plain)
+    .liquidGlassChrome(
+      shape: Capsule(style: .continuous),
+      isVisible: true,
+      isActive: state.isSnappingEnabled
+    )
+    .accessibilityLabel(
+      state.isSnappingEnabled
+        ? L10n.VideoEditor.disableSnapping
+        : L10n.VideoEditor.enableSnapping
+    )
+    .help(L10n.VideoEditor.toggleSnappingHint)
   }
 
   /// Mirrors `statusMetadata`'s conditions, so an empty badge group adds no spacing.
@@ -568,5 +755,38 @@ private struct VideoControlsZoomBadges<Count: View, Auto: View>: View {
   private func refresh(at time: CMTime) {
     let active = ZoomCalculator.activeSegment(at: CMTimeGetSeconds(time), in: zoomSegments)?.isAutoMode == true
     if isActive != active { isActive = active }
+  }
+}
+
+/// Crisp horseshoe magnet vector matching SF Symbol stroke weight.
+private struct ControlsSnapMagnetIcon: Shape {
+  func path(in rect: CGRect) -> Path {
+    var path = Path()
+    let w = rect.width
+    let h = rect.height
+    let topY = rect.minY + h * 0.10
+    let archY = rect.minY + h * 0.56
+    let radius = w * 0.38
+    let centerX = rect.midX
+    let leftX = centerX - radius
+    let rightX = centerX + radius
+
+    path.move(to: CGPoint(x: leftX, y: topY))
+    path.addLine(to: CGPoint(x: leftX, y: archY))
+    path.addArc(
+      center: CGPoint(x: centerX, y: archY),
+      radius: radius,
+      startAngle: .degrees(180),
+      endAngle: .degrees(0),
+      clockwise: true
+    )
+    path.addLine(to: CGPoint(x: rightX, y: topY))
+
+    let poleY = topY + h * 0.24
+    path.move(to: CGPoint(x: leftX - 1.2, y: poleY))
+    path.addLine(to: CGPoint(x: leftX + 1.2, y: poleY))
+    path.move(to: CGPoint(x: rightX - 1.2, y: poleY))
+    path.addLine(to: CGPoint(x: rightX + 1.2, y: poleY))
+    return path
   }
 }

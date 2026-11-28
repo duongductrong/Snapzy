@@ -256,7 +256,10 @@ extension VideoEditorAgentToolbox {
     try Task.checkCancellation()
 
     // Map back by id: nothing else edits captions during a run, but stay safe if it did.
-    let translations = Dictionary(uniqueKeysWithValues: zip(original.map(\.id), output.texts))
+    let translations = Dictionary(
+      zip(original.map(\.id), output.texts),
+      uniquingKeysWith: { first, _ in first }
+    )
     var captions = state.captions
     var translated = 0
     for index in captions.segments.indices {

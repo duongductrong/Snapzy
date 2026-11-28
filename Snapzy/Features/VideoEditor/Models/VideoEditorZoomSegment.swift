@@ -39,8 +39,14 @@ nonisolated struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
   static let defaultZoomLevel: CGFloat = 2.0
   static let minDuration: TimeInterval = 0.5
   static let maxDuration: TimeInterval = 30.0
+  static let maxTimelineStart: TimeInterval = 864_000
   static let minZoomLevel: CGFloat = 1.0
   static let maxZoomLevel: CGFloat = 4.0
+
+  private enum CodingKeys: String, CodingKey {
+    case id, startTime, duration, zoomLevel, zoomCenter
+    case zoomType, followSpeed, focusMargin, isEnabled, smartKeyframes
+  }
 
   // MARK: - Initialization
 
@@ -57,18 +63,54 @@ nonisolated struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
     smartKeyframes: [AutoFocusCameraSample]? = nil
   ) {
     self.id = id
-    self.startTime = max(0, startTime)
-    self.duration = max(Self.minDuration, min(duration, Self.maxDuration))
-    self.zoomLevel = max(Self.minZoomLevel, min(zoomLevel, Self.maxZoomLevel))
+    let safeStart = startTime.isFinite ? startTime : 0
+    self.startTime = min(max(0, safeStart), Self.maxTimelineStart)
+    let safeDuration = duration.isFinite ? duration : Self.defaultDuration
+    self.duration = max(Self.minDuration, min(safeDuration, Self.maxDuration))
+    let safeZoom = zoomLevel.isFinite ? zoomLevel : Self.defaultZoomLevel
+    self.zoomLevel = max(Self.minZoomLevel, min(safeZoom, Self.maxZoomLevel))
+    let safeX = zoomCenter.x.isFinite ? zoomCenter.x : 0.5
+    let safeY = zoomCenter.y.isFinite ? zoomCenter.y : 0.5
     self.zoomCenter = CGPoint(
-      x: max(0, min(zoomCenter.x, 1)),
-      y: max(0, min(zoomCenter.y, 1))
+      x: max(0, min(safeX, 1)),
+      y: max(0, min(safeY, 1))
     )
     self.zoomType = zoomType
-    self.followSpeed = AutoFocusSettings.clampFollowSpeed(followSpeed)
-    self.focusMargin = AutoFocusSettings.clampFocusMargin(focusMargin)
+    let safeFollow = followSpeed.isFinite ? followSpeed : AutoFocusSettings.defaultFollowSpeed
+    self.followSpeed = AutoFocusSettings.clampFollowSpeed(safeFollow)
+    let safeMargin = focusMargin.isFinite ? focusMargin : AutoFocusSettings.defaultFocusMargin
+    self.focusMargin = AutoFocusSettings.clampFocusMargin(safeMargin)
     self.isEnabled = isEnabled
     self.smartKeyframes = smartKeyframes?.isEmpty == true ? nil : smartKeyframes
+  }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    let decodedId = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+    let decodedStart = (try? c.decodeIfPresent(TimeInterval.self, forKey: .startTime)) ?? 0
+    let decodedDuration = (try? c.decodeIfPresent(TimeInterval.self, forKey: .duration)) ?? Self.defaultDuration
+    let decodedLevel = (try? c.decodeIfPresent(CGFloat.self, forKey: .zoomLevel)) ?? Self.defaultZoomLevel
+    let decodedCenter = (try? c.decodeIfPresent(CGPoint.self, forKey: .zoomCenter)) ?? CGPoint(x: 0.5, y: 0.5)
+    let decodedType = (try? c.decodeIfPresent(ZoomType.self, forKey: .zoomType)) ?? .manual
+    let decodedFollow = (try? c.decodeIfPresent(Double.self, forKey: .followSpeed))
+      ?? AutoFocusSettings.defaultFollowSpeed
+    let decodedMargin = (try? c.decodeIfPresent(CGFloat.self, forKey: .focusMargin))
+      ?? AutoFocusSettings.defaultFocusMargin
+    let decodedEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .isEnabled)) ?? true
+    let decodedKeyframes = try? c.decodeIfPresent([AutoFocusCameraSample].self, forKey: .smartKeyframes)
+
+    self.init(
+      id: decodedId,
+      startTime: decodedStart,
+      duration: decodedDuration,
+      zoomLevel: decodedLevel,
+      zoomCenter: decodedCenter,
+      zoomType: decodedType,
+      followSpeed: decodedFollow,
+      focusMargin: decodedMargin,
+      isEnabled: decodedEnabled,
+      smartKeyframes: decodedKeyframes
+    )
   }
 
   // MARK: - Validation

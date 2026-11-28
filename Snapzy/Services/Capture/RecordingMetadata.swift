@@ -474,9 +474,26 @@ enum RecordingMetadataStore {
     return locations
   }
 
+  private static let maxMetadataFileBytes: Int = 16_777_216
+
+  private static func readBoundedMetadataData(from url: URL) throws -> Data {
+    let values = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+    guard values.isRegularFile == true else {
+      throw CocoaError(.fileReadCorruptFile)
+    }
+    if let fileSize = values.fileSize, fileSize < 0 || fileSize > maxMetadataFileBytes {
+      throw CocoaError(.fileReadTooLarge)
+    }
+    let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+    guard data.count <= maxMetadataFileBytes else {
+      throw CocoaError(.fileReadTooLarge)
+    }
+    return data
+  }
+
   private static func loadIndex(from location: StoreLocation) -> MetadataIndex {
     guard FileManager.default.fileExists(atPath: location.indexURL.path),
-          let data = try? Data(contentsOf: location.indexURL)
+          let data = try? readBoundedMetadataData(from: location.indexURL)
     else {
       return MetadataIndex()
     }
@@ -512,7 +529,7 @@ enum RecordingMetadataStore {
       return nil
     }
 
-    let data = try Data(contentsOf: metadataURL)
+    let data = try readBoundedMetadataData(from: metadataURL)
     let metadata = try JSONDecoder().decode(RecordingMetadata.self, from: data)
 
     if index.entries[resolved.index] != resolved.entry {
@@ -672,7 +689,7 @@ enum RecordingMetadataStore {
   /// outside the store are never touched.
   private static func deleteMetadataFileAndSidecars(at metadataURL: URL, location: StoreLocation) {
     if
-      let data = try? Data(contentsOf: metadataURL),
+      let data = try? readBoundedMetadataData(from: metadataURL),
       let metadata = try? JSONDecoder().decode(RecordingMetadata.self, from: data)
     {
       for reference in metadata.sidecarReferences {
@@ -719,7 +736,7 @@ enum RecordingMetadataStore {
         return nil
       }
 
-      let data = try Data(contentsOf: sidecarURL)
+      let data = try readBoundedMetadataData(from: sidecarURL)
       return try JSONDecoder().decode(RecordingMetadata.self, from: data)
     }
   }

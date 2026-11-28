@@ -694,8 +694,123 @@ private struct AudioEditor: View {
             volumeSlider(for: role)
           }
         }
+        .transition(.opacity.combined(with: .move(edge: .top)))
+      }
+
+      if state.exportSettings.audioMode != .mute {
+        Divider()
+          .opacity(0.45)
+
+        if let clip = state.selectedAudioClip {
+          VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+              Image(systemName: clip.isPrimary ? "waveform" : "music.note")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.accentColor)
+              Text(clip.name)
+                .font(.system(size: 11, weight: .semibold))
+                .lineLimit(1)
+                .truncationMode(.middle)
+              Spacer(minLength: 0)
+              Button {
+                state.toggleAudioClipMute(id: clip.id)
+              } label: {
+                Label(
+                  clip.isMuted ? L10n.VideoEditor.unmute : L10n.VideoEditor.mute,
+                  systemImage: clip.isMuted ? "speaker.slash" : "speaker.wave.2"
+                )
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundColor(clip.isMuted ? .orange : .secondary)
+              }
+              .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 8) {
+              Label(L10n.VideoEditor.clipVolume, systemImage: "speaker.wave.2")
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .frame(width: 120, alignment: .leading)
+
+              Slider(value: selectedClipVolumeBinding(for: clip).stepped(by: 0.05, in: 0 ... 2), in: 0 ... 2)
+                .controlSize(.small)
+
+              Text("\(Int(clip.volume * 100))%")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.primary)
+                .monospacedDigit()
+                .frame(width: 40, alignment: .trailing)
+            }
+
+            fadeSlider(
+              title: L10n.VideoEditor.fadeIn,
+              icon: "arrow.up.right",
+              value: selectedClipFadeInBinding(for: clip)
+            )
+            fadeSlider(
+              title: L10n.VideoEditor.fadeOut,
+              icon: "arrow.down.right",
+              value: selectedClipFadeOutBinding(for: clip)
+            )
+          }
+          .transition(.opacity.combined(with: .move(edge: .top)))
+        } else {
+          VStack(alignment: .leading, spacing: 8) {
+            fadeSlider(
+              title: L10n.VideoEditor.fadeIn,
+              icon: "arrow.up.right",
+              value: fadeInBinding
+            )
+            fadeSlider(
+              title: L10n.VideoEditor.fadeOut,
+              icon: "arrow.down.right",
+              value: fadeOutBinding
+            )
+          }
+          .transition(.opacity.combined(with: .move(edge: .top)))
+        }
       }
     }
+    .animation(LiquidGlassTokens.settleSpring, value: state.exportSettings.audioMode)
+  }
+
+  private func selectedClipVolumeBinding(for clip: AudioTimelineClip) -> Binding<Float> {
+    Binding(
+      get: { state.audioClips.first(where: { $0.id == clip.id })?.volume ?? clip.volume },
+      set: { newValue in
+        state.setAudioClipVolume(id: clip.id, volume: newValue)
+      }
+    )
+  }
+
+  private func selectedClipFadeInBinding(for clip: AudioTimelineClip) -> Binding<TimeInterval> {
+    Binding(
+      get: {
+        let live = state.audioClips.first(where: { $0.id == clip.id }) ?? clip
+        if live.isPrimary, !state.usesIndependentAudioPlayback {
+          return state.exportSettings.clampedAudioFadeIn
+        }
+        return live.fadeIn
+      },
+      set: { newValue in
+        state.setAudioClipFade(id: clip.id, fadeIn: newValue)
+      }
+    )
+  }
+
+  private func selectedClipFadeOutBinding(for clip: AudioTimelineClip) -> Binding<TimeInterval> {
+    Binding(
+      get: {
+        let live = state.audioClips.first(where: { $0.id == clip.id }) ?? clip
+        if live.isPrimary, !state.usesIndependentAudioPlayback {
+          return state.exportSettings.clampedAudioFadeOut
+        }
+        return live.fadeOut
+      },
+      set: { newValue in
+        state.setAudioClipFade(id: clip.id, fadeOut: newValue)
+      }
+    )
   }
 
   private var customAudioVolumeRoles: [VideoEditorAudioTrackRole] {
@@ -727,6 +842,51 @@ private struct AudioEditor: View {
       set: { newValue in
         var settings = state.exportSettings
         settings.setAudioVolume(newValue, for: role)
+        state.updateExportSettings(settings)
+      }
+    )
+  }
+
+  private func fadeSlider(
+    title: String,
+    icon: String,
+    value: Binding<TimeInterval>
+  ) -> some View {
+    HStack(spacing: 8) {
+      Label(title, systemImage: icon)
+        .font(.system(size: 11))
+        .foregroundColor(.secondary)
+        .lineLimit(1)
+        .frame(width: 120, alignment: .leading)
+
+      Slider(value: value.stepped(by: 0.1, in: 0 ... 3.0), in: 0 ... 3.0)
+        .controlSize(.small)
+
+      Text(value.wrappedValue <= 0.05 ? L10n.Common.off : String(format: "%.1fs", value.wrappedValue))
+        .font(.system(size: 11, weight: .medium))
+        .foregroundColor(value.wrappedValue <= 0.05 ? .secondary : .primary)
+        .monospacedDigit()
+        .frame(width: 40, alignment: .trailing)
+    }
+  }
+
+  private var fadeInBinding: Binding<TimeInterval> {
+    Binding(
+      get: { state.exportSettings.clampedAudioFadeIn },
+      set: { newValue in
+        var settings = state.exportSettings
+        settings.setAudioFadeIn(newValue)
+        state.updateExportSettings(settings)
+      }
+    )
+  }
+
+  private var fadeOutBinding: Binding<TimeInterval> {
+    Binding(
+      get: { state.exportSettings.clampedAudioFadeOut },
+      set: { newValue in
+        var settings = state.exportSettings
+        settings.setAudioFadeOut(newValue)
         state.updateExportSettings(settings)
       }
     )
